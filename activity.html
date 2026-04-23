@@ -228,7 +228,7 @@
           <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         </div>
         <div>
-          <div class="summary-card-value">2</div>
+          <div class="summary-card-value" id="stat-live">—</div>
           <div class="summary-card-label">Live Matches</div>
         </div>
       </div>
@@ -237,7 +237,7 @@
           <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
         </div>
         <div>
-          <div class="summary-card-value">5</div>
+          <div class="summary-card-value" id="stat-unanswered">—</div>
           <div class="summary-card-label">Unanswered</div>
         </div>
       </div>
@@ -246,7 +246,7 @@
           <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
         </div>
         <div>
-          <div class="summary-card-value">18</div>
+          <div class="summary-card-value" id="stat-today">—</div>
           <div class="summary-card-label">Answered Today</div>
         </div>
       </div>
@@ -263,52 +263,9 @@
       </div>
       <div class="live-matches">
 
-        <!-- Live Match 1 -->
-        <a href="live.html" class="live-match">
-          <div class="live-match-time">
-            <div class="live-dot"></div>
-            <div class="live-minute">63'</div>
-          </div>
-          <div class="live-match-teams">
-            <div class="live-match-versus">
-              Barcelona vs Real Madrid
-              <span class="live-match-score">2 — 1</span>
-            </div>
-            <div class="live-match-league">
-              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-              LaLiga Legends 24/25 · La Liga Matchday 28
-            </div>
-          </div>
-          <div class="live-match-questions">
-            <div class="live-q-count">3</div>
-            <div class="live-q-label">Active Qs</div>
-          </div>
-          <button class="live-match-cta" onclick="event.preventDefault();">Play Now</button>
-        </a>
-
-        <!-- Live Match 2 -->
-        <a href="live.html" class="live-match">
-          <div class="live-match-time">
-            <div class="live-dot"></div>
-            <div class="live-minute">Q3</div>
-          </div>
-          <div class="live-match-teams">
-            <div class="live-match-versus">
-              LA Lakers vs Golden State
-              <span class="live-match-score">89 — 84</span>
-            </div>
-            <div class="live-match-league">
-              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-              UFC Fight Night Preds · NBA Thursday Night
-            </div>
-          </div>
-          <div class="live-match-questions">
-            <div class="live-q-count">1</div>
-            <div class="live-q-label">Active Q</div>
-          </div>
-          <button class="live-match-cta" onclick="event.preventDefault();">Play Now</button>
-        </a>
-
+        <div id="live-matches-container">
+          <div class="feed-loading" style="color:var(--grey);font-size:0.85rem;padding:12px 0;">Loading live matches…</div>
+        </div>
       </div>
     </div>
 
@@ -321,134 +278,9 @@
           <span class="section-count orange">5 pending</span>
         </h2>
       </div>
-      <div class="unanswered-list">
-
-        <!-- Unanswered 1 — LIVE, urgent -->
-        <div class="unanswered-card urgent" onclick="window.location.href='live.html'">
-          <div class="unanswered-icon coral">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          </div>
-          <div class="unanswered-info">
-            <div class="unanswered-question">Who will score the next goal?</div>
-            <div class="unanswered-meta">
-              <span class="unanswered-meta-item">
-                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-                LaLiga Legends
-              </span>
-              <span class="unanswered-meta-item">
-                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                Barca vs Real Madrid · 63'
-              </span>
-            </div>
-          </div>
-          <div class="unanswered-timer critical">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            2:34 left
-          </div>
-          <button class="unanswered-answer-btn" onclick="event.stopPropagation(); showToast('Jumping to question...')">Answer</button>
+      <div id="unanswered-container">
+          <div class="feed-loading" style="color:var(--grey);font-size:0.85rem;padding:12px 0;">Loading questions…</div>
         </div>
-
-        <!-- Unanswered 2 — LIVE -->
-        <div class="unanswered-card urgent" onclick="window.location.href='live.html'">
-          <div class="unanswered-icon coral">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          </div>
-          <div class="unanswered-info">
-            <div class="unanswered-question">Will there be a 3-pointer in the next 2 mins?</div>
-            <div class="unanswered-meta">
-              <span class="unanswered-meta-item">
-                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-                UFC Fight Night Preds
-              </span>
-              <span class="unanswered-meta-item">
-                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                Lakers vs Warriors · Q3
-              </span>
-            </div>
-          </div>
-          <div class="unanswered-timer critical">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            1:12 left
-          </div>
-          <button class="unanswered-answer-btn" onclick="event.stopPropagation(); showToast('Jumping to question...')">Answer</button>
-        </div>
-
-        <!-- Unanswered 3 — pre-match, moderate urgency -->
-        <div class="unanswered-card">
-          <div class="unanswered-icon orange">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          </div>
-          <div class="unanswered-info">
-            <div class="unanswered-question">Predict the correct scoreline: Atletico vs Sevilla</div>
-            <div class="unanswered-meta">
-              <span class="unanswered-meta-item">
-                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-                LaLiga Legends
-              </span>
-              <span class="unanswered-meta-item">
-                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
-                Pre-match · Sat 18:00
-              </span>
-            </div>
-          </div>
-          <div class="unanswered-timer warning">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            1d 6h left
-          </div>
-          <button class="unanswered-answer-btn" onclick="event.stopPropagation(); showToast('Jumping to question...')">Answer</button>
-        </div>
-
-        <!-- Unanswered 4 — weekly question -->
-        <div class="unanswered-card">
-          <div class="unanswered-icon orange">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          </div>
-          <div class="unanswered-info">
-            <div class="unanswered-question">Who finishes top scorer in the Roland Garros men's draw?</div>
-            <div class="unanswered-meta">
-              <span class="unanswered-meta-item">
-                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-                Grand Slam Guessers
-              </span>
-              <span class="unanswered-meta-item">
-                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
-                Weekly · Posted Mon
-              </span>
-            </div>
-          </div>
-          <div class="unanswered-timer ok">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            3d left
-          </div>
-          <button class="unanswered-answer-btn" onclick="event.stopPropagation(); showToast('Jumping to question...')">Answer</button>
-        </div>
-
-        <!-- Unanswered 5 — weekly question -->
-        <div class="unanswered-card">
-          <div class="unanswered-icon orange">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-          </div>
-          <div class="unanswered-info">
-            <div class="unanswered-question">Will CSK beat MI by 20+ runs this weekend?</div>
-            <div class="unanswered-meta">
-              <span class="unanswered-meta-item">
-                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-                IPL Prediction Kings
-              </span>
-              <span class="unanswered-meta-item">
-                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
-                Pre-match · Sun 14:30
-              </span>
-            </div>
-          </div>
-          <div class="unanswered-timer ok">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            2d 16h left
-          </div>
-          <button class="unanswered-answer-btn" onclick="event.stopPropagation(); showToast('Jumping to question...')">Answer</button>
-        </div>
-
-      </div>
     </div>
 
   </div>
@@ -464,26 +296,197 @@
 <script src="supabase-client.js"></script>
 <script src="spontix-store.js"></script>
 <script>
+  const CLOCK_SVG = `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+  const LEAGUE_SVG = `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>`;
+  const BOLT_SVG = `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`;
 
-  function hydrateActivity() {
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function timeLeft(closesAt) {
+    const ms = new Date(closesAt) - Date.now();
+    if (ms <= 0) return { label: 'Closing', cls: 'critical' };
+    const secs = Math.floor(ms / 1000);
+    const mins = Math.floor(secs / 60);
+    const hrs  = Math.floor(mins / 60);
+    const days = Math.floor(hrs / 24);
+    let label, cls;
+    if (secs < 300)       { label = `${Math.floor(secs/60)}:${String(secs%60).padStart(2,'0')} left`; cls = 'critical'; }
+    else if (mins < 60)   { label = `${mins}m left`; cls = 'warning'; }
+    else if (hrs < 24)    { label = `${hrs}h ${mins%60}m left`; cls = 'ok'; }
+    else                  { label = `${days}d ${hrs%24}h left`; cls = 'ok'; }
+    return { label, cls };
+  }
+
+  function isLiveQuestion(q) {
+    return q.question_type === 'CORE_MATCH_LIVE' || q.match_minute_at_generation != null;
+  }
+
+  function renderLiveNow(matches, teamNames) {
+    const el = document.getElementById('live-matches-container');
+    const count = matches.length;
+    document.getElementById('stat-live').textContent = count;
+    document.querySelector('#sec-live .section-count').textContent = count === 1 ? '1 match' : `${count} matches`;
+
+    if (!count) {
+      el.innerHTML = `<p style="color:var(--grey);font-size:0.85rem;padding:8px 0;">No live matches right now.</p>`;
+      return;
+    }
+
+    el.innerHTML = matches.map(m => {
+      const ids = Array.isArray(m.teamIds) ? m.teamIds.map(String) : [];
+      const home = teamNames[ids[0]] || ids[0] || '—';
+      const away = teamNames[ids[1]] || ids[1] || '—';
+      const matchLabel = (ids[0] && ids[1]) ? `${escHtml(home)} vs ${escHtml(away)}` : escHtml(m.leagueName);
+      const minuteLabel = m.minute != null ? `${m.minute}'` : 'LIVE';
+      const qCount = m.questions.length;
+      const href = `league.html?id=${encodeURIComponent(m.leagueId)}`;
+      return `
+        <a href="${href}" class="live-match">
+          <div class="live-match-time">
+            <div class="live-dot"></div>
+            <div class="live-minute">${escHtml(minuteLabel)}</div>
+          </div>
+          <div class="live-match-teams">
+            <div class="live-match-versus">${matchLabel}</div>
+            <div class="live-match-league">${LEAGUE_SVG}${escHtml(m.leagueName)}</div>
+          </div>
+          <div class="live-match-questions">
+            <div class="live-q-count">${qCount}</div>
+            <div class="live-q-label">Active ${qCount === 1 ? 'Q' : 'Qs'}</div>
+          </div>
+          <button class="live-match-cta" onclick="event.preventDefault(); window.location.href='${href}'">Play Now</button>
+        </a>`;
+    }).join('');
+  }
+
+  function renderUnanswered(questions, leagueMap, teamNames) {
+    const el = document.getElementById('unanswered-container');
+    const count = questions.length;
+    document.getElementById('stat-unanswered').textContent = count;
+    document.querySelector('#sec-unanswered .section-count').textContent = `${count} pending`;
+
+    if (!count) {
+      el.innerHTML = `<p style="color:var(--grey);font-size:0.85rem;padding:8px 0;">You're all caught up — no open questions.</p>`;
+      return;
+    }
+
+    el.innerHTML = questions.map(q => {
+      const closes = q.answer_closes_at || q.deadline;
+      const { label: timerLabel, cls: timerCls } = timeLeft(closes);
+      const live = isLiveQuestion(q);
+      const iconCls = live ? 'coral' : 'orange';
+      const iconSvg = live ? BOLT_SVG : `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+      const urgentCls = timerCls === 'critical' ? ' urgent' : '';
+      const leagueName = leagueMap[q.league_id] || 'League';
+      const matchMeta = q.match_minute_at_generation != null
+        ? `<span class="unanswered-meta-item">${BOLT_SVG}Live · ${q.match_minute_at_generation}'</span>`
+        : `<span class="unanswered-meta-item"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>Pre-match</span>`;
+      const href = `league.html?id=${encodeURIComponent(q.league_id)}`;
+      return `
+        <div class="unanswered-card${urgentCls}" onclick="window.location.href='${href}'">
+          <div class="unanswered-icon ${iconCls}">${iconSvg}</div>
+          <div class="unanswered-info">
+            <div class="unanswered-question">${escHtml(q.question_text)}</div>
+            <div class="unanswered-meta">
+              <span class="unanswered-meta-item">${LEAGUE_SVG}${escHtml(leagueName)}</span>
+              ${matchMeta}
+            </div>
+          </div>
+          <div class="unanswered-timer ${timerCls}">${CLOCK_SVG}${escHtml(timerLabel)}</div>
+          <button class="unanswered-answer-btn" onclick="event.stopPropagation(); window.location.href='${href}'">Answer</button>
+        </div>`;
+    }).join('');
+  }
+
+  async function loadActivityData() {
+    const sb = window.supabase;
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return;
+    const uid = user.id;
+    const now = new Date().toISOString();
+    const todayStart = new Date(); todayStart.setHours(0,0,0,0);
+
+    const { data: memberships } = await sb
+      .from('league_members')
+      .select('league_id, leagues(id, name)')
+      .eq('user_id', uid);
+
+    const leagueIds = (memberships || []).map(m => m.league_id);
+    const leagueMap = {};
+    (memberships || []).forEach(m => { leagueMap[m.league_id] = m.leagues?.name || 'League'; });
+
+    let openQuestions = [];
+    if (leagueIds.length) {
+      const { data: qs } = await sb
+        .from('questions')
+        .select('id, league_id, question_text, team_ids, match_id, answer_closes_at, deadline, match_minute_at_generation, question_type')
+        .in('league_id', leagueIds)
+        .not('resolution_status', 'in', '("resolved","voided")')
+        .or(`answer_closes_at.gt.${now},and(answer_closes_at.is.null,deadline.gt.${now})`);
+      openQuestions = qs || [];
+    }
+
+    const openIds = openQuestions.map(q => q.id);
+    let myAnsweredIds = new Set();
+    if (openIds.length) {
+      const { data: answers } = await sb
+        .from('player_answers')
+        .select('question_id')
+        .eq('user_id', uid)
+        .in('question_id', openIds);
+      (answers || []).forEach(a => myAnsweredIds.add(a.question_id));
+    }
+
+    const { count: answeredToday } = await sb
+      .from('player_answers')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', uid)
+      .gte('created_at', todayStart.toISOString());
+    document.getElementById('stat-today').textContent = answeredToday ?? 0;
+
+    const unanswered = openQuestions.filter(q => !myAnsweredIds.has(q.id));
+
+    // Group by match for Live Now
+    const matchMap = {};
+    openQuestions.forEach(q => {
+      const key = q.match_id || `league_${q.league_id}`;
+      if (!matchMap[key]) matchMap[key] = {
+        matchId: q.match_id, leagueId: q.league_id,
+        leagueName: leagueMap[q.league_id] || 'League',
+        teamIds: q.team_ids, minute: q.match_minute_at_generation, questions: []
+      };
+      matchMap[key].questions.push(q);
+    });
+    const liveMatches = Object.values(matchMap);
+
+    // Fetch team names
+    const allTeamIds = [...new Set(
+      liveMatches.flatMap(m => Array.isArray(m.teamIds) ? m.teamIds.map(Number).filter(Boolean) : [])
+    )];
+    let teamNames = {};
+    if (allTeamIds.length) {
+      const { data: teams } = await sb
+        .from('sports_teams')
+        .select('api_team_id, name')
+        .in('api_team_id', allTeamIds);
+      (teams || []).forEach(t => { teamNames[String(t.api_team_id)] = t.name; });
+    }
+
+    renderLiveNow(liveMatches, teamNames);
+    renderUnanswered(unanswered, leagueMap, teamNames);
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    // Hydrate sidebar from sync store
     const player = SpontixStore.getPlayer();
-    const gameHistory = SpontixStore.getGameHistory();
-
-    // Update sidebar profile
     document.querySelector('.sidebar-avatar').textContent = player.avatar;
     document.querySelector('.sidebar-avatar').style.backgroundColor = player.avatarColor;
     document.querySelector('.sidebar-profile-name').textContent = player.name;
     document.querySelector('.sidebar-profile-tier').textContent = SpontixStore.getTierLabel(player.tier);
 
-    // Update summary cards
-    document.querySelectorAll('.summary-card-value')[0].textContent = player.gamesPlayed;
-    const totalAnswered = player.totalCorrect + player.totalWrong;
-    document.querySelectorAll('.summary-card-value')[2].textContent = totalAnswered;
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
-    hydrateActivity();
-    window.addEventListener('spontix-game-history-refreshed', hydrateActivity);
+    loadActivityData().catch(err => console.warn('[activity]', err));
   });
 </script>
 
