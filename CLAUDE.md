@@ -2530,3 +2530,48 @@ The 3 Rayo vs Espanyol questions (`answer_closes_at = 18:00 UTC 2026-04-23`, `re
 **Beta password:** `spontyx15`
 **Beta flag key:** `spontix_beta_access`
 **Beta flag value:** `granted`
+
+---
+
+### 2026-04-23 — Beta gate hardened: session-scoped flag + back button fix + GitHub/Vercel setup
+
+**Goal**: fix two UX issues with the beta gate — the flag was permanent (localStorage) so once entered it never asked again, and clicking back from login.html bounced back to login in an infinite loop.
+
+**Beta flag moved from `localStorage` → `sessionStorage`:**
+- Flag now clears when the browser session ends (tab/window closed)
+- Entering the password but not logging in → next visit requires password again
+- Logged-in users bypass the password entirely (Supabase session checked first)
+- Logging out clears the flag immediately (no leftover access)
+
+**`waitlist.html` changes:**
+- On load: async check — if Supabase session exists → redirect to correct dashboard (venue-owner → `venue-dashboard.html`, else `dashboard.html`). No other auto-redirect.
+- If beta flag is set but not logged in: stay on page, change button label to "→ Go to Login" (no password re-entry needed within same session)
+- "Enter Beta Version" button: if flag already set → go straight to `login.html`; if not → open password modal
+- `submitBetaPassword()`: stores flag in `sessionStorage` (was `localStorage`)
+
+**`login.html` changes:**
+- Beta guard IIFE changed from `localStorage` → `sessionStorage` check
+- Sends to `waitlist.html` (not `index.html`) if flag missing
+
+**`spontix-store.js` — `logout()` changes:**
+- Added `sessionStorage.removeItem('spontix_beta_access')` — clears beta flag on logout
+- Redirect target changed from `login.html` → `waitlist.html` (skips the redirect chain)
+
+**Full access flow after these changes:**
+
+| Scenario | Result |
+|---|---|
+| New visit, not logged in | Waitlist page — must enter password |
+| Enter password, don't log in, close browser | Next visit → waitlist page again |
+| Enter password, navigate back from login | Waitlist page stays; button says "→ Go to Login" |
+| Logged in, refresh any page | Goes to correct dashboard |
+| Log out | Flag cleared → redirected to waitlist |
+
+**GitHub + Vercel setup (completed this session):**
+- GitHub repo created: `https://github.com/combatdefenderweprotect-oss/Spontyx` (private)
+- Local repo initialized, all files committed and pushed
+- GitHub CLI (`gh`) installed via Homebrew and authenticated
+- Vercel project connected to GitHub repo — auto-deploys on every `git push`
+- Standard deploy command going forward: `git add -A && git commit -m "message" && git push`
+
+**Note for future sessions:** if a user reports being stuck in a login redirect loop, ask them to clear `spontix_beta_access` from localStorage in browser DevTools (Application → Local Storage). This is a stale entry from the old `localStorage`-based implementation.
