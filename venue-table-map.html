@@ -1,0 +1,2648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Table Map</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>    /* ── Custom Scrollbars ── */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--navy-light); border-radius: 4px; }
+    ::-webkit-scrollbar-thumb {
+      background: linear-gradient(180deg, var(--purple), #5A3ED4);
+      border-radius: 4px; border: 1px solid var(--navy-light);
+    }
+    ::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #8E72FF, var(--purple)); }
+    ::-webkit-scrollbar-corner { background: var(--navy-light); }
+    /* Firefox */
+    * { scrollbar-width: thin; scrollbar-color: var(--purple) var(--navy-light); }
+
+        
+    /* ── Main ── */
+    .main { margin-left: 260px; flex: 1; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+    .topbar {
+      padding: 16px 32px; display: flex; align-items: center; gap: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .topbar-btn {
+      width: 40px; height: 40px; border-radius: 50%; border: none;
+      background: var(--navy-light); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; position: relative; transition: background 0.2s; text-decoration: none;
+    }
+    .topbar-btn:hover { background: var(--navy-hover); }
+    .topbar-btn svg { width: 18px; height: 18px; stroke: var(--grey); fill: none; stroke-width: 1.8; }
+    .topbar-btn .notif-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; background: var(--coral); border-radius: 50%; border: 2px solid var(--navy); }
+    .content { padding: 24px 32px; flex: 1; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+
+    /* ── Page Header ── */
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; flex-wrap: wrap; gap: 12px; flex-shrink: 0; }
+    .page-header-left h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .page-header-left h1 span { color: var(--purple); }
+    .page-header-left p { color: var(--grey); font-size: 0.85rem; }
+    .page-header-actions { display: flex; gap: 10px; }
+    .btn {
+      padding: 10px 20px; border-radius: var(--radius-pill); border: none;
+      font-size: 0.8rem; font-weight: 700; font-family: inherit; cursor: pointer;
+      display: flex; align-items: center; gap: 6px; transition: all 0.2s;
+    }
+    .btn svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .btn-primary { background: var(--purple); color: #fff; }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-secondary { background: var(--navy-card); color: var(--off-white); border: 1px solid rgba(255,255,255,0.08); }
+    .btn-secondary:hover { border-color: rgba(255,255,255,0.2); }
+    .btn-ghost { background: transparent; color: var(--grey); border: 1px solid rgba(255,255,255,0.08); padding: 8px 14px; font-size: 0.72rem; }
+    .btn-ghost:hover { color: var(--off-white); border-color: rgba(255,255,255,0.15); }
+
+    /* ── Summary Strip ── */
+    .summary-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 16px; flex-shrink: 0; }
+    .summary-card {
+      background: var(--navy-card); border-radius: var(--radius-md); padding: 16px 18px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .summary-label { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--grey); margin-bottom: 6px; }
+    .summary-value { font-size: 1.4rem; font-weight: 900; letter-spacing: -0.5px; }
+    .summary-sub { font-size: 0.65rem; color: var(--grey); margin-top: 2px; }
+
+    /* ── Floor Layout ── */
+    .floor-container {
+      display: flex; gap: 20px; flex: 1; min-height: 0; overflow: hidden;
+    }
+    .floor-canvas {
+      flex: 1; min-width: 0; min-height: 0; background: var(--navy-card); border-radius: var(--radius-lg);
+      border: 1px solid rgba(255,255,255,0.06); display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Mode tabs */
+    .mode-tabs {
+      display: flex; gap: 0; padding: 0; border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(0,0,0,0.15);
+    }
+    .mode-tab {
+      flex: 1; padding: 12px 18px; background: transparent; border: none;
+      color: var(--grey); font-size: 0.78rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s; border-bottom: 2px solid transparent;
+    }
+    .mode-tab:hover { color: var(--off-white); }
+    .mode-tab.active { color: var(--purple); border-bottom-color: var(--purple); }
+
+    /* Toolbar */
+    .floor-toolbar {
+      display: flex; align-items: center; gap: 8px; padding: 12px 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.06); background: rgba(0,0,0,0.15);
+      flex-wrap: wrap;
+    }
+    .floor-toolbar-label { font-size: 0.7rem; font-weight: 700; color: var(--grey); margin-right: auto; text-transform: uppercase; letter-spacing: 0.5px; }
+    .floor-toolbar-row { display: flex; align-items: center; gap: 8px; width: 100%; }
+    .floor-toolbar-row.secondary { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.06); }
+    .tool-btn {
+      width: 34px; height: 34px; border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.06);
+      background: var(--navy-card); cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s; position: relative;
+    }
+    .tool-btn:hover { border-color: rgba(255,255,255,0.15); background: var(--navy-hover); }
+    .tool-btn.active { border-color: var(--purple); background: rgba(124,92,252,0.1); }
+    .tool-btn svg { width: 16px; height: 16px; stroke: var(--grey); stroke-width: 1.8; fill: none; }
+    .tool-btn.active svg { stroke: var(--purple); }
+    .tool-btn .tip {
+      position: absolute; bottom: -28px; left: 50%; transform: translateX(-50%);
+      background: var(--navy); color: var(--off-white); font-size: 0.58rem; font-weight: 700;
+      padding: 3px 8px; border-radius: 4px; white-space: nowrap; opacity: 0; pointer-events: none;
+      transition: opacity 0.15s;
+    }
+    .tool-btn:hover .tip { opacity: 1; }
+    .tool-divider { width: 1px; height: 20px; background: rgba(255,255,255,0.06); margin: 0 4px; }
+
+    .floor-grid {
+      flex: 1; min-height: 0; position: relative; overflow: auto;
+      background: rgba(0,0,0,0.1);
+    }
+    .floor-grid-inner {
+      position: relative;
+      background-image:
+        radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+
+    /* Canvas size selector */
+    .canvas-size-select {
+      display: flex; align-items: center; gap: 6px;
+      margin-left: 8px; padding-left: 8px;
+      border-left: 1px solid rgba(255,255,255,0.06);
+    }
+    .canvas-size-select label {
+      font-size: 0.6rem; font-weight: 700; color: var(--grey); text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .canvas-size-select select {
+      background: var(--navy); border: 1px solid rgba(255,255,255,0.1); color: var(--off-white);
+      font-size: 0.65rem; font-weight: 600; border-radius: var(--radius-sm); padding: 4px 8px;
+      cursor: pointer; font-family: inherit;
+    }
+    .canvas-size-select select:focus { outline: none; border-color: var(--purple); }
+    .canvas-size-custom {
+      display: flex; align-items: center; gap: 4px;
+    }
+    .canvas-size-custom input {
+      background: var(--navy); border: 1px solid rgba(255,255,255,0.1); color: var(--off-white);
+      font-size: 0.65rem; font-weight: 600; border-radius: var(--radius-sm); padding: 4px 6px;
+      width: 60px; font-family: inherit; text-align: center;
+    }
+    .canvas-size-custom input:focus { outline: none; border-color: var(--purple); }
+    .canvas-size-custom span { font-size: 0.6rem; color: var(--grey); font-weight: 700; }
+    .canvas-size-badge {
+      position: sticky; bottom: 8px; right: 8px; float: right;
+      background: rgba(26,26,46,0.85); border: 1px solid rgba(255,255,255,0.08);
+      color: var(--grey); font-size: 0.58rem; font-weight: 700; padding: 3px 10px;
+      border-radius: var(--radius-pill); pointer-events: none; z-index: 10;
+      backdrop-filter: blur(8px); margin-right: 8px;
+    }
+
+    /* ── Zones ── */
+    .zone {
+      position: absolute; user-select: none;
+      border: 2px dashed rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.02);
+      border-radius: var(--radius-md);
+      cursor: move; transition: filter 0.2s, box-shadow 0.2s;
+    }
+    .zone:hover { filter: brightness(1.15); }
+    .zone.selected {
+      filter: brightness(1.25);
+      box-shadow: 0 0 0 2px var(--purple), var(--shadow);
+    }
+    .zone-label {
+      position: absolute; top: 8px; left: 8px;
+      padding: 3px 10px; border-radius: var(--radius-pill);
+      font-size: 0.58rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 0.5px;
+      pointer-events: none; z-index: 2;
+    }
+    .zone-resize-handle {
+      position: absolute; bottom: 0; right: 0;
+      width: 20px; height: 20px; cursor: nwse-resize; opacity: 0;
+      transition: opacity 0.15s; z-index: 3;
+    }
+    .zone-resize-handle::before {
+      content: ''; position: absolute; bottom: 4px; right: 4px;
+      width: 10px; height: 10px; border-right: 2px solid var(--purple);
+      border-bottom: 2px solid var(--purple); border-radius: 0 0 2px 0;
+    }
+    .zone:hover .zone-resize-handle { opacity: 0.6; }
+    .zone.selected .zone-resize-handle { opacity: 1; }
+
+    /* ── Structures ── */
+    .structure {
+      position: absolute; user-select: none;
+      color: var(--off-white); font-weight: 700; font-size: 0.68rem;
+      display: flex; align-items: center; justify-content: center;
+      letter-spacing: 0.5px;
+    }
+    .structure.bar-counter {
+      background: linear-gradient(135deg, #7C5CFC 0%, #5A3ED4 50%, #4A2EB4 100%);
+      border-radius: 10px; border: 2px solid var(--lime);
+      box-shadow: 0 0 20px rgba(124,92,252,0.35), 0 0 40px rgba(124,92,252,0.1), inset 0 1px 0 rgba(255,255,255,0.1);
+      position: relative; overflow: visible;
+      font-weight: 900; letter-spacing: 2px; font-size: 0.75rem;
+      color: #fff; text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+      min-height: 36px;
+    }
+    .structure.bar-counter::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 50%;
+      background: linear-gradient(180deg, rgba(168,225,12,0.15) 0%, transparent 100%);
+      border-radius: 8px 8px 0 0; pointer-events: none;
+    }
+    .structure.bar-counter::after {
+      content: '🍸'; position: absolute; top: -10px; right: -6px;
+      font-size: 14px; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
+    }
+    .structure.wall {
+      background: rgba(152,152,176,0.35); border: 1px solid rgba(152,152,176,0.4);
+      border-radius: 2px; box-shadow: 0 0 6px rgba(0,0,0,0.2);
+    }
+    .structure.stage {
+      background: linear-gradient(135deg, #8A6AC4 0%, #6A4AB4 50%, #5A3AA4 100%);
+      border-radius: 100px 100px 10px 10px;
+      border: 2px solid rgba(168,225,12,0.4);
+      box-shadow: 0 0 20px rgba(124,92,252,0.25);
+      color: #fff; font-weight: 900; letter-spacing: 2px;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+    }
+    .structure.stage::after {
+      content: '🎤'; position: absolute; top: -10px; right: -6px;
+      font-size: 13px; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
+    }
+    .structure.entrance {
+      font-size: 18px; background: rgba(168,225,12,0.1);
+      border: 2px dashed rgba(168,225,12,0.4); border-radius: 6px;
+      box-shadow: 0 0 10px rgba(168,225,12,0.1);
+    }
+    .floor-grid-inner.placing { cursor: crosshair; }
+    .struct-resize-handle {
+      position: absolute; bottom: 0; right: 0;
+      width: 16px; height: 16px; cursor: nwse-resize; opacity: 0;
+      transition: opacity 0.15s; z-index: 3;
+    }
+    .struct-resize-handle::before {
+      content: ''; position: absolute; bottom: 3px; right: 3px;
+      width: 8px; height: 8px; border-right: 2px solid var(--lime);
+      border-bottom: 2px solid var(--lime); border-radius: 0 0 2px 0;
+    }
+    .structure:hover .struct-resize-handle { opacity: 0.6; }
+
+    /* ── Table Items on Floor ── */
+    .table-item {
+      position: absolute; cursor: grab; user-select: none;
+      transition: box-shadow 0.2s; z-index: 5;
+    }
+    .table-item:active { cursor: grabbing; }
+    .table-item:hover { z-index: 10; }
+    .table-item:hover .table-shape { box-shadow: 0 0 0 2px var(--purple), var(--shadow); }
+    .table-shape {
+      display: flex; align-items: center; justify-content: center; flex-direction: column;
+      background: var(--navy-light); border: 2px solid rgba(255,255,255,0.08);
+      transition: all 0.2s; position: relative;
+    }
+    .table-shape.round { width: 80px; height: 80px; border-radius: 50%; }
+    .table-shape.rect { width: 110px; height: 65px; border-radius: var(--radius-md); }
+    .table-shape.long { width: 150px; height: 55px; border-radius: var(--radius-md); }
+    .table-shape.square { width: 72px; height: 72px; border-radius: var(--radius-md); }
+
+    /* Status colors */
+    .table-item.active .table-shape { border-color: var(--lime); background: rgba(168,225,12,0.06); }
+    .table-item.idle .table-shape { border-color: rgba(255,255,255,0.08); }
+    .table-item.reserved .table-shape { border-color: var(--purple); background: rgba(124,92,252,0.06); }
+    .table-item.empty .table-shape { border-color: rgba(255,255,255,0.04); background: rgba(0,0,0,0.1); }
+
+    .table-number { font-size: 0.82rem; font-weight: 900; color: var(--off-white); }
+    .table-team { font-size: 0.55rem; font-weight: 700; color: var(--grey); margin-top: 2px; max-width: 90%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: center; }
+    .table-status-dot {
+      position: absolute; top: -3px; right: -3px; width: 12px; height: 12px;
+      border-radius: 50%; border: 2px solid var(--navy-card);
+    }
+    .table-status-dot.live { background: var(--lime); animation: pulse-dot 2s infinite; }
+    .table-status-dot.reserved { background: var(--purple); }
+    .table-status-dot.empty { background: var(--grey-dark); }
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
+    }
+    .table-seats {
+      position: absolute; bottom: -8px; left: 50%; transform: translateX(-50%);
+      background: var(--navy); padding: 1px 7px; border-radius: var(--radius-pill);
+      font-size: 0.5rem; font-weight: 800; color: var(--grey); border: 1px solid rgba(255,255,255,0.06);
+      white-space: nowrap;
+    }
+
+    /* ── Side Panel ── */
+    .side-panel {
+      width: 280px; flex-shrink: 0;
+      display: flex; flex-direction: column; gap: 14px;
+      overflow-y: auto; min-height: 0;
+    }
+    .panel-card {
+      background: var(--navy-card); border-radius: var(--radius-lg); padding: 20px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .panel-title {
+      font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+      color: var(--grey); margin-bottom: 14px; display: flex; align-items: center; gap: 6px;
+    }
+    .panel-title svg { width: 14px; height: 14px; stroke: var(--purple); stroke-width: 2; fill: none; }
+    .selected-panel-card {
+      border-color: rgba(124,92,252,0.25);
+      background: linear-gradient(135deg, var(--navy-card), rgba(124,92,252,0.06));
+      position: sticky; top: 0; z-index: 2;
+    }
+
+    /* Zones list */
+    .zones-list { display: flex; flex-direction: column; gap: 8px; }
+    .zone-list-item {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      border-radius: var(--radius-sm); background: rgba(0,0,0,0.15);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .zone-list-item:hover { background: rgba(255,255,255,0.04); }
+    .zone-list-item.selected { background: rgba(124,92,252,0.08); border: 1px solid rgba(124,92,252,0.2); }
+    .zone-color-dot {
+      width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+    }
+    .zone-list-info { flex: 1; min-width: 0; }
+    .zone-list-name { font-size: 0.78rem; font-weight: 700; }
+    .zone-list-meta { font-size: 0.62rem; color: var(--grey); margin-top: 1px; }
+    .zone-list-actions { display: flex; gap: 4px; }
+    .zone-list-btn {
+      width: 24px; height: 24px; border-radius: var(--radius-sm); border: none;
+      background: rgba(255,255,255,0.06); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; font-size: 0.62rem;
+      transition: all 0.15s; color: var(--grey);
+    }
+    .zone-list-btn:hover { background: rgba(255,255,255,0.12); color: var(--off-white); }
+
+    /* Elements palette */
+    .elements-palette { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .element-card {
+      padding: 12px; border-radius: var(--radius-sm); background: rgba(0,0,0,0.15);
+      border: 1px solid rgba(255,255,255,0.06); cursor: pointer;
+      text-align: center; transition: all 0.15s; display: flex; flex-direction: column; align-items: center;
+    }
+    .element-card:hover { background: rgba(255,255,255,0.04); border-color: var(--purple); }
+    .element-icon {
+      font-size: 18px; margin-bottom: 6px;
+    }
+    .element-label { font-size: 0.62rem; font-weight: 700; color: var(--off-white); }
+
+    /* Detail panel */
+    .detail-row { display: flex; align-items: center; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .detail-row:last-child { border-bottom: none; }
+    .detail-label { font-size: 0.72rem; color: var(--grey); }
+    .detail-value { font-size: 0.78rem; font-weight: 700; }
+    .detail-actions { display: flex; gap: 6px; margin-top: 14px; }
+
+    /* ── Legend ── */
+    .floor-legend {
+      display: flex; align-items: center; gap: 18px; padding: 14px 18px;
+      border-top: 1px solid rgba(255,255,255,0.06); background: rgba(0,0,0,0.1);
+    }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.65rem; color: var(--grey); font-weight: 600; }
+    .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .legend-dot.live { background: var(--lime); }
+    .legend-dot.reserved { background: var(--purple); }
+    .legend-dot.idle { background: var(--grey); }
+    .legend-dot.empty { background: var(--grey-dark); }
+
+    /* ── Fullscreen Overlay ── */
+    .fs-overlay {
+      position: fixed; inset: 0; z-index: 9999;
+      background: var(--navy); display: none; flex-direction: column;
+    }
+    .fs-overlay.open { display: flex; }
+    .fs-topbar {
+      display: flex; align-items: center; gap: 16px; padding: 12px 24px;
+      background: var(--navy-light); border-bottom: 1px solid rgba(255,255,255,0.06);
+      flex-shrink: 0;
+    }
+    .fs-topbar-title { font-size: 1rem; font-weight: 800; color: var(--off-white); flex: 1; }
+    .fs-topbar-title span { color: var(--purple); }
+    .fs-topbar-info {
+      display: flex; align-items: center; gap: 20px;
+    }
+    .fs-info-pill {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.65rem; font-weight: 700; color: var(--grey);
+      background: var(--navy-card); padding: 5px 12px; border-radius: var(--radius-pill);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .fs-info-dot { width: 6px; height: 6px; border-radius: 50%; }
+    .fs-close-btn {
+      width: 38px; height: 38px; border-radius: var(--radius-sm);
+      border: 1px solid rgba(255,255,255,0.1); background: var(--navy-card);
+      color: var(--off-white); font-size: 1.1rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.15s;
+    }
+    .fs-close-btn:hover { background: var(--coral); border-color: var(--coral); }
+    .fs-canvas {
+      flex: 1; min-height: 0; overflow: auto; position: relative;
+      background-image: radial-gradient(circle, rgba(255,255,255,0.03) 1px, transparent 1px);
+      background-size: 28px 28px;
+    }
+    .fs-canvas-inner {
+      position: relative; transform-origin: top left;
+    }
+    .fs-legend {
+      display: flex; align-items: center; gap: 18px; padding: 10px 24px;
+      border-top: 1px solid rgba(255,255,255,0.06); background: var(--navy-light);
+      flex-shrink: 0;
+    }
+    .fs-legend .legend-item { font-size: 0.65rem; }
+    .fs-zoom-controls {
+      margin-left: auto; display: flex; align-items: center; gap: 8px;
+    }
+    .fs-zoom-btn {
+      width: 30px; height: 30px; border-radius: var(--radius-sm);
+      border: 1px solid rgba(255,255,255,0.08); background: var(--navy-card);
+      color: var(--grey); font-size: 0.85rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+    }
+    .fs-zoom-btn:hover { border-color: var(--purple); color: var(--purple); }
+    .fs-zoom-level {
+      font-size: 0.65rem; font-weight: 700; color: var(--purple);
+      min-width: 40px; text-align: center;
+    }
+    .mode-tab-spacer { flex: 1; }
+    .save-indicator {
+      display: flex; align-items: center; gap: 5px; padding: 0 10px;
+    }
+    .save-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--lime);
+      transition: background 0.3s;
+    }
+    .save-text {
+      font-size: 0.6rem; font-weight: 700; color: var(--grey);
+    }
+    .mode-action-btn {
+      padding: 6px 12px; border-radius: var(--radius-sm);
+      border: 1px solid rgba(255,255,255,0.06); background: transparent;
+      color: var(--grey); font-size: 0.65rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; gap: 5px; transition: all 0.15s;
+      font-family: inherit; white-space: nowrap;
+    }
+    .mode-action-btn svg { width: 13px; height: 13px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .mode-action-btn.save-btn:hover { color: var(--lime); border-color: rgba(168,225,12,0.3); background: rgba(168,225,12,0.06); }
+    .mode-action-btn.reset-btn:hover { color: var(--coral); border-color: rgba(255,107,107,0.3); background: rgba(255,107,107,0.06); }
+    .expand-btn { padding: 6px 14px; border-radius: var(--radius-sm);
+      border: 1px solid rgba(124,92,252,0.3); background: rgba(124,92,252,0.08);
+      color: var(--purple); font-size: 0.68rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; gap: 6px; transition: all 0.15s;
+      font-family: inherit;
+    }
+    .expand-btn:hover { background: rgba(124,92,252,0.15); border-color: var(--purple); }
+    .expand-btn svg { width: 14px; height: 14px; stroke: var(--purple); stroke-width: 2; fill: none; }
+
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200;
+      display: none; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--navy-card); border-radius: var(--radius-xl); padding: 28px;
+      width: 380px; max-width: 90vw; border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: var(--shadow-lg);
+    }
+    .modal h3 { font-size: 1.1rem; font-weight: 800; margin-bottom: 4px; }
+    .modal p { font-size: 0.78rem; color: var(--grey); margin-bottom: 20px; }
+    .modal-field { margin-bottom: 14px; }
+    .modal-field label { display: block; font-size: 0.68rem; font-weight: 700; color: var(--grey); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .modal-field input, .modal-field select {
+      width: 100%; padding: 10px 14px; border-radius: var(--radius-sm);
+      border: 1px solid rgba(255,255,255,0.08); background: var(--navy-light);
+      color: var(--off-white); font-size: 0.82rem; font-family: inherit; font-weight: 600;
+      outline: none; transition: border-color 0.15s;
+    }
+    .modal-field input:focus, .modal-field select:focus { border-color: var(--purple); }
+
+    /* Color swatches */
+    .color-swatches { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 14px; }
+    .color-swatch {
+      width: 100%; aspect-ratio: 1; border-radius: var(--radius-sm); border: 2px solid transparent;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .color-swatch:hover { transform: scale(1.05); }
+    .color-swatch.selected { border-color: var(--off-white); box-shadow: 0 0 0 2px var(--purple); }
+    .color-swatch.teal { background: var(--teal); }
+    .color-swatch.purple { background: var(--purple); }
+    .color-swatch.lime { background: var(--lime); }
+    .color-swatch.gold { background: var(--gold); }
+    .color-swatch.coral { background: var(--coral); }
+    .color-swatch.grey { background: var(--grey); }
+
+    /* Sliders */
+    .slider-container { margin-bottom: 14px; }
+    .slider-label { display: flex; justify-content: space-between; font-size: 0.68rem; margin-bottom: 6px; }
+    .slider-label-text { font-weight: 700; color: var(--grey); }
+    .slider-value { font-weight: 700; color: var(--purple); }
+    input[type="range"] {
+      width: 100%; height: 4px; border-radius: 2px;
+      background: rgba(255,255,255,0.06); outline: none; -webkit-appearance: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--purple); cursor: pointer; transition: all 0.2s;
+    }
+    input[type="range"]::-webkit-slider-thumb:hover { box-shadow: 0 0 0 6px rgba(124,92,252,0.2); }
+    input[type="range"]::-moz-range-thumb {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--purple); cursor: pointer; border: none;
+    }
+
+    .modal-actions { display: flex; gap: 8px; margin-top: 20px; }
+    .modal-actions .btn { flex: 1; justify-content: center; }
+
+    /* Rotation handle on tables */
+    .table-rotate-handle {
+      position: absolute; top: -22px; left: 50%; transform: translateX(-50%);
+      width: 18px; height: 18px; border-radius: 50%;
+      background: var(--purple); border: 2px solid var(--navy-card);
+      cursor: grab; z-index: 15; opacity: 0; transition: opacity 0.15s;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+    }
+    .table-rotate-handle svg { width: 10px; height: 10px; pointer-events: none; }
+    .table-item:hover .table-rotate-handle,
+    .table-rotate-handle.active { opacity: 1; }
+    .table-rotate-handle:hover { background: #9a7dff; transform: translateX(-50%) scale(1.15); }
+    .table-rotate-line {
+      position: absolute; top: -12px; left: 50%;
+      width: 1px; height: 12px; background: rgba(124,92,252,0.4);
+      opacity: 0; transition: opacity 0.15s; pointer-events: none;
+    }
+    .table-item:hover .table-rotate-line { opacity: 1; }
+
+    /* Custom Table Designer */
+    .td-shape-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+    }
+    .td-shape-option {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 8px 4px; border-radius: var(--radius-sm); cursor: pointer;
+      border: 2px solid rgba(255,255,255,0.06); background: rgba(0,0,0,0.15);
+      transition: all 0.15s;
+    }
+    .td-shape-option:hover { border-color: rgba(124,92,252,0.3); background: rgba(124,92,252,0.06); }
+    .td-shape-option.selected { border-color: var(--purple); background: rgba(124,92,252,0.1); }
+    .td-shape-option span { font-size: 0.6rem; font-weight: 700; color: var(--grey); text-transform: uppercase; letter-spacing: 0.3px; }
+    .td-shape-option.selected span { color: var(--purple); }
+    .td-shape-icon {
+      border: 2px solid rgba(255,255,255,0.25); background: rgba(255,255,255,0.04);
+    }
+    .td-shape-option.selected .td-shape-icon {
+      border-color: var(--purple); background: rgba(124,92,252,0.15);
+    }
+    .td-color-row {
+      display: flex; gap: 6px; flex-wrap: wrap;
+    }
+    .td-color-chip {
+      width: 28px; height: 28px; border-radius: 6px; cursor: pointer;
+      border: 2px solid transparent; transition: all 0.15s;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .td-color-chip:hover { transform: scale(1.1); }
+    .td-color-chip.selected { border-color: var(--off-white); box-shadow: 0 0 0 2px var(--purple); }
+    .td-preview-box {
+      width: 160px; height: 160px; border-radius: var(--radius-md);
+      background: var(--navy-light); border: 1px solid rgba(255,255,255,0.06);
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+
+    @media (max-width: 1100px) {
+      .main { height: auto; min-height: 100vh; overflow: auto; }
+      .content { overflow: visible; }
+      .floor-container { flex-direction: column; overflow: visible; }
+      .floor-canvas { min-height: 500px; max-height: 70vh; }
+      .side-panel { width: 100%; overflow-y: visible; }
+    }
+    @media (max-width: 600px) {
+      .content { padding: 16px; }
+      .page-header { flex-direction: column; align-items: flex-start; }
+      .page-header-actions { width: 100%; flex-direction: column; }
+      .page-header-actions .btn { width: 100%; }
+      .summary-strip { grid-template-columns: 1fr; }
+      .floor-container { flex-direction: column; }
+      .side-panel { width: 100%; }
+      .elements-palette { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── SIDEBAR ── -->
+  <div id="sidebar-placeholder"></div>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+    <header class="topbar">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-right">
+        <a href="notifications.html" class="topbar-btn" title="Notifications" style="text-decoration:none;">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="notif-dot"></span>
+        </a>
+        <button class="topbar-btn" title="Messages">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- Header -->
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Table <span>Map</span></h1>
+          <p>Design your venue layout with zones, tables, and structures.</p>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-primary" onclick="saveLayout(); showToast('Layout saved!')">
+            <svg viewBox="0 0 24 24" style="width:16px;height:16px;stroke:currentColor;stroke-width:2;fill:none;vertical-align:middle;margin-right:6px;margin-top:-2px;" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+            Save Layout
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary Strip -->
+      <div class="summary-strip">
+        <div class="summary-card">
+          <div class="summary-label">Total Tables</div>
+          <div class="summary-value" style="color: var(--purple);">12</div>
+          <div class="summary-sub">across all zones</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Total Zones</div>
+          <div class="summary-value" style="color: var(--lime);">4</div>
+          <div class="summary-sub">main floor, bar, patio, vip</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Structures</div>
+          <div class="summary-value" style="color: var(--teal);">3</div>
+          <div class="summary-sub">bar, wall, stage, entrance</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Canvas Size</div>
+          <div class="summary-value" style="color: var(--purple);">800x580</div>
+          <div class="summary-sub">pixels</div>
+        </div>
+      </div>
+
+      <!-- Floor + Side Panel -->
+      <div class="floor-container">
+
+        <!-- Floor Canvas -->
+        <div class="floor-canvas">
+          <!-- Mode Tabs -->
+          <div class="mode-tabs">
+            <button class="mode-tab active" onclick="setMode(this, 'edit')">Edit Layout</button>
+            <button class="mode-tab" onclick="setMode(this, 'live')">Live View</button>
+            <div class="mode-tab-spacer"></div>
+            <div class="save-indicator" id="saveIndicator">
+              <span class="save-dot" id="saveDot"></span>
+              <span class="save-text" id="saveText">Saved</span>
+            </div>
+            <button class="mode-action-btn save-btn" onclick="saveLayout(); showToast('Layout saved!')" title="Save layout (Ctrl+S)">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Save
+            </button>
+            <button class="mode-action-btn reset-btn" onclick="resetToDefault()" title="Reset to default layout">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/></svg>
+              Reset
+            </button>
+            <button class="expand-btn" onclick="openFullscreen()" title="Full View">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></svg>
+              Expand
+            </button>
+          </div>
+
+          <!-- Toolbar Row 1 -->
+          <div class="floor-toolbar">
+            <div class="floor-toolbar-row">
+              <span class="floor-toolbar-label">Tools</span>
+              <button class="tool-btn active" onclick="setTool(this, 'select')" title="Select">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3l7.07 16.97 2.51-7.39 7.39-2.51L3 3z"/></svg>
+                <span class="tip">Select</span>
+              </button>
+              <button class="tool-btn" onclick="setTool(this, 'zone')" title="Add Zone">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+                <span class="tip">Zone</span>
+              </button>
+              <button class="tool-btn" onclick="setTool(this, 'table')" title="Add Table">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/></svg>
+                <span class="tip">Table</span>
+              </button>
+              <button class="tool-btn" onclick="setTool(this, 'structure')" title="Add Structure">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="14" rx="2"/></svg>
+                <span class="tip">Structure</span>
+              </button>
+              <div class="tool-divider"></div>
+              <button class="tool-btn active" id="gridSnapBtn" onclick="toggleGridSnap(this)" title="Grid Snap">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="9" y1="3" x2="9" y2="21"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                <span class="tip">Grid</span>
+              </button>
+              <button class="tool-btn" onclick="zoomIn()" title="Zoom In">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                <span class="tip">Zoom +</span>
+              </button>
+              <button class="tool-btn" onclick="zoomOut()" title="Zoom Out">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+                <span class="tip">Zoom −</span>
+              </button>
+              <button class="tool-btn" onclick="undo()" title="Undo">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 00-9-9 9 9 0 00-6 2.3L3 13"/></svg>
+                <span class="tip">Undo</span>
+              </button>
+              <div class="canvas-size-select">
+                <label>Canvas</label>
+                <select id="canvasSizePreset" onchange="setCanvasPreset(this.value)">
+                  <option value="800x580">Small (800×580)</option>
+                  <option value="1200x800">Medium (1200×800)</option>
+                  <option value="1600x1000">Large (1600×1000)</option>
+                  <option value="2000x1400">XL (2000×1400)</option>
+                  <option value="2800x2000">XXL (2800×2000)</option>
+                  <option value="custom">Custom...</option>
+                </select>
+                <div class="canvas-size-custom" id="customSizeInputs" style="display:none;">
+                  <input type="number" id="customW" min="600" max="5000" step="100" placeholder="W" />
+                  <span>×</span>
+                  <input type="number" id="customH" min="400" max="5000" step="100" placeholder="H" />
+                  <button class="tool-btn" onclick="applyCustomSize()" title="Apply" style="padding:3px 8px;">
+                    <span style="font-size:0.6rem;font-weight:700;color:var(--lime);">✓</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Floor Grid (scrollable viewport) -->
+          <div class="floor-grid" id="floorGridOuter">
+            <div class="floor-grid-inner" id="floorGrid">
+              <!-- Zones and tables will be rendered here -->
+            </div>
+            <div class="canvas-size-badge" id="canvasSizeBadge">800 × 580</div>
+          </div>
+
+          <!-- Legend -->
+          <div class="floor-legend">
+            <div class="legend-item"><span class="legend-dot live"></span> Live</div>
+            <div class="legend-item"><span class="legend-dot reserved"></span> Reserved</div>
+            <div class="legend-item"><span class="legend-dot idle"></span> Idle</div>
+            <div class="legend-item"><span class="legend-dot empty"></span> Empty</div>
+            <div style="width: 1px; height: 16px; background: rgba(255,255,255,0.06); margin: 0 8px;"></div>
+            <span style="font-size: 0.65rem; color: var(--grey); font-weight: 600;">Zones: Teal | Purple | Lime | Gold</span>
+          </div>
+        </div>
+
+        <!-- Side Panel -->
+        <div class="side-panel">
+
+          <!-- Selected Item Panel (top — visible immediately on click) -->
+          <div class="panel-card selected-panel-card" id="selectedPanel" style="display: none;">
+            <div class="panel-title" id="selectedTitle">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+              <span id="selectedName">Selected Item</span>
+            </div>
+            <div id="selectedContent"></div>
+          </div>
+
+          <!-- Zones Panel -->
+          <div class="panel-card">
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+              Zones
+            </div>
+            <div class="zones-list" id="zonesList"></div>
+            <button class="btn btn-ghost" style="width: 100%; justify-content: center; margin-top: 12px;" onclick="openAddZoneModal()">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              Add Zone
+            </button>
+          </div>
+
+          <!-- Elements Panel -->
+          <div class="panel-card">
+            <div class="panel-title">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+              Elements
+            </div>
+            <div style="margin-bottom: 10px;">
+              <div style="font-size: 0.65rem; font-weight: 700; color: var(--grey); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Tables</div>
+              <div class="elements-palette">
+                <div class="element-card" onclick="setElement('table-round')">
+                  <div class="element-icon">●</div>
+                  <div class="element-label">Round</div>
+                </div>
+                <div class="element-card" onclick="setElement('table-rect')">
+                  <div class="element-icon">▭</div>
+                  <div class="element-label">Rectangle</div>
+                </div>
+                <div class="element-card" onclick="setElement('table-long')">
+                  <div class="element-icon">▭</div>
+                  <div class="element-label">Long</div>
+                </div>
+                <div class="element-card" onclick="setElement('table-square')">
+                  <div class="element-icon">▢</div>
+                  <div class="element-label">Square</div>
+                </div>
+              </div>
+            </div>
+            <div>
+              <div style="font-size: 0.65rem; font-weight: 700; color: var(--grey); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Structures</div>
+              <div class="elements-palette">
+                <div class="element-card" onclick="setElement('bar-counter')">
+                  <div class="element-icon">▁</div>
+                  <div class="element-label">Bar</div>
+                </div>
+                <div class="element-card" onclick="setElement('wall')">
+                  <div class="element-icon">|</div>
+                  <div class="element-label">Wall</div>
+                </div>
+                <div class="element-card" onclick="setElement('stage')">
+                  <div class="element-icon">⌢</div>
+                  <div class="element-label">Stage</div>
+                </div>
+                <div class="element-card" onclick="setElement('entrance')">
+                  <div class="element-icon">↦</div>
+                  <div class="element-label">Entrance</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Fullscreen Overlay -->
+  <div class="fs-overlay" id="fsOverlay">
+    <div class="fs-topbar">
+      <div class="fs-topbar-title">Table <span>Map</span> — Full View</div>
+      <div class="fs-topbar-info">
+        <div class="fs-info-pill"><span class="fs-info-dot" style="background:var(--purple);"></span> <span id="fsTableCount">12</span> Tables</div>
+        <div class="fs-info-pill"><span class="fs-info-dot" style="background:var(--lime);"></span> <span id="fsZoneCount">4</span> Zones</div>
+        <div class="fs-info-pill" id="fsSizePill">800 × 580</div>
+      </div>
+      <button class="fs-close-btn" onclick="closeFullscreen()" title="Close (Esc)">✕</button>
+    </div>
+    <div class="fs-canvas" id="fsCanvas">
+      <div class="fs-canvas-inner" id="fsCanvasInner"></div>
+    </div>
+    <div class="fs-legend">
+      <div class="legend-item"><span class="legend-dot live"></span> Live</div>
+      <div class="legend-item"><span class="legend-dot reserved"></span> Reserved</div>
+      <div class="legend-item"><span class="legend-dot idle"></span> Idle</div>
+      <div class="legend-item"><span class="legend-dot empty"></span> Empty</div>
+      <div class="fs-zoom-controls">
+        <button class="fs-zoom-btn" onclick="fsZoom(-0.1)">−</button>
+        <span class="fs-zoom-level" id="fsZoomLevel">Fit</span>
+        <button class="fs-zoom-btn" onclick="fsZoom(0.1)">+</button>
+        <button class="fs-zoom-btn" onclick="fsFitToScreen()" title="Fit to screen" style="font-size:0.6rem;width:auto;padding:0 10px;">Fit</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Zone Modal -->
+  <div class="modal-overlay" id="addZoneModal">
+    <div class="modal">
+      <h3>Add New Zone</h3>
+      <p>Create a new area in your venue layout.</p>
+      <div class="modal-field">
+        <label>Zone Name</label>
+        <input type="text" placeholder="e.g. VIP Section, Lounge" id="zoneName" />
+      </div>
+      <div class="modal-field">
+        <label>Color</label>
+        <div class="color-swatches">
+          <div class="color-swatch teal selected" onclick="selectZoneColor(this, 'teal')"></div>
+          <div class="color-swatch purple" onclick="selectZoneColor(this, 'purple')"></div>
+          <div class="color-swatch lime" onclick="selectZoneColor(this, 'lime')"></div>
+          <div class="color-swatch gold" onclick="selectZoneColor(this, 'gold')"></div>
+          <div class="color-swatch coral" onclick="selectZoneColor(this, 'coral')"></div>
+          <div class="color-swatch grey" onclick="selectZoneColor(this, 'grey')"></div>
+        </div>
+      </div>
+      <div class="modal-field">
+        <label>Shape</label>
+        <select id="zoneShape">
+          <option value="rect">Rectangle</option>
+          <option value="l-shape">L-Shape</option>
+        </select>
+      </div>
+      <div class="slider-container">
+        <div class="slider-label">
+          <span class="slider-label-text">Width</span>
+          <span class="slider-value" id="widthValue">300px</span>
+        </div>
+        <input type="range" id="zoneWidth" min="100" max="500" value="300" oninput="updateWidthValue(this.value)">
+      </div>
+      <div class="slider-container">
+        <div class="slider-label">
+          <span class="slider-label-text">Height</span>
+          <span class="slider-value" id="heightValue">200px</span>
+        </div>
+        <input type="range" id="zoneHeight" min="80" max="300" value="200" oninput="updateHeightValue(this.value)">
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeAddZoneModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="addZone()">Create Zone</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Table Modal -->
+  <div class="modal-overlay" id="addTableModal">
+    <div class="modal" style="width: 520px; max-width: 95vw;">
+      <h3>Custom Table Designer</h3>
+      <p>Design your table layout with a live preview.</p>
+
+      <div style="display: flex; gap: 20px;">
+        <!-- Left: Controls -->
+        <div style="flex: 1; min-width: 0;">
+          <div class="modal-field">
+            <label>Table Name</label>
+            <input type="text" placeholder="e.g. T1, VIP Booth" id="tableName" />
+          </div>
+
+          <div class="modal-field">
+            <label>Shape</label>
+            <div class="td-shape-grid" id="tdShapeGrid">
+              <div class="td-shape-option selected" data-shape="round" onclick="tdSelectShape(this,'round')">
+                <div class="td-shape-icon" style="width:28px;height:28px;border-radius:50%;"></div>
+                <span>Round</span>
+              </div>
+              <div class="td-shape-option" data-shape="rect" onclick="tdSelectShape(this,'rect')">
+                <div class="td-shape-icon" style="width:34px;height:22px;border-radius:4px;"></div>
+                <span>Rect</span>
+              </div>
+              <div class="td-shape-option" data-shape="square" onclick="tdSelectShape(this,'square')">
+                <div class="td-shape-icon" style="width:26px;height:26px;border-radius:4px;"></div>
+                <span>Square</span>
+              </div>
+              <div class="td-shape-option" data-shape="long" onclick="tdSelectShape(this,'long')">
+                <div class="td-shape-icon" style="width:42px;height:16px;border-radius:4px;"></div>
+                <span>Long</span>
+              </div>
+              <div class="td-shape-option" data-shape="oval" onclick="tdSelectShape(this,'oval')">
+                <div class="td-shape-icon" style="width:38px;height:22px;border-radius:50%;"></div>
+                <span>Oval</span>
+              </div>
+              <div class="td-shape-option" data-shape="booth" onclick="tdSelectShape(this,'booth')">
+                <div class="td-shape-icon" style="width:32px;height:24px;border-radius:8px 8px 2px 2px;border-bottom:3px solid rgba(124,92,252,0.6);"></div>
+                <span>Booth</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="slider-container">
+            <div class="slider-label">
+              <span class="slider-label-text">Width</span>
+              <span class="slider-value" id="tdWidthVal">80px</span>
+            </div>
+            <input type="range" min="40" max="220" value="80" id="tdWidth" oninput="tdUpdatePreview()" />
+          </div>
+
+          <div class="slider-container">
+            <div class="slider-label">
+              <span class="slider-label-text">Height</span>
+              <span class="slider-value" id="tdHeightVal">80px</span>
+            </div>
+            <input type="range" min="30" max="180" value="80" id="tdHeight" oninput="tdUpdatePreview()" />
+          </div>
+
+          <div class="slider-container">
+            <div class="slider-label">
+              <span class="slider-label-text">Seats</span>
+              <span class="slider-value" id="tdSeatsVal">4</span>
+            </div>
+            <input type="range" min="1" max="16" value="4" id="tdSeats" oninput="tdUpdatePreview()" />
+          </div>
+
+          <div class="slider-container">
+            <div class="slider-label">
+              <span class="slider-label-text">Rotation</span>
+              <span class="slider-value" id="tdRotVal">0°</span>
+            </div>
+            <input type="range" min="0" max="360" value="0" step="5" id="tdRotation" oninput="tdUpdatePreview()" />
+          </div>
+
+          <div class="modal-field">
+            <label>Table Color (optional override)</label>
+            <div class="td-color-row">
+              <div class="td-color-chip selected" data-color="auto" onclick="tdSelectColor(this,'auto')" style="background: linear-gradient(135deg,#4ECDC4,#7C5CFC,#A8E10C); position:relative;" title="Auto (zone color)">
+                <span style="font-size:0.5rem;color:#fff;font-weight:800;">AUTO</span>
+              </div>
+              <div class="td-color-chip" data-color="teal" onclick="tdSelectColor(this,'teal')" style="background:#4ECDC4;" title="Teal"></div>
+              <div class="td-color-chip" data-color="purple" onclick="tdSelectColor(this,'purple')" style="background:#7C5CFC;" title="Purple"></div>
+              <div class="td-color-chip" data-color="lime" onclick="tdSelectColor(this,'lime')" style="background:#A8E10C;" title="Lime"></div>
+              <div class="td-color-chip" data-color="gold" onclick="tdSelectColor(this,'gold')" style="background:#FFD700;" title="Gold"></div>
+              <div class="td-color-chip" data-color="coral" onclick="tdSelectColor(this,'coral')" style="background:#FF6B6B;" title="Coral"></div>
+              <div class="td-color-chip" data-color="grey" onclick="tdSelectColor(this,'grey')" style="background:#9ca3af;" title="Grey"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Live Preview -->
+        <div style="width: 180px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center;">
+          <label style="display:block;font-size:0.68rem;font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px;text-align:center;">Live Preview</label>
+          <div class="td-preview-box" id="tdPreviewBox">
+            <canvas id="tdPreviewCanvas" width="160" height="160"></canvas>
+          </div>
+          <div style="text-align:center;margin-top:8px;">
+            <span style="font-size:0.65rem;color:var(--grey);">Drag to rotate in preview</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeAddTableModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="addTable()">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><line x1="7" y1="2" x2="7" y2="12"/><line x1="2" y1="7" x2="12" y2="7"/></svg>
+          Add Table
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    // Global state
+    let currentMode = 'edit';
+    let currentTool = 'select';
+    let currentElement = null;
+    let selectedZone = null;
+    let selectedItem = null;
+    let zoom = 1;
+    let gridSnap = true;
+    let undoStack = [];
+    let canvasWidth = 800;
+    let canvasHeight = 580;
+
+    // Zone color map
+    const zoneColors = {
+      teal:   { rgb: 'rgba(78,205,196,0.06)',  border: 'rgba(78,205,196,0.3)',  solid: '#4ECDC4', tableBg: 'rgba(78,205,196,0.10)',  tableBorder: 'rgba(78,205,196,0.6)',  name: 'Teal' },
+      purple: { rgb: 'rgba(124,92,252,0.06)',   border: 'rgba(124,92,252,0.3)',  solid: '#7C5CFC', tableBg: 'rgba(124,92,252,0.10)',  tableBorder: 'rgba(124,92,252,0.6)',  name: 'Purple' },
+      lime:   { rgb: 'rgba(168,225,12,0.06)',   border: 'rgba(168,225,12,0.3)',  solid: '#A8E10C', tableBg: 'rgba(168,225,12,0.10)',  tableBorder: 'rgba(168,225,12,0.6)',  name: 'Lime' },
+      gold:   { rgb: 'rgba(255,215,0,0.06)',    border: 'rgba(255,215,0,0.3)',   solid: '#FFD700', tableBg: 'rgba(255,215,0,0.10)',   tableBorder: 'rgba(255,215,0,0.6)',   name: 'Gold' },
+      coral:  { rgb: 'rgba(255,107,107,0.06)',  border: 'rgba(255,107,107,0.3)', solid: '#FF6B6B', tableBg: 'rgba(255,107,107,0.10)', tableBorder: 'rgba(255,107,107,0.6)', name: 'Coral' },
+      grey:   { rgb: 'rgba(152,152,176,0.06)',  border: 'rgba(152,152,176,0.3)', solid: '#9898B0', tableBg: 'rgba(152,152,176,0.10)', tableBorder: 'rgba(152,152,176,0.6)', name: 'Grey' }
+    };
+
+    // Get table dimensions (supports custom sizes)
+    function getTableDims(table) {
+      if (table.customWidth && table.customHeight) return { w: table.customWidth, h: table.customHeight };
+      const defaults = { long: {w:150,h:55}, rect: {w:110,h:65}, square: {w:72,h:72}, oval: {w:120,h:70}, booth: {w:100,h:70} };
+      return defaults[table.shape] || { w: 80, h: 80 };
+    }
+
+    // Find which zone a table sits inside based on its center point
+    function findZoneForTable(table) {
+      const dims = getTableDims(table);
+      const tw = dims.w;
+      const th = dims.h;
+      const cx = table.x + tw / 2;
+      const cy = table.y + th / 2;
+      for (const zone of zones) {
+        if (cx >= zone.x && cx <= zone.x + zone.width && cy >= zone.y && cy <= zone.y + zone.height) {
+          return zone.id;
+        }
+      }
+      return null; // not inside any zone
+    }
+
+    // Recalculate all zone table counts
+    function recalcZoneCounts() {
+      zones.forEach(zone => {
+        zone.tableCount = tables.filter(t => t.zone === zone.id).length;
+      });
+    }
+
+    // Get zone color for a table (respects color override)
+    function getTableZoneColor(table) {
+      if (table.colorOverride && zoneColors[table.colorOverride]) return zoneColors[table.colorOverride];
+      const zone = zones.find(z => z.id === table.zone);
+      if (zone && zoneColors[zone.color]) return zoneColors[zone.color];
+      return null;
+    }
+
+    // Build inline style for a table shape (supports custom sizes + new shapes)
+    function buildTableShapeStyle(table, dims, zc) {
+      let s = `width:${dims.w}px; height:${dims.h}px;`;
+      if (zc) s += ` border-color:${zc.tableBorder}; background:${zc.tableBg};`;
+      if (table.shape === 'round') {
+        s += ` border-radius: 50%;`;
+      } else if (table.shape === 'oval') {
+        s += ` border-radius: 50%;`;
+      } else if (table.shape === 'booth') {
+        s += ` border-radius: 10px 10px 3px 3px; border-bottom: 4px solid ${zc ? zc.solid : 'var(--purple)'};`;
+      } else if (table.shape === 'square') {
+        s += ` border-radius: var(--radius-md);`;
+      } else {
+        s += ` border-radius: var(--radius-md);`;
+      }
+      return s;
+    }
+
+    // ── Default venue layout (shown on first visit) ──
+    const defaultLayout = {
+      canvasWidth: 800,
+      canvasHeight: 580,
+      zones: [
+        { id: 'z1', name: 'Main Floor',     color: 'teal',   x: 28,  y: 28,  width: 450, height: 240, tableCount: 0 },
+        { id: 'z2', name: 'Bar Area',        color: 'purple', x: 28,  y: 290, width: 310, height: 140, tableCount: 0 },
+        { id: 'z3', name: 'Outdoor Patio',   color: 'lime',   x: 500, y: 28,  width: 270, height: 200, tableCount: 0 },
+        { id: 'z4', name: 'VIP Section',     color: 'gold',   x: 500, y: 250, width: 270, height: 180, tableCount: 0 }
+      ],
+      tables: [
+        // Main Floor — 6 tables
+        { id: 't1',  name: 'T1',  shape: 'round',  x: 56,  y: 56,  team: '', seats: 4, status: 'empty', zone: 'z1' },
+        { id: 't2',  name: 'T2',  shape: 'round',  x: 168, y: 56,  team: '', seats: 4, status: 'empty', zone: 'z1' },
+        { id: 't3',  name: 'T3',  shape: 'rect',   x: 280, y: 56,  team: '', seats: 6, status: 'empty', zone: 'z1' },
+        { id: 't4',  name: 'T4',  shape: 'round',  x: 56,  y: 168, team: '', seats: 4, status: 'empty', zone: 'z1' },
+        { id: 't5',  name: 'T5',  shape: 'square', x: 168, y: 168, team: '', seats: 4, status: 'empty', zone: 'z1' },
+        { id: 't6',  name: 'T6',  shape: 'rect',   x: 280, y: 168, team: '', seats: 6, status: 'empty', zone: 'z1' },
+        // Bar Area — 3 tables + bar counter
+        { id: 't7',  name: 'B1',  shape: 'round',  x: 56,  y: 322, team: '', seats: 2, status: 'empty', zone: 'z2' },
+        { id: 't8',  name: 'B2',  shape: 'round',  x: 154, y: 322, team: '', seats: 2, status: 'empty', zone: 'z2' },
+        { id: 't9',  name: 'B3',  shape: 'square', x: 238, y: 322, team: '', seats: 4, status: 'empty', zone: 'z2' },
+        // Outdoor Patio — 3 tables
+        { id: 't10', name: 'P1',  shape: 'rect',   x: 518, y: 56,  team: '', seats: 6, status: 'empty', zone: 'z3' },
+        { id: 't11', name: 'P2',  shape: 'round',  x: 658, y: 56,  team: '', seats: 4, status: 'empty', zone: 'z3' },
+        { id: 't12', name: 'P3',  shape: 'long',   x: 518, y: 140, team: '', seats: 8, status: 'empty', zone: 'z3' },
+        // VIP Section — 2 tables
+        { id: 't13', name: 'V1',  shape: 'long',   x: 518, y: 280, team: '', seats: 8, status: 'empty', zone: 'z4' },
+        { id: 't14', name: 'V2',  shape: 'rect',   x: 518, y: 364, team: '', seats: 6, status: 'empty', zone: 'z4' }
+      ],
+      structures: [
+        { id: 's1', type: 'bar-counter', x: 56,  y: 392, width: 260, height: 36, label: 'BAR' },
+        { id: 's2', type: 'wall',        x: 490, y: 28,  width: 2,   height: 402 },
+        { id: 's3', type: 'stage',        x: 360, y: 460, width: 120, height: 56,  label: 'STAGE' },
+        { id: 's4', type: 'entrance',     x: 224, y: 460, width: 20,  height: 20,  label: '↦' }
+      ]
+    };
+
+    // ── Save / Load system ──
+    const SAVE_KEY = 'spontix_venue_layout';
+    let saveTimeout = null;
+    let hasUnsavedChanges = false;
+
+    function getDefaultCopy() {
+      return JSON.parse(JSON.stringify(defaultLayout));
+    }
+
+    function loadLayout() {
+      try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (raw) {
+          const data = JSON.parse(raw);
+          if (data.zones && data.tables && data.structures) return data;
+        }
+      } catch (e) { /* ignore corrupt data */ }
+      return null;
+    }
+
+    function saveLayout() {
+      try {
+        const data = {
+          canvasWidth: canvasWidth,
+          canvasHeight: canvasHeight,
+          zones: zones,
+          tables: tables,
+          structures: structures,
+          savedAt: new Date().toISOString()
+        };
+        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+        hasUnsavedChanges = false;
+        updateSaveIndicator('saved');
+      } catch (e) {
+        showToast('Save failed — storage may be full');
+      }
+    }
+
+    function markUnsaved() {
+      hasUnsavedChanges = true;
+      updateSaveIndicator('unsaved');
+      // Auto-save after 3 seconds of inactivity
+      clearTimeout(saveTimeout);
+      saveTimeout = setTimeout(() => { saveLayout(); }, 3000);
+    }
+
+    function updateSaveIndicator(state) {
+      const dot = document.getElementById('saveDot');
+      const text = document.getElementById('saveText');
+      if (!dot || !text) return;
+      if (state === 'saved') {
+        dot.style.background = 'var(--lime)';
+        text.textContent = 'Saved';
+      } else if (state === 'saving') {
+        dot.style.background = 'var(--gold)';
+        text.textContent = 'Saving...';
+      } else {
+        dot.style.background = 'var(--coral)';
+        text.textContent = 'Unsaved';
+      }
+    }
+
+    function resetToDefault() {
+      if (!confirm('Reset the entire floor plan to the default layout? This cannot be undone.')) return;
+      localStorage.removeItem(SAVE_KEY);
+      const d = getDefaultCopy();
+      zones.length = 0; tables.length = 0; structures.length = 0;
+      d.zones.forEach(z => zones.push(z));
+      d.tables.forEach(t => tables.push(t));
+      d.structures.forEach(s => structures.push(s));
+      canvasWidth = d.canvasWidth;
+      canvasHeight = d.canvasHeight;
+      recalcZoneCounts();
+      applyCanvasSize();
+      selectedZone = null; selectedItem = null;
+      document.getElementById('selectedPanel').style.display = 'none';
+      const preset = document.getElementById('canvasSizePreset');
+      const match = Array.from(preset.options).find(o => o.value === canvasWidth + 'x' + canvasHeight);
+      if (match) preset.value = match.value;
+      render();
+      saveLayout();
+      showToast('Floor plan reset to default');
+    }
+
+    // ── Initialize data from save or default ──
+    const saved = loadLayout();
+    const initData = saved || getDefaultCopy();
+    const zones = initData.zones;
+    const tables = initData.tables;
+    const structures = initData.structures;
+    if (saved) {
+      canvasWidth = saved.canvasWidth || 800;
+      canvasHeight = saved.canvasHeight || 580;
+    }
+
+    // Sidebar toggle
+    // Toast
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('active');
+      setTimeout(() => t.classList.remove('active'), 3000);
+    }
+
+    // Mode
+    function setMode(btn, mode) {
+      document.querySelectorAll('.mode-tab').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentMode = mode;
+      showToast(mode === 'edit' ? 'Edit Layout mode' : 'Live View mode (read-only)');
+      render();
+    }
+
+    // Tool selection
+    function setTool(btn, tool) {
+      // Clear any active placement mode
+      const inner = document.getElementById('floorGrid');
+      if (inner._placeHandler) {
+        inner.removeEventListener('click', inner._placeHandler);
+        inner._placeHandler = null;
+        inner.classList.remove('placing');
+      }
+      document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentTool = tool;
+
+      // Trigger the right action
+      if (tool === 'zone') {
+        openAddZoneModal();
+      } else if (tool === 'table') {
+        openAddTableModal();
+      } else if (tool === 'structure') {
+        openAddStructureMenu();
+      } else {
+        showToast(tool.charAt(0).toUpperCase() + tool.slice(1) + ' tool selected');
+      }
+    }
+
+    // Structure picker menu
+    function openAddStructureMenu() {
+      const items = [
+        { type: 'bar-counter', label: 'Bar Counter', icon: '▬' },
+        { type: 'wall',        label: 'Wall',        icon: '|' },
+        { type: 'stage',       label: 'Stage',       icon: '⌢' },
+        { type: 'entrance',    label: 'Entrance',    icon: '↦' }
+      ];
+      // Remove old menu if any
+      const old = document.getElementById('structMenu');
+      if (old) old.remove();
+
+      const menu = document.createElement('div');
+      menu.id = 'structMenu';
+      menu.style.cssText = `
+        position: fixed; z-index: 9999; background: var(--navy-card);
+        border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;
+        padding: 6px; box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+        display: flex; flex-direction: column; gap: 2px; min-width: 160px;
+      `;
+      // Position near the structure button
+      const structBtn = document.querySelector('.tool-btn[title="Add Structure"]');
+      const rect = structBtn.getBoundingClientRect();
+      menu.style.left = rect.left + 'px';
+      menu.style.top = (rect.bottom + 8) + 'px';
+
+      items.forEach(item => {
+        const opt = document.createElement('button');
+        opt.style.cssText = `
+          display: flex; align-items: center; gap: 10px; padding: 8px 14px;
+          background: transparent; border: none; color: var(--off-white);
+          font-size: 0.75rem; font-weight: 600; cursor: pointer;
+          border-radius: 6px; font-family: inherit; text-align: left; width: 100%;
+        `;
+        opt.innerHTML = '<span style="width:18px;text-align:center;font-size:1rem;color:var(--purple);">' + item.icon + '</span>' + item.label;
+        opt.onmouseenter = () => { opt.style.background = 'var(--navy-hover)'; };
+        opt.onmouseleave = () => { opt.style.background = 'transparent'; };
+        opt.onclick = () => {
+          menu.remove();
+          setElement(item.type);
+        };
+        menu.appendChild(opt);
+      });
+
+      document.body.appendChild(menu);
+      // Close on click outside
+      setTimeout(() => {
+        const closeMenu = (e) => {
+          if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('mousedown', closeMenu); }
+        };
+        document.addEventListener('mousedown', closeMenu);
+      }, 10);
+    }
+
+    // Element selection
+    function setElement(elem) {
+      currentElement = elem;
+      if (elem.startsWith('table')) {
+        openAddTableModal();
+      } else {
+        // Activate placement mode — click on canvas to place structure
+        const inner = document.getElementById('floorGrid');
+        inner.classList.add('placing');
+        showToast('Click on the canvas to place ' + elem.replace('-', ' '));
+
+        const placeHandler = (e) => {
+          const rect = inner.getBoundingClientRect();
+          let px = e.clientX - rect.left;
+          let py = e.clientY - rect.top;
+          px = snapToGrid(px);
+          py = snapToGrid(py);
+
+          const structDefs = {
+            'bar-counter': { width: 200, height: 36, label: 'BAR' },
+            'wall':        { width: 2,   height: 120, label: '' },
+            'stage':       { width: 140, height: 60,  label: 'STAGE' },
+            'entrance':    { width: 20,  height: 20,  label: '↦' }
+          };
+          const def = structDefs[elem] || { width: 80, height: 40, label: elem.toUpperCase() };
+          const newStruct = {
+            id: 's' + Date.now(),
+            type: elem,
+            x: px,
+            y: py,
+            width: def.width,
+            height: def.height,
+            label: def.label
+          };
+          pushUndo();
+          structures.push(newStruct);
+          inner.classList.remove('placing');
+          inner.removeEventListener('click', placeHandler);
+          currentElement = null;
+          render();
+          showToast(elem.replace('-', ' ').replace(/\b\w/g, c => c.toUpperCase()) + ' placed!');
+        };
+
+        // Remove previous placement handler if any
+        if (inner._placeHandler) {
+          inner.removeEventListener('click', inner._placeHandler);
+        }
+        inner._placeHandler = placeHandler;
+        inner.addEventListener('click', placeHandler);
+      }
+    }
+
+    // Grid snap
+    function snapToGrid(val) {
+      return gridSnap ? Math.round(val / 14) * 14 : Math.round(val);
+    }
+
+    function toggleGridSnap(btn) {
+      gridSnap = !gridSnap;
+      if (gridSnap) {
+        btn.classList.add('active');
+        showToast('Grid snap ON');
+      } else {
+        btn.classList.remove('active');
+        showToast('Grid snap OFF — free positioning');
+      }
+    }
+
+    // Zoom
+    function zoomIn() {
+      zoom = Math.min(zoom + 0.15, 2.5);
+      applyZoom();
+      showToast('Zoom ' + Math.round(zoom * 100) + '%');
+    }
+
+    function zoomOut() {
+      zoom = Math.max(zoom - 0.15, 0.3);
+      applyZoom();
+      showToast('Zoom ' + Math.round(zoom * 100) + '%');
+    }
+
+    function applyZoom() {
+      const inner = document.getElementById('floorGrid');
+      inner.style.transform = 'scale(' + zoom + ')';
+      inner.style.transformOrigin = 'top left';
+    }
+
+    // Undo
+    function pushUndo() {
+      undoStack.push({
+        zones: JSON.parse(JSON.stringify(zones)),
+        tables: JSON.parse(JSON.stringify(tables)),
+        structures: JSON.parse(JSON.stringify(structures))
+      });
+      if (undoStack.length > 30) undoStack.shift();
+    }
+
+    function undo() {
+      if (undoStack.length === 0) {
+        showToast('Nothing to undo');
+        return;
+      }
+      const state = undoStack.pop();
+      zones.length = 0; tables.length = 0; structures.length = 0;
+      state.zones.forEach(z => zones.push(z));
+      state.tables.forEach(t => tables.push(t));
+      state.structures.forEach(s => structures.push(s));
+      recalcZoneCounts();
+      selectedZone = null; selectedItem = null;
+      document.getElementById('selectedPanel').style.display = 'none';
+      render();
+      showToast('Undone');
+    }
+
+    // Canvas size
+    function setCanvasPreset(value) {
+      const customInputs = document.getElementById('customSizeInputs');
+      if (value === 'custom') {
+        customInputs.style.display = 'flex';
+        document.getElementById('customW').value = canvasWidth;
+        document.getElementById('customH').value = canvasHeight;
+        return;
+      }
+      customInputs.style.display = 'none';
+      const [w, h] = value.split('x').map(Number);
+      canvasWidth = w;
+      canvasHeight = h;
+      applyCanvasSize();
+      showToast('Canvas resized to ' + w + '×' + h);
+    }
+
+    function applyCustomSize() {
+      const w = parseInt(document.getElementById('customW').value) || 800;
+      const h = parseInt(document.getElementById('customH').value) || 580;
+      canvasWidth = Math.max(600, Math.min(5000, w));
+      canvasHeight = Math.max(400, Math.min(5000, h));
+      applyCanvasSize();
+      document.getElementById('customSizeInputs').style.display = 'none';
+      // Update dropdown to show closest preset or custom
+      const preset = document.getElementById('canvasSizePreset');
+      const match = Array.from(preset.options).find(o => o.value === canvasWidth + 'x' + canvasHeight);
+      preset.value = match ? match.value : 'custom';
+      showToast('Canvas resized to ' + canvasWidth + '×' + canvasHeight);
+    }
+
+    function applyCanvasSize() {
+      const inner = document.getElementById('floorGrid');
+      inner.style.width = canvasWidth + 'px';
+      inner.style.height = canvasHeight + 'px';
+      // Update summary card
+      const summaryEl = document.querySelector('.summary-value[style*="purple"]');
+      if (summaryEl && summaryEl.textContent.match(/\d+x\d+/)) {
+        summaryEl.textContent = canvasWidth + 'x' + canvasHeight;
+      }
+      // Update badge
+      const badge = document.getElementById('canvasSizeBadge');
+      if (badge) badge.textContent = canvasWidth + ' × ' + canvasHeight;
+    }
+
+    // ── Fullscreen View ──
+    let fsScale = 1;
+    let isFullscreen = false;
+
+    function openFullscreen() {
+      isFullscreen = true;
+      const overlay = document.getElementById('fsOverlay');
+      overlay.classList.add('open');
+      updateFsInfo();
+      renderFullscreen();
+      fsFitToScreen();
+      document.addEventListener('keydown', fsEscHandler);
+    }
+
+    function closeFullscreen() {
+      isFullscreen = false;
+      document.getElementById('fsOverlay').classList.remove('open');
+      document.removeEventListener('keydown', fsEscHandler);
+      // Sync main canvas with any changes made in fullscreen
+      render();
+    }
+
+    function fsEscHandler(e) {
+      if (e.key === 'Escape') closeFullscreen();
+    }
+
+    function updateFsInfo() {
+      document.getElementById('fsTableCount').textContent = tables.length;
+      document.getElementById('fsZoneCount').textContent = zones.length;
+      document.getElementById('fsSizePill').textContent = canvasWidth + ' × ' + canvasHeight;
+    }
+
+    // Helper: get mouse position in canvas coordinates (accounting for scale)
+    function fsMousePos(e) {
+      const inner = document.getElementById('fsCanvasInner');
+      const rect = inner.getBoundingClientRect();
+      return {
+        x: (e.clientX - rect.left) / fsScale,
+        y: (e.clientY - rect.top) / fsScale
+      };
+    }
+
+    function renderFullscreen() {
+      const inner = document.getElementById('fsCanvasInner');
+      inner.style.width = canvasWidth + 'px';
+      inner.style.height = canvasHeight + 'px';
+      inner.innerHTML = '';
+
+      // Render zones (draggable + resizable)
+      zones.forEach(zone => {
+        const zoneEl = document.createElement('div');
+        zoneEl.className = 'zone';
+        const colors = zoneColors[zone.color];
+        zoneEl.style.cssText = `
+          left: ${zone.x}px; top: ${zone.y}px;
+          width: ${zone.width}px; height: ${zone.height}px;
+          background: ${colors.rgb}; border-color: ${colors.border};
+          cursor: grab;
+        `;
+        zoneEl.innerHTML = `
+          <div class="zone-label" style="background: ${colors.border}; color: #fff;">${zone.name} <span style="opacity:0.7;">(${zone.tableCount})</span></div>
+          <div class="zone-resize-handle" data-zone-id="${zone.id}"></div>
+        `;
+        // Zone drag
+        zoneEl.onmousedown = (e) => {
+          if (e.target.classList.contains('zone-resize-handle')) return;
+          e.preventDefault(); e.stopPropagation();
+          pushUndo();
+          const start = fsMousePos(e);
+          const ox = start.x - zone.x, oy = start.y - zone.y;
+          const onMove = (ev) => {
+            const pos = fsMousePos(ev);
+            zone.x = Math.max(0, snapToGrid(pos.x - ox));
+            zone.y = Math.max(0, snapToGrid(pos.y - oy));
+            zoneEl.style.left = zone.x + 'px';
+            zoneEl.style.top = zone.y + 'px';
+          };
+          const onUp = () => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            tables.forEach(t => { t.zone = findZoneForTable(t); });
+            recalcZoneCounts();
+            renderFullscreen(); updateFsInfo();
+          };
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        };
+        // Zone resize
+        const rh = zoneEl.querySelector('.zone-resize-handle');
+        rh.onmousedown = (e) => {
+          e.preventDefault(); e.stopPropagation();
+          pushUndo();
+          const onMove = (ev) => {
+            const pos = fsMousePos(ev);
+            zone.width = Math.max(100, snapToGrid(pos.x - zone.x));
+            zone.height = Math.max(70, snapToGrid(pos.y - zone.y));
+            zoneEl.style.width = zone.width + 'px';
+            zoneEl.style.height = zone.height + 'px';
+          };
+          const onUp = () => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            tables.forEach(t => { t.zone = findZoneForTable(t); });
+            recalcZoneCounts();
+            renderFullscreen(); updateFsInfo();
+          };
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        };
+        inner.appendChild(zoneEl);
+      });
+
+      // Render structures (draggable + resizable)
+      structures.forEach(struct => {
+        const structEl = document.createElement('div');
+        structEl.className = 'structure ' + struct.type;
+        structEl.style.cssText = `
+          left: ${struct.x}px; top: ${struct.y}px;
+          width: ${struct.width || 60}px; height: ${struct.height || 60}px;
+          cursor: grab;
+        `;
+        structEl.innerHTML = (struct.label || '') + '<div class="struct-resize-handle"></div>';
+        structEl.onmousedown = (e) => {
+          if (e.target.classList.contains('struct-resize-handle')) {
+            e.preventDefault(); e.stopPropagation();
+            pushUndo();
+            const onMove = (ev) => {
+              const pos = fsMousePos(ev);
+              struct.width = Math.max(28, snapToGrid(pos.x - struct.x));
+              struct.height = Math.max(14, snapToGrid(pos.y - struct.y));
+              structEl.style.width = struct.width + 'px';
+              structEl.style.height = struct.height + 'px';
+            };
+            const onUp = () => {
+              document.removeEventListener('mousemove', onMove);
+              document.removeEventListener('mouseup', onUp);
+              renderFullscreen();
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+            return;
+          }
+          e.preventDefault(); e.stopPropagation();
+          pushUndo();
+          const start = fsMousePos(e);
+          const ox = start.x - struct.x, oy = start.y - struct.y;
+          structEl.style.cursor = 'grabbing';
+          const onMove = (ev) => {
+            const pos = fsMousePos(ev);
+            struct.x = Math.max(0, snapToGrid(pos.x - ox));
+            struct.y = Math.max(0, snapToGrid(pos.y - oy));
+            structEl.style.left = struct.x + 'px';
+            structEl.style.top = struct.y + 'px';
+          };
+          const onUp = () => {
+            structEl.style.cursor = 'grab';
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+          };
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        };
+        inner.appendChild(structEl);
+      });
+
+      // Render tables (draggable)
+      tables.forEach(table => {
+        const tableEl = document.createElement('div');
+        tableEl.className = 'table-item ' + table.status;
+        tableEl.style.left = table.x + 'px';
+        tableEl.style.top = table.y + 'px';
+        tableEl.style.zIndex = 5;
+        tableEl.style.cursor = 'grab';
+        const status = table.status === 'active' ? 'live' : (table.status === 'reserved' ? 'reserved' : 'empty');
+        const zc = getTableZoneColor(table);
+        const dims = getTableDims(table);
+        const rot = table.rotation || 0;
+        const shapeClass = (table.shape === 'oval' || table.shape === 'booth') ? '' : table.shape;
+        const customShapeStyle = buildTableShapeStyle(table, dims, zc);
+        const rotStyle = rot ? `transform: rotate(${rot}deg);` : '';
+        tableEl.innerHTML = `
+          <div class="table-rotate-line"></div>
+          <div class="table-rotate-handle" data-table-id="${table.id}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          </div>
+          <div class="table-shape ${shapeClass}" style="${customShapeStyle} ${rotStyle}">
+            <span class="table-status-dot ${status}" ${zc ? `style="background: ${zc.solid};"` : ''}></span>
+            <span class="table-number">${table.name}</span>
+            <span class="table-team">${table.team || '—'}</span>
+          </div>
+          <span class="table-seats">${table.seats} seats</span>
+        `;
+        // Rotation handle in fullscreen
+        const fsRotHandle = tableEl.querySelector('.table-rotate-handle');
+        fsRotHandle.onmousedown = (e) => {
+          e.preventDefault(); e.stopPropagation();
+          pushUndo();
+          fsRotHandle.classList.add('active');
+          const tDims = getTableDims(table);
+          const cx = table.x + tDims.w / 2;
+          const cy = table.y + tDims.h / 2;
+          const onMove = (ev) => {
+            const pos = fsMousePos(ev);
+            let angle = Math.atan2(pos.y - cy, pos.x - cx) * 180 / Math.PI + 90;
+            if (angle < 0) angle += 360;
+            if (gridSnap) angle = Math.round(angle / 15) * 15;
+            table.rotation = Math.round(angle) % 360;
+            const shapeDiv = tableEl.querySelector('.table-shape');
+            if (shapeDiv) shapeDiv.style.transform = 'rotate(' + table.rotation + 'deg)';
+          };
+          const onUp = () => {
+            fsRotHandle.classList.remove('active');
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            markUnsaved();
+            renderFullscreen(); updateFsInfo();
+          };
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        };
+        tableEl.onmousedown = (e) => {
+          if (e.target.closest('.table-rotate-handle')) return;
+          e.preventDefault(); e.stopPropagation();
+          pushUndo();
+          const start = fsMousePos(e);
+          const ox = start.x - table.x, oy = start.y - table.y;
+          tableEl.style.cursor = 'grabbing';
+          tableEl.style.zIndex = 20;
+          const onMove = (ev) => {
+            const pos = fsMousePos(ev);
+            const nx = Math.max(0, Math.min(snapToGrid(pos.x - ox), canvasWidth - 80));
+            const ny = Math.max(0, Math.min(snapToGrid(pos.y - oy), canvasHeight - 80));
+            table.x = nx; table.y = ny;
+            tableEl.style.left = nx + 'px';
+            tableEl.style.top = ny + 'px';
+          };
+          const onUp = () => {
+            tableEl.style.cursor = 'grab';
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            const oldZone = table.zone;
+            table.zone = findZoneForTable(table);
+            recalcZoneCounts();
+            if (table.zone !== oldZone) {
+              const zName = table.zone ? zones.find(z => z.id === table.zone).name : 'No zone';
+              showToast(table.name + ' moved to ' + zName);
+            }
+            renderFullscreen(); updateFsInfo();
+          };
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        };
+        inner.appendChild(tableEl);
+      });
+    }
+
+    function fsFitToScreen() {
+      const canvas = document.getElementById('fsCanvas');
+      const inner = document.getElementById('fsCanvasInner');
+      const padding = 40;
+      const availW = canvas.clientWidth - padding;
+      const availH = canvas.clientHeight - padding;
+      const scaleX = availW / canvasWidth;
+      const scaleY = availH / canvasHeight;
+      fsScale = Math.min(scaleX, scaleY, 1.5);
+      fsScale = Math.round(fsScale * 100) / 100;
+      inner.style.transform = 'scale(' + fsScale + ')';
+      inner.style.transformOrigin = 'top left';
+      document.getElementById('fsZoomLevel').textContent = Math.round(fsScale * 100) + '%';
+    }
+
+    function fsZoom(delta) {
+      const inner = document.getElementById('fsCanvasInner');
+      fsScale = Math.max(0.2, Math.min(3, fsScale + delta));
+      fsScale = Math.round(fsScale * 100) / 100;
+      inner.style.transform = 'scale(' + fsScale + ')';
+      document.getElementById('fsZoomLevel').textContent = Math.round(fsScale * 100) + '%';
+    }
+
+    // Modal functions
+    function openAddZoneModal() {
+      document.getElementById('addZoneModal').classList.add('open');
+    }
+
+    function closeAddZoneModal() {
+      document.getElementById('addZoneModal').classList.remove('open');
+    }
+
+    // ── Custom Table Designer ──
+    let tdShape = 'round';
+    let tdColor = 'auto';
+
+    function openAddTableModal() {
+      // Reset designer state
+      tdShape = 'round';
+      tdColor = 'auto';
+      document.getElementById('tableName').value = '';
+      document.getElementById('tdWidth').value = 80;
+      document.getElementById('tdHeight').value = 80;
+      document.getElementById('tdSeats').value = 4;
+      document.getElementById('tdRotation').value = 0;
+      // Reset shape selection
+      document.querySelectorAll('.td-shape-option').forEach(s => s.classList.remove('selected'));
+      document.querySelector('.td-shape-option[data-shape="round"]').classList.add('selected');
+      // Reset color selection
+      document.querySelectorAll('.td-color-chip').forEach(c => c.classList.remove('selected'));
+      document.querySelector('.td-color-chip[data-color="auto"]').classList.add('selected');
+      document.getElementById('addTableModal').classList.add('open');
+      tdUpdatePreview();
+    }
+
+    function closeAddTableModal() {
+      document.getElementById('addTableModal').classList.remove('open');
+    }
+
+    function tdSelectShape(el, shape) {
+      tdShape = shape;
+      document.querySelectorAll('.td-shape-option').forEach(s => s.classList.remove('selected'));
+      el.classList.add('selected');
+      // Set sensible defaults for each shape
+      const defaults = {
+        round:  { w: 80, h: 80 },
+        rect:   { w: 110, h: 65 },
+        square: { w: 72, h: 72 },
+        long:   { w: 150, h: 55 },
+        oval:   { w: 120, h: 70 },
+        booth:  { w: 100, h: 70 }
+      };
+      const d = defaults[shape] || { w: 80, h: 80 };
+      document.getElementById('tdWidth').value = d.w;
+      document.getElementById('tdHeight').value = d.h;
+      tdUpdatePreview();
+    }
+
+    function tdSelectColor(el, color) {
+      tdColor = color;
+      document.querySelectorAll('.td-color-chip').forEach(c => c.classList.remove('selected'));
+      el.classList.add('selected');
+      tdUpdatePreview();
+    }
+
+    function tdUpdatePreview() {
+      const canvas = document.getElementById('tdPreviewCanvas');
+      const ctx = canvas.getContext('2d');
+      const cw = canvas.width, ch = canvas.height;
+      ctx.clearRect(0, 0, cw, ch);
+
+      const w = parseInt(document.getElementById('tdWidth').value);
+      const h = parseInt(document.getElementById('tdHeight').value);
+      const seats = parseInt(document.getElementById('tdSeats').value);
+      const rot = parseInt(document.getElementById('tdRotation').value);
+
+      // Update labels
+      document.getElementById('tdWidthVal').textContent = w + 'px';
+      document.getElementById('tdHeightVal').textContent = h + 'px';
+      document.getElementById('tdSeatsVal').textContent = seats;
+      document.getElementById('tdRotVal').textContent = rot + '°';
+
+      // Determine color
+      let fillColor = 'rgba(124,92,252,0.12)';
+      let strokeColor = 'rgba(124,92,252,0.6)';
+      let seatColor = '#7C5CFC';
+      if (tdColor !== 'auto' && zoneColors[tdColor]) {
+        fillColor = zoneColors[tdColor].tableBg;
+        strokeColor = zoneColors[tdColor].tableBorder;
+        seatColor = zoneColors[tdColor].solid;
+      }
+
+      ctx.save();
+      ctx.translate(cw / 2, ch / 2);
+      ctx.rotate(rot * Math.PI / 180);
+
+      // Scale down to fit preview
+      const maxDim = Math.max(w, h);
+      const scale = Math.min(1, 100 / maxDim);
+      ctx.scale(scale, scale);
+
+      // Draw table shape
+      ctx.fillStyle = fillColor;
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 2.5 / scale;
+
+      if (tdShape === 'round') {
+        ctx.beginPath();
+        ctx.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+      } else if (tdShape === 'oval') {
+        ctx.beginPath();
+        ctx.ellipse(0, 0, w / 2, h / 2, 0, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+      } else if (tdShape === 'booth') {
+        // Booth: rounded top, flat bottom with a thick "bench" line
+        const r = 8;
+        ctx.beginPath();
+        ctx.moveTo(-w/2 + r, -h/2);
+        ctx.arcTo(w/2, -h/2, w/2, h/2, r);
+        ctx.lineTo(w/2, h/2);
+        ctx.lineTo(-w/2, h/2);
+        ctx.arcTo(-w/2, -h/2, -w/2 + r, -h/2, r);
+        ctx.closePath();
+        ctx.fill(); ctx.stroke();
+        // Bench seat at bottom
+        ctx.fillStyle = strokeColor;
+        ctx.fillRect(-w/2 + 2, h/2 - 8, w - 4, 6);
+      } else {
+        // rect, square, long
+        const r = tdShape === 'square' ? 6 : 8;
+        roundRect(ctx, -w/2, -h/2, w, h, r);
+        ctx.fill(); ctx.stroke();
+      }
+
+      // Draw seat dots around the table
+      ctx.fillStyle = seatColor;
+      const seatRadius = Math.max(4, 6 / scale);
+      const padding = (seatRadius + 4) / scale;
+      for (let i = 0; i < seats; i++) {
+        const angle = (Math.PI * 2 * i) / seats - Math.PI / 2;
+        const rx = w / 2 + padding + 2;
+        const ry = h / 2 + padding + 2;
+        const sx = Math.cos(angle) * rx;
+        const sy = Math.sin(angle) * ry;
+        ctx.beginPath();
+        ctx.arc(sx, sy, seatRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Draw label
+      ctx.restore();
+      ctx.save();
+      ctx.translate(cw / 2, ch / 2);
+      const label = document.getElementById('tableName').value || 'T?';
+      ctx.fillStyle = '#e5e7eb';
+      ctx.font = 'bold ' + Math.max(10, 12 * scale) + 'px Inter, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      // Rotate text with table
+      ctx.rotate(rot * Math.PI / 180);
+      ctx.scale(scale, scale);
+      ctx.fillText(label, 0, 0);
+      ctx.restore();
+    }
+
+    function roundRect(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + r, y, r);
+      ctx.closePath();
+    }
+
+    // Live preview update when typing name
+    document.addEventListener('DOMContentLoaded', function() {
+      const nameInput = document.getElementById('tableName');
+      if (nameInput) nameInput.addEventListener('input', tdUpdatePreview);
+    });
+
+    function selectZoneColor(el, color) {
+      document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    function updateWidthValue(val) {
+      document.getElementById('widthValue').textContent = val + 'px';
+    }
+
+    function updateHeightValue(val) {
+      document.getElementById('heightValue').textContent = val + 'px';
+    }
+
+    function addZone() {
+      pushUndo();
+      const name = document.getElementById('zoneName').value || 'New Zone';
+      const shape = document.getElementById('zoneShape').value;
+      const width = document.getElementById('zoneWidth').value;
+      const height = document.getElementById('zoneHeight').value;
+      const color = document.querySelector('.color-swatch.selected').className.split(' ')[1];
+
+      const newZone = {
+        id: 'z' + (zones.length + 1),
+        name: name,
+        color: color,
+        x: 50,
+        y: 50 + (zones.length * 150),
+        width: parseInt(width),
+        height: parseInt(height),
+        shape: shape,
+        tableCount: 0
+      };
+
+      zones.push(newZone);
+      closeAddZoneModal();
+      document.getElementById('zoneName').value = '';
+      render();
+      showToast('Zone "' + name + '" added!');
+    }
+
+    function addTable() {
+      pushUndo();
+      const name = document.getElementById('tableName').value || 'Table ' + (tables.length + 1);
+      const seats = parseInt(document.getElementById('tdSeats').value);
+      const customW = parseInt(document.getElementById('tdWidth').value);
+      const customH = parseInt(document.getElementById('tdHeight').value);
+      const rotation = parseInt(document.getElementById('tdRotation').value);
+
+      const newTable = {
+        id: 't' + Date.now(),
+        name: name,
+        shape: tdShape,
+        x: 300 + Math.random() * 100,
+        y: 300 + Math.random() * 100,
+        team: '',
+        seats: seats,
+        status: 'empty',
+        zone: 'z1',
+        customWidth: customW,
+        customHeight: customH,
+        rotation: rotation,
+        colorOverride: tdColor !== 'auto' ? tdColor : null
+      };
+
+      tables.push(newTable);
+      // Auto-detect zone
+      newTable.zone = findZoneForTable(newTable);
+      recalcZoneCounts();
+      closeAddTableModal();
+      render();
+      markUnsaved();
+      showToast('Table "' + name + '" added!');
+    }
+
+    // Render floor
+    let layoutReady = false;
+
+    function render() {
+      const grid = document.getElementById('floorGrid');
+      grid.innerHTML = '';
+      grid.style.width = canvasWidth + 'px';
+      grid.style.height = canvasHeight + 'px';
+      if (layoutReady) markUnsaved();
+
+      // Render zones
+      zones.forEach(zone => {
+        const zoneEl = document.createElement('div');
+        zoneEl.className = 'zone' + (selectedZone === zone.id ? ' selected' : '');
+        const colors = zoneColors[zone.color];
+        zoneEl.style.cssText = `
+          left: ${zone.x}px; top: ${zone.y}px;
+          width: ${zone.width}px; height: ${zone.height}px;
+          background: ${colors.rgb};
+          border-color: ${colors.border};
+        `;
+        zoneEl.innerHTML = `
+          <div class="zone-label" style="background: ${colors.border}; color: #fff;">${zone.name} <span style="opacity:0.7;">(${zone.tableCount})</span></div>
+          <div class="zone-resize-handle" data-zone-id="${zone.id}"></div>
+        `;
+        // Zone body drag
+        zoneEl.onmousedown = (e) => {
+          if (e.target.classList.contains('zone-resize-handle')) return;
+          e.preventDefault(); e.stopPropagation();
+          selectedZone = zone.id;
+          selectedItem = null;
+          showZoneDetails(zone);
+          // Visually mark selected without re-rendering
+          document.querySelectorAll('.zone').forEach(z => z.classList.remove('selected'));
+          zoneEl.classList.add('selected');
+          // Start zone drag
+          if (currentMode === 'edit') {
+            const gridEl = document.getElementById('floorGrid');
+            const gridRect = gridEl.getBoundingClientRect();
+            const offsetX = e.clientX - gridRect.left - zone.x;
+            const offsetY = e.clientY - gridRect.top - zone.y;
+            let dragged = false;
+            const onMove = (ev) => {
+              dragged = true;
+              let nx = ev.clientX - gridRect.left - offsetX;
+              let ny = ev.clientY - gridRect.top - offsetY;
+              nx = snapToGrid(nx);
+              ny = snapToGrid(ny);
+              nx = Math.max(0, nx);
+              ny = Math.max(0, ny);
+              zone.x = nx; zone.y = ny;
+              zoneEl.style.left = nx + 'px';
+              zoneEl.style.top = ny + 'px';
+            };
+            const onUp = () => {
+              document.removeEventListener('mousemove', onMove);
+              document.removeEventListener('mouseup', onUp);
+              // Reassign tables to zones based on new positions
+              tables.forEach(t => { t.zone = findZoneForTable(t); });
+              recalcZoneCounts();
+              render();
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+          }
+        };
+        // Resize handle
+        const resizeHandle = zoneEl.querySelector('.zone-resize-handle');
+        resizeHandle.onmousedown = (e) => {
+          e.preventDefault(); e.stopPropagation();
+          selectedZone = zone.id;
+          const grid = document.getElementById('floorGrid');
+          const gridRect = grid.getBoundingClientRect();
+          const onMove = (ev) => {
+            let nw = ev.clientX - gridRect.left - zone.x;
+            let nh = ev.clientY - gridRect.top - zone.y;
+            nw = snapToGrid(nw);
+            nh = snapToGrid(nh);
+            zone.width = Math.max(100, nw);
+            zone.height = Math.max(70, nh);
+            zoneEl.style.width = zone.width + 'px';
+            zoneEl.style.height = zone.height + 'px';
+          };
+          const onUp = () => {
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            // Reassign tables after zone resize
+            tables.forEach(t => { t.zone = findZoneForTable(t); });
+            recalcZoneCounts();
+            render();
+          };
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        };
+        grid.appendChild(zoneEl);
+      });
+
+      // Render structures
+      structures.forEach(struct => {
+        const structEl = document.createElement('div');
+        structEl.className = 'structure ' + struct.type;
+        structEl.style.cssText = `
+          left: ${struct.x}px; top: ${struct.y}px;
+          width: ${struct.width || 60}px; height: ${struct.height || 60}px;
+          cursor: ${currentMode === 'edit' ? 'grab' : 'default'};
+        `;
+        structEl.innerHTML = (struct.label || '') + (currentMode === 'edit' ? '<div class="struct-resize-handle"></div>' : '');
+        // Structure drag + resize
+        if (currentMode === 'edit') {
+          structEl.onmousedown = (e) => {
+            // Check if resize handle was clicked
+            if (e.target.classList.contains('struct-resize-handle')) {
+              e.preventDefault(); e.stopPropagation();
+              const grid = document.getElementById('floorGrid');
+              const gridRect = grid.getBoundingClientRect();
+              const onMove = (ev) => {
+                let nw = ev.clientX - gridRect.left - struct.x;
+                let nh = ev.clientY - gridRect.top - struct.y;
+                nw = snapToGrid(nw);
+                nh = snapToGrid(nh);
+                struct.width = Math.max(28, nw);
+                struct.height = Math.max(14, nh);
+                structEl.style.width = struct.width + 'px';
+                structEl.style.height = struct.height + 'px';
+              };
+              const onUp = () => {
+                document.removeEventListener('mousemove', onMove);
+                document.removeEventListener('mouseup', onUp);
+                render();
+              };
+              document.addEventListener('mousemove', onMove);
+              document.addEventListener('mouseup', onUp);
+              return;
+            }
+            // Normal drag
+            e.preventDefault(); e.stopPropagation();
+            const grid = document.getElementById('floorGrid');
+            const gridRect = grid.getBoundingClientRect();
+            const offsetX = e.clientX - gridRect.left - struct.x;
+            const offsetY = e.clientY - gridRect.top - struct.y;
+            structEl.style.cursor = 'grabbing';
+            const onMove = (ev) => {
+              let nx = ev.clientX - gridRect.left - offsetX;
+              let ny = ev.clientY - gridRect.top - offsetY;
+              nx = snapToGrid(nx);
+              ny = snapToGrid(ny);
+              struct.x = Math.max(0, nx);
+              struct.y = Math.max(0, ny);
+              structEl.style.left = struct.x + 'px';
+              structEl.style.top = struct.y + 'px';
+            };
+            const onUp = () => {
+              structEl.style.cursor = 'grab';
+              document.removeEventListener('mousemove', onMove);
+              document.removeEventListener('mouseup', onUp);
+            };
+            document.addEventListener('mousemove', onMove);
+            document.addEventListener('mouseup', onUp);
+          };
+        }
+        grid.appendChild(structEl);
+      });
+
+      // Render tables
+      tables.forEach(table => {
+        const tableEl = document.createElement('div');
+        tableEl.className = 'table-item ' + table.status;
+        tableEl.style.left = table.x + 'px';
+        tableEl.style.top = table.y + 'px';
+        tableEl.style.zIndex = 5;
+
+        const status = table.status === 'active' ? 'live' : (table.status === 'reserved' ? 'reserved' : 'empty');
+        const zc = getTableZoneColor(table);
+        const dims = getTableDims(table);
+        const rot = table.rotation || 0;
+        const shapeClass = (table.shape === 'oval' || table.shape === 'booth') ? '' : table.shape;
+        const customShapeStyle = buildTableShapeStyle(table, dims, zc);
+        const rotStyle = rot ? `transform: rotate(${rot}deg);` : '';
+        tableEl.innerHTML = `
+          <div class="table-rotate-line"></div>
+          <div class="table-rotate-handle" data-table-id="${table.id}">
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M1 4v6h6"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          </div>
+          <div class="table-shape ${shapeClass}" style="${customShapeStyle} ${rotStyle}">
+            <span class="table-status-dot ${status}" ${zc ? `style="background: ${zc.solid};"` : ''}></span>
+            <span class="table-number">${table.name}</span>
+            <span class="table-team">${table.team || '—'}</span>
+          </div>
+          <span class="table-seats">${table.seats} seats</span>
+        `;
+
+        // Rotation handle drag
+        const rotHandle = tableEl.querySelector('.table-rotate-handle');
+        rotHandle.onmousedown = (e) => {
+          e.preventDefault(); e.stopPropagation();
+          pushUndo();
+          rotHandle.classList.add('active');
+          const tDims = getTableDims(table);
+          const cx = table.x + tDims.w / 2;
+          const cy = table.y + tDims.h / 2;
+          const grid = document.getElementById('floorGrid');
+          const gridRect = grid.getBoundingClientRect();
+          const onMove = (ev) => {
+            const mx = (ev.clientX - gridRect.left) / zoom;
+            const my = (ev.clientY - gridRect.top) / zoom;
+            let angle = Math.atan2(my - cy, mx - cx) * 180 / Math.PI + 90;
+            if (angle < 0) angle += 360;
+            if (gridSnap) angle = Math.round(angle / 15) * 15;
+            table.rotation = Math.round(angle) % 360;
+            const shapeDiv = tableEl.querySelector('.table-shape');
+            if (shapeDiv) shapeDiv.style.transform = 'rotate(' + table.rotation + 'deg)';
+          };
+          const onUp = () => {
+            rotHandle.classList.remove('active');
+            document.removeEventListener('mousemove', onMove);
+            document.removeEventListener('mouseup', onUp);
+            markUnsaved();
+            render();
+          };
+          document.addEventListener('mousemove', onMove);
+          document.addEventListener('mouseup', onUp);
+        };
+
+        tableEl.onmousedown = (e) => {
+          if (e.target.closest('.table-rotate-handle')) return; // handled above
+          if (currentMode === 'edit') {
+            e.preventDefault(); e.stopPropagation();
+            // Update selection panel without re-rendering
+            selectedItem = table;
+            selectedZone = null;
+            const panel = document.getElementById('selectedPanel');
+            panel.style.display = 'block';
+            document.getElementById('selectedName').textContent = table.name;
+            const tZone = zones.find(z => z.id === table.zone);
+            const tZoneColor = tZone ? zoneColors[tZone.color] : null;
+            const tDims = getTableDims(table);
+            const tRot = table.rotation || 0;
+            document.getElementById('selectedContent').innerHTML = `
+              <div class="detail-row">
+                <span class="detail-label">Zone</span>
+                <span class="detail-value" ${tZoneColor ? `style="color: ${tZoneColor.solid};"` : ''}>${tZone ? tZone.name : 'None'}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Shape</span>
+                <span class="detail-value">${table.shape.charAt(0).toUpperCase() + table.shape.slice(1)}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Size</span>
+                <span class="detail-value">${tDims.w} × ${tDims.h}px</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Seats</span>
+                <span class="detail-value">${table.seats}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Rotation</span>
+                <span class="detail-value" style="display:flex;align-items:center;gap:6px;">
+                  <button onclick="rotateTable('${table.id}',-15)" style="background:rgba(124,92,252,0.15);border:1px solid rgba(124,92,252,0.3);color:var(--purple);border-radius:4px;width:24px;height:22px;cursor:pointer;font-weight:800;font-size:0.7rem;">↶</button>
+                  <span id="rotLabel_${table.id}">${table.rotation || 0}°</span>
+                  <button onclick="rotateTable('${table.id}',15)" style="background:rgba(124,92,252,0.15);border:1px solid rgba(124,92,252,0.3);color:var(--purple);border-radius:4px;width:24px;height:22px;cursor:pointer;font-weight:800;font-size:0.7rem;">↷</button>
+                </span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Team</span>
+                <span class="detail-value">${table.team || '—'}</span>
+              </div>
+              <div class="detail-row">
+                <span class="detail-label">Status</span>
+                <span class="detail-value" style="color: ${table.status === 'active' ? 'var(--lime)' : table.status === 'reserved' ? 'var(--purple)' : 'var(--grey)'};">${table.status}</span>
+              </div>
+              <div class="detail-actions">
+                <button class="btn btn-ghost" onclick="duplicateTable('${table.id}')">Duplicate</button>
+                <button class="btn btn-ghost" style="color: var(--coral); border-color: rgba(255,107,107,0.2);" onclick="deleteTable('${table.id}')">Delete</button>
+              </div>
+              <div style="margin-top:8px;font-size:0.55rem;color:var(--grey-dark);line-height:1.4;">Shortcuts: <b>Del</b> delete &nbsp; <b>Ctrl+D</b> duplicate &nbsp; <b>R</b> rotate</div>
+            `;
+            startDrag(e, tableEl, table);
+          }
+        };
+        grid.appendChild(tableEl);
+      });
+
+      // Update zones list
+      const zonesList = document.getElementById('zonesList');
+      zonesList.innerHTML = zones.map(zone => `
+        <div class="zone-list-item${selectedZone === zone.id ? ' selected' : ''}">
+          <div class="zone-color-dot" style="background: var(--${zone.color}); opacity: 0.7;"></div>
+          <div class="zone-list-info">
+            <div class="zone-list-name">${zone.name}</div>
+            <div class="zone-list-meta">${zone.tableCount} tables</div>
+          </div>
+          <div class="zone-list-actions">
+            <button class="zone-list-btn" onclick="editZone('${zone.id}')">✎</button>
+            <button class="zone-list-btn" onclick="deleteZone('${zone.id}')">✕</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Drag & drop
+    let dragEl = null, dragOffsetX = 0, dragOffsetY = 0, draggedTable = null;
+    function startDrag(e, el, table) {
+      e.preventDefault();
+      dragEl = el;
+      draggedTable = table;
+      const rect = el.getBoundingClientRect();
+      dragOffsetX = e.clientX - rect.left;
+      dragOffsetY = e.clientY - rect.top;
+      el.style.zIndex = 20;
+      document.addEventListener('mousemove', onDrag);
+      document.addEventListener('mouseup', stopDrag);
+    }
+
+    function onDrag(e) {
+      if (!dragEl) return;
+      const grid = document.getElementById('floorGrid');
+      const gridRect = grid.getBoundingClientRect();
+      let x = e.clientX - gridRect.left - dragOffsetX;
+      let y = e.clientY - gridRect.top - dragOffsetY;
+      x = snapToGrid(x);
+      y = snapToGrid(y);
+      x = Math.max(0, Math.min(x, canvasWidth - 80));
+      y = Math.max(0, Math.min(y, canvasHeight - 80));
+      dragEl.style.left = x + 'px';
+      dragEl.style.top = y + 'px';
+    }
+
+    function stopDrag() {
+      pushUndo();
+      if (dragEl && draggedTable) {
+        draggedTable.x = parseInt(dragEl.style.left);
+        draggedTable.y = parseInt(dragEl.style.top);
+        // Detect which zone the table landed in
+        const oldZone = draggedTable.zone;
+        const newZone = findZoneForTable(draggedTable);
+        if (newZone !== oldZone) {
+          draggedTable.zone = newZone;
+          recalcZoneCounts();
+          const zoneName = newZone ? zones.find(z => z.id === newZone).name : 'No zone';
+          showToast(draggedTable.name + ' moved to ' + zoneName);
+        }
+      }
+      dragEl = null;
+      draggedTable = null;
+      document.removeEventListener('mousemove', onDrag);
+      document.removeEventListener('mouseup', stopDrag);
+      render();
+    }
+
+    function selectZoneItem(zoneId, e) {
+      e.preventDefault();
+      selectedZone = zoneId;
+      selectedItem = null;
+      const zone = zones.find(z => z.id === zoneId);
+      if (zone) showZoneDetails(zone);
+      render();
+    }
+
+    function showZoneDetails(zone) {
+      const panel = document.getElementById('selectedPanel');
+      panel.style.display = 'block';
+      document.getElementById('selectedName').textContent = zone.name;
+      const zoneTables = tables.filter(t => t.zone === zone.id);
+      document.getElementById('selectedContent').innerHTML = `
+        <div class="detail-row">
+          <span class="detail-label">Type</span>
+          <span class="detail-value">Zone</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Size</span>
+          <span class="detail-value">${zone.width} × ${zone.height}px</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Position</span>
+          <span class="detail-value">${zone.x}, ${zone.y}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Tables</span>
+          <span class="detail-value">${zoneTables.length}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Color</span>
+          <span class="detail-value" style="color: var(--${zone.color}); text-transform: capitalize;">${zone.color}</span>
+        </div>
+        <div style="margin-top: 12px; font-size: 0.65rem; color: var(--grey); line-height: 1.4;">Drag to reposition. Use the corner handle to resize.</div>
+        <div class="detail-actions">
+          <button class="btn btn-ghost" onclick="duplicateZone('${zone.id}')">Duplicate</button>
+          <button class="btn btn-ghost" onclick="editZone('${zone.id}')">Rename</button>
+          <button class="btn btn-ghost" style="color: var(--coral); border-color: rgba(255,107,107,0.2);" onclick="deleteZone('${zone.id}')">Delete</button>
+        </div>
+        <div style="margin-top:8px;font-size:0.55rem;color:var(--grey-dark);line-height:1.4;">Shortcuts: <b>Del</b> delete &nbsp; <b>Ctrl+D</b> duplicate</div>
+      `;
+    }
+
+    function selectTableItem(tableId, e) {
+      e.stopPropagation();
+      const table = tables.find(t => t.id === tableId);
+      if (!table) return;
+      selectedItem = table;
+      selectedZone = null;
+
+      const panel = document.getElementById('selectedPanel');
+      panel.style.display = 'block';
+      document.getElementById('selectedName').textContent = table.name;
+      document.getElementById('selectedContent').innerHTML = `
+        <div class="detail-row">
+          <span class="detail-label">Shape</span>
+          <span class="detail-value">${table.shape.charAt(0).toUpperCase() + table.shape.slice(1)}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Seats</span>
+          <span class="detail-value">${table.seats}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Team</span>
+          <span class="detail-value">${table.team || '—'}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-label">Status</span>
+          <span class="detail-value" style="color: ${table.status === 'active' ? 'var(--lime)' : table.status === 'reserved' ? 'var(--purple)' : 'var(--grey)'};">${table.status}</span>
+        </div>
+        <div class="detail-actions">
+          <button class="btn btn-ghost" onclick="showToast('Editing ${table.name}...')">Edit</button>
+          <button class="btn btn-ghost" style="color: var(--coral); border-color: rgba(255,107,107,0.2);" onclick="showToast('Removed ${table.name}')">Remove</button>
+        </div>
+      `;
+      render();
+    }
+
+    function editZone(zoneId) {
+      showToast('Edit zone (coming soon)');
+    }
+
+    function deleteZone(zoneId) {
+      pushUndo();
+      const zone = zones.find(z => z.id === zoneId);
+      if (zone) {
+        // Unassign tables from this zone
+        tables.forEach(t => { if (t.zone === zoneId) t.zone = null; });
+        zones.splice(zones.indexOf(zone), 1);
+        // Reassign orphaned tables to any overlapping zone
+        tables.forEach(t => { if (!t.zone) t.zone = findZoneForTable(t); });
+        recalcZoneCounts();
+        selectedZone = null;
+        document.getElementById('selectedPanel').style.display = 'none';
+        render();
+        showToast('Zone "' + zone.name + '" deleted');
+      }
+    }
+
+    function rotateTable(tableId, delta) {
+      pushUndo();
+      const table = tables.find(t => t.id === tableId);
+      if (!table) return;
+      table.rotation = ((table.rotation || 0) + delta + 360) % 360;
+      markUnsaved();
+      render();
+      showToast(table.name + ' rotated to ' + table.rotation + '°');
+    }
+
+    function deleteTable(tableId) {
+      pushUndo();
+      const idx = tables.findIndex(t => t.id === tableId);
+      if (idx === -1) return;
+      const table = tables[idx];
+      tables.splice(idx, 1);
+      recalcZoneCounts();
+      selectedItem = null;
+      document.getElementById('selectedPanel').style.display = 'none';
+      render();
+      showToast('"' + table.name + '" deleted');
+    }
+
+    function duplicateTable(tableId) {
+      pushUndo();
+      const original = tables.find(t => t.id === tableId);
+      if (!original) return;
+      const copy = {
+        id: 't' + Date.now(),
+        name: original.name + ' copy',
+        shape: original.shape,
+        x: original.x + 30,
+        y: original.y + 30,
+        team: '',
+        seats: original.seats,
+        status: 'empty',
+        zone: null,
+        customWidth: original.customWidth || null,
+        customHeight: original.customHeight || null,
+        rotation: original.rotation || 0,
+        colorOverride: original.colorOverride || null
+      };
+      copy.zone = findZoneForTable(copy);
+      tables.push(copy);
+      recalcZoneCounts();
+      selectedItem = copy;
+      render();
+      showToast('"' + original.name + '" duplicated');
+    }
+
+    function duplicateZone(zoneId) {
+      pushUndo();
+      const original = zones.find(z => z.id === zoneId);
+      if (!original) return;
+      const copy = {
+        id: 'z' + Date.now(),
+        name: original.name + ' copy',
+        color: original.color,
+        x: original.x + 40,
+        y: original.y + 40,
+        width: original.width,
+        height: original.height,
+        tableCount: 0
+      };
+      zones.push(copy);
+      recalcZoneCounts();
+      selectedZone = copy.id;
+      render();
+      showToast('"' + original.name + '" duplicated');
+    }
+
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (isFullscreen) return;
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+      if (currentMode !== 'edit') return;
+
+      // Delete / Backspace — delete selected item
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (selectedItem) {
+          e.preventDefault();
+          deleteTable(selectedItem.id);
+        } else if (selectedZone) {
+          e.preventDefault();
+          deleteZone(selectedZone);
+        }
+      }
+
+      // Ctrl+D / Cmd+D — duplicate selected item
+      if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+        e.preventDefault();
+        if (selectedItem) {
+          duplicateTable(selectedItem.id);
+        } else if (selectedZone) {
+          duplicateZone(selectedZone);
+        }
+      }
+
+      // R — rotate selected table by 15°
+      if (e.key === 'r' || e.key === 'R') {
+        if (selectedItem) {
+          e.preventDefault();
+          rotateTable(selectedItem.id, e.shiftKey ? -15 : 15);
+        }
+      }
+    });
+
+    // Ctrl+S to save, Ctrl+Z to undo
+    document.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        saveLayout();
+        showToast('Layout saved!');
+      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        e.preventDefault();
+        undo();
+      }
+    });
+
+    // Initialize
+    recalcZoneCounts();
+    applyCanvasSize();
+    // Sync canvas size dropdown
+    const initPreset = document.getElementById('canvasSizePreset');
+    const initMatch = Array.from(initPreset.options).find(o => o.value === canvasWidth + 'x' + canvasHeight);
+    if (initMatch) initPreset.value = initMatch.value;
+    render();
+    layoutReady = true;
+    if (saved) {
+      updateSaveIndicator('saved');
+    } else {
+      // First visit — save the default layout
+      saveLayout();
+      showToast('Welcome! Here\'s a starter floor plan — customize it to match your venue.');
+    }
+  </script>
+  <script src="utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+  <script src="sidebar.js"></script>
+  <script>
+    SpontixSidebar.init({ type: 'venue', active: 'venue-table-map.html' });
+
+    // Tier gate — Table Map requires Venue Pro+
+    SpontixSidebar.gatePage({
+      feature: 'tableMap',
+      requiredTier: 'Venue Pro',
+      isVenue: true,
+      icon: '🗺️',
+      title: 'Table Map requires Venue Pro',
+      description: 'Manage your venue layout, assign tables to events, and track where your players are sitting. Upgrade to Venue Pro to unlock Table Map.'
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Leaderboards</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+<style>/* ══ SIDEBAR ══ */
+
+    /* ══ MAIN ══ */
+    .main { margin-left: 260px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
+    .topbar {
+      padding: 16px 32px; display: flex; align-items: center; gap: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-search { flex: 1; max-width: 400px; position: relative; }
+    .topbar-search input {
+      width: 100%; padding: 10px 14px 10px 40px; background: var(--navy-light);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-pill);
+      color: var(--off-white); font-size: 0.85rem; font-family: inherit; outline: none;
+      transition: border-color 0.2s;
+    }
+    .topbar-search input::placeholder { color: var(--grey-dark); }
+    .topbar-search input:focus { border-color: rgba(168,225,12,0.3); }
+    .topbar-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--grey-dark); }
+    .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .topbar-btn {
+      width: 40px; height: 40px; border-radius: 50%; border: none;
+      background: var(--navy-light); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; position: relative; transition: background 0.2s;
+    }
+    .topbar-btn:hover { background: var(--navy-hover); }
+    .topbar-btn svg { width: 18px; height: 18px; stroke: var(--grey); fill: none; stroke-width: 1.8; }
+    .topbar-btn .notif-dot {
+      position: absolute; top: 8px; right: 8px; width: 8px; height: 8px;
+      background: var(--coral); border-radius: 50%; border: 2px solid var(--navy);
+    }
+    .content { padding: 32px; flex: 1; width: 100%; }
+
+    /* ══ PAGE HEADER ══ */
+    .page-header { margin-bottom: 28px; }
+    .page-title { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .page-sub { color: var(--grey); font-size: 0.9rem; }
+
+    /* ══ VIEW TABS (Global / My Leagues / Friends) ══ */
+    .view-tabs {
+      display: flex; gap: 4px; margin-bottom: 20px; background: var(--navy-light);
+      border-radius: var(--radius-sm); padding: 4px; overflow-x: auto;
+    }
+    .view-tab {
+      padding: 10px 20px; border-radius: 6px; border: none; background: none;
+      color: var(--grey); font-size: 0.82rem; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .view-tab:hover { color: var(--off-white); }
+    .view-tab.active { background: var(--navy-card); color: var(--lime); }
+    .view-tab svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+    /* ══ TIME FILTER ══ */
+    .time-filter { display: flex; gap: 6px; margin-bottom: 24px; flex-wrap: wrap; }
+    .time-chip {
+      padding: 7px 16px; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.08);
+      background: none; color: var(--grey); font-size: 0.75rem; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: all 0.15s;
+    }
+    .time-chip:hover { border-color: rgba(168,225,12,0.2); color: var(--off-white); }
+    .time-chip.active { background: var(--lime); color: var(--navy); border-color: var(--lime); }
+
+    /* ══ CATEGORY SELECTOR ══ */
+    .cat-row { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .cat-chip {
+      padding: 8px 16px; border-radius: var(--radius-pill); border: 2px solid rgba(255,255,255,0.06);
+      background: var(--navy-card); color: var(--grey); font-size: 0.78rem; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: all 0.15s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .cat-chip:hover { border-color: rgba(168,225,12,0.2); }
+    .cat-chip.active { border-color: var(--lime); color: var(--lime); background: var(--lime-dim); }
+    .cat-chip svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+    /* ══ VIEW PANELS ══ */
+    .view-panel { display: none; animation: fadeIn 0.3s ease; }
+    .view-panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ══ PODIUM ══ */
+    .podium { display: flex; align-items: flex-end; justify-content: center; gap: 12px; margin-bottom: 28px; padding: 20px 0; }
+    .podium-spot { text-align: center; display: flex; flex-direction: column; align-items: center; }
+    .podium-avatar {
+      width: 56px; height: 56px; border-radius: 50%; display: flex;
+      align-items: center; justify-content: center; font-weight: 800;
+      font-size: 0.9rem; margin-bottom: 8px; position: relative;
+    }
+    .podium-spot.first .podium-avatar { width: 68px; height: 68px; font-size: 1.1rem; }
+    .podium-crown {
+      position: absolute; top: -14px; left: 50%; transform: translateX(-50%);
+      font-size: 0; line-height: 0;
+    }
+    .podium-crown svg { width: 22px; height: 22px; fill: #FFD700; stroke: none; }
+    .podium-name { font-size: 0.82rem; font-weight: 700; margin-bottom: 2px; }
+    .podium-value { font-size: 0.7rem; font-weight: 600; }
+    .podium-bar {
+      width: 80px; border-radius: 8px 8px 0 0; margin-top: 8px;
+    }
+    .podium-spot.first .podium-bar { height: 100px; background: linear-gradient(180deg, var(--lime), rgba(168,225,12,0.3)); }
+    .podium-spot.second .podium-bar { height: 72px; background: linear-gradient(180deg, var(--purple), rgba(124,92,252,0.25)); }
+    .podium-spot.third .podium-bar { height: 52px; background: linear-gradient(180deg, var(--teal), rgba(78,205,196,0.25)); }
+    .podium-rank {
+      font-size: 0.65rem; font-weight: 800; color: var(--navy); width: 22px; height: 22px;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      margin-top: -11px; position: relative; z-index: 1;
+    }
+    .podium-spot.first .podium-rank { background: var(--lime); }
+    .podium-spot.second .podium-rank { background: var(--purple); color: #fff; }
+    .podium-spot.third .podium-rank { background: var(--teal); }
+
+    /* ══ LEADERBOARD TABLE ══ */
+    .lb-table { width: 100%; border-collapse: collapse; margin-bottom: 28px; }
+    .lb-table th {
+      text-align: left; font-size: 0.68rem; font-weight: 700; color: var(--grey-dark);
+      text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .lb-table th:first-child { width: 50px; text-align: center; }
+    .lb-table td { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.85rem; }
+    .lb-table tr { transition: background 0.1s; }
+    .lb-table tr:hover { background: rgba(255,255,255,0.02); }
+    .lb-table tr.you { background: var(--lime-dim); }
+    .lb-table tr.you td { font-weight: 700; }
+
+    .lb-rank {
+      width: 28px; height: 28px; border-radius: 50%; display: flex;
+      align-items: center; justify-content: center; font-size: 0.72rem;
+      font-weight: 800; margin: 0 auto;
+    }
+    .lb-rank.gold { background: rgba(255,215,0,0.15); color: #FFD700; }
+    .lb-rank.silver { background: rgba(192,192,192,0.12); color: #C0C0C0; }
+    .lb-rank.bronze { background: rgba(205,127,50,0.12); color: #CD7F32; }
+    .lb-rank.normal { color: var(--grey); }
+
+    .lb-player { display: flex; align-items: center; gap: 12px; }
+    .lb-avatar {
+      width: 34px; height: 34px; border-radius: 50%; display: flex;
+      align-items: center; justify-content: center; font-weight: 800;
+      font-size: 0.65rem; flex-shrink: 0;
+    }
+    .lb-player-info {}
+    .lb-player-name { font-weight: 600; }
+    .lb-player-handle { font-size: 0.7rem; color: var(--grey); }
+    .lb-stat { font-weight: 700; }
+    .lb-stat.lime { color: var(--lime); }
+    .lb-stat.teal { color: var(--teal); }
+    .lb-stat.purple { color: var(--purple); }
+
+    .lb-change { display: flex; align-items: center; gap: 3px; font-size: 0.75rem; font-weight: 700; }
+    .lb-change.up { color: var(--lime); }
+    .lb-change.down { color: var(--coral); }
+    .lb-change.same { color: var(--grey-dark); }
+    .lb-change svg { width: 12px; height: 12px; stroke: currentColor; stroke-width: 2.5; fill: none; }
+
+    /* ══ MY LEAGUES CARDS ══ */
+    .league-lb-list { display: flex; flex-direction: column; gap: 16px; }
+    .league-lb-card {
+      background: var(--navy-card); border-radius: var(--radius-lg); padding: 22px;
+      border: 1px solid rgba(255,255,255,0.06); transition: border-color 0.15s;
+    }
+    .league-lb-card:hover { border-color: rgba(168,225,12,0.12); }
+    .league-lb-header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+    .league-lb-icon {
+      width: 44px; height: 44px; border-radius: var(--radius-md); display: flex;
+      align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .league-lb-icon svg { width: 20px; height: 20px; stroke-width: 2; fill: none; }
+    .league-lb-info { flex: 1; }
+    .league-lb-name { font-size: 0.95rem; font-weight: 700; }
+    .league-lb-meta { font-size: 0.72rem; color: var(--grey); }
+    .league-lb-your-rank {
+      padding: 5px 14px; border-radius: var(--radius-pill); font-size: 0.72rem; font-weight: 700;
+    }
+    .league-lb-mini { display: flex; flex-direction: column; gap: 0; }
+    .league-lb-row {
+      display: flex; align-items: center; gap: 10px; padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .league-lb-row:last-child { border-bottom: none; }
+    .league-lb-row.you { background: var(--lime-dim); margin: 0 -10px; padding: 8px 10px; border-radius: 6px; }
+    .league-lb-pos { width: 24px; font-size: 0.78rem; font-weight: 800; text-align: center; flex-shrink: 0; }
+    .league-lb-row-avatar {
+      width: 28px; height: 28px; border-radius: 50%; display: flex;
+      align-items: center; justify-content: center; font-weight: 800;
+      font-size: 0.55rem; flex-shrink: 0;
+    }
+    .league-lb-row-name { flex: 1; font-size: 0.82rem; font-weight: 600; }
+    .league-lb-row-pts { font-size: 0.82rem; font-weight: 800; }
+
+    /* ══ FRIENDS VIEW ══ */
+    .friends-header {
+      display: flex; align-items: center; gap: 14px; margin-bottom: 20px;
+      padding: 18px 22px; background: var(--navy-card); border-radius: var(--radius-lg);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .friends-header-icon {
+      width: 44px; height: 44px; border-radius: 50%; flex-shrink: 0;
+      background: rgba(124,92,252,0.12); display: flex; align-items: center; justify-content: center;
+    }
+    .friends-header-icon svg { width: 20px; height: 20px; stroke: var(--purple); stroke-width: 2; fill: none; }
+    .friends-header-text { flex: 1; }
+    .friends-header-title { font-size: 0.9rem; font-weight: 700; }
+    .friends-header-sub { font-size: 0.75rem; color: var(--grey); }
+
+    /* Toast */
+
+      .podium-bar { width: 60px; }
+    }
+    @media (max-width: 640px) {
+      .content { padding: 20px 16px; }
+      .lb-table th:nth-child(4), .lb-table td:nth-child(4),
+      .lb-table th:nth-child(5), .lb-table td:nth-child(5) { display: none; }
+    }</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar-placeholder"></div>
+
+<!-- Main -->
+<div class="main">
+  <header class="topbar">
+    <div class="topbar-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Search players..." />
+    </div>
+    <div class="topbar-right">
+      <a href="notifications.html" class="topbar-btn" title="Notifications" style="text-decoration:none;">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        <span class="notif-dot"></span>
+      </a>
+      <button class="topbar-btn">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <div class="page-header">
+      <h1 class="page-title">Leaderboards</h1>
+      <p class="page-sub">See who's on top. Climb the ranks. Flex on your mates.</p>
+    </div>
+
+    <!-- View Tabs -->
+    <div class="view-tabs">
+      <button class="view-tab active" onclick="switchView('global')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+        Global
+      </button>
+      <button class="view-tab" onclick="switchView('leagues')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+        My Leagues
+      </button>
+      <button class="view-tab" onclick="switchView('friends')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Friends
+      </button>
+    </div>
+
+    <!-- Time Filter -->
+    <div class="time-filter">
+      <button class="time-chip active" onclick="selectTime(this)">This Week</button>
+      <button class="time-chip" onclick="selectTime(this)">This Month</button>
+      <button class="time-chip" onclick="selectTime(this)">This Season</button>
+      <button class="time-chip" onclick="selectTime(this)">All Time</button>
+    </div>
+
+    <!-- ═══ GLOBAL VIEW ═══ -->
+    <div class="view-panel active" id="view-global">
+
+      <!-- Category chips -->
+      <div class="cat-row">
+        <button class="cat-chip active" onclick="selectCat(this)">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Total Points
+        </button>
+        <button class="cat-chip" onclick="selectCat(this)">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Accuracy
+        </button>
+        <button class="cat-chip" onclick="selectCat(this)">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Best Streak
+        </button>
+        <button class="cat-chip" onclick="selectCat(this)">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+          Qs Answered
+        </button>
+        <button class="cat-chip" onclick="selectCat(this)">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+          Leagues Created
+        </button>
+      </div>
+
+      <!-- Podium -->
+      <div class="podium">
+        <div class="podium-spot second">
+          <div class="podium-avatar av-user" data-name="MK" style="background:linear-gradient(135deg,var(--purple),#5B3FD4);color:#fff;">MK</div>
+          <div class="podium-name">Marcus K.</div>
+          <div class="podium-value" style="color:var(--purple);">4,820 pts</div>
+          <div class="podium-bar"></div>
+          <div class="podium-rank">2</div>
+        </div>
+        <div class="podium-spot first">
+          <div class="podium-avatar av-user" data-name="SR" style="background:linear-gradient(135deg,var(--lime),var(--teal));color:var(--navy);">
+            <span class="podium-crown"><svg viewBox="0 0 24 24"><path d="M2 20h20L18 8l-4 5-2-9-2 9-4-5z"/></svg></span>
+            SR
+          </div>
+          <div class="podium-name">Sofia R.</div>
+          <div class="podium-value" style="color:var(--lime);">5,340 pts</div>
+          <div class="podium-bar"></div>
+          <div class="podium-rank">1</div>
+        </div>
+        <div class="podium-spot third">
+          <div class="podium-avatar av-user" data-name="JR" style="background:linear-gradient(135deg,var(--teal),#2BA8A0);color:var(--navy);">JR</div>
+          <div class="podium-name">Jake R.</div>
+          <div class="podium-value" style="color:var(--teal);">4,510 pts</div>
+          <div class="podium-bar"></div>
+          <div class="podium-rank">3</div>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <table class="lb-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Player</th>
+            <th>Points</th>
+            <th>Accuracy</th>
+            <th>Streak</th>
+            <th>Change</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><div class="lb-rank gold">1</div></td>
+            <td><div class="lb-player"><div class="lb-avatar av-user" data-name="SR" style="background:linear-gradient(135deg,var(--lime),var(--teal));color:var(--navy);">SR</div><div class="lb-player-info"><div class="lb-player-name">Sofia R.</div><div class="lb-player-handle">@sofia_goals</div></div></div></td>
+            <td class="lb-stat lime">5,340</td>
+            <td class="lb-stat teal">74%</td>
+            <td class="lb-stat purple">12</td>
+            <td><div class="lb-change up"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg> 2</div></td>
+          </tr>
+          <tr>
+            <td><div class="lb-rank silver">2</div></td>
+            <td><div class="lb-player"><div class="lb-avatar av-user" data-name="MK" style="background:var(--purple);color:#fff;">MK</div><div class="lb-player-info"><div class="lb-player-name">Marcus K.</div><div class="lb-player-handle">@marc_predicts</div></div></div></td>
+            <td class="lb-stat lime">4,820</td>
+            <td class="lb-stat teal">71%</td>
+            <td class="lb-stat purple">9</td>
+            <td><div class="lb-change down"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg> 1</div></td>
+          </tr>
+          <tr>
+            <td><div class="lb-rank bronze">3</div></td>
+            <td><div class="lb-player"><div class="lb-avatar av-user" data-name="JR" style="background:var(--teal);color:var(--navy);">JR</div><div class="lb-player-info"><div class="lb-player-name">Jake R.</div><div class="lb-player-handle">@jake_risky</div></div></div></td>
+            <td class="lb-stat lime">4,510</td>
+            <td class="lb-stat teal">69%</td>
+            <td class="lb-stat purple">11</td>
+            <td><div class="lb-change up"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg> 1</div></td>
+          </tr>
+          <tr>
+            <td><div class="lb-rank normal">4</div></td>
+            <td><div class="lb-player"><div class="lb-avatar av-user" data-name="IL" style="background:var(--coral);color:#fff;">IL</div><div class="lb-player-info"><div class="lb-player-name">Ines L.</div><div class="lb-player-handle">@ines_trivia</div></div></div></td>
+            <td class="lb-stat lime">3,980</td>
+            <td class="lb-stat teal">76%</td>
+            <td class="lb-stat purple">8</td>
+            <td><div class="lb-change same"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg> 0</div></td>
+          </tr>
+          <tr>
+            <td><div class="lb-rank normal">5</div></td>
+            <td><div class="lb-player"><div class="lb-avatar av-user" data-name="DO" style="background:rgba(255,255,255,0.08);color:var(--off-white);">DO</div><div class="lb-player-info"><div class="lb-player-name">Dan O.</div><div class="lb-player-handle">@danno</div></div></div></td>
+            <td class="lb-stat lime">3,420</td>
+            <td class="lb-stat teal">63%</td>
+            <td class="lb-stat purple">6</td>
+            <td><div class="lb-change up"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg> 3</div></td>
+          </tr>
+          <tr class="you">
+            <td><div class="lb-rank normal">6</div></td>
+            <td><div class="lb-player"><div class="lb-avatar av-self" style="background:var(--lime);color:var(--navy);">B</div><div class="lb-player-info"><div class="lb-player-name">Bran <span style="font-size:0.65rem;color:var(--lime);font-weight:700;">(You)</span></div><div class="lb-player-handle">@bran_predicts</div></div></div></td>
+            <td class="lb-stat lime">1,240</td>
+            <td class="lb-stat teal">68%</td>
+            <td class="lb-stat purple">7</td>
+            <td><div class="lb-change up"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg> 4</div></td>
+          </tr>
+          <tr>
+            <td><div class="lb-rank normal">7</div></td>
+            <td><div class="lb-player"><div class="lb-avatar av-user" data-name="KW" style="background:rgba(124,92,252,0.2);color:var(--purple);">KW</div><div class="lb-player-info"><div class="lb-player-name">Kai W.</div><div class="lb-player-handle">@kai_wins</div></div></div></td>
+            <td class="lb-stat lime">1,110</td>
+            <td class="lb-stat teal">58%</td>
+            <td class="lb-stat purple">4</td>
+            <td><div class="lb-change down"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg> 2</div></td>
+          </tr>
+          <tr>
+            <td><div class="lb-rank normal">8</div></td>
+            <td><div class="lb-player"><div class="lb-avatar av-user" data-name="MT" style="background:rgba(78,205,196,0.15);color:var(--teal);">MT</div><div class="lb-player-info"><div class="lb-player-name">Marcus T.</div><div class="lb-player-handle">@marcus_t</div></div></div></td>
+            <td class="lb-stat lime">980</td>
+            <td class="lb-stat teal">61%</td>
+            <td class="lb-stat purple">5</td>
+            <td><div class="lb-change same"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg> 0</div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ═══ MY LEAGUES VIEW ═══ -->
+    <div class="view-panel" id="view-leagues">
+      <div class="league-lb-list">
+
+        <!-- LaLiga Legends -->
+        <div class="league-lb-card">
+          <div class="league-lb-header">
+            <div class="league-lb-icon" style="background:var(--lime-dim);"><svg viewBox="0 0 24 24" stroke="var(--lime)" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></div>
+            <div class="league-lb-info">
+              <div class="league-lb-name">LaLiga Legends 24/25</div>
+              <div class="league-lb-meta">Season League · Matchday 32/38 · 8 players</div>
+            </div>
+            <div class="league-lb-your-rank" style="background:var(--lime-dim);color:var(--lime);">2nd</div>
+          </div>
+          <div class="league-lb-mini">
+            <div class="league-lb-row"><div class="league-lb-pos" style="color:var(--lime);">1</div><div class="league-lb-row-avatar" style="background:var(--purple);color:#fff;">MK</div><div class="league-lb-row-name">Marcus K.</div><div class="league-lb-row-pts" style="color:var(--lime);">2,180</div></div>
+            <div class="league-lb-row you"><div class="league-lb-pos" style="color:var(--lime);">2</div><div class="league-lb-row-avatar" style="background:var(--lime);color:var(--navy);">B</div><div class="league-lb-row-name">Bran (You)</div><div class="league-lb-row-pts" style="color:var(--lime);">1,940</div></div>
+            <div class="league-lb-row"><div class="league-lb-pos">3</div><div class="league-lb-row-avatar" style="background:var(--teal);color:var(--navy);">JR</div><div class="league-lb-row-name">Jake R.</div><div class="league-lb-row-pts">1,870</div></div>
+            <div class="league-lb-row"><div class="league-lb-pos">4</div><div class="league-lb-row-avatar" style="background:var(--coral);color:#fff;">IL</div><div class="league-lb-row-name">Ines L.</div><div class="league-lb-row-pts">1,755</div></div>
+            <div class="league-lb-row"><div class="league-lb-pos">5</div><div class="league-lb-row-avatar" style="background:rgba(255,255,255,0.08);color:var(--off-white);">DO</div><div class="league-lb-row-name">Dan O.</div><div class="league-lb-row-pts">1,620</div></div>
+          </div>
+        </div>
+
+        <!-- UCL Knockout Crew -->
+        <div class="league-lb-card">
+          <div class="league-lb-header">
+            <div class="league-lb-icon" style="background:rgba(124,92,252,0.12);"><svg viewBox="0 0 24 24" stroke="var(--purple)" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+            <div class="league-lb-info">
+              <div class="league-lb-name">UCL Knockout Crew</div>
+              <div class="league-lb-meta">Event League · Quarter Finals · 6 players</div>
+            </div>
+            <div class="league-lb-your-rank" style="background:rgba(255,215,0,0.12);color:#FFD700;">1st</div>
+          </div>
+          <div class="league-lb-mini">
+            <div class="league-lb-row you"><div class="league-lb-pos" style="color:#FFD700;">1</div><div class="league-lb-row-avatar" style="background:var(--lime);color:var(--navy);">B</div><div class="league-lb-row-name">Bran (You)</div><div class="league-lb-row-pts" style="color:var(--lime);">680</div></div>
+            <div class="league-lb-row"><div class="league-lb-pos">2</div><div class="league-lb-row-avatar" style="background:var(--coral);color:#fff;">IL</div><div class="league-lb-row-name">Ines L.</div><div class="league-lb-row-pts">640</div></div>
+            <div class="league-lb-row"><div class="league-lb-pos">3</div><div class="league-lb-row-avatar" style="background:rgba(124,92,252,0.2);color:var(--purple);">KW</div><div class="league-lb-row-name">Kai W.</div><div class="league-lb-row-pts">595</div></div>
+            <div class="league-lb-row"><div class="league-lb-pos">4</div><div class="league-lb-row-avatar" style="background:rgba(78,205,196,0.15);color:var(--teal);">MT</div><div class="league-lb-row-name">Marcus T.</div><div class="league-lb-row-pts">520</div></div>
+          </div>
+        </div>
+
+        <!-- Draft Night -->
+        <div class="league-lb-card">
+          <div class="league-lb-header">
+            <div class="league-lb-icon" style="background:rgba(255,107,107,0.12);"><svg viewBox="0 0 24 24" stroke="var(--coral)" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg></div>
+            <div class="league-lb-info">
+              <div class="league-lb-name">Draft Night Crew</div>
+              <div class="league-lb-meta">Event League · NFL Draft 2026 · 10 players</div>
+            </div>
+            <div class="league-lb-your-rank" style="background:rgba(255,255,255,0.06);color:var(--grey);">5th</div>
+          </div>
+          <div class="league-lb-mini">
+            <div class="league-lb-row"><div class="league-lb-pos" style="color:var(--lime);">1</div><div class="league-lb-row-avatar" style="background:var(--teal);color:var(--navy);">JR</div><div class="league-lb-row-name">Jake R.</div><div class="league-lb-row-pts" style="color:var(--lime);">310</div></div>
+            <div class="league-lb-row"><div class="league-lb-pos">2</div><div class="league-lb-row-avatar" style="background:rgba(255,255,255,0.08);color:var(--off-white);">DO</div><div class="league-lb-row-name">Dan O.</div><div class="league-lb-row-pts">285</div></div>
+            <div class="league-lb-row"><div class="league-lb-pos">3</div><div class="league-lb-row-avatar" style="background:var(--purple);color:#fff;">MK</div><div class="league-lb-row-name">Marcus K.</div><div class="league-lb-row-pts">270</div></div>
+            <div class="league-lb-row"><div class="league-lb-pos">4</div><div class="league-lb-row-avatar" style="background:var(--coral);color:#fff;">IL</div><div class="league-lb-row-name">Ines L.</div><div class="league-lb-row-pts">245</div></div>
+            <div class="league-lb-row you"><div class="league-lb-pos">5</div><div class="league-lb-row-avatar" style="background:var(--lime);color:var(--navy);">B</div><div class="league-lb-row-name">Bran (You)</div><div class="league-lb-row-pts">220</div></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ═══ FRIENDS VIEW ═══ -->
+    <div class="view-panel" id="view-friends">
+
+      <div class="friends-header">
+        <div class="friends-header-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <div class="friends-header-text">
+          <div class="friends-header-title">Your Mates — Ranked</div>
+          <div class="friends-header-sub">Only people you've shared a league with. 7 mates total.</div>
+        </div>
+      </div>
+
+      <table class="lb-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Player</th>
+            <th>Points</th>
+            <th>Accuracy</th>
+            <th>Leagues Together</th>
+            <th>Change</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><div class="lb-rank gold">1</div></td>
+            <td><div class="lb-player"><div class="lb-avatar av-user" data-name="MK" style="background:var(--purple);color:#fff;">MK</div><div class="lb-player-info"><div class="lb-player-name">Marcus K.</div><div class="lb-player-handle">@marc_predicts</div></div></div></td>
+            <td class="lb-stat lime">4,820</td>
+            <td class="lb-stat teal">71%</td>
+            <td class="lb-stat" style="color:var(--off-white);">3</td>
+            <td><div class="lb-change same"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg> 0</div></td>
+          </tr>
+          <tr>
+            <td><div class="lb-rank silver">2</div></td>
+            <td><div class="lb-player"><div class="lb-avatar av-user" data-name="JR" style="background:var(--teal);color:var(--navy);">JR</div><div class="lb-player-info"><div class="lb-player-name">Jake R.</div><div class="lb-player-handle">@jake_risky</div></div></div></td>
+            <td class="lb-stat lime">4,510</td>
+            <td class="lb-stat teal">69%</td>
+            <td class="lb-stat" style="color:var(--off-white);">2</td>
+            <td><div class="lb-change up"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg> 1</div></td>
+          </tr>
+          <tr>
+            <td><div class="lb-rank bronze">3</div></td>
+            <td><div class="lb-player"><div class="lb-avatar av-user" data-name="IL" style="background:var(--coral);color:#fff;">IL</div><div class="lb-player-info"><div class="lb-player-name">Ines L.</div><div class="lb-player-handle">@ines_trivia</div></div></div></td>
+            <td class="lb-stat lime">3,980</td>
+            <td class="lb-stat teal">76%</td>
+            <td class="lb-stat" style="color:var(--off-white);">3</td>
+            <td><div class="lb-change up"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg> 1</div></td>
+          </tr>
+          <tr>
+            <td><div class="lb-rank normal">4</div></td>
+            <td><div class="lb-player"><div class="lb-avatar av-user" data-name="DO" style="background:rgba(255,255,255,0.08);color:var(--off-white);">DO</div><div class="lb-player-info"><div class="lb-player-name">Dan O.</div><div class="lb-player-handle">@danno</div></div></div></td>
+            <td class="lb-stat lime">3,420</td>
+            <td class="lb-stat teal">63%</td>
+            <td class="lb-stat" style="color:var(--off-white);">2</td>
+            <td><div class="lb-change down"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg> 1</div></td>
+          </tr>
+          <tr class="you">
+            <td><div class="lb-rank normal">5</div></td>
+            <td><div class="lb-player"><div class="lb-avatar av-self" style="background:var(--lime);color:var(--navy);">B</div><div class="lb-player-info"><div class="lb-player-name">Bran <span style="font-size:0.65rem;color:var(--lime);font-weight:700;">(You)</span></div><div class="lb-player-handle">@bran_predicts</div></div></div></td>
+            <td class="lb-stat lime">1,240</td>
+            <td class="lb-stat teal">68%</td>
+            <td class="lb-stat" style="color:var(--off-white);">3</td>
+            <td><div class="lb-change up"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg> 2</div></td>
+          </tr>
+          <tr>
+            <td><div class="lb-rank normal">6</div></td>
+            <td><div class="lb-player"><div class="lb-avatar av-user" data-name="KW" style="background:rgba(124,92,252,0.2);color:var(--purple);">KW</div><div class="lb-player-info"><div class="lb-player-name">Kai W.</div><div class="lb-player-handle">@kai_wins</div></div></div></td>
+            <td class="lb-stat lime">1,110</td>
+            <td class="lb-stat teal">58%</td>
+            <td class="lb-stat" style="color:var(--off-white);">1</td>
+            <td><div class="lb-change down"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg> 1</div></td>
+          </tr>
+          <tr>
+            <td><div class="lb-rank normal">7</div></td>
+            <td><div class="lb-player"><div class="lb-avatar av-user" data-name="MT" style="background:rgba(78,205,196,0.15);color:var(--teal);">MT</div><div class="lb-player-info"><div class="lb-player-name">Marcus T.</div><div class="lb-player-handle">@marcus_t</div></div></div></td>
+            <td class="lb-stat lime">980</td>
+            <td class="lb-stat teal">61%</td>
+            <td class="lb-stat" style="color:var(--off-white);">2</td>
+            <td><div class="lb-change same"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg> 0</div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="utils.js"></script>
+<script src="sidebar.js"></script>
+<script>SpontixSidebar.init({ type: 'player', active: 'leaderboard.html' });</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+<script>
+/* ═══ LEADERBOARD — real data from Supabase ═══ */
+
+let players = [];          // global player list (populated async)
+let leagueRows = [];       // current user's leagues (for Leagues view)
+let leagueMemberMap = {};  // leagueId → players array (populated on demand)
+
+let currentTime = 'all';  // default to All Time until real week data exists
+let currentCat  = 'pts';
+let currentView = 'global';
+
+const catMap   = { 'Total Points':'pts', 'Accuracy':'acc', 'Best Streak':'streak', 'Qs Answered':'qs', 'Leagues Created':'created' };
+const timeMap  = { 'This Week':'week', 'This Month':'month', 'This Season':'season', 'All Time':'all' };
+const catUnits = { pts:' pts', acc:'%', streak:'', qs:'', created:'' };
+const catColors = { pts:'var(--lime)', acc:'var(--teal)', streak:'var(--purple)', qs:'var(--off-white)', created:'var(--orange)' };
+
+const changeIconUp   = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>';
+const changeIconDown = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+const changeIconSame = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+
+function fmtVal(val) { return val >= 1000 ? val.toLocaleString() : val; }
+function ordinal(n) { return n + (['st','nd','rd'][n-1] || 'th'); }
+
+// ── Loading state ──────────────────────────────────────────────────────
+function setLoading(on) {
+  const wrap = document.querySelector('.leaderboard-wrap') || document.querySelector('.main-content');
+  if (!wrap) return;
+  let overlay = document.getElementById('lb-loading');
+  if (on) {
+    if (!overlay) {
+      overlay = document.createElement('div');
+      overlay.id = 'lb-loading';
+      overlay.style.cssText = 'position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,10,20,0.6);z-index:50;border-radius:12px;';
+      overlay.innerHTML = '<div style="color:var(--lime);font-size:0.9rem;font-weight:700;">Loading rankings…</div>';
+      wrap.style.position = 'relative';
+      wrap.appendChild(overlay);
+    }
+    overlay.style.display = 'flex';
+  } else if (overlay) {
+    overlay.style.display = 'none';
+  }
+}
+
+// ── Data loading ───────────────────────────────────────────────────────
+async function loadLeaderboardData() {
+  setLoading(true);
+  try {
+    if (typeof SpontixStoreAsync !== 'undefined' && window.sb) {
+      players = await SpontixStoreAsync.getLeaderboard({ limit: 100 });
+      // Load current user's leagues for the Leagues view
+      leagueRows = await SpontixStoreAsync.getMyLeagues().catch(() => []);
+    }
+  } catch (e) {
+    console.warn('[leaderboard] load error', e);
+  }
+  setLoading(false);
+  renderLeaderboard();
+  SpontixStore.applyAvatarsToPage();
+}
+
+// ── View / chip handlers ───────────────────────────────────────────────
+function switchView(view) {
+  document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
+  event.currentTarget.classList.add('active');
+  currentView = view;
+  const panel = document.getElementById('view-' + view);
+  if (panel) panel.classList.add('active');
+  renderLeaderboard();
+}
+
+function selectTime(chip) {
+  document.querySelectorAll('.time-chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  currentTime = timeMap[chip.textContent] || 'all';
+  renderLeaderboard();
+}
+
+function selectCat(chip) {
+  document.querySelectorAll('.cat-chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  currentCat = catMap[chip.textContent.trim()] || 'pts';
+  renderLeaderboard();
+}
+
+function renderLeaderboard() {
+  if (!players.length) return;
+  if (currentView === 'global')  renderGlobalLeaderboard();
+  else if (currentView === 'leagues') renderLeaguesLeaderboard();
+  else if (currentView === 'friends') renderFriendsLeaderboard();
+}
+
+// ── Global leaderboard ─────────────────────────────────────────────────
+function renderGlobalLeaderboard() {
+  const sorted = [...players].sort((a, b) => b[currentCat][currentTime] - a[currentCat][currentTime]);
+  const unit  = catUnits[currentCat];
+  const color = catColors[currentCat];
+
+  // Podium
+  [
+    { el: document.querySelector('.podium-spot.first'),  idx: 0 },
+    { el: document.querySelector('.podium-spot.second'), idx: 1 },
+    { el: document.querySelector('.podium-spot.third'),  idx: 2 },
+  ].forEach(({ el, idx }) => {
+    const p = sorted[idx];
+    if (!el || !p) return;
+    const avatarEl = el.querySelector('.podium-avatar');
+    const avClass = p.you ? 'podium-avatar av-self' : 'podium-avatar av-user';
+    avatarEl.className = avClass;
+    avatarEl.setAttribute('data-name', p.initials);
+    avatarEl.style.cssText = p.bg;
+    avatarEl.textContent = p.initials;
+    if (idx === 0) {
+      avatarEl.innerHTML = '<span class="podium-crown"><svg viewBox="0 0 24 24"><path d="M2 20h20L18 8l-4 5-2-9-2 9-4-5z"/></svg></span>' + p.initials;
+    }
+    el.querySelector('.podium-name').textContent = p.name;
+    const val = p[currentCat][currentTime];
+    el.querySelector('.podium-value').textContent = fmtVal(val) + unit;
+    el.querySelector('.podium-value').style.color = color;
+  });
+
+  // Table
+  const tbody = document.querySelector('#view-global .lb-table tbody');
+  tbody.innerHTML = '';
+  sorted.forEach((p, i) => {
+    const val = p[currentCat][currentTime];
+    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : 'normal';
+    const youTag = p.you ? ' <span style="font-size:0.65rem;color:var(--lime);font-weight:700;">(You)</span>' : '';
+    const avClass = p.you ? 'lb-avatar av-self' : 'lb-avatar av-user';
+    const avAttr  = p.you ? '' : ` data-name="${p.initials}"`;
+    tbody.innerHTML += `<tr${p.you ? ' class="you"' : ''}>
+      <td><div class="lb-rank ${rankClass}">${i + 1}</div></td>
+      <td><div class="lb-player"><div class="${avClass}"${avAttr} style="${p.bg}">${p.initials}</div>
+        <div class="lb-player-info"><div class="lb-player-name">${p.name}${youTag}</div>
+        <div class="lb-player-handle">${p.handle}</div></div></div></td>
+      <td class="lb-stat" style="color:${color};">${fmtVal(val)}${unit}</td>
+      <td class="lb-stat teal">${p.acc[currentTime]}%</td>
+      <td class="lb-stat purple">${p.streak[currentTime]}</td>
+      <td><div class="lb-change same">${changeIconSame} —</div></td>
+    </tr>`;
+  });
+  SpontixStore.applyAvatarsToPage();
+}
+
+// ── Leagues leaderboard ────────────────────────────────────────────────
+async function renderLeaguesLeaderboard() {
+  const unit  = catUnits[currentCat];
+  const color = catColors[currentCat];
+  const listEl = document.querySelector('#view-leagues .league-lb-list');
+  if (!listEl) return;
+
+  const uid = SpontixStore.Session.getCurrentUserId();
+  const myLeagues = leagueRows.filter(l => l.isMember || l.isOwner);
+  if (!myLeagues.length) {
+    listEl.innerHTML = '<div style="padding:40px;text-align:center;color:var(--grey);">Join a league to see league standings here.</div>';
+    return;
+  }
+
+  listEl.innerHTML = '<div style="padding:24px;text-align:center;color:var(--grey);">Loading…</div>';
+
+  // League colour palette (cycles through brand colours)
+  const palette = [
+    { color: 'var(--lime)',   dim: 'rgba(168,225,12,0.12)'  },
+    { color: 'var(--purple)', dim: 'rgba(124,92,252,0.12)'  },
+    { color: 'var(--coral)',  dim: 'rgba(255,107,107,0.12)' },
+    { color: 'var(--teal)',   dim: 'rgba(78,205,196,0.12)'  },
+  ];
+
+  const cards = await Promise.all(myLeagues.map(async (league, li) => {
+    const pal = palette[li % palette.length];
+    if (!leagueMemberMap[league.id]) {
+      leagueMemberMap[league.id] = await SpontixStoreAsync.getLeagueLeaderboard(league.id).catch(() => []);
+    }
+    const members = leagueMemberMap[league.id];
+    const sorted  = [...members].sort((a, b) => b[currentCat][currentTime] - a[currentCat][currentTime]);
+    const myRank  = sorted.findIndex(p => p.you) + 1;
+
+    const miniRows = sorted.slice(0, 5).map((p, idx) => {
+      const val = p[currentCat][currentTime];
+      const avCls  = p.you ? 'league-lb-row-avatar av-self' : 'league-lb-row-avatar av-user';
+      const avAttr = p.you ? '' : ` data-name="${p.initials}"`;
+      return `<div class="league-lb-row${p.you ? ' you' : ''}">
+        <div class="league-lb-pos" style="color:${idx === 0 ? pal.color : ''}">${idx + 1}</div>
+        <div class="${avCls}"${avAttr} style="${p.bg}">${p.initials}</div>
+        <div class="league-lb-row-name">${p.you ? p.name + ' (You)' : p.name}</div>
+        <div class="league-lb-row-pts" style="color:${color};">${fmtVal(val)}${unit}</div>
+      </div>`;
+    }).join('');
+
+    return `<div class="league-lb-card">
+      <div class="league-lb-header">
+        <div class="league-lb-icon" style="background:${pal.dim};">
+          <svg viewBox="0 0 24 24" stroke="${pal.color}" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+        </div>
+        <div class="league-lb-info">
+          <div class="league-lb-name">${league.name}</div>
+          <div class="league-lb-meta">${league.sport} · ${league.stage} · ${members.length} players</div>
+        </div>
+        ${myRank > 0 ? `<div class="league-lb-your-rank" style="background:${pal.dim};color:${pal.color};">${ordinal(myRank)}</div>` : ''}
+      </div>
+      <div class="league-lb-mini">${miniRows}</div>
+    </div>`;
+  }));
+
+  listEl.innerHTML = cards.join('');
+  SpontixStore.applyAvatarsToPage();
+}
+
+// ── Friends leaderboard ────────────────────────────────────────────────
+function renderFriendsLeaderboard() {
+  const unit   = catUnits[currentCat];
+  const color  = catColors[currentCat];
+  const uid    = SpontixStore.Session.getCurrentUserId();
+
+  // Friends = all players who share a league with "you"
+  const myLeagueIds = new Set(leagueRows.filter(l => l.isMember || l.isOwner).map(l => l.id));
+  // Collect friend IDs from league member maps we've already loaded
+  const friendIds = new Set();
+  myLeagueIds.forEach(lid => {
+    (leagueMemberMap[lid] || []).forEach(p => { if (!p.you) friendIds.add(p.id); });
+  });
+  const sorted = players
+    .filter(p => !p.you && friendIds.has(p.id))
+    .sort((a, b) => b[currentCat][currentTime] - a[currentCat][currentTime]);
+
+  const headerSub = document.querySelector('#view-friends .friends-header-sub');
+  if (headerSub) headerSub.textContent = `People you've shared a league with. ${sorted.length} mates total.`;
+
+  const tbody = document.querySelector('#view-friends .lb-table tbody');
+  tbody.innerHTML = '';
+  sorted.forEach((p, i) => {
+    const val = p[currentCat][currentTime];
+    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : 'normal';
+    tbody.innerHTML += `<tr>
+      <td><div class="lb-rank ${rankClass}">${i + 1}</div></td>
+      <td><div class="lb-player"><div class="lb-avatar av-user" data-name="${p.initials}" style="${p.bg}">${p.initials}</div>
+        <div class="lb-player-info"><div class="lb-player-name">${p.name}</div>
+        <div class="lb-player-handle">${p.handle}</div></div></div></td>
+      <td class="lb-stat" style="color:${color};">${fmtVal(val)}${unit}</td>
+      <td class="lb-stat teal">${p.acc[currentTime]}%</td>
+      <td class="lb-stat" style="color:var(--off-white);">—</td>
+      <td><div class="lb-change same">${changeIconSame} —</div></td>
+    </tr>`;
+  });
+  SpontixStore.applyAvatarsToPage();
+}
+
+// ── Boot ───────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Set "All Time" chip active by default
+  document.querySelectorAll('.time-chip').forEach(c => {
+    if (c.textContent.trim() === 'All Time') c.classList.add('active');
+    else c.classList.remove('active');
+  });
+  loadLeaderboardData();
+});
+
+// Re-render if profile refreshes (handles sidebar update)
+window.addEventListener('spontix-profile-refreshed', () => {
+  loadLeaderboardData();
+});
+</script>
+
+</body>
+</html>

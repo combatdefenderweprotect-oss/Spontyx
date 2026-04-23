@@ -1,0 +1,10 @@
+<svg width="1200" height="400" viewBox="0 0 1200 400" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="400" fill="#FFFFFF"/>
+  <text x="110" y="235"
+        font-family="Clash Display, Arial, sans-serif"
+        font-size="150"
+        font-weight="800"
+        fill="#A8E10C">
+    Spontyx<tspan dx="-4" dy="-58" fill="#1A1A2E">●</tspan>
+  </text>
+</svg>

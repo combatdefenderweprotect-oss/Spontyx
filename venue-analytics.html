@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Venue Analytics</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+
+        
+    /* ── Main ── */    .topbar {
+      padding: 16px 32px; display: flex; align-items: center; gap: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-search { flex: 1; max-width: 400px; position: relative; }
+    .topbar-search input {
+      width: 100%; padding: 10px 14px 10px 40px; background: var(--navy-light);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-pill);
+      color: var(--off-white); font-size: 0.85rem; font-family: inherit; outline: none;
+    }
+    .topbar-search input::placeholder { color: var(--grey-dark); }
+    .topbar-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--grey-dark); }
+    .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .topbar-btn {
+      width: 40px; height: 40px; border-radius: 50%; border: none;
+      background: var(--navy-light); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; position: relative; transition: background 0.2s; text-decoration: none;
+    }
+    .topbar-btn:hover { background: var(--navy-hover); }
+    .topbar-btn svg { width: 18px; height: 18px; stroke: var(--grey); fill: none; stroke-width: 1.8; }
+    .topbar-btn .notif-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; background: var(--coral); border-radius: 50%; border: 2px solid var(--navy); }
+    .content { padding: 32px; flex: 1; max-width: 1200px; }
+
+    /* ── Page Header ── */
+    .page-header { margin-bottom: 28px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .page-header-left h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .page-header-left h1 span { color: var(--purple); }
+    .page-header-left p { color: var(--grey); font-size: 0.85rem; }
+    .header-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .header-btn {
+      display: flex; align-items: center; gap: 8px; padding: 10px 18px;
+      border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.08); background: transparent;
+      cursor: pointer; font-family: inherit; font-size: 0.78rem; font-weight: 700;
+      color: var(--grey); transition: all 0.15s; text-decoration: none;
+    }
+    .header-btn svg { width: 15px; height: 15px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .header-btn:hover { border-color: rgba(255,255,255,0.2); color: var(--off-white); }
+    .header-btn.active { background: var(--purple); border-color: var(--purple); color: #fff; }
+    .header-btn.active svg { stroke: var(--navy); }
+
+    /* ── Period Selector ── */
+    .period-tabs {
+      display: flex; gap: 4px; padding: 4px; background: var(--navy-card); border-radius: var(--radius-pill);
+      margin-bottom: 28px; width: fit-content; border: 1px solid rgba(255,255,255,0.04);
+    }
+    .period-tab {
+      padding: 7px 16px; border-radius: var(--radius-pill); border: none;
+      font-family: inherit; font-size: 0.75rem; font-weight: 700;
+      background: transparent; color: var(--grey); cursor: pointer; transition: all 0.15s;
+    }
+    .period-tab:hover { color: var(--off-white); }
+    .period-tab.active { background: var(--purple); color: #fff; }
+
+    /* ── KPI Row ── */
+    .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 28px; }
+    .kpi-card {
+      background: var(--navy-card); border-radius: var(--radius-md); padding: 18px;
+      border: 1px solid rgba(255,255,255,0.06); position: relative; overflow: hidden;
+    }
+    .kpi-label { font-size: 0.62rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .kpi-value { font-size: 1.6rem; font-weight: 900; letter-spacing: -0.5px; line-height: 1; }
+    .kpi-change {
+      display: inline-flex; align-items: center; gap: 3px; margin-top: 6px;
+      font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: var(--radius-pill);
+    }
+    .kpi-change.up { background: rgba(168,225,12,0.1); color: var(--lime); }
+    .kpi-change.down { background: rgba(255,107,107,0.1); color: var(--coral); }
+    .kpi-change svg { width: 10px; height: 10px; stroke: currentColor; stroke-width: 2.5; fill: none; }
+    .kpi-spark {
+      position: absolute; bottom: 0; right: 0; width: 80px; height: 40px; opacity: 0.15;
+    }
+
+    /* ── Charts Grid ── */
+    .charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 28px; }
+    .chart-card {
+      background: var(--navy-card); border-radius: var(--radius-lg); padding: 24px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .chart-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .chart-title { font-size: 0.88rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .chart-title svg { width: 16px; height: 16px; stroke: var(--purple); stroke-width: 2; fill: none; }
+    .chart-legend { display: flex; gap: 14px; }
+    .chart-legend-item { display: flex; align-items: center; gap: 5px; font-size: 0.62rem; color: var(--grey); font-weight: 600; }
+    .chart-legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+    /* Bar chart */
+    .bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 180px; padding-top: 10px; }
+    .bar-group { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; }
+    .bar-stack { display: flex; gap: 3px; align-items: flex-end; width: 100%; justify-content: center; }
+    .bar {
+      width: 14px; border-radius: 3px 3px 0 0; min-height: 3px; transition: height 0.6s ease;
+    }
+    .bar.lime { background: var(--lime); }
+    .bar.orange { background: var(--purple); }
+    .bar.purple { background: var(--purple); }
+    .bar.teal { background: var(--teal); }
+    .bar.coral { background: var(--coral); }
+    .bar-label { font-size: 0.6rem; color: var(--grey-dark); font-weight: 600; }
+
+    /* Line chart (CSS-based) */
+    .line-chart { position: relative; height: 160px; margin-bottom: 10px; }
+    .line-chart-row {
+      position: absolute; left: 0; right: 0; display: flex; align-items: center; gap: 6px;
+      height: 1px; background: rgba(255,255,255,0.04);
+    }
+    .line-chart-label { font-size: 0.55rem; color: var(--grey-dark); width: 28px; text-align: right; flex-shrink: 0; }
+    .line-dots { display: flex; justify-content: space-between; position: absolute; bottom: 0; left: 36px; right: 0; height: 100%; align-items: flex-end; }
+    .line-dot-col { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; flex: 1; }
+    .line-dot {
+      width: 8px; height: 8px; border-radius: 50%; border: 2px solid var(--navy-card);
+      position: relative; z-index: 2;
+    }
+    .line-dot.lime { background: var(--lime); }
+    .line-dot.orange { background: var(--purple); }
+    .line-x-labels { display: flex; justify-content: space-between; padding-left: 36px; }
+    .line-x-label { font-size: 0.55rem; color: var(--grey-dark); font-weight: 600; flex: 1; text-align: center; }
+
+    /* Donut */
+    .donut-wrap { display: flex; align-items: center; gap: 24px; }
+    .donut {
+      width: 120px; height: 120px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .donut-center {
+      width: 72px; height: 72px; border-radius: 50%; background: var(--navy-card);
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+    }
+    .donut-center-value { font-size: 1.2rem; font-weight: 900; }
+    .donut-center-label { font-size: 0.55rem; color: var(--grey); font-weight: 600; }
+    .donut-legend { display: flex; flex-direction: column; gap: 8px; }
+    .donut-legend-item { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; }
+    .donut-legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+    .donut-legend-name { font-weight: 600; flex: 1; }
+    .donut-legend-pct { color: var(--grey); font-weight: 700; min-width: 36px; text-align: right; }
+
+    /* ── Tables ── */
+    .data-table { width: 100%; border-collapse: collapse; }
+    .data-table th {
+      text-align: left; padding: 10px 14px; font-size: 0.62rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px; color: var(--grey-dark);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .data-table td {
+      padding: 12px 14px; font-size: 0.8rem; border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .rank-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 24px; height: 24px; border-radius: 50%; font-size: 0.65rem; font-weight: 800;
+    }
+    .rank-badge.gold { background: rgba(255,215,0,0.15); color: var(--gold); }
+    .rank-badge.silver { background: rgba(192,192,192,0.12); color: #C0C0C0; }
+    .rank-badge.bronze { background: rgba(205,127,50,0.12); color: #CD7F32; }
+    .rank-badge.default { background: rgba(255,255,255,0.04); color: var(--grey); }
+    .team-cell { display: flex; align-items: center; gap: 10px; }
+    .team-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.55rem; font-weight: 800;
+    }
+    .accuracy-bar { display: flex; align-items: center; gap: 8px; }
+    .accuracy-track { flex: 1; height: 6px; background: rgba(255,255,255,0.06); border-radius: 6px; overflow: hidden; max-width: 80px; }
+    .accuracy-fill { height: 100%; border-radius: 6px; }
+    .accuracy-label { font-size: 0.75rem; font-weight: 700; min-width: 36px; }
+
+    /* ── Stat Row Cards ── */
+    .stats-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 28px; }
+    .stat-card {
+      background: var(--navy-card); border-radius: var(--radius-lg); padding: 24px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .stat-card-title { font-size: 0.88rem; font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+    .stat-card-title svg { width: 16px; height: 16px; stroke: var(--purple); stroke-width: 2; fill: none; }
+    .stat-rows { display: flex; flex-direction: column; gap: 10px; }
+    .stat-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 14px; background: rgba(255,255,255,0.025); border-radius: var(--radius-sm);
+    }
+    .stat-row-label { font-size: 0.8rem; font-weight: 600; display: flex; align-items: center; gap: 10px; }
+    .stat-row-icon {
+      width: 30px; height: 30px; border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center; font-size: 0.9rem;
+    }
+    .stat-row-right { text-align: right; }
+    .stat-row-value { font-size: 0.9rem; font-weight: 800; }
+    .stat-row-sub { font-size: 0.62rem; color: var(--grey); margin-top: 1px; }
+
+    /* ── Question Performance ── */
+    .question-list { display: flex; flex-direction: column; gap: 8px; }
+    .question-item {
+      display: flex; align-items: center; gap: 14px; padding: 12px 14px;
+      background: rgba(255,255,255,0.025); border-radius: var(--radius-sm);
+    }
+    .question-num {
+      width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; font-weight: 800;
+    }
+    .question-num.easy { background: rgba(168,225,12,0.12); color: var(--lime); }
+    .question-num.medium { background: rgba(124,92,252,0.12); color: var(--purple); }
+    .question-num.hard { background: rgba(255,107,107,0.12); color: var(--coral); }
+    .question-info { flex: 1; min-width: 0; }
+    .question-text { font-size: 0.8rem; font-weight: 600; margin-bottom: 2px; }
+    .question-meta { font-size: 0.65rem; color: var(--grey); }
+    .question-accuracy { text-align: right; flex-shrink: 0; }
+    .question-accuracy-value { font-size: 0.88rem; font-weight: 800; }
+    .question-accuracy-label { font-size: 0.58rem; color: var(--grey); }
+
+
+    /* ── Responsive ── */
+    @media (max-width: 1100px) {
+      .kpi-row { grid-template-columns: repeat(3, 1fr); }
+      .charts-grid { grid-template-columns: 1fr; }
+    }
+    @media (max-width: 600px) {
+      .kpi-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── SIDEBAR ── -->
+  <div id="sidebar-placeholder"></div>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+    <header class="topbar">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Search analytics..." />
+      </div>
+      <div class="topbar-right">
+        <a href="notifications.html" class="topbar-btn" title="Notifications" style="text-decoration:none;">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="notif-dot"></span>
+        </a>
+        <button class="topbar-btn" title="Messages">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- Header -->
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Venue <span>Analytics</span></h1>
+          <p>Track engagement, performance, and trends across your events.</p>
+        </div>
+        <div class="header-actions">
+          <button class="header-btn" onclick="showToast('Exporting report as PDF...')">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export
+          </button>
+        </div>
+      </div>
+
+      <!-- Period Selector -->
+      <div class="period-tabs">
+        <button class="period-tab" onclick="setPeriod(this)">Today</button>
+        <button class="period-tab active" onclick="setPeriod(this)">This Week</button>
+        <button class="period-tab" onclick="setPeriod(this)">This Month</button>
+        <button class="period-tab" onclick="setPeriod(this)">All Time</button>
+      </div>
+
+      <!-- KPI Row -->
+      <div class="kpi-row">
+        <div class="kpi-card">
+          <div class="kpi-label">Total Players</div>
+          <div class="kpi-value" style="color: var(--lime);">312</div>
+          <span class="kpi-change up">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+            +18% vs last week
+          </span>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Events Hosted</div>
+          <div class="kpi-value" style="color: var(--purple);">14</div>
+          <span class="kpi-change up">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+            +3 vs last week
+          </span>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Questions Pushed</div>
+          <div class="kpi-value" style="color: var(--teal);">186</div>
+          <span class="kpi-change up">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+            +24% vs last week
+          </span>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Avg Accuracy</div>
+          <div class="kpi-value" style="color: var(--purple);">74%</div>
+          <span class="kpi-change down">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/></svg>
+            -2% vs last week
+          </span>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Repeat Players</div>
+          <div class="kpi-value" style="color: var(--coral);">68%</div>
+          <span class="kpi-change up">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/></svg>
+            +5% vs last week
+          </span>
+        </div>
+      </div>
+
+      <!-- Charts Row 1: Weekly Engagement + Sport Breakdown -->
+      <div class="charts-grid">
+
+        <!-- Weekly Player Engagement -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20V14"/></svg>
+              Weekly Player Engagement
+            </div>
+            <div class="chart-legend">
+              <div class="chart-legend-item"><span class="chart-legend-dot" style="background: var(--lime);"></span> In-venue</div>
+              <div class="chart-legend-item"><span class="chart-legend-dot" style="background: var(--purple);"></span> Remote</div>
+            </div>
+          </div>
+          <div class="bar-chart">
+            <div class="bar-group">
+              <div class="bar-stack">
+                <div class="bar lime" style="height: 65px;"></div>
+                <div class="bar purple" style="height: 20px;"></div>
+              </div>
+              <span class="bar-label">Mon</span>
+            </div>
+            <div class="bar-group">
+              <div class="bar-stack">
+                <div class="bar lime" style="height: 30px;"></div>
+                <div class="bar purple" style="height: 8px;"></div>
+              </div>
+              <span class="bar-label">Tue</span>
+            </div>
+            <div class="bar-group">
+              <div class="bar-stack">
+                <div class="bar lime" style="height: 85px;"></div>
+                <div class="bar purple" style="height: 25px;"></div>
+              </div>
+              <span class="bar-label">Wed</span>
+            </div>
+            <div class="bar-group">
+              <div class="bar-stack">
+                <div class="bar lime" style="height: 55px;"></div>
+                <div class="bar purple" style="height: 18px;"></div>
+              </div>
+              <span class="bar-label">Thu</span>
+            </div>
+            <div class="bar-group">
+              <div class="bar-stack">
+                <div class="bar lime" style="height: 150px;"></div>
+                <div class="bar purple" style="height: 42px;"></div>
+              </div>
+              <span class="bar-label">Fri</span>
+            </div>
+            <div class="bar-group">
+              <div class="bar-stack">
+                <div class="bar lime" style="height: 120px;"></div>
+                <div class="bar purple" style="height: 35px;"></div>
+              </div>
+              <span class="bar-label">Sat</span>
+            </div>
+            <div class="bar-group">
+              <div class="bar-stack">
+                <div class="bar lime" style="height: 45px;"></div>
+                <div class="bar purple" style="height: 10px;"></div>
+              </div>
+              <span class="bar-label">Sun</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sport Breakdown -->
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+              Popular Sports
+            </div>
+          </div>
+          <div class="donut-wrap">
+            <div class="donut" style="background: conic-gradient(var(--lime) 0% 42%, var(--coral) 42% 68%, var(--purple) 68% 85%, var(--teal) 85% 100%);">
+              <div class="donut-center">
+                <div class="donut-center-value">4</div>
+                <div class="donut-center-label">Sports</div>
+              </div>
+            </div>
+            <div class="donut-legend">
+              <div class="donut-legend-item">
+                <span class="donut-legend-dot" style="background: var(--lime);"></span>
+                <span class="donut-legend-name">Football</span>
+                <span class="donut-legend-pct">42%</span>
+              </div>
+              <div class="donut-legend-item">
+                <span class="donut-legend-dot" style="background: var(--coral);"></span>
+                <span class="donut-legend-name">NBA</span>
+                <span class="donut-legend-pct">26%</span>
+              </div>
+              <div class="donut-legend-item">
+                <span class="donut-legend-dot" style="background: var(--purple);"></span>
+                <span class="donut-legend-name">MMA / UFC</span>
+                <span class="donut-legend-pct">17%</span>
+              </div>
+              <div class="donut-legend-item">
+                <span class="donut-legend-dot" style="background: var(--teal);"></span>
+                <span class="donut-legend-name">Other</span>
+                <span class="donut-legend-pct">15%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Team Leaderboard -->
+      <div class="chart-card" style="margin-bottom: 28px;">
+        <div class="chart-header">
+          <div class="chart-title">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5C7 4 7 7 7 7"/><path d="M18 9h1.5a2.5 2.5 0 000-5C17 4 17 7 17 7"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0012 0V2z"/></svg>
+            Team Leaderboard — This Week
+          </div>
+          <div class="chart-legend">
+            <div class="chart-legend-item" style="color: var(--grey);">Top performers across all events</div>
+          </div>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th style="width:50px;">Rank</th>
+              <th>Team</th>
+              <th>Events</th>
+              <th>Score</th>
+              <th>Accuracy</th>
+              <th>Avg Response</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="rank-badge gold">1</span></td>
+              <td>
+                <div class="team-cell">
+                  <div class="team-avatar" style="background: var(--lime-dim); color: var(--lime);">LG</div>
+                  Los Galácticos
+                </div>
+              </td>
+              <td>6</td>
+              <td style="font-weight: 800; color: var(--lime);">7,420</td>
+              <td>
+                <div class="accuracy-bar">
+                  <div class="accuracy-track"><div class="accuracy-fill" style="width: 89%; background: var(--lime);"></div></div>
+                  <span class="accuracy-label" style="color: var(--lime);">89%</span>
+                </div>
+              </td>
+              <td style="color: var(--teal); font-weight: 700;">4.2s</td>
+            </tr>
+            <tr>
+              <td><span class="rank-badge silver">2</span></td>
+              <td>
+                <div class="team-cell">
+                  <div class="team-avatar" style="background: rgba(78,205,196,0.12); color: var(--teal);">BB</div>
+                  Barça Boys
+                </div>
+              </td>
+              <td>5</td>
+              <td style="font-weight: 800; color: var(--lime);">6,840</td>
+              <td>
+                <div class="accuracy-bar">
+                  <div class="accuracy-track"><div class="accuracy-fill" style="width: 82%; background: var(--lime);"></div></div>
+                  <span class="accuracy-label" style="color: var(--lime);">82%</span>
+                </div>
+              </td>
+              <td style="color: var(--teal); font-weight: 700;">5.1s</td>
+            </tr>
+            <tr>
+              <td><span class="rank-badge bronze">3</span></td>
+              <td>
+                <div class="team-cell">
+                  <div class="team-avatar" style="background: rgba(124,92,252,0.12); color: var(--purple);">DG</div>
+                  Dunk Gods
+                </div>
+              </td>
+              <td>4</td>
+              <td style="font-weight: 800; color: var(--off-white);">5,980</td>
+              <td>
+                <div class="accuracy-bar">
+                  <div class="accuracy-track"><div class="accuracy-fill" style="width: 78%; background: var(--purple);"></div></div>
+                  <span class="accuracy-label" style="color: var(--purple);">78%</span>
+                </div>
+              </td>
+              <td style="color: var(--teal); font-weight: 700;">6.3s</td>
+            </tr>
+            <tr>
+              <td><span class="rank-badge default">4</span></td>
+              <td>
+                <div class="team-cell">
+                  <div class="team-avatar" style="background: rgba(124,92,252,0.12); color: var(--purple);">MD</div>
+                  Madridistas
+                </div>
+              </td>
+              <td>5</td>
+              <td style="font-weight: 800; color: var(--off-white);">5,640</td>
+              <td>
+                <div class="accuracy-bar">
+                  <div class="accuracy-track"><div class="accuracy-fill" style="width: 75%; background: var(--purple);"></div></div>
+                  <span class="accuracy-label" style="color: var(--purple);">75%</span>
+                </div>
+              </td>
+              <td style="color: var(--teal); font-weight: 700;">7.0s</td>
+            </tr>
+            <tr>
+              <td><span class="rank-badge default">5</span></td>
+              <td>
+                <div class="team-cell">
+                  <div class="team-avatar" style="background: rgba(255,107,107,0.12); color: var(--coral);">UD</div>
+                  The Underdogs
+                </div>
+              </td>
+              <td>3</td>
+              <td style="font-weight: 800; color: var(--off-white);">4,210</td>
+              <td>
+                <div class="accuracy-bar">
+                  <div class="accuracy-track"><div class="accuracy-fill" style="width: 71%; background: var(--coral);"></div></div>
+                  <span class="accuracy-label" style="color: var(--coral);">71%</span>
+                </div>
+              </td>
+              <td style="color: var(--teal); font-weight: 700;">8.2s</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Retention + Revenue -->
+      <div class="stats-pair">
+
+        <!-- Retention -->
+        <div class="stat-card">
+          <div class="stat-card-title">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 11-2.12-9.36L23 10"/></svg>
+            Player Retention
+          </div>
+          <div class="stat-rows">
+            <div class="stat-row">
+              <div class="stat-row-label">
+                <div class="stat-row-icon" style="background: var(--lime-dim);">🔄</div>
+                Repeat Players (30d)
+              </div>
+              <div class="stat-row-right">
+                <div class="stat-row-value" style="color: var(--lime);">68%</div>
+                <div class="stat-row-sub">212 of 312 players</div>
+              </div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-row-label">
+                <div class="stat-row-icon" style="background: rgba(78,205,196,0.12);">⏱</div>
+                Avg Session Length
+              </div>
+              <div class="stat-row-right">
+                <div class="stat-row-value" style="color: var(--teal);">1h 42m</div>
+                <div class="stat-row-sub">+8m vs last month</div>
+              </div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-row-label">
+                <div class="stat-row-icon" style="background: rgba(124,92,252,0.12);">🆕</div>
+                New Players This Week
+              </div>
+              <div class="stat-row-right">
+                <div class="stat-row-value" style="color: var(--purple);">23</div>
+                <div class="stat-row-sub">7.4% of total</div>
+              </div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-row-label">
+                <div class="stat-row-icon" style="background: rgba(124,92,252,0.12);">📱</div>
+                Remote Player Share
+              </div>
+              <div class="stat-row-right">
+                <div class="stat-row-value" style="color: var(--purple);">22%</div>
+                <div class="stat-row-sub">69 remote players</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Revenue / Costs -->
+        <div class="stat-card">
+          <div class="stat-card-title">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+            Revenue &amp; Costs
+          </div>
+          <div class="stat-rows">
+            <div class="stat-row">
+              <div class="stat-row-label">
+                <div class="stat-row-icon" style="background: var(--lime-dim);">💰</div>
+                Player Passes Sold
+              </div>
+              <div class="stat-row-right">
+                <div class="stat-row-value" style="color: var(--lime);">$428</div>
+                <div class="stat-row-sub">86 passes this week</div>
+              </div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-row-label">
+                <div class="stat-row-icon" style="background: rgba(124,92,252,0.12);">📢</div>
+                Event Promotions
+              </div>
+              <div class="stat-row-right">
+                <div class="stat-row-value" style="color: var(--purple);">$82</div>
+                <div class="stat-row-sub">14 events promoted</div>
+              </div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-row-label">
+                <div class="stat-row-icon" style="background: rgba(124,92,252,0.12);">📋</div>
+                Subscription
+              </div>
+              <div class="stat-row-right">
+                <div class="stat-row-value" style="color: var(--lime);">$0.00</div>
+                <div class="stat-row-sub">Venue Starter · Free plan</div>
+              </div>
+            </div>
+            <div class="stat-row">
+              <div class="stat-row-label">
+                <div class="stat-row-icon" style="background: rgba(78,205,196,0.12);">📈</div>
+                Net This Month
+              </div>
+              <div class="stat-row-right">
+                <div class="stat-row-value" style="color: var(--teal);">+$346</div>
+                <div class="stat-row-sub">revenue minus costs</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Question Performance -->
+      <div class="chart-card" style="margin-bottom: 28px;">
+        <div class="chart-header">
+          <div class="chart-title">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            Question Performance — Recent Events
+          </div>
+          <div class="chart-legend">
+            <div class="chart-legend-item"><span class="chart-legend-dot" style="background: var(--lime);"></span> Easy (80%+)</div>
+            <div class="chart-legend-item"><span class="chart-legend-dot" style="background: var(--purple);"></span> Medium (50-79%)</div>
+            <div class="chart-legend-item"><span class="chart-legend-dot" style="background: var(--coral);"></span> Hard (&lt;50%)</div>
+          </div>
+        </div>
+        <div class="question-list">
+          <div class="question-item">
+            <div class="question-num easy">1</div>
+            <div class="question-info">
+              <div class="question-text">Who scored the first goal?</div>
+              <div class="question-meta">Barcelona vs Real Madrid · Avg response: 3.2s</div>
+            </div>
+            <div class="question-accuracy">
+              <div class="question-accuracy-value" style="color: var(--lime);">92%</div>
+              <div class="question-accuracy-label">accuracy</div>
+            </div>
+          </div>
+          <div class="question-item">
+            <div class="question-num easy">2</div>
+            <div class="question-info">
+              <div class="question-text">Will there be a goal before halftime?</div>
+              <div class="question-meta">Barcelona vs Real Madrid · Avg response: 5.8s</div>
+            </div>
+            <div class="question-accuracy">
+              <div class="question-accuracy-value" style="color: var(--lime);">85%</div>
+              <div class="question-accuracy-label">accuracy</div>
+            </div>
+          </div>
+          <div class="question-item">
+            <div class="question-num medium">3</div>
+            <div class="question-info">
+              <div class="question-text">Who leads at halftime?</div>
+              <div class="question-meta">Lakers vs Warriors · Avg response: 7.1s</div>
+            </div>
+            <div class="question-accuracy">
+              <div class="question-accuracy-value" style="color: var(--purple);">67%</div>
+              <div class="question-accuracy-label">accuracy</div>
+            </div>
+          </div>
+          <div class="question-item">
+            <div class="question-num medium">4</div>
+            <div class="question-info">
+              <div class="question-text">Total points over or under 210.5?</div>
+              <div class="question-meta">Lakers vs Warriors · Avg response: 9.4s</div>
+            </div>
+            <div class="question-accuracy">
+              <div class="question-accuracy-value" style="color: var(--purple);">58%</div>
+              <div class="question-accuracy-label">accuracy</div>
+            </div>
+          </div>
+          <div class="question-item">
+            <div class="question-num hard">5</div>
+            <div class="question-info">
+              <div class="question-text">Exact scoreline at 60 minutes?</div>
+              <div class="question-meta">Barcelona vs Real Madrid · Avg response: 12.1s</div>
+            </div>
+            <div class="question-accuracy">
+              <div class="question-accuracy-value" style="color: var(--coral);">23%</div>
+              <div class="question-accuracy-label">accuracy</div>
+            </div>
+          </div>
+          <div class="question-item">
+            <div class="question-num hard">6</div>
+            <div class="question-info">
+              <div class="question-text">Who gets the next yellow card?</div>
+              <div class="question-meta">Barcelona vs Real Madrid · Avg response: 6.5s</div>
+            </div>
+            <div class="question-accuracy">
+              <div class="question-accuracy-value" style="color: var(--coral);">18%</div>
+              <div class="question-accuracy-label">accuracy</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script>
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('active');
+      setTimeout(() => t.classList.remove('active'), 3000);
+    }
+    function setPeriod(btn) {
+      document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      showToast('Showing data for: ' + btn.textContent.trim());
+    }
+  </script>
+  <script src="utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+  <script src="sidebar.js"></script>
+  <script>
+    SpontixSidebar.init({ type: 'venue', active: 'venue-analytics.html' });
+
+    // Tier gate — Analytics requires Venue Pro+
+    SpontixSidebar.gatePage({
+      feature: 'basicAnalytics',
+      requiredTier: 'Venue Pro',
+      isVenue: true,
+      icon: '📊',
+      title: 'Analytics requires Venue Pro',
+      description: 'Track player engagement, peak times, and event performance. Upgrade to Venue Pro to unlock your analytics dashboard.'
+    });
+  </script>
+</body>
+</html>

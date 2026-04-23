@@ -1,0 +1,1271 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Discover Leagues</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+<style>
+    /* ── Main Area ── */
+    .main { margin-left: 260px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* Top Bar */
+    .topbar {
+      padding: 16px 32px; display: flex; align-items: center; gap: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-search { flex: 1; max-width: 480px; position: relative; }
+    .topbar-search input {
+      width: 100%; padding: 10px 14px 10px 40px; background: var(--navy-light);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-pill);
+      color: var(--off-white); font-size: 0.85rem; font-family: inherit; outline: none;
+      transition: border-color 0.2s;
+    }
+    .topbar-search input::placeholder { color: var(--grey-dark); }
+    .topbar-search input:focus { border-color: rgba(168,225,12,0.3); }
+    .topbar-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--grey-dark); }
+    .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .topbar-btn {
+      width: 40px; height: 40px; border-radius: 50%; border: none;
+      background: var(--navy-light); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; position: relative; transition: background 0.2s;
+    }
+    .topbar-btn:hover { background: var(--navy-hover); }
+    .topbar-btn svg { width: 18px; height: 18px; stroke: var(--grey); fill: none; stroke-width: 1.8; }
+    .topbar-btn .notif-dot {
+      position: absolute; top: 8px; right: 8px; width: 8px; height: 8px;
+      background: var(--coral); border-radius: 50%; border: 2px solid var(--navy);
+    }
+
+    /* Content */
+    .content { padding: 32px; flex: 1; max-width: 1200px; }
+
+    /* Page Header */
+    .page-header { margin-bottom: 28px; }
+    .page-header h1 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+    .page-header h1 span { color: var(--lime); }
+    .page-header p { color: var(--grey); font-size: 0.9rem; }
+
+    /* ── Filter Bar ── */
+    .filter-bar {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 28px; flex-wrap: wrap;
+    }
+    .filter-group { display: flex; align-items: center; gap: 8px; }
+    .filter-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--grey-dark); white-space: nowrap; }
+    .filter-select {
+      padding: 8px 32px 8px 12px; background: var(--navy-card); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-sm); color: var(--off-white); font-size: 0.82rem; font-family: inherit;
+      cursor: pointer; appearance: none; outline: none; transition: border-color 0.2s;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239898B0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 10px center;
+    }
+    .filter-select:focus { border-color: rgba(168,225,12,0.3); }
+    .filter-select option { background: var(--navy-card); color: var(--off-white); }
+
+    .filter-chip {
+      padding: 7px 16px; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.1);
+      background: transparent; color: var(--grey); font-size: 0.8rem; font-weight: 600;
+      font-family: inherit; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .filter-chip:hover { border-color: rgba(168,225,12,0.3); color: var(--off-white); }
+    .filter-chip.active { background: var(--lime); color: var(--navy); border-color: var(--lime); }
+
+    .filter-divider { width: 1px; height: 24px; background: rgba(255,255,255,0.08); margin: 0 4px; }
+
+    /* ── Promote Banner ── */
+    .promote-banner {
+      background: linear-gradient(135deg, rgba(168,225,12,0.14), rgba(78,205,196,0.06));
+      border: 1px solid rgba(168,225,12,0.25); border-radius: var(--radius-lg);
+      padding: 20px 24px; margin-bottom: 32px; display: flex; align-items: center; gap: 20px;
+    }
+    .promote-banner-icon {
+      width: 48px; height: 48px; border-radius: var(--radius-md);
+      background: rgba(168,225,12,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .promote-banner-icon svg { width: 24px; height: 24px; stroke: var(--lime); fill: none; stroke-width: 1.8; }
+    .promote-banner-text { flex: 1; }
+    .promote-banner-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 3px; }
+    .promote-banner-title span { color: var(--lime); }
+    .promote-banner-sub { font-size: 0.78rem; color: var(--grey); line-height: 1.4; }
+    .promote-banner-btn {
+      padding: 10px 24px; background: var(--lime); color: var(--navy); border: none;
+      border-radius: var(--radius-pill); font-size: 0.82rem; font-weight: 800;
+      font-family: inherit; cursor: pointer; white-space: nowrap; transition: opacity 0.2s, transform 0.2s;
+      box-shadow: 0 4px 16px rgba(168,225,12,0.25);
+    }
+    .promote-banner-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    /* ── Section Header ── */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;
+    }
+    .section-header h2 { font-size: 1.1rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+
+    /* ── Featured/Promoted Leagues ── */
+    .promoted-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; margin-bottom: 36px;
+    }
+    .league-card {
+      background: var(--navy-card); border-radius: var(--radius-lg); padding: 20px;
+      border: 1px solid rgba(255,255,255,0.06); transition: border-color 0.2s, transform 0.2s;
+      cursor: pointer; position: relative;
+    }
+    .league-card:hover { border-color: rgba(168,225,12,0.2); transform: translateY(-2px); }
+    .league-card.promoted {
+      border-color: rgba(124,92,252,0.25);
+      background: linear-gradient(135deg, var(--navy-card), rgba(124,92,252,0.06));
+    }
+    .league-card.promoted:hover { border-color: rgba(124,92,252,0.45); }
+
+    .promoted-badge {
+      position: absolute; top: 12px; right: 12px;
+      background: linear-gradient(135deg, var(--purple), #9B7CFC); color: #fff;
+      font-size: 0.6rem; font-weight: 800; padding: 3px 10px; border-radius: var(--radius-pill);
+      text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 4px;
+    }
+    .promoted-badge svg { width: 10px; height: 10px; stroke: #fff; fill: none; stroke-width: 2.5; }
+
+    .league-card-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+    .league-card-icon {
+      width: 44px; height: 44px; border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; font-weight: 800; flex-shrink: 0;
+    }
+    .league-card-icon.lime { background: var(--lime-dim); color: var(--lime); }
+    .league-card-icon.purple { background: rgba(124,92,252,0.12); color: var(--purple); }
+    .league-card-icon.coral { background: rgba(255,107,107,0.12); color: var(--coral); }
+    .league-card-icon.teal { background: rgba(78,205,196,0.12); color: var(--teal); }
+    .league-card-icon.gold { background: rgba(255,215,0,0.12); color: var(--gold); }
+    .league-card-info { flex: 1; min-width: 0; }
+    .league-card-name { font-size: 0.95rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .league-card-meta { font-size: 0.72rem; color: var(--grey); margin-top: 2px; }
+
+    .league-card-
+    .league-card-desc { font-size: 0.8rem; color: var(--grey); line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .league-card-tags { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 10px; }
+    .league-tag {
+      font-size: 0.68rem; font-weight: 600; padding: 3px 10px; border-radius: var(--radius-pill);
+      background: rgba(255,255,255,0.06); color: var(--grey);
+    }
+    .league-tag.sport { background: var(--lime-dim); color: var(--lime); }
+    .league-tag.region { background: rgba(78,205,196,0.1); color: var(--teal); }
+    .league-tag.mode-team { background: rgba(124,92,252,0.2); color: var(--purple); }
+
+    .league-card-footer { display: flex; align-items: center; justify-content: space-between; }
+    .league-card-stats { display: flex; align-items: center; gap: 14px; }
+    .league-stat { display: flex; align-items: center; gap: 5px; font-size: 0.75rem; color: var(--grey); }
+    .league-stat svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .league-stat .count { font-weight: 700; color: var(--off-white); }
+
+    .league-access {
+      display: flex; align-items: center; gap: 5px; font-size: 0.72rem; font-weight: 600;
+      padding: 4px 12px; border-radius: var(--radius-pill);
+    }
+    .league-access.public { background: rgba(168,225,12,0.1); color: var(--lime); }
+    .league-access.private { background: rgba(255,107,107,0.1); color: var(--coral); }
+    .league-access svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2.2; }
+
+    .league-card-join {
+      width: 100%; margin-top: 14px; padding: 10px; border-radius: var(--radius-sm);
+      border: 1px solid rgba(168,225,12,0.2); background: transparent; color: var(--lime);
+      font-size: 0.82rem; font-weight: 700; font-family: inherit; cursor: pointer; transition: all 0.2s;
+    }
+    .league-card-join:hover { background: var(--lime); color: var(--navy); }
+    .league-card-join.private-join { border-color: rgba(255,107,107,0.2); color: var(--coral); }
+    .league-card-join.private-join:hover { background: var(--coral); color: #fff; }
+
+    /* ── Browse Grid ── */
+    .browse-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 16px; margin-bottom: 36px;
+    }
+
+    /* ── Results count ── */
+    .results-info { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .results-count { font-size: 0.82rem; color: var(--grey); }
+    .results-count span { color: var(--off-white); font-weight: 700; }
+    .sort-select {
+      padding: 6px 28px 6px 10px; background: var(--navy-card); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-sm); color: var(--off-white); font-size: 0.78rem; font-family: inherit;
+      cursor: pointer; appearance: none; outline: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 24 24' fill='none' stroke='%239898B0' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 8px center;
+    }
+
+    /* ── Load More ── */
+    .load-more {
+      display: flex; justify-content: center; margin: 16px 0 32px;
+    }
+    .load-more-btn {
+      padding: 12px 40px; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.1);
+      background: transparent; color: var(--off-white); font-size: 0.85rem; font-weight: 600;
+      font-family: inherit; cursor: pointer; transition: all 0.2s;
+    }
+    .load-more-btn:hover { border-color: var(--lime); color: var(--lime); }
+
+    /* ── Promote Modal ── */
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6); z-index: 200; align-items: center; justify-content: center;
+      backdrop-filter: blur(4px);
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: var(--navy-light); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-xl); padding: 32px; max-width: 520px; width: 90%;
+      position: relative; max-height: 90vh; overflow-y: auto;
+    }
+    .modal-close {
+      position: absolute; top: 16px; right: 16px; width: 32px; height: 32px;
+      border-radius: 50%; border: none; background: rgba(255,255,255,0.06);
+      cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s;
+    }
+    .modal-close:hover { background: rgba(255,255,255,0.1); }
+    .modal-close svg { width: 16px; height: 16px; stroke: var(--grey); fill: none; stroke-width: 2; }
+    .modal-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 6px; }
+    .modal-title span { color: var(--purple); }
+    .modal-subtitle { font-size: 0.85rem; color: var(--grey); margin-bottom: 24px; line-height: 1.5; }
+
+    .promote-select-league { margin-bottom: 20px; }
+    .promote-select-league label { display: block; font-size: 0.78rem; font-weight: 600; color: var(--grey); margin-bottom: 6px; }
+    .promote-select-league select {
+      width: 100%; padding: 10px 14px; background: var(--navy-card); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-sm); color: var(--off-white); font-size: 0.85rem; font-family: inherit;
+      cursor: pointer; appearance: none; outline: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239898B0' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+    }
+
+    .promote-plans { display: flex; gap: 12px; margin-bottom: 24px; }
+    .promote-plan {
+      flex: 1; padding: 16px; background: var(--navy-card); border: 2px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s; text-align: center;
+    }
+    .promote-plan:hover { border-color: rgba(168,225,12,0.35); }
+    .promote-plan.selected { border-color: var(--lime); background: rgba(168,225,12,0.1); }
+    .promote-plan-duration { font-size: 0.78rem; font-weight: 700; color: var(--off-white); margin-bottom: 4px; }
+    .promote-plan-price { font-size: 1.4rem; font-weight: 900; color: var(--lime); margin-bottom: 2px; }
+    .promote-plan-unit { font-size: 0.7rem; color: var(--grey); }
+    .promote-plan-save { font-size: 0.68rem; font-weight: 700; color: var(--lime); margin-top: 6px; }
+
+    .promote-perks { margin-bottom: 24px; }
+    .promote-perks-title { font-size: 0.78rem; font-weight: 700; color: var(--grey); margin-bottom: 10px; }
+    .promote-perk {
+      display: flex; align-items: center; gap: 10px; padding: 6px 0; font-size: 0.82rem; color: var(--off-white);
+    }
+    .promote-perk svg { width: 16px; height: 16px; stroke: var(--lime); fill: none; stroke-width: 2.5; flex-shrink: 0; }
+
+    .promote-cta {
+      width: 100%; padding: 14px; background: var(--lime); color: var(--navy); border: none;
+      border-radius: var(--radius-sm); font-size: 0.9rem; font-weight: 800; font-family: inherit;
+      cursor: pointer; transition: opacity 0.2s, transform 0.2s;
+      box-shadow: 0 6px 20px rgba(168,225,12,0.3);
+    }
+    .promote-cta:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    /* ── Password Modal ── */
+    .password-modal .modal { max-width: 400px; text-align: center; }
+    .password-input-group { margin: 20px 0; }
+    .password-input-group input {
+      width: 100%; padding: 12px 16px; background: var(--navy-card); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius-sm); color: var(--off-white); font-size: 0.9rem; font-family: inherit;
+      outline: none; text-align: center; letter-spacing: 4px;
+    }
+    .password-input-group input:focus { border-color: rgba(168,225,12,0.3); }
+    .password-submit {
+      width: 100%; padding: 12px; background: var(--lime); color: var(--navy); border: none;
+      border-radius: var(--radius-sm); font-size: 0.85rem; font-weight: 700; font-family: inherit;
+      cursor: pointer; transition: opacity 0.2s;
+    }
+    .password-submit:hover { opacity: 0.85; }
+
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .promoted-grid, .browse-grid { grid-template-columns: 1fr; }
+      .promote-plans { flex-direction: column; }
+    }</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar-placeholder"></div>
+
+<!-- Main Content -->
+<div class="main">
+  <!-- Top Bar -->
+  <header class="topbar">
+    <button class="mobile-menu-btn" onclick="toggleSidebar()">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="topbar-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Search leagues by name, sport, team..." id="searchInput" oninput="filterLeagues()" />
+    </div>
+    <div class="topbar-right">
+      <a href="notifications.html" class="topbar-btn" title="Notifications" style="text-decoration:none;">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        <span class="notif-dot"></span>
+      </a>
+      <button class="topbar-btn" title="Messages">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="content">
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1>Discover <span>Leagues</span></h1>
+      <p>Find and join public leagues from around the world — or enter a password to access private ones.</p>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+      <div class="filter-group">
+        <span class="filter-label">Sport</span>
+        <select class="filter-select" id="filterSport" onchange="filterLeagues()">
+          <option value="all">All Sports</option>
+          <option value="football">Football</option>
+          <option value="basketball">Basketball</option>
+          <option value="tennis">Tennis</option>
+          <option value="cricket">Cricket</option>
+          <option value="baseball">Baseball</option>
+          <option value="hockey">Hockey</option>
+          <option value="mma">MMA / UFC</option>
+          <option value="rugby">Rugby</option>
+          <option value="f1">Formula 1</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Region</span>
+        <select class="filter-select" id="filterRegion" onchange="filterLeagues()">
+          <option value="all">Worldwide</option>
+          <option value="europe">Europe</option>
+          <option value="north-america">North America</option>
+          <option value="south-america">South America</option>
+          <option value="asia">Asia</option>
+          <option value="africa">Africa</option>
+          <option value="oceania">Oceania</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Team</span>
+        <select class="filter-select" id="filterTeam" onchange="filterLeagues()">
+          <option value="all">Any Team</option>
+          <option value="real-madrid">Real Madrid</option>
+          <option value="barcelona">FC Barcelona</option>
+          <option value="man-city">Manchester City</option>
+          <option value="liverpool">Liverpool</option>
+          <option value="bayern">Bayern Munich</option>
+          <option value="psg">PSG</option>
+          <option value="lakers">LA Lakers</option>
+          <option value="warriors">Golden State</option>
+        </select>
+      </div>
+
+      <div class="filter-divider"></div>
+
+      <button class="filter-chip active" onclick="setType(this,'all')">All</button>
+      <button class="filter-chip" onclick="setType(this,'public')">Public</button>
+      <button class="filter-chip" onclick="setType(this,'private')">Private</button>
+
+      <div class="filter-divider"></div>
+
+      <button class="filter-chip" onclick="setMode(this,'all')" data-mode-filter="all">All Modes</button>
+      <button class="filter-chip" onclick="setMode(this,'individual')" data-mode-filter="individual">Individual</button>
+      <button class="filter-chip" onclick="setMode(this,'team')" data-mode-filter="team">Teams</button>
+    </div>
+
+    <!-- Promote Your League Banner -->
+    <div class="promote-banner">
+      <div class="promote-banner-icon">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      </div>
+      <div class="promote-banner-text">
+        <div class="promote-banner-title"><span>Boost</span> your league to the top</div>
+        <div class="promote-banner-sub">Get your public league featured at the top of Discover so more players find and join you faster.</div>
+      </div>
+      <button class="promote-banner-btn" onclick="openPromoteModal()">Promote a League</button>
+    </div>
+
+    <!-- Featured / Promoted Leagues -->
+    <div class="section-header">
+      <h2>
+        <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:var(--purple);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Featured Leagues
+      </h2>
+    </div>
+    <div class="promoted-grid" id="promotedGrid">
+      <!-- Promoted Card 1 -->
+      <div class="league-card promoted" data-sport="football" data-region="europe" data-team="real-madrid" data-type="public">
+        <div class="promoted-badge">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Promoted
+        </div>
+        <div class="league-card-header">
+          <div class="league-card-icon gold">RM</div>
+          <div class="league-card-info">
+            <div class="league-card-name">Hala Madrid Global</div>
+            <div class="league-card-meta">by @madridista_99 · Created Mar 2026</div>
+          </div>
+        </div>
+        <div class="league-card-body">
+          <div class="league-card-desc">The ultimate league for Real Madrid fans worldwide. Predict La Liga, Champions League, and every El Clasico moment.</div>
+          <div class="league-card-tags">
+            <span class="league-tag sport">Football</span>
+            <span class="league-tag region">Europe</span>
+            <span class="league-tag">Real Madrid</span>
+            <span class="league-tag">La Liga</span>
+          </div>
+        </div>
+        <div class="league-card-footer">
+          <div class="league-card-stats">
+            <div class="league-stat">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+              <span class="count">342</span>/500
+            </div>
+            <div class="league-stat">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Active
+            </div>
+          </div>
+          <div class="league-access public">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+            Public
+          </div>
+        </div>
+        <button class="league-card-join" onclick="joinLeague('Hala Madrid Global')">Join League</button>
+      </div>
+
+      <!-- Promoted Card 2 -->
+      <div class="league-card promoted" data-sport="basketball" data-region="north-america" data-team="lakers" data-type="public" data-mode="team">
+        <div class="promoted-badge">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Promoted
+        </div>
+        <div class="league-card-header">
+          <div class="league-card-icon purple">LA</div>
+          <div class="league-card-info">
+            <div class="league-card-name">Lakers Nation Predictions</div>
+            <div class="league-card-meta">by @showtime_fan · Created Feb 2026</div>
+          </div>
+        </div>
+        <div class="league-card-body">
+          <div class="league-card-desc">NBA predictions from die-hard Lakers fans. Predict games, player stats, playoff outcomes, and more throughout the season.</div>
+          <div style="font-size: 0.72rem; color: var(--grey); margin-top: 8px; margin-bottom: 8px;">6 teams × 5 players</div>
+          <div class="league-card-tags">
+            <span class="league-tag sport">Basketball</span>
+            <span class="league-tag region">N. America</span>
+            <span class="league-tag mode-team">Team Mode</span>
+            <span class="league-tag">Lakers</span>
+            <span class="league-tag">NBA</span>
+          </div>
+        </div>
+        <div class="league-card-footer">
+          <div class="league-card-stats">
+            <div class="league-stat">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+              <span class="count">189</span>/300
+            </div>
+            <div class="league-stat">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Active
+            </div>
+          </div>
+          <div class="league-access public">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+            Public
+          </div>
+        </div>
+        <button class="league-card-join" onclick="joinLeague('Lakers Nation Predictions')">Join League</button>
+      </div>
+    </div>
+
+    <!-- Browse All Leagues -->
+    <div class="results-info">
+      <div class="results-count">Showing <span id="resultCount">12</span> leagues</div>
+      <select class="sort-select" id="sortSelect" onchange="filterLeagues()">
+        <option value="popular">Most Popular</option>
+        <option value="newest">Newest First</option>
+        <option value="active">Most Active</option>
+        <option value="filling">Almost Full</option>
+      </select>
+    </div>
+
+    <div class="browse-grid" id="browseGrid">
+      <!-- Card 1 -->
+      <div class="league-card" data-sport="football" data-region="europe" data-team="barcelona" data-type="public" data-name="La Liga Fanatics" data-mode="individual">
+        <div class="league-card-header">
+          <div class="league-card-icon coral">LF</div>
+          <div class="league-card-info">
+            <div class="league-card-name">La Liga Fanatics</div>
+            <div class="league-card-meta">by @futbol_guru · 890 members</div>
+          </div>
+        </div>
+        <div class="league-card-body">
+          <div class="league-card-desc">Covering every La Liga matchday with predictions, scorelines, and player performance questions.</div>
+          <div class="league-card-tags">
+            <span class="league-tag sport">Football</span>
+            <span class="league-tag region">Europe</span>
+            <span class="league-tag">La Liga</span>
+          </div>
+        </div>
+        <div class="league-card-footer">
+          <div class="league-card-stats">
+            <div class="league-stat">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <span class="count">890</span>/1000
+            </div>
+          </div>
+          <div class="league-access public">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+            Public
+          </div>
+        </div>
+        <button class="league-card-join" onclick="joinLeague('La Liga Fanatics')">Join League</button>
+      </div>
+
+      <!-- Card 2 -->
+      <div class="league-card" data-sport="football" data-region="europe" data-team="man-city" data-type="private" data-name="Citizens Inner Circle" data-mode="team">
+        <div class="league-card-header">
+          <div class="league-card-icon teal">CI</div>
+          <div class="league-card-info">
+            <div class="league-card-name">Citizens Inner Circle</div>
+            <div class="league-card-meta">by @mcfc_die_hard · 45 members</div>
+          </div>
+        </div>
+        <div class="league-card-body">
+          <div class="league-card-desc">Exclusive Man City league for real fans only. Deep-dive predictions on PL, UCL, and transfer windows.</div>
+          <div style="font-size: 0.72rem; color: var(--grey); margin-top: 8px; margin-bottom: 8px;">3 teams × 3 players</div>
+          <div class="league-card-tags">
+            <span class="league-tag sport">Football</span>
+            <span class="league-tag region">Europe</span>
+            <span class="league-tag mode-team">Team Mode</span>
+            <span class="league-tag">Man City</span>
+          </div>
+        </div>
+        <div class="league-card-footer">
+          <div class="league-card-stats">
+            <div class="league-stat">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <span class="count">9</span>/9
+            </div>
+          </div>
+          <div class="league-access private">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            Private
+          </div>
+        </div>
+        <button class="league-card-join private-join" onclick="openPasswordModal('Citizens Inner Circle')">Enter Password</button>
+      </div>
+
+      <!-- Card 3 -->
+      <div class="league-card" data-sport="basketball" data-region="north-america" data-team="warriors" data-type="public" data-name="Dub Nation Picks" data-mode="individual">
+        <div class="league-card-header">
+          <div class="league-card-icon lime">DN</div>
+          <div class="league-card-info">
+            <div class="league-card-name">Dub Nation Picks</div>
+            <div class="league-card-meta">by @bay_area_hoops · 567 members</div>
+          </div>
+        </div>
+        <div class="league-card-body">
+          <div class="league-card-desc">Warriors fans predicting every game, trade deadline move, and playoff moment. Let's go Dubs!</div>
+          <div class="league-card-tags">
+            <span class="league-tag sport">Basketball</span>
+            <span class="league-tag region">N. America</span>
+            <span class="league-tag">Warriors</span>
+          </div>
+        </div>
+        <div class="league-card-footer">
+          <div class="league-card-stats">
+            <div class="league-stat">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <span class="count">567</span>/750
+            </div>
+          </div>
+          <div class="league-access public">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+            Public
+          </div>
+        </div>
+        <button class="league-card-join" onclick="joinLeague('Dub Nation Picks')">Join League</button>
+      </div>
+
+      <!-- Card 4 -->
+      <div class="league-card" data-sport="tennis" data-region="europe" data-team="all" data-type="public" data-name="Grand Slam Guessers" data-mode="individual">
+        <div class="league-card-header">
+          <div class="league-card-icon purple">GS</div>
+          <div class="league-card-info">
+            <div class="league-card-name">Grand Slam Guessers</div>
+            <div class="league-card-meta">by @ace_predictor · 234 members</div>
+          </div>
+        </div>
+        <div class="league-card-body">
+          <div class="league-card-desc">Predict every Grand Slam match, ATP/WTA outcomes. From seeds to upsets — who will you call?</div>
+          <div class="league-card-tags">
+            <span class="league-tag sport">Tennis</span>
+            <span class="league-tag region">Europe</span>
+            <span class="league-tag">Grand Slams</span>
+          </div>
+        </div>
+        <div class="league-card-footer">
+          <div class="league-card-stats">
+            <div class="league-stat">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <span class="count">234</span>/500
+            </div>
+          </div>
+          <div class="league-access public">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+            Public
+          </div>
+        </div>
+        <button class="league-card-join" onclick="joinLeague('Grand Slam Guessers')">Join League</button>
+      </div>
+
+      <!-- Card 5 -->
+      <div class="league-card" data-sport="cricket" data-region="asia" data-team="all" data-type="public" data-name="IPL Prediction Kings" data-mode="individual">
+        <div class="league-card-header">
+          <div class="league-card-icon coral">IP</div>
+          <div class="league-card-info">
+            <div class="league-card-name">IPL Prediction Kings</div>
+            <div class="league-card-meta">by @cricket_oracle · 1,204 members</div>
+          </div>
+        </div>
+        <div class="league-card-body">
+          <div class="league-card-desc">The biggest IPL prediction league on Spontyx. Match winners, top scorers, wicket tallies — all season long.</div>
+          <div class="league-card-tags">
+            <span class="league-tag sport">Cricket</span>
+            <span class="league-tag region">Asia</span>
+            <span class="league-tag">IPL</span>
+          </div>
+        </div>
+        <div class="league-card-footer">
+          <div class="league-card-stats">
+            <div class="league-stat">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <span class="count">1,204</span>/2000
+            </div>
+          </div>
+          <div class="league-access public">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+            Public
+          </div>
+        </div>
+        <button class="league-card-join" onclick="joinLeague('IPL Prediction Kings')">Join League</button>
+      </div>
+
+      <!-- Card 6 -->
+      <div class="league-card" data-sport="f1" data-region="europe" data-team="all" data-type="private" data-name="Paddock Club VIP" data-mode="team">
+        <div class="league-card-header">
+          <div class="league-card-icon lime">F1</div>
+          <div class="league-card-info">
+            <div class="league-card-name">Paddock Club VIP</div>
+            <div class="league-card-meta">by @formula_fanatic · 78 members</div>
+          </div>
+        </div>
+        <div class="league-card-body">
+          <div class="league-card-desc">Private F1 league for die-hards. Predict race winners, qualifying, fastest laps, and strategy calls every race weekend.</div>
+          <div style="font-size: 0.72rem; color: var(--grey); margin-top: 8px; margin-bottom: 8px;">4 teams × 4 players</div>
+          <div class="league-card-tags">
+            <span class="league-tag sport">Formula 1</span>
+            <span class="league-tag region">Europe</span>
+            <span class="league-tag mode-team">Team Mode</span>
+            <span class="league-tag">F1</span>
+          </div>
+        </div>
+        <div class="league-card-footer">
+          <div class="league-card-stats">
+            <div class="league-stat">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <span class="count">16</span>/16
+            </div>
+          </div>
+          <div class="league-access private">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            Private
+          </div>
+        </div>
+        <button class="league-card-join private-join" onclick="openPasswordModal('Paddock Club VIP')">Enter Password</button>
+      </div>
+
+      <!-- Card 7 -->
+      <div class="league-card" data-sport="football" data-region="europe" data-team="liverpool" data-type="public" data-name="The Kop Predictors" data-mode="individual">
+        <div class="league-card-header">
+          <div class="league-card-icon coral">TK</div>
+          <div class="league-card-info">
+            <div class="league-card-name">The Kop Predictors</div>
+            <div class="league-card-meta">by @ynwa_forever · 621 members</div>
+          </div>
+        </div>
+        <div class="league-card-body">
+          <div class="league-card-desc">Liverpool supporters predicting PL, UCL, and derby results. You'll Never Walk Alone — or predict alone.</div>
+          <div class="league-card-tags">
+            <span class="league-tag sport">Football</span>
+            <span class="league-tag region">Europe</span>
+            <span class="league-tag">Liverpool</span>
+          </div>
+        </div>
+        <div class="league-card-footer">
+          <div class="league-card-stats">
+            <div class="league-stat">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <span class="count">621</span>/750
+            </div>
+          </div>
+          <div class="league-access public">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+            Public
+          </div>
+        </div>
+        <button class="league-card-join" onclick="joinLeague('The Kop Predictors')">Join League</button>
+      </div>
+
+      <!-- Card 8 -->
+      <div class="league-card" data-sport="mma" data-region="north-america" data-team="all" data-type="public" data-name="UFC Fight Night Preds" data-mode="individual">
+        <div class="league-card-header">
+          <div class="league-card-icon teal">UF</div>
+          <div class="league-card-info">
+            <div class="league-card-name">UFC Fight Night Preds</div>
+            <div class="league-card-meta">by @octagon_oracle · 412 members</div>
+          </div>
+        </div>
+        <div class="league-card-body">
+          <div class="league-card-desc">Predict every UFC fight card — winners, methods, rounds. From PPV main events to prelims.</div>
+          <div class="league-card-tags">
+            <span class="league-tag sport">MMA / UFC</span>
+            <span class="league-tag region">N. America</span>
+          </div>
+        </div>
+        <div class="league-card-footer">
+          <div class="league-card-stats">
+            <div class="league-stat">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <span class="count">412</span>/500
+            </div>
+          </div>
+          <div class="league-access public">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+            Public
+          </div>
+        </div>
+        <button class="league-card-join" onclick="joinLeague('UFC Fight Night Preds')">Join League</button>
+      </div>
+
+      <!-- Card 9 -->
+      <div class="league-card" data-sport="football" data-region="europe" data-team="bayern" data-type="private" data-name="Mia San Mia Elite" data-mode="team">
+        <div class="league-card-header">
+          <div class="league-card-icon coral">MS</div>
+          <div class="league-card-info">
+            <div class="league-card-name">Mia San Mia Elite</div>
+            <div class="league-card-meta">by @fcb_munchen · 32 members</div>
+          </div>
+        </div>
+        <div class="league-card-body">
+          <div class="league-card-desc">Bayern Munich private predictions league. Bundesliga, DFB-Pokal, and UCL — only for real Bayern fans.</div>
+          <div style="font-size: 0.72rem; color: var(--grey); margin-top: 8px; margin-bottom: 8px;">2 teams × 5 players</div>
+          <div class="league-card-tags">
+            <span class="league-tag sport">Football</span>
+            <span class="league-tag region">Europe</span>
+            <span class="league-tag mode-team">Team Mode</span>
+            <span class="league-tag">Bayern</span>
+          </div>
+        </div>
+        <div class="league-card-footer">
+          <div class="league-card-stats">
+            <div class="league-stat">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <span class="count">10</span>/10
+            </div>
+          </div>
+          <div class="league-access private">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+            Private
+          </div>
+        </div>
+        <button class="league-card-join private-join" onclick="openPasswordModal('Mia San Mia Elite')">Enter Password</button>
+      </div>
+
+      <!-- Card 10 -->
+      <div class="league-card" data-sport="football" data-region="europe" data-team="psg" data-type="public" data-name="Parc des Princes Picks" data-mode="individual">
+        <div class="league-card-header">
+          <div class="league-card-icon purple">PP</div>
+          <div class="league-card-info">
+            <div class="league-card-name">Parc des Princes Picks</div>
+            <div class="league-card-meta">by @allez_paris · 289 members</div>
+          </div>
+        </div>
+        <div class="league-card-body">
+          <div class="league-card-desc">PSG fans unite! Predict Ligue 1, Champions League, and every Parisian derby with fellow supporters.</div>
+          <div class="league-card-tags">
+            <span class="league-tag sport">Football</span>
+            <span class="league-tag region">Europe</span>
+            <span class="league-tag">PSG</span>
+          </div>
+        </div>
+        <div class="league-card-footer">
+          <div class="league-card-stats">
+            <div class="league-stat">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <span class="count">289</span>/500
+            </div>
+          </div>
+          <div class="league-access public">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+            Public
+          </div>
+        </div>
+        <button class="league-card-join" onclick="joinLeague('Parc des Princes Picks')">Join League</button>
+      </div>
+
+      <!-- Card 11 -->
+      <div class="league-card" data-sport="baseball" data-region="north-america" data-team="all" data-type="public" data-name="MLB Diamond Picks" data-mode="individual">
+        <div class="league-card-header">
+          <div class="league-card-icon teal">ML</div>
+          <div class="league-card-info">
+            <div class="league-card-name">MLB Diamond Picks</div>
+            <div class="league-card-meta">by @diamond_data · 156 members</div>
+          </div>
+        </div>
+        <div class="league-card-body">
+          <div class="league-card-desc">America's pastime meets prediction games. Call home runs, pitching duels, and World Series winners.</div>
+          <div class="league-card-tags">
+            <span class="league-tag sport">Baseball</span>
+            <span class="league-tag region">N. America</span>
+            <span class="league-tag">MLB</span>
+          </div>
+        </div>
+        <div class="league-card-footer">
+          <div class="league-card-stats">
+            <div class="league-stat">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <span class="count">156</span>/300
+            </div>
+          </div>
+          <div class="league-access public">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+            Public
+          </div>
+        </div>
+        <button class="league-card-join" onclick="joinLeague('MLB Diamond Picks')">Join League</button>
+      </div>
+
+      <!-- Card 12 -->
+      <div class="league-card" data-sport="rugby" data-region="oceania" data-team="all" data-type="public" data-name="All Blacks Predictions" data-mode="individual">
+        <div class="league-card-header">
+          <div class="league-card-icon lime">AB</div>
+          <div class="league-card-info">
+            <div class="league-card-name">All Blacks Predictions</div>
+            <div class="league-card-meta">by @haka_nation · 198 members</div>
+          </div>
+        </div>
+        <div class="league-card-body">
+          <div class="league-card-desc">Rugby union predictions from New Zealand and beyond. Super Rugby, test matches, and World Cup build-up.</div>
+          <div class="league-card-tags">
+            <span class="league-tag sport">Rugby</span>
+            <span class="league-tag region">Oceania</span>
+            <span class="league-tag">All Blacks</span>
+          </div>
+        </div>
+        <div class="league-card-footer">
+          <div class="league-card-stats">
+            <div class="league-stat">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <span class="count">198</span>/250
+            </div>
+          </div>
+          <div class="league-access public">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+            Public
+          </div>
+        </div>
+        <button class="league-card-join" onclick="joinLeague('All Blacks Predictions')">Join League</button>
+      </div>
+    </div>
+
+    <div class="load-more">
+      <button class="load-more-btn" onclick="showToast('Loading more leagues...')">Load More Leagues</button>
+    </div>
+  </div>
+</div>
+
+<!-- Promote Modal -->
+<div class="modal-overlay" id="promoteModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closePromoteModal()">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="modal-title">Promote Your <span>League</span></div>
+    <div class="modal-subtitle">Get your league featured at the top of the Discover page. More visibility means more players joining faster.</div>
+
+    <div class="promote-select-league">
+      <label>Select a league to promote</label>
+      <select>
+        <option>LaLiga Legends (Public · 8 members)</option>
+        <option>UCL Knockout Crew (Public · 6 members)</option>
+        <option>Draft Night Crew (Public · 10 members)</option>
+      </select>
+    </div>
+
+    <div class="promote-plans">
+      <div class="promote-plan" onclick="selectPromotePlan(this)">
+        <div class="promote-plan-duration">3 Days</div>
+        <div class="promote-plan-price">$2.99</div>
+        <div class="promote-plan-unit">one-time</div>
+      </div>
+      <div class="promote-plan selected" onclick="selectPromotePlan(this)">
+        <div class="promote-plan-duration">7 Days</div>
+        <div class="promote-plan-price">$4.99</div>
+        <div class="promote-plan-unit">one-time</div>
+        <div class="promote-plan-save">Most Popular</div>
+      </div>
+      <div class="promote-plan" onclick="selectPromotePlan(this)">
+        <div class="promote-plan-duration">30 Days</div>
+        <div class="promote-plan-price">$14.99</div>
+        <div class="promote-plan-unit">one-time</div>
+        <div class="promote-plan-save">Save 28%</div>
+      </div>
+    </div>
+
+    <div class="promote-perks">
+      <div class="promote-perks-title">What you get</div>
+      <div class="promote-perk">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Featured placement at the top of Discover
+      </div>
+      <div class="promote-perk">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Purple "Promoted" badge on your league card
+      </div>
+      <div class="promote-perk">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Priority in search results and filters
+      </div>
+      <div class="promote-perk">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        Analytics dashboard for impressions and joins
+      </div>
+    </div>
+
+    <button class="promote-cta" onclick="showToast('Promotion activated! Your league is now featured.'); closePromoteModal();">Start Promotion — $4.99</button>
+  </div>
+</div>
+
+<!-- Password Modal -->
+<div class="modal-overlay password-modal" id="passwordModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closePasswordModal()">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="modal-title" style="text-align:center;">Enter League <span style="color:var(--coral);">Password</span></div>
+    <div class="modal-subtitle" style="text-align:center;" id="passwordLeagueName">Enter the password for this private league to join.</div>
+    <div class="password-input-group">
+      <input type="password" placeholder="League password" id="passwordInput" />
+    </div>
+    <button class="password-submit" onclick="submitPassword()">Join League</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="utils.js"></script>
+<script src="sidebar.js"></script>
+<script>SpontixSidebar.init({ type: 'player', active: 'discover.html' });</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+<script>
+
+  /* ── Filters ── */
+  let currentType = 'all';
+  let currentMode = 'all';
+  let allDiscoverLeagues = []; // Store for filtering
+
+  function setType(chip, type) {
+    currentType = type;
+    document.querySelectorAll('.filter-chip:not([data-mode-filter])').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    filterLeagues();
+  }
+
+  function setMode(chip, mode) {
+    currentMode = mode;
+    document.querySelectorAll('.filter-chip[data-mode-filter]').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    filterLeagues();
+  }
+
+  function filterLeagues() {
+    const sport = document.getElementById('filterSport').value;
+    const region = document.getElementById('filterRegion').value;
+    const team = document.getElementById('filterTeam').value;
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const cards = document.querySelectorAll('#browseGrid .league-card');
+    let visible = 0;
+
+    cards.forEach(card => {
+      const matchSport = sport === 'all' || card.dataset.sport === sport;
+      const matchRegion = region === 'all' || card.dataset.region === region;
+      const matchTeam = team === 'all' || card.dataset.team === team;
+      const matchType = currentType === 'all' || card.dataset.type === currentType;
+      const matchMode = currentMode === 'all' || card.dataset.mode === currentMode;
+      const name = (card.dataset.name || '').toLowerCase();
+      const matchSearch = !search || name.includes(search) || card.textContent.toLowerCase().includes(search);
+
+      if (matchSport && matchRegion && matchTeam && matchType && matchMode && matchSearch) {
+        card.style.display = '';
+        visible++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+    document.getElementById('resultCount').textContent = visible;
+  }
+
+  /* ── Hydrate Discover from Store ── */
+  function hydrateDiscover() {
+    // Get leagues user has NOT joined
+    const discoverLeagues = SpontixStore.getDiscoverLeagues();
+    allDiscoverLeagues = discoverLeagues;
+
+    // Populate featured/promoted leagues (first 2 from discover list that should be featured)
+    const promotedGrid = document.getElementById('promotedGrid');
+    if (promotedGrid) {
+      const featured = discoverLeagues.slice(0, 2);
+      promotedGrid.innerHTML = '';
+
+      featured.forEach(league => {
+        const card = createLeagueCard(league, true);
+        promotedGrid.appendChild(card);
+      });
+    }
+
+    // Populate browse grid with all discover leagues
+    const browseGrid = document.getElementById('browseGrid');
+    if (browseGrid) {
+      browseGrid.innerHTML = '';
+
+      discoverLeagues.forEach(league => {
+        const card = createLeagueCard(league, false);
+        browseGrid.appendChild(card);
+      });
+    }
+
+    // Update result count
+    document.getElementById('resultCount').textContent = discoverLeagues.length;
+  }
+
+  /* ── Create League Card from Data ── */
+  function createLeagueCard(league, isPromoted) {
+    const div = document.createElement('div');
+    div.className = 'league-card' + (isPromoted ? ' promoted' : '');
+    div.dataset.sport = league.sport.toLowerCase();
+    div.dataset.region = league.region.toLowerCase();
+    div.dataset.team = league.team ? league.team.toLowerCase() : 'all';
+    div.dataset.type = league.type;
+    div.dataset.name = league.name;
+    div.dataset.mode = league.mode;
+
+    const initials = league.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
+    const iconColor = getIconColor(league.name);
+    const createdDate = new Date(league.createdAt);
+    const monthYear = createdDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+
+    const isTeamMode = league.mode === 'team';
+    const teamInfo = isTeamMode && league.teamName ? `<div style="font-size: 0.72rem; color: var(--grey); margin-top: 8px; margin-bottom: 8px;">${league.teamName || 'Team League'}</div>` : '';
+
+    const createdByText = `by ${league.createdBy} · ${isTeamMode ? league.members + ' members' : monthYear}`;
+
+    let statsHtml = `
+      <div class="league-stat">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        <span class="count">${league.members}</span>/${league.maxMembers}
+      </div>
+    `;
+    if (isPromoted) {
+      statsHtml += `
+        <div class="league-stat">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Active
+        </div>
+      `;
+    }
+
+    const joinButtonClass = league.type === 'private' ? 'league-card-join private-join' : 'league-card-join';
+    const joinButtonText = league.type === 'private' ? 'Enter Password' : 'Join League';
+    const joinButtonClick = league.type === 'private'
+      ? `openPasswordModal('${league.id}', '${league.name}')`
+      : `joinLeague('${league.id}', '${league.name}')`;
+
+    const promotedBadge = isPromoted ? `
+      <div class="promoted-badge">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Promoted
+      </div>
+    ` : '';
+
+    const sportLabel = league.sport === 'football' ? 'Football' :
+                      league.sport === 'basketball' ? 'Basketball' :
+                      league.sport === 'tennis' ? 'Tennis' :
+                      league.sport === 'cricket' ? 'Cricket' :
+                      league.sport === 'baseball' ? 'Baseball' :
+                      league.sport === 'f1' ? 'Formula 1' :
+                      league.sport === 'mma' ? 'MMA / UFC' :
+                      league.sport === 'rugby' ? 'Rugby' : league.sport;
+
+    const regionLabel = league.region === 'north-america' ? 'N. America' :
+                       league.region === 'south-america' ? 'S. America' :
+                       league.region === 'europe' ? 'Europe' :
+                       league.region === 'asia' ? 'Asia' :
+                       league.region === 'africa' ? 'Africa' :
+                       league.region === 'oceania' ? 'Oceania' : league.region;
+
+    const tags = [
+      `<span class="league-tag sport">${sportLabel}</span>`,
+      `<span class="league-tag region">${regionLabel}</span>`,
+      league.mode === 'team' ? `<span class="league-tag mode-team">Team Mode</span>` : '',
+      league.team ? `<span class="league-tag">${league.team}</span>` : '',
+    ].filter(t => t).join('\n');
+
+    div.innerHTML = `
+      ${promotedBadge}
+      <div class="league-card-header">
+        <div class="league-card-icon ${iconColor}">${initials}</div>
+        <div class="league-card-info">
+          <div class="league-card-name">${escapeHtml(league.name)}</div>
+          <div class="league-card-meta">${createdByText}</div>
+        </div>
+      </div>
+      <div class="league-card-body">
+        <div class="league-card-desc">${escapeHtml(league.description || 'Join this league to start predicting!')}</div>
+        ${teamInfo}
+        <div class="league-card-tags">
+          ${tags}
+        </div>
+      </div>
+      <div class="league-card-footer">
+        <div class="league-card-stats">
+          ${statsHtml}
+        </div>
+        <div class="league-access ${league.type}">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+          ${league.type === 'private' ? 'Private' : 'Public'}
+        </div>
+      </div>
+      <button class="${joinButtonClass}" onclick="${joinButtonClick}">${joinButtonText}</button>
+    `;
+
+    return div;
+  }
+
+  /* ── Helper: Escape HTML ── */
+  function escapeHtml(text) {
+    const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+    return text.replace(/[&<>"']/g, m => map[m]);
+  }
+
+  /* ── Helper: Get Icon Color ── */
+  function getIconColor(name) {
+    const colors = ['coral', 'teal', 'purple', 'lime', 'gold'];
+    const hash = name.charCodeAt(0) + name.charCodeAt(name.length - 1);
+    return colors[hash % colors.length];
+  }
+
+  /* ── Join ── */
+  async function joinLeague(leagueId, leagueName) {
+    try {
+      const result = await SpontixStoreAsync.joinLeague(leagueId);
+      if (result && !result.ok) {
+        console.warn('[joinLeague] failed:', result.error);
+        SpontixStore.joinLeague(leagueId);
+      }
+    } catch (err) {
+      console.warn('[joinLeague] async error, using fallback:', err);
+      SpontixStore.joinLeague(leagueId);
+    }
+    window.location.href = 'league.html?id=' + leagueId;
+  }
+
+  /* ── Password Modal ── */
+  let pendingLeagueId = '';
+  let pendingLeagueName = '';
+  function openPasswordModal(leagueId, leagueName) {
+    pendingLeagueId = leagueId;
+    pendingLeagueName = leagueName;
+    document.getElementById('passwordLeagueName').textContent = 'Enter the password for "' + leagueName + '" to join.';
+    document.getElementById('passwordInput').value = '';
+    document.getElementById('passwordModal').classList.add('active');
+  }
+  function closePasswordModal() {
+    document.getElementById('passwordModal').classList.remove('active');
+  }
+  async function submitPassword() {
+    const pw = document.getElementById('passwordInput').value.trim();
+    if (!pw) {
+      showToast('Please enter the league password.');
+      return;
+    }
+    try {
+      const result = await SpontixStoreAsync.joinLeague(pendingLeagueId, pw);
+      if (result && result.error === 'wrong-password') {
+        document.getElementById('passwordInput').value = '';
+        document.getElementById('passwordInput').focus();
+        showToast('Incorrect password — try again.');
+        return;
+      }
+      if (result && !result.ok) {
+        showToast('Could not join league. Please try again.');
+        return;
+      }
+    } catch (err) {
+      showToast('Could not join league. Please try again.');
+      return;
+    }
+    closePasswordModal();
+    window.location.href = 'league.html?id=' + pendingLeagueId;
+  }
+
+  /* ── Promote Modal ── */
+  function openPromoteModal() {
+    document.getElementById('promoteModal').classList.add('active');
+  }
+  function closePromoteModal() {
+    document.getElementById('promoteModal').classList.remove('active');
+  }
+  function selectPromotePlan(el) {
+    document.querySelectorAll('.promote-plan').forEach(p => p.classList.remove('selected'));
+    el.classList.add('selected');
+    const price = el.querySelector('.promote-plan-price').textContent;
+    document.querySelector('.promote-cta').textContent = 'Start Promotion — ' + price;
+  }
+
+  /* ── Toast ── */
+
+  /* Close modals on overlay click */
+  document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', e => {
+      if (e.target === overlay) {
+        overlay.classList.remove('active');
+      }
+    });
+  });
+
+  /* Initialize on page load */
+  document.addEventListener('DOMContentLoaded', () => {
+    hydrateDiscover();
+
+    // Re-render when leagues cache is refreshed from Supabase
+    window.addEventListener('spontix-leagues-refreshed', () => {
+      hydrateDiscover();
+      filterLeagues();
+    });
+  });
+</script>
+
+</body>
+</html>

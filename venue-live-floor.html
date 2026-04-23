@@ -1,0 +1,2211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Live Floor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy: #1A1A2E;
+      --navy-light: #22223A;
+      --navy-card: #2A2A44;
+      --navy-hover: #32325A;
+      --lime: #A8E10C;
+      --lime-dim: rgba(168,225,12,0.12);
+      --coral: #FF6B6B;
+      --teal: #4ECDC4;
+      --purple: #7C5CFC;
+      --orange: #FF9F43;
+      --off-white: #E8E8F0;
+      --grey: #9898B0;
+      --grey-dark: #5A5A78;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+      --radius-pill: 100px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.25);
+      --shadow-lg: 0 8px 40px rgba(0,0,0,0.35);
+      --gold: #FFD700;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--navy); color: var(--off-white);
+      min-height: 100vh;
+    }
+    body.tv-mode { background: #0D0D1A; cursor: none; }
+
+    /* ══ MANAGER VIEW ══ */
+    .manager-view { min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* Top Control Bar */
+    .control-bar {
+      padding: 14px 28px; display: flex; align-items: center; gap: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy-light);
+      position: sticky; top: 0; z-index: 100; flex-wrap: wrap;
+    }
+    .control-bar-back {
+      display: flex; align-items: center; gap: 6px; color: var(--grey); font-size: 0.78rem;
+      font-weight: 600; text-decoration: none; padding: 6px 12px 6px 8px;
+      border-radius: var(--radius-pill); transition: all 0.15s;
+    }
+    .control-bar-back:hover { background: rgba(255,255,255,0.05); color: var(--off-white); }
+    .control-bar-back svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .control-bar-event {
+      flex: 1; min-width: 200px;
+    }
+    .control-bar-title { font-size: 1rem; font-weight: 800; display: flex; align-items: center; gap: 8px; }
+    .control-bar-title .live-badge {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: var(--coral); color: #fff; padding: 3px 10px;
+      border-radius: var(--radius-pill); font-size: 0.6rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .live-badge .pulse { width: 6px; height: 6px; border-radius: 50%; background: #fff; animation: pulse-live 2s infinite; }
+    @keyframes pulse-live { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .control-bar-meta { font-size: 0.72rem; color: var(--grey); margin-top: 2px; }
+    .control-bar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .ctrl-btn {
+      display: flex; align-items: center; gap: 6px; padding: 8px 16px;
+      border-radius: var(--radius-pill); border: none; cursor: pointer;
+      font-family: inherit; font-size: 0.75rem; font-weight: 700; transition: all 0.2s;
+    }
+    .ctrl-btn svg { width: 14px; height: 14px; stroke-width: 2; fill: none; }
+    .ctrl-btn.lime { background: var(--lime); color: var(--navy); }
+    .ctrl-btn.lime svg { stroke: var(--navy); }
+    .ctrl-btn.lime:hover { opacity: 0.85; }
+    .ctrl-btn.orange { background: var(--orange); color: var(--navy); }
+    .ctrl-btn.orange svg { stroke: var(--navy); }
+    .ctrl-btn.orange:hover { opacity: 0.85; }
+    .ctrl-btn.ghost { background: rgba(255,255,255,0.06); color: var(--off-white); }
+    .ctrl-btn.ghost svg { stroke: var(--off-white); }
+    .ctrl-btn.ghost:hover { background: rgba(255,255,255,0.1); }
+    .ctrl-btn.coral { background: var(--coral); color: #fff; }
+    .ctrl-btn.coral svg { stroke: #fff; }
+    .ctrl-btn.tv { background: var(--purple); color: #fff; }
+    .ctrl-btn.tv svg { stroke: #fff; }
+    .ctrl-btn.tv:hover { opacity: 0.85; }
+
+    /* Summary strip */
+    .summary-strip {
+      display: flex; gap: 24px; padding: 14px 28px; border-bottom: 1px solid rgba(255,255,255,0.04);
+      background: var(--navy);
+    }
+    .summary-item { display: flex; align-items: center; gap: 8px; }
+    .summary-item-value { font-size: 1rem; font-weight: 900; }
+    .summary-item-label { font-size: 0.7rem; color: var(--grey); font-weight: 600; }
+
+    /* Match timer */
+    .match-timer {
+      display: flex; align-items: center; gap: 8px; margin-left: auto;
+      padding: 8px 18px; background: rgba(255,107,107,0.1); border-radius: var(--radius-pill);
+    }
+    .match-timer-value { font-size: 1.2rem; font-weight: 900; color: var(--coral); font-variant-numeric: tabular-nums; }
+    .match-timer-label { font-size: 0.65rem; color: var(--coral); font-weight: 700; text-transform: uppercase; }
+
+    /* Current Question Banner */
+    .current-question {
+      padding: 14px 28px; background: linear-gradient(135deg, rgba(255,159,67,0.1), rgba(168,225,12,0.05));
+      border-bottom: 1px solid rgba(255,159,67,0.15);
+      display: flex; align-items: center; gap: 16px;
+    }
+    .cq-badge {
+      padding: 4px 12px; background: var(--orange); color: var(--navy);
+      border-radius: var(--radius-pill); font-size: 0.65rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0;
+    }
+    .cq-text { flex: 1; font-size: 0.88rem; font-weight: 700; }
+    .cq-timer {
+      font-size: 0.85rem; font-weight: 900; color: var(--coral);
+      font-variant-numeric: tabular-nums; flex-shrink: 0;
+    }
+    .cq-responses {
+      font-size: 0.75rem; color: var(--grey); flex-shrink: 0;
+    }
+    .cq-responses strong { color: var(--lime); }
+
+    /* ══ TAB NAVIGATION ══ */
+    .tab-nav {
+      display: flex; gap: 2px; padding: 0 28px; border-bottom: 1px solid rgba(255,255,255,0.04);
+      background: var(--navy); overflow-x: auto;
+    }
+    .tab-btn {
+      flex-shrink: 0; padding: 12px 18px; border: none; background: transparent;
+      color: var(--grey); font-family: inherit; font-size: 0.85rem; font-weight: 600;
+      cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { color: var(--off-white); }
+    .tab-btn.active { color: var(--lime); border-bottom-color: var(--lime); }
+
+    /* ══ TAB CONTENT PANELS ══ */
+    .tab-panels { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .tab-panel { display: none; flex: 1; overflow-y: auto; padding: 24px 28px; }
+    .tab-panel.active { display: flex; flex-direction: column; }
+
+    /* Floor grid */
+    .floor-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+
+    /* Table card */
+    .table-card {
+      background: var(--navy-card); border-radius: var(--radius-lg); border: 1px solid rgba(255,255,255,0.06);
+      overflow: hidden; transition: border-color 0.2s;
+    }
+    .table-card.leading { border-color: rgba(255,159,67,0.3); }
+    .table-card-header {
+      padding: 16px 18px; display: flex; align-items: center; gap: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .table-rank {
+      width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 900; flex-shrink: 0;
+    }
+    .table-rank.r1 { background: rgba(255,159,67,0.15); color: var(--orange); }
+    .table-rank.r2 { background: var(--lime-dim); color: var(--lime); }
+    .table-rank.r3 { background: rgba(124,92,252,0.12); color: var(--purple); }
+    .table-rank.r4 { background: rgba(78,205,196,0.12); color: var(--teal); }
+    .table-rank.r5 { background: rgba(255,107,107,0.12); color: var(--coral); }
+    .table-rank.r6 { background: rgba(255,255,255,0.06); color: var(--grey); }
+    .table-info { flex: 1; min-width: 0; }
+    .table-name { font-size: 0.9rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+    .table-name .remote-icon { width: 14px; height: 14px; stroke: var(--purple); fill: none; stroke-width: 2; }
+    .table-type { font-size: 0.65rem; color: var(--grey); }
+    .table-score-big { font-size: 1.4rem; font-weight: 900; color: var(--lime); flex-shrink: 0; }
+
+    /* Players in table */
+    .table-players { padding: 12px 18px; display: flex; flex-direction: column; gap: 6px; }
+    .player-row {
+      display: flex; align-items: center; gap: 10px; padding: 6px 10px;
+      border-radius: var(--radius-sm); transition: background 0.15s;
+    }
+    .player-row:hover { background: rgba(255,255,255,0.03); }
+    .player-avatar {
+      width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 0.55rem; font-weight: 800; flex-shrink: 0;
+    }
+    .player-name { flex: 1; font-size: 0.78rem; font-weight: 600; }
+    .player-pts { font-size: 0.75rem; font-weight: 800; color: var(--lime); min-width: 50px; text-align: right; }
+    .player-status { flex-shrink: 0; }
+    .player-status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+    }
+    .player-status-dot.active { background: var(--lime); }
+    .player-status-dot.idle { background: var(--grey-dark); }
+    .player-status-dot.answering { background: var(--orange); animation: pulse-live 1.5s infinite; }
+
+    /* Question status in table */
+    .table-question-bar {
+      padding: 10px 18px; display: flex; align-items: center; gap: 8px;
+      border-top: 1px solid rgba(255,255,255,0.04); font-size: 0.72rem;
+    }
+    .table-question-bar svg { width: 14px; height: 14px; stroke-width: 2; fill: none; flex-shrink: 0; }
+    .table-question-bar.answered { color: var(--lime); }
+    .table-question-bar.answered svg { stroke: var(--lime); }
+    .table-question-bar.pending { color: var(--coral); }
+    .table-question-bar.pending svg { stroke: var(--coral); }
+    .tqb-timer { margin-left: auto; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+    /* Table actions */
+    .table-actions {
+      padding: 10px 18px 14px; display: flex; gap: 6px; border-top: 1px solid rgba(255,255,255,0.04);
+    }
+    .tbl-btn {
+      flex: 1; padding: 7px 10px; border-radius: var(--radius-pill); border: none;
+      font-family: inherit; font-size: 0.68rem; font-weight: 700; cursor: pointer;
+      transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 5px;
+    }
+    .tbl-btn svg { width: 12px; height: 12px; stroke-width: 2; }
+    .tbl-btn.nudge { background: var(--lime-dim); color: var(--lime); }
+    .tbl-btn.nudge svg { stroke: var(--lime); }
+    .tbl-btn.nudge:hover { background: rgba(168,225,12,0.2); }
+    .tbl-btn.bonus { background: rgba(255,159,67,0.12); color: var(--orange); }
+    .tbl-btn.bonus svg { stroke: var(--orange); }
+    .tbl-btn.bonus:hover { background: rgba(255,159,67,0.2); }
+    .tbl-btn.flag { background: rgba(255,107,107,0.12); color: var(--coral); }
+    .tbl-btn.flag svg { stroke: var(--coral); }
+    .tbl-btn.flag:hover { background: rgba(255,107,107,0.2); }
+
+    /* Questions panel */
+    .questions-list { display: flex; flex-direction: column; gap: 16px; }
+    .question-card {
+      background: var(--navy-card); border-radius: var(--radius-lg); border: 1px solid rgba(255,255,255,0.06);
+      padding: 18px; transition: all 0.2s;
+    }
+    .question-card.active { border-color: rgba(255,159,67,0.3); background: rgba(255,159,67,0.04); }
+    .question-card-header {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 12px;
+    }
+    .question-card-title { flex: 1; font-weight: 700; font-size: 0.95rem; }
+    .question-card-badge {
+      padding: 3px 10px; border-radius: var(--radius-pill); font-size: 0.65rem;
+      font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0;
+    }
+    .question-card-badge.active { background: var(--orange); color: var(--navy); }
+    .question-card-badge.completed { background: var(--lime-dim); color: var(--lime); }
+    .question-card-stats {
+      display: flex; gap: 16px; font-size: 0.72rem; color: var(--grey); margin-bottom: 12px;
+    }
+    .question-card-stats strong { color: var(--off-white); }
+    .question-answer-bars { display: flex; flex-direction: column; gap: 8px; }
+    .question-answer-bar {
+      display: flex; align-items: center; gap: 10px; font-size: 0.75rem;
+    }
+    .question-answer-label { min-width: 120px; font-weight: 600; }
+    .question-answer-count { min-width: 80px; color: var(--grey); font-size: 0.7rem; }
+    .question-bar-visual {
+      flex: 1; height: 20px; background: rgba(255,255,255,0.03); border-radius: 4px;
+      overflow: hidden; position: relative;
+    }
+    .question-bar-fill {
+      height: 100%; border-radius: 4px; transition: width 0.3s;
+    }
+    .question-bar-fill.correct { background: var(--lime); }
+    .question-bar-fill.incorrect { background: var(--coral); }
+    .question-bar-fill.waiting { background: var(--grey-dark); }
+    .question-bar-fill.option-a { background: var(--teal); }
+    .question-bar-fill.option-b { background: var(--purple); }
+    .question-bar-fill.option-c { background: var(--orange); }
+    .question-result {
+      margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.04);
+      font-size: 0.75rem;
+    }
+    .question-result.correct { color: var(--lime); }
+    .question-result.incorrect { color: var(--coral); }
+    .question-stat-row { display: flex; gap: 20px; font-size: 0.7rem; color: var(--grey); margin-top: 8px; }
+    .question-stat-row strong { color: var(--off-white); }
+
+    /* Activity panel */
+    .activity-list { display: flex; flex-direction: column; gap: 10px; }
+    .activity-item {
+      display: flex; gap: 12px; padding: 12px; background: rgba(255,255,255,0.02);
+      border-radius: var(--radius-md); border-left: 3px solid transparent; font-size: 0.78rem;
+      align-items: flex-start;
+    }
+    .activity-time { font-weight: 800; color: var(--grey); min-width: 50px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
+    .activity-icon { font-size: 1.1rem; flex-shrink: 0; }
+    .activity-text { flex: 1; line-height: 1.4; }
+    .activity-item.answer { border-left-color: var(--off-white); }
+    .activity-item.correct { border-left-color: var(--lime); }
+    .activity-item.incorrect { border-left-color: var(--coral); }
+    .activity-item.announcement { border-left-color: var(--orange); }
+    .activity-item.streak { border-left-color: var(--purple); }
+    .activity-item.idle { border-left-color: var(--grey-dark); }
+    .activity-item.push { border-left-color: var(--orange); }
+    .activity-text strong { color: var(--off-white); font-weight: 700; }
+    .activity-text .highlight { color: var(--lime); }
+
+    /* Announcements panel */
+    .announcements-send {
+      display: flex; gap: 10px; margin-bottom: 20px; background: rgba(255,255,255,0.02);
+      padding: 14px; border-radius: var(--radius-md);
+    }
+    .announcements-input {
+      flex: 1; background: var(--navy-card); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-md); padding: 10px 14px; color: var(--off-white);
+      font-family: inherit; font-size: 0.85rem; outline: none; transition: border 0.2s;
+    }
+    .announcements-input:focus { border-color: rgba(168,225,12,0.3); }
+    .announcements-send-btn {
+      padding: 10px 16px; background: var(--lime); color: var(--navy); border: none;
+      border-radius: var(--radius-md); font-family: inherit; font-size: 0.8rem; font-weight: 700;
+      cursor: pointer; transition: opacity 0.2s;
+    }
+    .announcements-send-btn:hover { opacity: 0.85; }
+    .quick-announce-buttons {
+      display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .quick-btn {
+      padding: 8px 14px; background: rgba(255,159,67,0.12); border: 1px solid rgba(255,159,67,0.2);
+      color: var(--orange); border-radius: var(--radius-pill); font-family: inherit;
+      font-size: 0.75rem; font-weight: 600; cursor: pointer; transition: all 0.2s;
+    }
+    .quick-btn:hover { background: rgba(255,159,67,0.2); }
+    .announcements-history {
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    .announcement-item {
+      display: flex; align-items: flex-start; gap: 12px; padding: 12px;
+      background: rgba(255,159,67,0.05); border-radius: var(--radius-md);
+      border-left: 3px solid var(--orange);
+    }
+    .announcement-time { font-weight: 800; color: var(--grey); min-width: 60px; flex-shrink: 0; font-size: 0.7rem; }
+    .announcement-content { flex: 1; }
+    .announcement-text { font-size: 0.85rem; font-weight: 600; margin-bottom: 4px; }
+    .announcement-status { font-size: 0.65rem; color: var(--grey); }
+
+    /* Analytics panel */
+    .analytics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card {
+      background: var(--navy-card); border-radius: var(--radius-lg); padding: 18px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .stat-card-label { font-size: 0.7rem; color: var(--grey); text-transform: uppercase; font-weight: 700; margin-bottom: 6px; letter-spacing: 0.5px; }
+    .stat-card-value { font-size: 1.8rem; font-weight: 900; margin-bottom: 6px; }
+    .stat-card-detail { font-size: 0.7rem; color: var(--grey); }
+    .analytics-table {
+      width: 100%; border-collapse: collapse; font-size: 0.8rem;
+      background: var(--navy-card); border-radius: var(--radius-lg); overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .analytics-table th {
+      background: rgba(255,255,255,0.04); padding: 12px; text-align: left;
+      font-weight: 700; color: var(--grey); border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .analytics-table td {
+      padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .analytics-table tr:last-child td { border-bottom: none; }
+    .analytics-table tbody tr:hover { background: rgba(255,255,255,0.02); }
+    .analytics-difficulty-section { margin-top: 24px; }
+    .analytics-difficulty-title { font-size: 0.85rem; font-weight: 700; margin-bottom: 14px; }
+    .question-difficulty-item {
+      display: flex; align-items: center; gap: 12px; padding: 10px 0;
+    }
+    .difficulty-label { font-size: 0.75rem; font-weight: 600; min-width: 100px; }
+    .difficulty-bar {
+      flex: 1; height: 16px; background: rgba(255,255,255,0.03); border-radius: 4px; overflow: hidden;
+    }
+    .difficulty-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+    .difficulty-accuracy { font-size: 0.7rem; color: var(--grey); min-width: 60px; text-align: right; }
+
+    /* ══ CREATE QUESTION MODAL ══ */
+    .cq-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+      z-index: 9000; align-items: center; justify-content: center; padding: 20px;
+      backdrop-filter: blur(4px);
+    }
+    .cq-overlay.open { display: flex; }
+    .cq-modal {
+      background: var(--navy-light); border-radius: var(--radius-xl); width: 100%; max-width: 580px;
+      max-height: 90vh; overflow-y: auto; box-shadow: var(--shadow-lg);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .cq-modal-header {
+      padding: 20px 24px; border-bottom: 1px solid rgba(255,255,255,0.06);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .cq-modal-title { font-size: 1.05rem; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+    .cq-modal-title .step-badge {
+      font-size: 0.6rem; font-weight: 700; background: var(--purple); color: #fff;
+      padding: 3px 10px; border-radius: var(--radius-pill); text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .cq-close {
+      width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,0.06);
+      border: none; color: var(--grey); cursor: pointer; display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; transition: all 0.15s;
+    }
+    .cq-close:hover { background: rgba(255,255,255,0.12); color: var(--off-white); }
+    .cq-modal-body { padding: 24px; }
+    .cq-step { display: none; }
+    .cq-step.active { display: block; }
+    .cq-field { margin-bottom: 18px; }
+    .cq-label {
+      font-size: 0.72rem; font-weight: 700; color: var(--grey); text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 6px; display: block;
+    }
+    .cq-input, .cq-textarea, .cq-select {
+      width: 100%; padding: 10px 14px; background: var(--navy-card); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-sm); color: var(--off-white); font-family: inherit; font-size: 0.88rem;
+      transition: border-color 0.2s;
+    }
+    .cq-input:focus, .cq-textarea:focus, .cq-select:focus {
+      outline: none; border-color: var(--purple);
+    }
+    .cq-textarea { resize: vertical; min-height: 60px; }
+    .cq-select { cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239898B0' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+    }
+    .cq-answer-row {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 10px;
+    }
+    .cq-answer-row .cq-input { flex: 1; }
+    .cq-radio-wrap {
+      display: flex; align-items: center; gap: 4px; cursor: pointer; flex-shrink: 0;
+    }
+    .cq-radio-wrap input[type="radio"] { display: none; }
+    .cq-radio-dot {
+      width: 20px; height: 20px; border-radius: 50%; border: 2px solid var(--grey-dark);
+      display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+    }
+    .cq-radio-wrap input[type="radio"]:checked + .cq-radio-dot {
+      border-color: var(--lime); background: var(--lime);
+    }
+    .cq-radio-wrap input[type="radio"]:checked + .cq-radio-dot::after {
+      content: '✓'; font-size: 0.7rem; color: var(--navy); font-weight: 900;
+    }
+    .cq-radio-label { font-size: 0.65rem; color: var(--grey); font-weight: 600; }
+    .cq-timer-row {
+      display: flex; align-items: center; gap: 14px;
+    }
+    .cq-timer-row input[type="range"] {
+      flex: 1; accent-color: var(--purple); height: 6px;
+    }
+    .cq-timer-value {
+      font-size: 1rem; font-weight: 900; color: var(--purple); min-width: 32px; text-align: center;
+    }
+    .cq-modal-footer {
+      padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex; gap: 10px; justify-content: flex-end;
+    }
+    .cq-btn {
+      padding: 10px 22px; border-radius: var(--radius-pill); border: none; cursor: pointer;
+      font-family: inherit; font-size: 0.8rem; font-weight: 700; transition: all 0.2s;
+    }
+    .cq-btn.ghost { background: rgba(255,255,255,0.06); color: var(--off-white); }
+    .cq-btn.ghost:hover { background: rgba(255,255,255,0.1); }
+    .cq-btn.purple { background: var(--purple); color: #fff; }
+    .cq-btn.purple:hover { opacity: 0.85; }
+    .cq-btn.lime { background: var(--lime); color: var(--navy); }
+    .cq-btn.lime:hover { opacity: 0.85; }
+
+    /* Preview Step */
+    .cq-preview-phone {
+      background: var(--navy); border-radius: var(--radius-lg); padding: 24px 20px;
+      border: 2px solid rgba(124,92,252,0.3); position: relative; max-width: 400px; margin: 0 auto;
+    }
+    .cq-preview-phone::before {
+      content: 'Player Preview'; position: absolute; top: -10px; left: 20px;
+      background: var(--purple); color: #fff; padding: 2px 12px; border-radius: var(--radius-pill);
+      font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .cq-preview-badge {
+      display: inline-flex; padding: 3px 10px; border-radius: var(--radius-pill);
+      font-size: 0.6rem; font-weight: 700; text-transform: uppercase; margin-bottom: 12px;
+    }
+    .cq-preview-badge.live { background: rgba(255,107,107,0.15); color: var(--coral); }
+    .cq-preview-badge.prediction { background: rgba(168,225,12,0.12); color: var(--lime); }
+    .cq-preview-badge.trivia { background: rgba(78,205,196,0.12); color: var(--teal); }
+    .cq-preview-badge.news { background: rgba(124,92,252,0.12); color: var(--purple); }
+    .cq-preview-question {
+      font-size: 1.1rem; font-weight: 800; margin-bottom: 16px; line-height: 1.4;
+    }
+    .cq-preview-timer-bar {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 16px;
+    }
+    .cq-preview-timer-bar svg { width: 14px; height: 14px; stroke: var(--orange); stroke-width: 2; fill: none; }
+    .cq-preview-timer-val { font-size: 0.85rem; font-weight: 800; color: var(--orange); }
+    .cq-preview-options { display: flex; flex-direction: column; gap: 8px; }
+    .cq-preview-option {
+      padding: 12px 16px; border-radius: var(--radius-sm); font-weight: 600; font-size: 0.88rem;
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 10px;
+    }
+    .cq-preview-option .opt-letter {
+      width: 24px; height: 24px; border-radius: 50%; background: rgba(255,255,255,0.06);
+      display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 800; flex-shrink: 0;
+    }
+    .cq-preview-option.correct {
+      border-color: rgba(168,225,12,0.3); background: rgba(168,225,12,0.06);
+    }
+    .cq-preview-option.correct .opt-letter {
+      background: var(--lime); color: var(--navy);
+    }
+    .cq-preview-correct-note {
+      font-size: 0.65rem; color: var(--lime); font-weight: 600; margin-top: 10px;
+      display: flex; align-items: center; gap: 4px;
+    }
+
+    /* ══ TV MODE ENHANCEMENTS ══ */
+    .tv-view {
+      display: none; padding: 40px; max-width: 1600px; margin: 0 auto;
+      background: #0D0D1A; min-height: 100vh; flex-direction: column;
+    }
+    body.tv-mode .tv-view { display: flex; }
+    body.tv-mode .manager-view { display: none; }
+
+    .tv-header {
+      margin-bottom: 40px; text-align: center;
+    }
+    .tv-logo {
+      font-size: 2.2rem; font-weight: 900; margin-bottom: 8px; color: var(--off-white);
+    }
+    .tv-logo .dot {
+      color: var(--lime); animation: pulse-dot 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    .tv-event-name {
+      font-size: 3rem; font-weight: 900; background: linear-gradient(135deg, var(--lime), var(--orange));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; margin-bottom: 20px; letter-spacing: -1px;
+    }
+    .tv-event-name span { color: var(--lime); }
+    .tv-match-info { display: flex; justify-content: center; gap: 40px; }
+    .tv-match-teams { font-size: 1.2rem; font-weight: 700; color: var(--off-white); }
+    .tv-match-time { font-size: 1.4rem; font-weight: 900; color: var(--coral); font-variant-numeric: tabular-nums; }
+
+    /* TV Question — Full-screen focused */
+    .tv-question-wrap {
+      flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center;
+      position: relative;
+    }
+    .tv-question-wrap::before {
+      content: ''; position: absolute; top: 50%; left: 50%; width: 600px; height: 600px;
+      background: radial-gradient(circle, rgba(255,159,67,0.08) 0%, transparent 70%);
+      transform: translate(-50%, -50%); pointer-events: none;
+    }
+    .tv-q-badge {
+      padding: 10px 28px; background: var(--orange); color: var(--navy);
+      border-radius: var(--radius-pill); font-size: 1.1rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 1px; margin-bottom: 28px;
+    }
+    .tv-q-text {
+      font-size: 3.2rem; font-weight: 900; line-height: 1.25; text-align: center;
+      max-width: 1000px; letter-spacing: -0.5px; margin-bottom: 40px;
+    }
+    .tv-q-timer-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 48px; }
+    .tv-q-timer-label { font-size: 1rem; font-weight: 700; color: var(--grey); text-transform: uppercase; letter-spacing: 1px; }
+    .tv-q-timer {
+      font-size: 4rem; font-weight: 900; color: var(--coral); font-variant-numeric: tabular-nums;
+      line-height: 1;
+    }
+    .tv-q-timer.warning { animation: pulse-timer 0.6s infinite; color: var(--coral); }
+    @keyframes pulse-timer { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.05); } }
+
+    /* TV Answer Options */
+    .tv-options { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; width: 100%; max-width: 1000px; }
+    .tv-option {
+      padding: 24px 28px; background: var(--navy-card); border: 2px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-lg); display: flex; align-items: center; gap: 16px;
+      transition: all 0.3s;
+    }
+    .tv-option-letter {
+      width: 44px; height: 44px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 1.2rem; font-weight: 900; flex-shrink: 0;
+      background: rgba(255,255,255,0.06); color: var(--grey);
+    }
+    .tv-option-text { flex: 1; font-size: 1.3rem; font-weight: 700; }
+    .tv-option-count {
+      flex-shrink: 0; font-size: 1.1rem; font-weight: 800; color: var(--grey);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .tv-option-bar {
+      width: 80px; height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden;
+    }
+    .tv-option-bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; background: var(--orange); }
+
+    /* Responses counter */
+    .tv-responses {
+      margin-top: 32px; text-align: center; font-size: 1rem; color: var(--grey); font-weight: 600;
+    }
+    .tv-responses strong { color: var(--lime); font-size: 1.2rem; }
+
+    .tv-footer {
+      margin-top: 40px; display: flex; align-items: center; justify-content: space-between;
+      padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .tv-footer-text { font-size: 1.1rem; color: var(--grey); font-weight: 600; }
+    .tv-footer-scan {
+      font-size: 1.3rem; color: var(--lime); font-weight: 800; display: flex; align-items: center; gap: 12px;
+    }
+    .tv-qr-placeholder {
+      width: 120px; height: 120px; background: rgba(168,225,12,0.1); border: 2px solid var(--lime);
+      border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center;
+      font-size: 3rem;
+    }
+
+    /* Exit TV button (only visible on hover/touch) */
+    .tv-exit {
+      position: fixed; top: 20px; right: 20px; z-index: 200;
+      padding: 8px 16px; background: rgba(255,255,255,0.1); color: var(--off-white);
+      border: 1px solid rgba(255,255,255,0.15); border-radius: var(--radius-pill);
+      font-size: 0.75rem; font-weight: 700; cursor: pointer; font-family: inherit;
+      opacity: 0; transition: opacity 0.3s; display: none;
+    }
+    body.tv-mode .tv-exit { display: block; }
+    body.tv-mode:hover .tv-exit { opacity: 1; cursor: pointer; }
+
+    /* ══ TOAST ══ */
+    .toast {
+      position: fixed; bottom: 30px; right: 30px; background: var(--navy-card);
+      border: 1px solid rgba(255,159,67,0.3); border-radius: var(--radius-md);
+      padding: 14px 22px; font-size: 0.82rem; font-weight: 600; color: var(--orange);
+      box-shadow: var(--shadow-lg); opacity: 0; transform: translateY(20px);
+      transition: all 0.3s ease; z-index: 999; pointer-events: none;
+    }
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    /* ══ SESSION BAR (Bridge) ══ */
+    .session-bar {
+      display: flex; align-items: center; gap: 14px; padding: 10px 28px;
+      background: linear-gradient(90deg, rgba(124,92,252,0.08), rgba(168,225,12,0.06));
+      border-bottom: 1px solid rgba(124,92,252,0.15); flex-wrap: wrap;
+    }
+    .session-bar-label { font-size: 0.72rem; font-weight: 700; color: var(--grey); text-transform: uppercase; letter-spacing: 0.5px; }
+    .session-code-box {
+      display: flex; align-items: center; gap: 8px; background: var(--navy-card);
+      border: 2px solid var(--purple); border-radius: var(--radius-md); padding: 6px 14px;
+    }
+    .session-code {
+      font-size: 1.2rem; font-weight: 900; letter-spacing: 4px; color: var(--lime);
+      font-variant-numeric: tabular-nums;
+    }
+    .session-copy-btn {
+      padding: 4px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.1);
+      background: transparent; color: var(--grey); font-size: 0.65rem; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: all 0.2s;
+    }
+    .session-copy-btn:hover { background: rgba(255,255,255,0.05); color: var(--off-white); }
+    .session-players-live {
+      display: flex; align-items: center; gap: 6px; font-size: 0.78rem; font-weight: 700; color: var(--teal);
+    }
+    .session-players-live .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--teal); animation: pulse-live 2s infinite; }
+    .session-link {
+      margin-left: auto; font-size: 0.7rem; color: var(--grey); overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; max-width: 260px;
+    }
+    .session-link code {
+      background: rgba(255,255,255,0.04); padding: 3px 8px; border-radius: 4px;
+      font-size: 0.68rem; color: var(--purple); cursor: pointer;
+    }
+    .session-link code:hover { background: rgba(124,92,252,0.12); }
+  </style>
+</head>
+<body>
+
+  <!-- ══════ MANAGER VIEW ══════ -->
+  <div class="manager-view">
+
+    <!-- Control Bar -->
+    <div class="control-bar">
+      <a href="venue-dashboard.html" class="control-bar-back">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Dashboard
+      </a>
+      <div class="control-bar-event">
+        <div class="control-bar-title">
+          El Clásico Night
+          <span class="live-badge"><span class="pulse"></span> Live</span>
+        </div>
+        <div class="control-bar-meta">Barcelona vs Real Madrid · La Liga · 6 teams · 24 players</div>
+      </div>
+      <div class="control-bar-actions">
+        <button class="ctrl-btn lime" onclick="showToast('Question pushed to all teams!')">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Push Question
+        </button>
+        <button class="ctrl-btn purple" onclick="openCreateQuestionModal()" style="background: var(--purple); color: #fff;">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" style="stroke: #fff;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Create Question
+        </button>
+        <button class="ctrl-btn orange" onclick="showToast('Notification sent to all players!')">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          Notify All
+        </button>
+        <button class="ctrl-btn tv" onclick="enterTvMode()">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          TV Mode
+        </button>
+        <button class="ctrl-btn ghost" onclick="showToast('Event paused — no new questions will be pushed.')">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+          Pause
+        </button>
+        <button class="ctrl-btn coral" onclick="endEventAndAwardWinner()">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
+          End Event
+        </button>
+      </div>
+    </div>
+
+    <!-- Session Bar (Bridge) -->
+    <div class="session-bar" id="sessionBar">
+      <div class="session-bar-label">Game Code</div>
+      <div class="session-code-box">
+        <span class="session-code" id="sessionCode">—</span>
+        <button class="session-copy-btn" onclick="copySessionCode()">Copy</button>
+      </div>
+      <div class="session-players-live">
+        <span class="dot"></span>
+        <span id="sessionPlayerCount">0</span> players joined
+      </div>
+      <div class="session-link">
+        Player link: <code id="sessionLink" onclick="copySessionLink()">—</code>
+      </div>
+    </div>
+
+    <!-- Summary Strip -->
+    <div class="summary-strip">
+      <div class="summary-item">
+        <div class="summary-item-value" style="color: var(--lime);">6</div>
+        <div class="summary-item-label">Teams</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-item-value" style="color: var(--orange);">24</div>
+        <div class="summary-item-label">Players</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-item-value" style="color: var(--teal);">8 / 14</div>
+        <div class="summary-item-label">Qs Answered</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-item-value" style="color: var(--coral);">3</div>
+        <div class="summary-item-label">Pending</div>
+      </div>
+      <div class="match-timer">
+        <div class="match-timer-label">Match</div>
+        <div class="match-timer-value" id="matchTimer">63:24</div>
+      </div>
+    </div>
+
+    <!-- Current Question Banner -->
+    <div class="current-question">
+      <div class="cq-badge">Q8 Active</div>
+      <div class="cq-text">Who will score the next goal?</div>
+      <div class="cq-timer" id="cqTimer">1:42</div>
+      <div class="cq-responses"><strong>4</strong> of 6 teams answered</div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tab-nav">
+      <button class="tab-btn active" onclick="switchManagerTab('floor')">Floor</button>
+      <button class="tab-btn" onclick="switchManagerTab('questions')">Questions</button>
+      <button class="tab-btn" onclick="switchManagerTab('activity')">Activity</button>
+      <button class="tab-btn" onclick="switchManagerTab('announcements')">Announcements</button>
+      <button class="tab-btn" onclick="switchManagerTab('analytics')">Analytics</button>
+    </div>
+
+    <!-- Tab Panels -->
+    <div class="tab-panels">
+
+      <!-- Floor Tab -->
+      <div id="floor-panel" class="tab-panel active">
+        <div class="floor-grid">
+
+          <!-- Table 1 — Leading -->
+          <div class="table-card leading">
+            <div class="table-card-header">
+              <div class="table-rank r1">1</div>
+              <div class="table-info">
+                <div class="table-name">Los Galácticos</div>
+                <div class="table-type">Table 1 · In-Venue</div>
+              </div>
+              <div class="table-score-big">1,240</div>
+            </div>
+            <div class="table-players">
+              <div class="player-row">
+                <div class="player-avatar av-user" data-name="MR" style="background: var(--lime-dim); color: var(--lime);">MR</div>
+                <div class="player-name">Marco</div>
+                <div class="player-pts">420 pts</div>
+                <div class="player-status"><div class="player-status-dot active" title="Active"></div></div>
+              </div>
+              <div class="player-row">
+                <div class="player-avatar av-user" data-name="JL" style="background: rgba(255,159,67,0.12); color: var(--orange);">JL</div>
+                <div class="player-name">Julia</div>
+                <div class="player-pts">410 pts</div>
+                <div class="player-status"><div class="player-status-dot active" title="Active"></div></div>
+              </div>
+              <div class="player-row">
+                <div class="player-avatar av-user" data-name="DK" style="background: rgba(124,92,252,0.12); color: var(--purple);">DK</div>
+                <div class="player-name">Derek</div>
+                <div class="player-pts">410 pts</div>
+                <div class="player-status"><div class="player-status-dot active" title="Active"></div></div>
+              </div>
+            </div>
+            <div class="table-question-bar answered">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              All questions answered
+            </div>
+            <div class="table-actions">
+              <button class="tbl-btn nudge" onclick="showToast('Nudge sent to Los Galácticos!')">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                Nudge
+              </button>
+              <button class="tbl-btn bonus" onclick="showToast('Bonus question sent to Table 1!')">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                Bonus Q
+              </button>
+              <button class="tbl-btn flag" onclick="showToast('Table 1 flagged for review.')">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                Flag
+              </button>
+            </div>
+          </div>
+
+          <!-- Table 2 -->
+          <div class="table-card">
+            <div class="table-card-header">
+              <div class="table-rank r2">2</div>
+              <div class="table-info">
+                <div class="table-name">Barça Boys</div>
+                <div class="table-type">Table 3 · In-Venue</div>
+              </div>
+              <div class="table-score-big">1,080</div>
+            </div>
+            <div class="table-players">
+              <div class="player-row">
+                <div class="player-avatar av-user" data-name="AL" style="background: rgba(78,205,196,0.12); color: var(--teal);">AL</div>
+                <div class="player-name">Alex</div>
+                <div class="player-pts">380 pts</div>
+                <div class="player-status"><div class="player-status-dot active"></div></div>
+              </div>
+              <div class="player-row">
+                <div class="player-avatar av-user" data-name="SR" style="background: rgba(255,107,107,0.12); color: var(--coral);">SR</div>
+                <div class="player-name">Sara</div>
+                <div class="player-pts">360 pts</div>
+                <div class="player-status"><div class="player-status-dot answering" title="Answering..."></div></div>
+              </div>
+              <div class="player-row">
+                <div class="player-avatar av-user" data-name="TW" style="background: var(--lime-dim); color: var(--lime);">TW</div>
+                <div class="player-name">Tom</div>
+                <div class="player-pts">340 pts</div>
+                <div class="player-status"><div class="player-status-dot active"></div></div>
+              </div>
+            </div>
+            <div class="table-question-bar pending">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              1 pending — Sara answering
+              <span class="tqb-timer">1:42</span>
+            </div>
+            <div class="table-actions">
+              <button class="tbl-btn nudge" onclick="showToast('Nudge sent to Barça Boys!')">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                Nudge
+              </button>
+              <button class="tbl-btn bonus" onclick="showToast('Bonus question sent to Table 3!')">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                Bonus Q
+              </button>
+              <button class="tbl-btn flag" onclick="showToast('Table 3 flagged for review.')">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                Flag
+              </button>
+            </div>
+          </div>
+
+          <!-- Table 3 -->
+          <div class="table-card">
+            <div class="table-card-header">
+              <div class="table-rank r3">3</div>
+              <div class="table-info">
+                <div class="table-name">Madridistas</div>
+                <div class="table-type">Table 5 · In-Venue</div>
+              </div>
+              <div class="table-score-big">890</div>
+            </div>
+            <div class="table-players">
+              <div class="player-row">
+                <div class="player-avatar av-user" data-name="LN" style="background: rgba(255,159,67,0.12); color: var(--orange);">LN</div>
+                <div class="player-name">Lena</div>
+                <div class="player-pts">320 pts</div>
+                <div class="player-status"><div class="player-status-dot active"></div></div>
+              </div>
+              <div class="player-row">
+                <div class="player-avatar av-user" data-name="KM" style="background: rgba(124,92,252,0.12); color: var(--purple);">KM</div>
+                <div class="player-name">Kai</div>
+                <div class="player-pts">290 pts</div>
+                <div class="player-status"><div class="player-status-dot idle" title="Idle 4m"></div></div>
+              </div>
+              <div class="player-row">
+                <div class="player-avatar av-user" data-name="RM" style="background: rgba(78,205,196,0.12); color: var(--teal);">RM</div>
+                <div class="player-name">Rosa</div>
+                <div class="player-pts">280 pts</div>
+                <div class="player-status"><div class="player-status-dot answering" title="Answering..."></div></div>
+              </div>
+            </div>
+            <div class="table-question-bar pending">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              2 pending — Kai idle, Rosa answering
+              <span class="tqb-timer">0:58</span>
+            </div>
+            <div class="table-actions">
+              <button class="tbl-btn nudge" onclick="showToast('Nudge sent to Madridistas!')">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                Nudge
+              </button>
+              <button class="tbl-btn bonus" onclick="showToast('Bonus question sent to Table 5!')">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                Bonus Q
+              </button>
+              <button class="tbl-btn flag" onclick="showToast('Table 5 flagged for review.')">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                Flag
+              </button>
+            </div>
+          </div>
+
+          <!-- Table 4 -->
+          <div class="table-card">
+            <div class="table-card-header">
+              <div class="table-rank r4">4</div>
+              <div class="table-info">
+                <div class="table-name">The Underdogs</div>
+                <div class="table-type">Table 7 · In-Venue</div>
+              </div>
+              <div class="table-score-big">720</div>
+            </div>
+            <div class="table-players">
+              <div class="player-row">
+                <div class="player-avatar av-user" data-name="NB" style="background: rgba(255,107,107,0.12); color: var(--coral);">NB</div>
+                <div class="player-name">Nadia</div>
+                <div class="player-pts">250 pts</div>
+                <div class="player-status"><div class="player-status-dot active"></div></div>
+              </div>
+              <div class="player-row">
+                <div class="player-avatar av-user" data-name="PH" style="background: var(--lime-dim); color: var(--lime);">PH</div>
+                <div class="player-name">Phil</div>
+                <div class="player-pts">240 pts</div>
+                <div class="player-status"><div class="player-status-dot active"></div></div>
+              </div>
+              <div class="player-row">
+                <div class="player-avatar av-user" data-name="EM" style="background: rgba(255,159,67,0.12); color: var(--orange);">EM</div>
+                <div class="player-name">Emma</div>
+                <div class="player-pts">230 pts</div>
+                <div class="player-status"><div class="player-status-dot idle" title="Idle 8m"></div></div>
+              </div>
+            </div>
+            <div class="table-question-bar answered">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              All questions answered
+            </div>
+            <div class="table-actions">
+              <button class="tbl-btn nudge" onclick="showToast('Nudge sent to The Underdogs!')">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                Nudge
+              </button>
+              <button class="tbl-btn bonus" onclick="showToast('Bonus question sent to Table 7!')">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                Bonus Q
+              </button>
+              <button class="tbl-btn flag" onclick="showToast('Table 7 flagged for review.')">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                Flag
+              </button>
+            </div>
+          </div>
+
+          <!-- Remote Team 1 -->
+          <div class="table-card">
+            <div class="table-card-header">
+              <div class="table-rank r5">5</div>
+              <div class="table-info">
+                <div class="table-name">
+                  <svg class="remote-icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                  Sofa Squad
+                </div>
+                <div class="table-type">Remote Team</div>
+              </div>
+              <div class="table-score-big">640</div>
+            </div>
+            <div class="table-players">
+              <div class="player-row">
+                <div class="player-avatar av-user" data-name="CW" style="background: rgba(124,92,252,0.12); color: var(--purple);">CW</div>
+                <div class="player-name">Chris</div>
+                <div class="player-pts">340 pts</div>
+                <div class="player-status"><div class="player-status-dot active"></div></div>
+              </div>
+              <div class="player-row">
+                <div class="player-avatar av-user" data-name="AK" style="background: rgba(78,205,196,0.12); color: var(--teal);">AK</div>
+                <div class="player-name">Anya</div>
+                <div class="player-pts">300 pts</div>
+                <div class="player-status"><div class="player-status-dot active"></div></div>
+              </div>
+            </div>
+            <div class="table-question-bar answered">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              All questions answered
+            </div>
+            <div class="table-actions">
+              <button class="tbl-btn nudge" onclick="showToast('Nudge sent to Sofa Squad!')">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                Nudge
+              </button>
+              <button class="tbl-btn bonus" onclick="showToast('Bonus question sent to Sofa Squad!')">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                Bonus Q
+              </button>
+              <button class="tbl-btn flag" onclick="showToast('Sofa Squad flagged for review.')">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                Flag
+              </button>
+            </div>
+          </div>
+
+          <!-- Remote Team 2 -->
+          <div class="table-card">
+            <div class="table-card-header">
+              <div class="table-rank r6">6</div>
+              <div class="table-info">
+                <div class="table-name">
+                  <svg class="remote-icon" viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                  Pub Exiles
+                </div>
+                <div class="table-type">Remote Team</div>
+              </div>
+              <div class="table-score-big">510</div>
+            </div>
+            <div class="table-players">
+              <div class="player-row">
+                <div class="player-avatar av-user" data-name="JD" style="background: rgba(255,159,67,0.12); color: var(--orange);">JD</div>
+                <div class="player-name">Jake</div>
+                <div class="player-pts">280 pts</div>
+                <div class="player-status"><div class="player-status-dot answering" title="Answering..."></div></div>
+              </div>
+              <div class="player-row">
+                <div class="player-avatar av-user" data-name="ML" style="background: rgba(255,107,107,0.12); color: var(--coral);">ML</div>
+                <div class="player-name">Mia</div>
+                <div class="player-pts">230 pts</div>
+                <div class="player-status"><div class="player-status-dot idle" title="Idle 12m"></div></div>
+              </div>
+            </div>
+            <div class="table-question-bar pending">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              1 pending — Jake answering, Mia idle
+              <span class="tqb-timer">0:48</span>
+            </div>
+            <div class="table-actions">
+              <button class="tbl-btn nudge" onclick="showToast('Nudge sent to Pub Exiles!')">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                Nudge
+              </button>
+              <button class="tbl-btn bonus" onclick="showToast('Bonus question sent to Pub Exiles!')">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                Bonus Q
+              </button>
+              <button class="tbl-btn flag" onclick="showToast('Pub Exiles flagged for review.')">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                Flag
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Questions Tab -->
+      <div id="questions-panel" class="tab-panel">
+        <div class="questions-list" id="questionsList">
+          <!-- Q8 Active -->
+          <div class="question-card active">
+            <div class="question-card-header">
+              <div class="question-card-title">Q8: Who will score the next goal?</div>
+              <div class="question-card-badge active">ACTIVE</div>
+            </div>
+            <div class="question-card-stats">
+              <div>Timer: <strong>1:42</strong></div>
+              <div>Answered: <strong>4/6 teams</strong></div>
+            </div>
+            <div class="question-answer-bars">
+              <div class="question-answer-bar">
+                <div class="question-answer-label">Option A (Barcelona)</div>
+                <div class="question-bar-visual"><div class="question-bar-fill option-a" style="width: 50%;"></div></div>
+                <div class="question-answer-count">2 teams</div>
+              </div>
+              <div class="question-answer-bar">
+                <div class="question-answer-label">Option B (Real Madrid)</div>
+                <div class="question-bar-visual"><div class="question-bar-fill option-b" style="width: 25%;"></div></div>
+                <div class="question-answer-count">1 team</div>
+              </div>
+              <div class="question-answer-bar">
+                <div class="question-answer-label">Option C (Draw)</div>
+                <div class="question-bar-visual"><div class="question-bar-fill option-c" style="width: 25%;"></div></div>
+                <div class="question-answer-count">1 team</div>
+              </div>
+              <div class="question-answer-bar">
+                <div class="question-answer-label">Waiting</div>
+                <div class="question-bar-visual"><div class="question-bar-fill waiting" style="width: 100%;"></div></div>
+                <div class="question-answer-count">2 teams</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Q7 Completed -->
+          <div class="question-card">
+            <div class="question-card-header">
+              <div class="question-card-title">Q7: Will there be a goal before 60'?</div>
+              <div class="question-card-badge completed">COMPLETED</div>
+            </div>
+            <div class="question-card-stats">
+              <div>Result: <strong>Yes</strong></div>
+            </div>
+            <div class="question-answer-bars">
+              <div class="question-answer-bar">
+                <div class="question-answer-label">Yes</div>
+                <div class="question-bar-visual"><div class="question-bar-fill correct" style="width: 67%;"></div></div>
+                <div class="question-answer-count">4 teams</div>
+              </div>
+              <div class="question-answer-bar">
+                <div class="question-answer-label">No</div>
+                <div class="question-bar-visual"><div class="question-bar-fill incorrect" style="width: 33%;"></div></div>
+                <div class="question-answer-count">2 teams</div>
+              </div>
+            </div>
+            <div class="question-result correct">Correct: Los Galácticos, Barça Boys, The Underdogs, Sofa Squad</div>
+            <div class="question-stat-row">
+              <div>Best response: <strong>Los Galácticos (3.2s)</strong></div>
+              <div>Accuracy: <strong>67%</strong></div>
+            </div>
+          </div>
+
+          <!-- Q6 Completed -->
+          <div class="question-card">
+            <div class="question-card-header">
+              <div class="question-card-title">Q6: Who scored Barcelona's second goal?</div>
+              <div class="question-card-badge completed">COMPLETED</div>
+            </div>
+            <div class="question-card-stats">
+              <div>Result: <strong>Raphinha</strong></div>
+            </div>
+            <div class="question-answer-bars">
+              <div class="question-answer-bar">
+                <div class="question-answer-label">Raphinha</div>
+                <div class="question-bar-visual"><div class="question-bar-fill correct" style="width: 50%;"></div></div>
+                <div class="question-answer-count">3 teams</div>
+              </div>
+              <div class="question-answer-bar">
+                <div class="question-answer-label">Lewandowski</div>
+                <div class="question-bar-visual"><div class="question-bar-fill incorrect" style="width: 33%;"></div></div>
+                <div class="question-answer-count">2 teams</div>
+              </div>
+              <div class="question-answer-bar">
+                <div class="question-answer-label">Pedri</div>
+                <div class="question-bar-visual"><div class="question-bar-fill incorrect" style="width: 17%;"></div></div>
+                <div class="question-answer-count">1 team</div>
+              </div>
+            </div>
+            <div class="question-result correct">Correct: Los Galácticos, Barça Boys, The Underdogs</div>
+            <div class="question-stat-row">
+              <div>Best response: <strong>Barça Boys (2.8s)</strong></div>
+              <div>Accuracy: <strong>50%</strong></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity Tab -->
+      <div id="activity-panel" class="tab-panel">
+        <div class="activity-list" id="activityList">
+          <div class="activity-item answer">
+            <div class="activity-time">63:24</div>
+            <div class="activity-icon">🎯</div>
+            <div class="activity-text"><strong>Los Galácticos</strong> answered Q8 (3.2s) — picked "Barcelona"</div>
+          </div>
+          <div class="activity-item answer">
+            <div class="activity-time">63:18</div>
+            <div class="activity-icon">🎯</div>
+            <div class="activity-text"><strong>Barça Boys</strong> answered Q8 (8.7s) — picked "Real Madrid"</div>
+          </div>
+          <div class="activity-item answer">
+            <div class="activity-time">63:15</div>
+            <div class="activity-icon">🎯</div>
+            <div class="activity-text"><strong>The Underdogs</strong> answered Q8 (11.4s) — picked "Barcelona"</div>
+          </div>
+          <div class="activity-item answer">
+            <div class="activity-time">63:10</div>
+            <div class="activity-icon">🎯</div>
+            <div class="activity-text"><strong>Sofa Squad</strong> answered Q8 (15.1s) — picked "Draw"</div>
+          </div>
+          <div class="activity-item push">
+            <div class="activity-time">62:45</div>
+            <div class="activity-icon">⚡</div>
+            <div class="activity-text">Q8 pushed: <strong>"Who will score the next goal?"</strong></div>
+          </div>
+          <div class="activity-item correct">
+            <div class="activity-time">61:30</div>
+            <div class="activity-icon">✅</div>
+            <div class="activity-text">Q7 resolved: <strong>"Will there be a goal before 60'?"</strong> → Yes</div>
+          </div>
+          <div class="activity-item correct">
+            <div class="activity-time">61:28</div>
+            <div class="activity-icon">🏆</div>
+            <div class="activity-text"><strong>Los Galácticos</strong> got it right! (+40 pts, now leading with 1,240)</div>
+          </div>
+          <div class="activity-item correct">
+            <div class="activity-time">61:28</div>
+            <div class="activity-icon">🏆</div>
+            <div class="activity-text"><strong>Barça Boys</strong> got it right! (+40 pts)</div>
+          </div>
+          <div class="activity-item incorrect">
+            <div class="activity-time">61:28</div>
+            <div class="activity-icon">❌</div>
+            <div class="activity-text"><strong>Pub Exiles</strong> got it wrong (-10 pts)</div>
+          </div>
+          <div class="activity-item announcement">
+            <div class="activity-time">60:00</div>
+            <div class="activity-icon">📢</div>
+            <div class="activity-text"><strong>Announcement:</strong> "Half-time drinks 50% off at the bar!"</div>
+          </div>
+          <div class="activity-item streak">
+            <div class="activity-time">58:42</div>
+            <div class="activity-icon">🔥</div>
+            <div class="activity-text"><strong>Marco</strong> (Los Galácticos) is on a <span class="highlight">5-streak</span>!</div>
+          </div>
+          <div class="activity-item idle">
+            <div class="activity-time">57:10</div>
+            <div class="activity-icon">💤</div>
+            <div class="activity-text"><strong>Mia</strong> (Pub Exiles) has been idle for 10 minutes</div>
+          </div>
+          <div class="activity-item push">
+            <div class="activity-time">55:00</div>
+            <div class="activity-icon">⚡</div>
+            <div class="activity-text">Q7 pushed: <strong>"Will there be a goal before 60'?"</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Announcements Tab -->
+      <div id="announcements-panel" class="tab-panel">
+        <div class="announcements-send">
+          <input type="text" class="announcements-input" id="announcementInput" placeholder="Type announcement message..." />
+          <button class="announcements-send-btn" onclick="sendAnnouncement()">Send to All</button>
+        </div>
+        <div class="quick-announce-buttons">
+          <button class="quick-btn" onclick="sendQuickAnnouncement('Half-time break!')">Half-time break!</button>
+          <button class="quick-btn" onclick="sendQuickAnnouncement('Last 15 minutes!')">Last 15 minutes!</button>
+          <button class="quick-btn" onclick="sendQuickAnnouncement('Final question coming up!')">Final question coming up!</button>
+          <button class="quick-btn" onclick="sendQuickAnnouncement('Thanks for playing!')">Thanks for playing!</button>
+        </div>
+        <h3 style="font-size: 0.9rem; margin-bottom: 14px;">Sent Announcements</h3>
+        <div class="announcements-history" id="announcementHistory">
+          <div class="announcement-item">
+            <div class="announcement-time">60:00</div>
+            <div class="announcement-content">
+              <div class="announcement-text">Half-time drinks 50% off at the bar!</div>
+              <div class="announcement-status">Delivered to 24 players</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Analytics Tab -->
+      <div id="analytics-panel" class="tab-panel">
+        <div class="analytics-grid">
+          <div class="stat-card">
+            <div class="stat-card-label">Avg Response Time</div>
+            <div class="stat-card-value" style="color: var(--teal);">6.8s</div>
+            <div class="stat-card-detail">Across all teams</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Fastest Team</div>
+            <div class="stat-card-value" style="color: var(--lime);">Los Galácticos</div>
+            <div class="stat-card-detail">3.2s avg response</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Overall Accuracy</div>
+            <div class="stat-card-value" style="color: var(--orange);">62%</div>
+            <div class="stat-card-detail">7 / 8 correct</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Most Engaged</div>
+            <div class="stat-card-value" style="color: var(--purple);">Marco</div>
+            <div class="stat-card-detail">All 8 Qs in 4.1s avg</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-card-label">Idle Players</div>
+            <div class="stat-card-value" style="color: var(--coral);">2</div>
+            <div class="stat-card-detail">Kai — 4m, Mia — 12m</div>
+          </div>
+        </div>
+
+        <h3 style="font-size: 0.9rem; margin-bottom: 14px;">Team Performance</h3>
+        <table class="analytics-table">
+          <thead>
+            <tr>
+              <th>Team</th>
+              <th>Answered</th>
+              <th>Correct</th>
+              <th>Accuracy</th>
+              <th>Avg Time</th>
+              <th>Streak</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="color: var(--orange); font-weight: 700;">Los Galácticos</td>
+              <td>8/8</td>
+              <td>6</td>
+              <td style="color: var(--lime); font-weight: 600;">75%</td>
+              <td style="font-variant-numeric: tabular-nums;">3.2s</td>
+              <td>3</td>
+            </tr>
+            <tr>
+              <td style="color: var(--lime); font-weight: 700;">Barça Boys</td>
+              <td>7/8</td>
+              <td>5</td>
+              <td style="color: var(--lime); font-weight: 600;">71%</td>
+              <td style="font-variant-numeric: tabular-nums;">5.4s</td>
+              <td>2</td>
+            </tr>
+            <tr>
+              <td style="color: var(--purple); font-weight: 700;">Madridistas</td>
+              <td>6/8</td>
+              <td>4</td>
+              <td style="color: var(--orange); font-weight: 600;">67%</td>
+              <td style="font-variant-numeric: tabular-nums;">6.1s</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td style="color: var(--teal); font-weight: 700;">The Underdogs</td>
+              <td>8/8</td>
+              <td>5</td>
+              <td style="color: var(--lime); font-weight: 600;">63%</td>
+              <td style="font-variant-numeric: tabular-nums;">7.2s</td>
+              <td>0</td>
+            </tr>
+            <tr>
+              <td style="color: var(--coral); font-weight: 700;">Sofa Squad</td>
+              <td>7/8</td>
+              <td>4</td>
+              <td style="color: var(--orange); font-weight: 600;">57%</td>
+              <td style="font-variant-numeric: tabular-nums;">8.3s</td>
+              <td>1</td>
+            </tr>
+            <tr>
+              <td style="color: var(--grey); font-weight: 700;">Pub Exiles</td>
+              <td>5/8</td>
+              <td>2</td>
+              <td style="color: var(--coral); font-weight: 600;">40%</td>
+              <td style="font-variant-numeric: tabular-nums;">9.8s</td>
+              <td>0</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="analytics-difficulty-section">
+          <div class="analytics-difficulty-title">Question Difficulty (Accuracy)</div>
+          <div class="question-difficulty-item">
+            <div class="difficulty-label">Q7: Before 60'?</div>
+            <div class="difficulty-bar"><div class="difficulty-fill correct" style="width: 100%;"></div></div>
+            <div class="difficulty-accuracy">100%</div>
+          </div>
+          <div class="question-difficulty-item">
+            <div class="difficulty-label">Q6: Who scored?</div>
+            <div class="difficulty-bar"><div class="difficulty-fill correct" style="width: 83%;"></div></div>
+            <div class="difficulty-accuracy">83%</div>
+          </div>
+          <div class="question-difficulty-item">
+            <div class="difficulty-label">Q8: Next goal?</div>
+            <div class="difficulty-bar"><div class="difficulty-fill option-a" style="width: 67%;"></div></div>
+            <div class="difficulty-accuracy">67%</div>
+          </div>
+          <div class="question-difficulty-item">
+            <div class="difficulty-label">Q5: Half-time?</div>
+            <div class="difficulty-bar"><div class="difficulty-fill option-b" style="width: 50%;"></div></div>
+            <div class="difficulty-accuracy">50%</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════ CREATE QUESTION MODAL ══════ -->
+  <div class="cq-overlay" id="cqOverlay">
+    <div class="cq-modal">
+
+      <!-- Step 1: Create -->
+      <div class="cq-step active" id="cqStep1">
+        <div class="cq-modal-header">
+          <div class="cq-modal-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Create Custom Question
+            <span class="step-badge">Step 1 of 2</span>
+          </div>
+          <button class="cq-close" onclick="closeCreateQuestionModal()">&times;</button>
+        </div>
+        <div class="cq-modal-body">
+          <div class="cq-field">
+            <label class="cq-label">Question Type</label>
+            <select class="cq-select" id="cqType">
+              <option value="live">Live — Real-time match question</option>
+              <option value="prediction">Prediction — What happens next?</option>
+              <option value="trivia">Trivia — Knowledge & history</option>
+              <option value="news">News — Current events & transfers</option>
+            </select>
+          </div>
+          <div class="cq-field">
+            <label class="cq-label">Question Text</label>
+            <textarea class="cq-textarea" id="cqText" placeholder="e.g. Who will score the next goal?" rows="2"></textarea>
+          </div>
+          <div class="cq-field">
+            <label class="cq-label">Answer Options <span style="color: var(--lime); font-size: 0.6rem; margin-left: 4px;">● = correct</span></label>
+            <div class="cq-answer-row">
+              <span style="color: var(--teal); font-weight: 800; font-size: 0.75rem; min-width: 14px;">A</span>
+              <input class="cq-input" id="cqA" placeholder="Option A" />
+              <label class="cq-radio-wrap"><input type="radio" name="cqCorrect" value="0" checked /><span class="cq-radio-dot"></span></label>
+            </div>
+            <div class="cq-answer-row">
+              <span style="color: var(--purple); font-weight: 800; font-size: 0.75rem; min-width: 14px;">B</span>
+              <input class="cq-input" id="cqB" placeholder="Option B" />
+              <label class="cq-radio-wrap"><input type="radio" name="cqCorrect" value="1" /><span class="cq-radio-dot"></span></label>
+            </div>
+            <div class="cq-answer-row">
+              <span style="color: var(--orange); font-weight: 800; font-size: 0.75rem; min-width: 14px;">C</span>
+              <input class="cq-input" id="cqC" placeholder="Option C" />
+              <label class="cq-radio-wrap"><input type="radio" name="cqCorrect" value="2" /><span class="cq-radio-dot"></span></label>
+            </div>
+            <div class="cq-answer-row">
+              <span style="color: var(--coral); font-weight: 800; font-size: 0.75rem; min-width: 14px;">D</span>
+              <input class="cq-input" id="cqD" placeholder="Option D" />
+              <label class="cq-radio-wrap"><input type="radio" name="cqCorrect" value="3" /><span class="cq-radio-dot"></span></label>
+            </div>
+          </div>
+          <div class="cq-field">
+            <label class="cq-label">Timer (seconds)</label>
+            <div class="cq-timer-row">
+              <input type="range" id="cqTimer" min="5" max="30" value="15" oninput="document.getElementById('cqTimerVal').textContent = this.value" />
+              <div class="cq-timer-value" id="cqTimerVal">15</div>
+              <span style="font-size: 0.7rem; color: var(--grey);">sec</span>
+            </div>
+          </div>
+        </div>
+        <div class="cq-modal-footer">
+          <button class="cq-btn ghost" onclick="closeCreateQuestionModal()">Cancel</button>
+          <button class="cq-btn purple" onclick="goToPreview()">Preview →</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Preview & Publish -->
+      <div class="cq-step" id="cqStep2">
+        <div class="cq-modal-header">
+          <div class="cq-modal-title">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            Preview & Publish
+            <span class="step-badge">Step 2 of 2</span>
+          </div>
+          <button class="cq-close" onclick="closeCreateQuestionModal()">&times;</button>
+        </div>
+        <div class="cq-modal-body">
+          <p style="font-size: 0.75rem; color: var(--grey); margin-bottom: 16px;">This is how players will see your question. Confirm and publish to push it live.</p>
+          <div class="cq-preview-phone" id="cqPreviewPhone">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+        <div class="cq-modal-footer">
+          <button class="cq-btn ghost" onclick="goBackToEdit()">← Edit</button>
+          <button class="cq-btn lime" onclick="publishCustomQuestion()">
+            ⚡ Publish to All Players
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ══════ TV MODE ══════ -->
+  <div class="tv-view">
+    <div class="tv-header">
+      <div class="tv-logo">Spontyx<span class="dot">●</span></div>
+      <div class="tv-event-name">El <span>Clásico</span> Night</div>
+      <div class="tv-match-info">
+        <div class="tv-match-teams">Barcelona vs Real Madrid</div>
+        <div class="tv-match-time" id="tvTimer">63:24</div>
+      </div>
+    </div>
+
+    <div class="tv-question-wrap">
+      <div class="tv-q-badge">Question 8</div>
+      <div class="tv-q-text">Who will score the next goal?</div>
+      <div class="tv-q-timer-wrap">
+        <div class="tv-q-timer-label">Time left</div>
+        <div class="tv-q-timer" id="tvQTimer">1:42</div>
+      </div>
+
+      <div class="tv-options">
+        <div class="tv-option">
+          <div class="tv-option-letter" style="background:rgba(255,159,67,0.15);color:var(--orange);">A</div>
+          <div class="tv-option-text">Barcelona</div>
+          <div class="tv-option-count">
+            <div class="tv-option-bar"><div class="tv-option-bar-fill" style="width:50%;"></div></div>
+            3 teams
+          </div>
+        </div>
+        <div class="tv-option">
+          <div class="tv-option-letter" style="background:rgba(168,225,12,0.15);color:var(--lime);">B</div>
+          <div class="tv-option-text">Real Madrid</div>
+          <div class="tv-option-count">
+            <div class="tv-option-bar"><div class="tv-option-bar-fill" style="width:17%;"></div></div>
+            1 team
+          </div>
+        </div>
+        <div class="tv-option">
+          <div class="tv-option-letter" style="background:rgba(124,92,252,0.15);color:var(--purple);">C</div>
+          <div class="tv-option-text">No more goals</div>
+          <div class="tv-option-count">
+            <div class="tv-option-bar"><div class="tv-option-bar-fill" style="width:0%;"></div></div>
+            0 teams
+          </div>
+        </div>
+        <div class="tv-option">
+          <div class="tv-option-letter" style="background:rgba(78,205,196,0.15);color:var(--teal);">D</div>
+          <div class="tv-option-text">Own goal</div>
+          <div class="tv-option-count">
+            <div class="tv-option-bar"><div class="tv-option-bar-fill" style="width:0%;"></div></div>
+            0 teams
+          </div>
+        </div>
+      </div>
+
+      <div class="tv-responses"><strong>4</strong> of 6 teams have answered</div>
+    </div>
+
+    <div class="tv-footer">
+      <div class="tv-footer-text">The Crown Pub · Friday 10 Apr 2026</div>
+      <div class="tv-footer-scan">Scan the QR at your table to join! <div class="tv-qr-placeholder">█▀█</div></div>
+    </div>
+  </div>
+
+  <!-- Exit TV button -->
+  <button class="tv-exit" onclick="exitTvMode()">Exit TV Mode</button>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+  <script src="sidebar.js"></script>
+  <script>
+    // ══════════════════════════════════════════
+    // SPONTIX BRIDGE — Venue Session Manager
+    // ══════════════════════════════════════════
+
+    // ── Session State ──
+    let sessionCode = null;
+    let sessionActive = false;
+    let currentQuestionIdx = -1;
+
+    // The question bank the venue can push from
+    const QUESTION_BANK = [
+      { type: 'live', typeLabel: "Live · 23'", text: "Who scored the opening goal?", options: ["Lewandowski", "Vinícius Jr", "Pedri", "Bellingham"], correct: 0, time: 12 },
+      { type: 'prediction', typeLabel: "Prediction · 34'", text: "Will there be a goal before halftime?", options: ["Yes — home team", "Yes — away team", "Yes — both teams", "No more goals"], correct: 0, time: 15 },
+      { type: 'live', typeLabel: "Live · 45+2'", text: "A penalty has been given! Will it be scored?", options: ["Scored — bottom left", "Scored — bottom right", "Saved by the keeper", "Hits the post"], correct: 0, time: 10 },
+      { type: 'live', typeLabel: "Live · 55'", text: "Which team makes the next substitution?", options: ["Barcelona", "Real Madrid", "Both at same time", "No sub before 60'"], correct: 1, time: 15 },
+      { type: 'history', typeLabel: "History · Halftime Trivia", text: "How many El Clásicos have ended 0-0 since 2010?", options: ["Zero", "One", "Two", "Three"], correct: 1, time: 15 },
+      { type: 'live', typeLabel: "Live · 67'", text: "Corner kick! What happens next?", options: ["Goal — header", "Cleared at near post", "Goes out for goal kick", "Another corner"], correct: 2, time: 10 },
+      { type: 'news', typeLabel: "News · Transfer Buzz", text: "Which club made the biggest signing this window?", options: ["Barcelona", "Real Madrid", "PSG", "Man City"], correct: 0, time: 12 },
+      { type: 'live', typeLabel: "Live · 76'", text: "Free kick on the edge of the box. What happens?", options: ["Goal from free kick", "Saved by keeper", "Hits the wall", "Goes over the bar"], correct: 1, time: 10 },
+      { type: 'prediction', typeLabel: "Prediction · 85'", text: "What will the final score be?", options: ["2-1 Barcelona", "3-1 Barcelona", "2-2 Draw", "3-2 Barcelona"], correct: 1, time: 15 },
+      { type: 'live', typeLabel: "Live · 90+3'", text: "Last corner of the match! Will they score?", options: ["Yes — header!", "Yes — scramble", "No — cleared", "No — keeper catches"], correct: 2, time: 8 },
+    ];
+
+    function generateCode() {
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      let code = '';
+      for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+      return code;
+    }
+
+    function initSession() {
+      sessionCode = generateCode();
+      sessionActive = true;
+      currentQuestionIdx = -1;
+
+      const session = {
+        code: sessionCode,
+        venueName: 'The Sports Bar',
+        matchTitle: 'Barcelona vs Real Madrid',
+        matchSub: 'La Liga · El Clásico Night',
+        status: 'active',
+        currentQ: -1,
+        totalQ: QUESTION_BANK.length,
+        createdAt: Date.now()
+      };
+
+      localStorage.setItem('spontix_live_session', JSON.stringify(session));
+      localStorage.setItem('spontix_live_questions', JSON.stringify([]));
+      localStorage.setItem('spontix_live_players', JSON.stringify([]));
+      localStorage.setItem('spontix_live_answers', JSON.stringify({}));
+
+      // Update UI
+      document.getElementById('sessionCode').textContent = sessionCode;
+      const baseUrl = window.location.href.replace('venue-live-floor.html', 'live.html');
+      document.getElementById('sessionLink').textContent = baseUrl + '?code=' + sessionCode;
+      updatePlayerCount();
+    }
+
+    function copySessionCode() {
+      if (!sessionCode) return;
+      navigator.clipboard.writeText(sessionCode).then(() => showToast('Game code copied!')).catch(() => {});
+    }
+
+    function copySessionLink() {
+      const link = document.getElementById('sessionLink').textContent;
+      if (link === '—') return;
+      navigator.clipboard.writeText(link).then(() => showToast('Player link copied!')).catch(() => {});
+    }
+
+    function pushNextQuestion() {
+      if (!sessionActive) return;
+      currentQuestionIdx++;
+      if (currentQuestionIdx >= QUESTION_BANK.length) {
+        showToast('All questions have been pushed!');
+        currentQuestionIdx--;
+        return;
+      }
+
+      const q = QUESTION_BANK[currentQuestionIdx];
+      const questions = JSON.parse(localStorage.getItem('spontix_live_questions') || '[]');
+      questions.push({ id: currentQuestionIdx, ...q, status: 'active', pushedAt: Date.now() });
+
+      // Mark previous question as revealed
+      if (questions.length > 1) {
+        questions[questions.length - 2].status = 'revealed';
+      }
+
+      localStorage.setItem('spontix_live_questions', JSON.stringify(questions));
+
+      // Update session currentQ
+      const session = JSON.parse(localStorage.getItem('spontix_live_session'));
+      session.currentQ = currentQuestionIdx;
+      localStorage.setItem('spontix_live_session', JSON.stringify(session));
+
+      // Signal to player tabs
+      localStorage.setItem('spontix_live_signal', JSON.stringify({
+        action: 'push_question', questionId: currentQuestionIdx, timestamp: Date.now()
+      }));
+
+      updateVenueStats();
+      showToast('Q' + (currentQuestionIdx + 1) + ' pushed to all players!');
+    }
+
+    function endSession() {
+      if (!sessionActive) return;
+      sessionActive = false;
+      const session = JSON.parse(localStorage.getItem('spontix_live_session') || '{}');
+      session.status = 'ended';
+      localStorage.setItem('spontix_live_session', JSON.stringify(session));
+      localStorage.setItem('spontix_live_signal', JSON.stringify({
+        action: 'end_game', timestamp: Date.now()
+      }));
+      showToast('Game ended for all players.');
+    }
+
+    function updatePlayerCount() {
+      const players = JSON.parse(localStorage.getItem('spontix_live_players') || '[]');
+      document.getElementById('sessionPlayerCount').textContent = players.length;
+      // Update summary strip
+      const summaryVals = document.querySelectorAll('.summary-item-value');
+      if (summaryVals[1] && players.length > 0) summaryVals[1].textContent = players.length;
+    }
+
+    function updateVenueStats() {
+      const summaryVals = document.querySelectorAll('.summary-item-value');
+      if (summaryVals[2]) summaryVals[2].textContent = (currentQuestionIdx + 1) + ' / ' + QUESTION_BANK.length;
+
+      // Update answer counts
+      const answers = JSON.parse(localStorage.getItem('spontix_live_answers') || '{}');
+      const qAnswers = answers[currentQuestionIdx] || {};
+      const players = JSON.parse(localStorage.getItem('spontix_live_players') || '[]');
+      const total = players.length || 1;
+      const counts = [0, 0, 0, 0];
+      Object.values(qAnswers).forEach(a => { if (a.answer >= 0 && a.answer <= 3) counts[a.answer]++; });
+      const answered = counts.reduce((s, c) => s + c, 0);
+
+      // Update pending count
+      if (summaryVals[3]) summaryVals[3].textContent = Math.max(0, total - answered);
+    }
+
+    // ── Listen for player activity ──
+    window.addEventListener('storage', (e) => {
+      if (e.key === 'spontix_live_players') { updatePlayerCount(); updateVenueStats(); }
+      if (e.key === 'spontix_live_answers') { updateVenueStats(); }
+    });
+
+    // Wire up existing hardcoded buttons to use the bridge
+    function wireUpButtons() {
+      const pushBtn = document.querySelector('.ctrl-btn.lime');
+      if (pushBtn) pushBtn.onclick = function() { pushNextQuestion(); };
+      const endBtn = document.querySelector('.ctrl-btn.coral');
+      if (endBtn) endBtn.onclick = function() { if (confirm('End the game for all players?')) endSession(); };
+    }
+
+    // ── Boot ──
+    initSession();
+    wireUpButtons();
+
+    // ── Original timers ──
+    // Match timer simulation
+    let matchSeconds = 63 * 60 + 24;
+    let qSeconds = 102;
+
+    setInterval(() => {
+      matchSeconds++;
+      const m = Math.floor(matchSeconds / 60);
+      const s = matchSeconds % 60;
+      const str = m + ':' + String(s).padStart(2, '0');
+      const el = document.getElementById('matchTimer');
+      if (el) el.textContent = str;
+      const tv = document.getElementById('tvTimer');
+      if (tv) tv.textContent = str;
+    }, 1000);
+
+    setInterval(() => {
+      if (qSeconds > 0) {
+        qSeconds--;
+        const m = Math.floor(qSeconds / 60);
+        const s = qSeconds % 60;
+        const str = m + ':' + String(s).padStart(2, '0');
+        const el = document.getElementById('cqTimer');
+        if (el) el.textContent = str;
+        const tv = document.getElementById('tvQTimer');
+        if (tv) {
+          tv.textContent = str;
+          if (qSeconds < 30) {
+            tv.classList.add('warning');
+          } else {
+            tv.classList.remove('warning');
+          }
+        }
+      }
+    }, 1000);
+
+    function enterTvMode() {
+      document.body.classList.add('tv-mode');
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    }
+
+    function exitTvMode() {
+      document.body.classList.remove('tv-mode');
+      if (document.fullscreenElement) {
+        document.exitFullscreen().catch(() => {});
+      }
+    }
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && document.body.classList.contains('tv-mode')) {
+        exitTvMode();
+      }
+    });
+
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2400);
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // End Event — declare winner + award trophy via the routing
+    // helpers in SpontixStore. Trophy selection follows tier limits:
+    //   • venue-starter → no trophies (skip)
+    //   • venue-pro → preset trophies only
+    //   • venue-elite → preset or their custom AI trophies
+    // ═══════════════════════════════════════════════════════════
+    function endEventAndAwardWinner() {
+      if (!confirm('End this event? This will declare a winner and award the venue trophy.')) return;
+
+      const tier = localStorage.getItem('spontix_user_tier') || 'venue-starter';
+      const limits = SpontixStore.TIER_LIMITS[tier] || SpontixStore.TIER_LIMITS['venue-starter'];
+      const profile = SpontixStore.getVenueProfile();
+      const venueName = profile ? profile.venueName : SpontixStore.DEFAULT_VENUE_NAME;
+
+      if (!limits.canAwardTrophies) {
+        showToast('Event ended — upgrade to Pro to award trophies to winners');
+        return;
+      }
+
+      // For the demo we treat the current user as the winner.
+      // In production this would come from the live leaderboard backend.
+      const winnerHandle = SpontixStore.getPlayer().handle;
+
+      // Resolve trophy in priority order:
+      //   1. The trophy configured on the most recent active event for this venue
+      //   2. First custom venue trophy (Elite venues that created one)
+      //   3. First preset from the tier's trophy catalogue
+      //   4. Generic venue_event_champion
+      let trophyChoice;
+
+      const events = SpontixStore.getVenueEvents();
+      const activeEvent = events.find(e => e.status === 'live' || e.status === 'scheduled');
+      if (activeEvent && activeEvent.trophy) {
+        const cfg = activeEvent.trophy;
+        if (cfg.kind === 'custom' && cfg.customTrophyId) {
+          const t = SpontixStore.getVenueCustomTrophies().find(x => x.id === cfg.customTrophyId);
+          if (t) trophyChoice = { ...t, custom: true };
+        } else if (cfg.kind === 'preset' && cfg.type) {
+          trophyChoice = cfg.type;
+        }
+      }
+
+      if (!trophyChoice && limits.customTrophyCreation) {
+        const custom = SpontixStore.getVenueCustomTrophies().filter(t => t.venueName === venueName);
+        if (custom.length > 0) trophyChoice = { ...custom[0], custom: true };
+      }
+      if (!trophyChoice) {
+        trophyChoice = (limits.trophyPresets || [])[0] || 'venue_event_champion';
+      }
+
+      const result = SpontixStore.awardVenueEventTrophy('evt_live_' + Date.now(), winnerHandle, trophyChoice);
+      if (result) {
+        showToast('🏆 Event ended — trophy awarded to ' + winnerHandle);
+      } else {
+        showToast('Event ended — trophy queued for winner');
+      }
+    }
+
+    function switchManagerTab(tabName) {
+      document.querySelectorAll('.tab-panel').forEach(el => el.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+
+      const panel = document.getElementById(tabName + '-panel');
+      if (panel) panel.classList.add('active');
+
+      event.target.classList.add('active');
+    }
+
+    function sendAnnouncement() {
+      const input = document.getElementById('announcementInput');
+      const msg = input.value.trim();
+      if (!msg) return;
+
+      addAnnouncementToHistory(msg);
+      input.value = '';
+      showToast('Announcement sent to all players!');
+    }
+
+    function sendQuickAnnouncement(msg) {
+      addAnnouncementToHistory(msg);
+      showToast('Announcement sent to all players!');
+    }
+
+    function addAnnouncementToHistory(msg) {
+      const now = new Date();
+      const time = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+
+      const item = document.createElement('div');
+      item.className = 'announcement-item';
+      item.innerHTML = `
+        <div class="announcement-time">${time}</div>
+        <div class="announcement-content">
+          <div class="announcement-text">${msg}</div>
+          <div class="announcement-status">Delivered to 24 players</div>
+        </div>
+      `;
+
+      document.getElementById('announcementHistory').insertBefore(item, document.getElementById('announcementHistory').firstChild);
+    }
+
+    // ══════════════════════════════════════════
+    // Hydrate Floor with SpontixStore
+    // ══════════════════════════════════════════
+    function hydrateVenueFloor() {
+      const profile = SpontixStore.getVenueProfile();
+      const events = SpontixStore.getVenueEvents();
+
+      // Update venue name in control bar
+      if (profile && profile.venueName) {
+        // Venue name is typically shown in event context
+        // The event title is already populated, so we update it if profile exists
+      }
+
+      // Get the first live or most recent event
+      const currentEvent = events.find(e => e.status === 'live') || events[0];
+      if (currentEvent) {
+        // Update control bar title with event name
+        const controlBarTitle = document.querySelector('.control-bar-title');
+        if (controlBarTitle) {
+          const liveBadge = controlBarTitle.querySelector('.live-badge');
+          controlBarTitle.textContent = currentEvent.name + ' ';
+          controlBarTitle.appendChild(liveBadge);
+        }
+
+        // Update control bar meta with match info and counts
+        const controlBarMeta = document.querySelector('.control-bar-meta');
+        if (controlBarMeta) {
+          controlBarMeta.textContent = currentEvent.matchTitle + ' · ' + currentEvent.sport + ' · 6 teams · 24 players';
+        }
+      }
+
+      // Update upcoming events for context
+      const upcomingEvents = events.filter(e => e.status !== 'live');
+      if (upcomingEvents.length > 0) {
+        // Log that upcoming events are available for manager reference
+        console.log('Upcoming events:', upcomingEvents);
+      }
+    }
+
+    // ══════════════════════════════════════════
+    // CREATE CUSTOM QUESTION — Modal Logic
+    // ══════════════════════════════════════════
+
+    function openCreateQuestionModal() {
+      // Reset form
+      document.getElementById('cqType').value = 'live';
+      document.getElementById('cqText').value = '';
+      document.getElementById('cqA').value = '';
+      document.getElementById('cqB').value = '';
+      document.getElementById('cqC').value = '';
+      document.getElementById('cqD').value = '';
+      document.getElementById('cqTimer').value = 15;
+      document.getElementById('cqTimerVal').textContent = '15';
+      document.querySelector('input[name="cqCorrect"][value="0"]').checked = true;
+
+      // Show step 1
+      document.getElementById('cqStep1').classList.add('active');
+      document.getElementById('cqStep2').classList.remove('active');
+
+      document.getElementById('cqOverlay').classList.add('open');
+    }
+
+    function closeCreateQuestionModal() {
+      document.getElementById('cqOverlay').classList.remove('open');
+    }
+
+    // Close on overlay click
+    document.getElementById('cqOverlay').addEventListener('click', function(e) {
+      if (e.target === this) closeCreateQuestionModal();
+    });
+
+    // Close on Escape
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && document.getElementById('cqOverlay').classList.contains('open')) {
+        closeCreateQuestionModal();
+      }
+    });
+
+    function getCustomQuestionData() {
+      const type = document.getElementById('cqType').value;
+      const text = document.getElementById('cqText').value.trim();
+      const options = [
+        document.getElementById('cqA').value.trim(),
+        document.getElementById('cqB').value.trim(),
+        document.getElementById('cqC').value.trim(),
+        document.getElementById('cqD').value.trim()
+      ];
+      const correct = parseInt(document.querySelector('input[name="cqCorrect"]:checked').value);
+      const time = parseInt(document.getElementById('cqTimer').value);
+
+      const typeLabels = {
+        live: 'Live',
+        prediction: 'Prediction',
+        trivia: 'Trivia',
+        news: 'News'
+      };
+
+      return { type, typeLabel: typeLabels[type] + ' · Custom', text, options, correct, time };
+    }
+
+    function validateCustomQuestion() {
+      const data = getCustomQuestionData();
+      if (!data.text) {
+        showToast('Please enter a question.');
+        document.getElementById('cqText').focus();
+        return false;
+      }
+      const filledOptions = data.options.filter(o => o.length > 0);
+      if (filledOptions.length < 2) {
+        showToast('Please fill in at least 2 answer options.');
+        return false;
+      }
+      // Make sure correct answer has text
+      if (!data.options[data.correct]) {
+        showToast('The correct answer option is empty.');
+        return false;
+      }
+      return true;
+    }
+
+    function goToPreview() {
+      if (!validateCustomQuestion()) return;
+
+      const data = getCustomQuestionData();
+      const letters = ['A', 'B', 'C', 'D'];
+      const letterColors = ['var(--teal)', 'var(--purple)', 'var(--orange)', 'var(--coral)'];
+      const badgeClass = data.type;
+
+      let optionsHtml = '';
+      data.options.forEach((opt, i) => {
+        if (!opt) return;
+        const isCorrect = i === data.correct;
+        optionsHtml += `
+          <div class="cq-preview-option ${isCorrect ? 'correct' : ''}">
+            <span class="opt-letter" ${isCorrect ? 'style="background: var(--lime); color: var(--navy);"' : ''}>${letters[i]}</span>
+            ${opt}
+          </div>`;
+      });
+
+      const phone = document.getElementById('cqPreviewPhone');
+      phone.innerHTML = `
+        <div class="cq-preview-badge ${badgeClass}">${data.typeLabel}</div>
+        <div class="cq-preview-question">${data.text}</div>
+        <div class="cq-preview-timer-bar">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <span class="cq-preview-timer-val">${data.time}s</span>
+        </div>
+        <div class="cq-preview-options">${optionsHtml}</div>
+        <div class="cq-preview-correct-note">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--lime)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Correct answer: ${letters[data.correct]}. ${data.options[data.correct]}
+        </div>
+      `;
+
+      // Switch to step 2
+      document.getElementById('cqStep1').classList.remove('active');
+      document.getElementById('cqStep2').classList.add('active');
+    }
+
+    function goBackToEdit() {
+      document.getElementById('cqStep2').classList.remove('active');
+      document.getElementById('cqStep1').classList.add('active');
+    }
+
+    function publishCustomQuestion() {
+      if (!sessionActive) {
+        showToast('No active session — start the event first.');
+        return;
+      }
+
+      const data = getCustomQuestionData();
+
+      // Add to QUESTION_BANK so it integrates with existing push flow
+      QUESTION_BANK.push(data);
+
+      // Now push it using the same bridge as pushNextQuestion
+      currentQuestionIdx++;
+      const q = QUESTION_BANK[currentQuestionIdx];
+
+      const questions = JSON.parse(localStorage.getItem('spontix_live_questions') || '[]');
+
+      // Mark previous question as revealed
+      if (questions.length > 0) {
+        questions[questions.length - 1].status = 'revealed';
+      }
+
+      questions.push({
+        id: currentQuestionIdx,
+        ...q,
+        status: 'active',
+        pushedAt: Date.now(),
+        custom: true
+      });
+
+      localStorage.setItem('spontix_live_questions', JSON.stringify(questions));
+
+      // Update session
+      const session = JSON.parse(localStorage.getItem('spontix_live_session') || '{}');
+      session.currentQ = currentQuestionIdx;
+      session.totalQ = QUESTION_BANK.length;
+      localStorage.setItem('spontix_live_session', JSON.stringify(session));
+
+      // Signal player tabs
+      localStorage.setItem('spontix_live_signal', JSON.stringify({
+        action: 'push_question',
+        questionId: currentQuestionIdx,
+        timestamp: Date.now()
+      }));
+
+      updateVenueStats();
+
+      // Add to activity feed
+      addActivityItem('push', 'Q' + (currentQuestionIdx + 1) + ' pushed: <strong>"' + data.text + '"</strong> <span style="color: var(--purple); font-size: 0.65rem; font-weight: 700;">CUSTOM</span>');
+
+      // Add card to Questions panel
+      addQuestionCardToPanel(data, currentQuestionIdx);
+
+      // Update current question banner
+      const cqBadge = document.querySelector('.cq-badge');
+      const cqText = document.querySelector('.cq-text');
+      if (cqBadge) cqBadge.textContent = 'Q' + (currentQuestionIdx + 1) + ' Active';
+      if (cqText) cqText.textContent = data.text;
+
+      closeCreateQuestionModal();
+      showToast('⚡ Custom question published to all players!');
+    }
+
+    function addActivityItem(type, html) {
+      const list = document.getElementById('activityList');
+      if (!list) return;
+      const now = new Date();
+      const time = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+      const item = document.createElement('div');
+      item.className = 'activity-item ' + type;
+      item.innerHTML = `
+        <div class="activity-time">${time}</div>
+        <div class="activity-text">${html}</div>
+      `;
+      list.insertBefore(item, list.firstChild);
+    }
+
+    function addQuestionCardToPanel(data, idx) {
+      const list = document.getElementById('questionsList');
+      if (!list) return;
+      const letters = ['A', 'B', 'C', 'D'];
+
+      // Deactivate previous active card
+      const prev = list.querySelector('.question-card.active');
+      if (prev) {
+        prev.classList.remove('active');
+        const badge = prev.querySelector('.question-card-badge');
+        if (badge) { badge.textContent = 'COMPLETED'; badge.className = 'question-card-badge completed'; }
+      }
+
+      const card = document.createElement('div');
+      card.className = 'question-card active';
+      let barsHtml = '';
+      data.options.forEach((opt, i) => {
+        if (!opt) return;
+        const colorClasses = ['option-a', 'option-b', 'option-c', 'waiting'];
+        barsHtml += `
+          <div class="question-answer-bar">
+            <div class="question-answer-label">${letters[i]}. ${opt}</div>
+            <div class="question-bar-visual"><div class="question-bar-fill ${colorClasses[i]}" style="width: 0%;"></div></div>
+            <div class="question-answer-count">0 teams</div>
+          </div>`;
+      });
+
+      card.innerHTML = `
+        <div class="question-card-header">
+          <div class="question-card-title">Q${idx + 1}: ${data.text} <span style="color: var(--purple); font-size: 0.6rem; font-weight: 700; margin-left: 6px;">CUSTOM</span></div>
+          <div class="question-card-badge active">ACTIVE</div>
+        </div>
+        <div class="question-card-stats">
+          <span><strong>0</strong> of 6 teams answered</span> · <span>Timer: <strong>${data.time}s</strong></span>
+        </div>
+        <div class="question-answer-bars">${barsHtml}</div>
+      `;
+      list.insertBefore(card, list.firstChild);
+    }
+
+    // ── Tier-gate specific Live Floor features ──
+    function applyLiveFloorGating() {
+      const tier = localStorage.getItem('spontix_user_tier') || 'venue-starter';
+      const limits = SpontixStore.getTierLimits(tier);
+
+      // Create Question button — Pro+ only
+      if (!limits.customQuestionsLive) {
+        const createBtn = document.querySelector('.ctrl-btn.purple');
+        if (createBtn) {
+          SpontixSidebar.lockElement(createBtn, {
+            feature: 'customQuestionsLive',
+            requiredTier: 'Venue Pro',
+            isVenue: true,
+            icon: '✏️',
+            description: 'Create custom questions on the fly during live events. Upgrade to <strong>Venue Pro</strong> to unlock live question creation.',
+            benefits: ['Create questions during live events', 'Preview before publishing', 'Full Question Bank access', 'All question types unlocked']
+          });
+        }
+      }
+
+      // TV Mode button — Pro+ only
+      if (!limits.tvDisplayMode) {
+        const tvBtn = document.querySelector('.ctrl-btn.tv');
+        if (tvBtn) {
+          SpontixSidebar.lockElement(tvBtn, {
+            feature: 'tvDisplayMode',
+            requiredTier: 'Venue Pro',
+            isVenue: true,
+            icon: '📺',
+            description: 'Display questions and leaderboards on your venue screens. Upgrade to <strong>Venue Pro</strong> to unlock TV Display Mode.',
+            benefits: ['Leaderboard on big screens', 'Questions displayed for all to see', 'Custom branding on displays', 'Auto-rotate between views']
+          });
+        }
+      }
+    }
+
+    // Call on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      hydrateVenueFloor();
+      applyLiveFloorGating();
+
+      // Re-render when events cache is refreshed from Supabase
+      window.addEventListener('spontix-events-refreshed', function() {
+        hydrateVenueFloor();
+      });
+    });
+  </script>
+</body>
+</html>

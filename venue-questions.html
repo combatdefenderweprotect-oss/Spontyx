@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Question Bank</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+
+    /* ── Layout ── */
+    .main { margin-left: 260px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* ── Top Bar ── */
+    .topbar {
+      padding: 14px 28px; display: flex; align-items: center; gap: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .mobile-menu-btn {
+      display: none; width: 36px; height: 36px; border: none;
+      background: var(--navy-light); border-radius: var(--radius-sm);
+      color: var(--grey); cursor: pointer; align-items: center; justify-content: center;
+    }
+    .mobile-menu-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .topbar-title { font-size: 1rem; font-weight: 800; letter-spacing: -0.3px; margin-right: auto; }
+    .topbar-search { position: relative; }
+    .topbar-search svg {
+      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+      width: 15px; height: 15px; stroke: var(--grey-dark); fill: none; stroke-width: 2; pointer-events: none;
+    }
+    .topbar-search input {
+      padding: 9px 14px 9px 36px; background: var(--navy-light);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-pill);
+      color: var(--off-white); font-size: 0.85rem; font-family: inherit; outline: none;
+      width: 240px; transition: border-color 0.2s;
+    }
+    .topbar-search input::placeholder { color: var(--grey-dark); }
+    .topbar-search input:focus { border-color: rgba(124,92,252,0.4); }
+    .btn-create {
+      padding: 9px 18px; background: var(--purple); color: #fff; border: none;
+      border-radius: var(--radius-pill); font-family: inherit; font-size: 0.82rem;
+      font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 6px;
+      transition: opacity 0.15s, transform 0.15s;
+      box-shadow: 0 4px 16px rgba(124,92,252,0.3);
+    }
+    .btn-create:hover { opacity: 0.88; transform: translateY(-1px); }
+    .btn-create svg { width: 14px; height: 14px; stroke: #fff; fill: none; stroke-width: 2.5; }
+
+    /* ── Content ── */
+    .content { padding: 28px 28px 48px; flex: 1; }
+
+    /* ── Page Header ── */
+    .page-header { margin-bottom: 28px; }
+    .page-header h1 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .page-header h1 span { color: var(--purple); }
+    .page-header p { color: var(--grey); font-size: 0.88rem; }
+
+    /* ── Stats Row ── */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 14px; margin-bottom: 28px;
+    }
+    .stat-card {
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg); padding: 18px 20px;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .stat-label {
+      font-size: 0.68rem; font-weight: 700; color: var(--grey-dark);
+      text-transform: uppercase; letter-spacing: 0.6px;
+    }
+    .stat-value { font-size: 2rem; font-weight: 900; color: var(--purple); line-height: 1; }
+    .stat-meta { font-size: 0.7rem; color: var(--grey); margin-top: 2px; }
+
+    /* ── AI Section ── */
+    .ai-section {
+      background: var(--navy-card); border: 1px solid rgba(124,92,252,0.2);
+      border-radius: var(--radius-lg); padding: 20px 24px; margin-bottom: 24px;
+      position: relative; overflow: hidden;
+    }
+    .ai-section::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 100% 0%, rgba(124,92,252,0.07), transparent 60%);
+      pointer-events: none;
+    }
+    .ai-header {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.95rem; font-weight: 800; margin-bottom: 18px; letter-spacing: -0.2px;
+    }
+    .ai-header-icon {
+      width: 28px; height: 28px; border-radius: var(--radius-sm);
+      background: rgba(124,92,252,0.15); display: flex; align-items: center; justify-content: center;
+    }
+    .ai-header-icon svg { width: 15px; height: 15px; stroke: var(--purple); fill: none; stroke-width: 2; }
+    .ai-content {
+      display: grid; grid-template-columns: 1fr 1fr 1fr auto;
+      gap: 16px; align-items: flex-end;
+    }
+    .ai-form-group { display: flex; flex-direction: column; gap: 6px; }
+    .ai-label {
+      font-size: 0.68rem; font-weight: 700; color: var(--grey-dark);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .ai-select {
+      padding: 9px 12px; background: var(--navy-light);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md);
+      color: var(--off-white); font-size: 0.85rem; font-family: inherit;
+      outline: none; cursor: pointer; transition: border-color 0.2s;
+    }
+    .ai-select:focus { border-color: rgba(124,92,252,0.4); }
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-row input[type=range] { flex: 1; accent-color: var(--purple); }
+    .slider-display { font-size: 0.88rem; font-weight: 700; color: var(--purple); min-width: 28px; text-align: right; }
+    .ai-types-row { display: flex; flex-direction: column; gap: 6px; }
+    .checkbox-row { display: flex; align-items: center; gap: 7px; }
+    .checkbox-row input[type=checkbox] { width: 15px; height: 15px; accent-color: var(--purple); cursor: pointer; }
+    .checkbox-row label { font-size: 0.82rem; color: var(--off-white); cursor: pointer; }
+    .btn-generate {
+      padding: 10px 20px; background: var(--purple); color: #fff; border: none;
+      border-radius: var(--radius-md); font-family: inherit; font-size: 0.85rem;
+      font-weight: 700; cursor: pointer; white-space: nowrap;
+      transition: opacity 0.15s, transform 0.15s;
+      box-shadow: 0 4px 16px rgba(124,92,252,0.3);
+    }
+    .btn-generate:hover { opacity: 0.88; transform: translateY(-1px); }
+    .btn-generate:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    /* ── Filter Bar ── */
+    .filter-bar {
+      display: flex; flex-wrap: wrap; gap: 20px; align-items: center;
+      padding: 14px 18px; background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-lg);
+      margin-bottom: 20px;
+    }
+    .filter-group { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; }
+    .filter-label {
+      font-size: 0.68rem; font-weight: 700; color: var(--grey-dark);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .filter-chip {
+      padding: 5px 13px; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-pill);
+      color: var(--grey); cursor: pointer; font-size: 0.78rem; font-weight: 600;
+      font-family: inherit; transition: all 0.15s;
+    }
+    .filter-chip:hover { border-color: rgba(124,92,252,0.35); color: var(--off-white); }
+    .filter-chip.active {
+      background: rgba(124,92,252,0.15); border-color: rgba(124,92,252,0.5);
+      color: var(--purple);
+    }
+    .sort-select {
+      padding: 5px 12px; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-pill);
+      color: var(--grey); font-size: 0.78rem; font-family: inherit;
+      outline: none; cursor: pointer; transition: border-color 0.2s;
+    }
+    .sort-select:focus { border-color: rgba(124,92,252,0.35); }
+
+    /* ── Questions Grid ── */
+    .questions-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 14px;
+    }
+
+    /* ── Question Card ── */
+    .question-card {
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg); padding: 18px 20px;
+      display: flex; flex-direction: column; gap: 10px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .question-card:hover {
+      border-color: rgba(124,92,252,0.25);
+      box-shadow: 0 4px 20px rgba(124,92,252,0.08);
+    }
+    .card-header { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+
+    /* Type badges */
+    .type-badge {
+      padding: 3px 9px; border-radius: var(--radius-sm);
+      font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px;
+    }
+    .type-badge.live     { background: rgba(255,107,107,0.15); color: var(--coral); }
+    .type-badge.prediction { background: rgba(124,92,252,0.15); color: var(--purple); }
+    .type-badge.trivia   { background: rgba(78,205,196,0.15); color: var(--teal); }
+    .type-badge.news     { background: rgba(168,225,12,0.12); color: var(--lime); }
+
+    /* Difficulty badges */
+    .difficulty-badge {
+      padding: 3px 9px; border-radius: var(--radius-sm);
+      font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px;
+    }
+    .difficulty-badge.easy   { background: rgba(168,225,12,0.1); color: var(--lime); }
+    .difficulty-badge.medium { background: rgba(255,200,60,0.12); color: #FFCA3C; }
+    .difficulty-badge.hard   { background: rgba(255,107,107,0.12); color: var(--coral); }
+
+    .question-text { font-size: 0.9rem; font-weight: 600; line-height: 1.45; color: var(--off-white); }
+
+    .answer-options { display: flex; flex-direction: column; gap: 6px; }
+    .answer-pill {
+      padding: 8px 12px; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07); border-radius: var(--radius-sm);
+      font-size: 0.8rem; color: var(--grey); display: flex; align-items: center;
+      justify-content: space-between; gap: 8px; word-break: break-word;
+    }
+    .answer-pill.correct {
+      background: rgba(168,225,12,0.08); border-color: rgba(168,225,12,0.3); color: var(--lime);
+    }
+    .answer-correct-tick {
+      width: 16px; height: 16px; border-radius: 50%;
+      background: rgba(168,225,12,0.2); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .answer-correct-tick svg { width: 9px; height: 9px; stroke: var(--lime); fill: none; stroke-width: 3; }
+
+    .card-meta {
+      display: flex; gap: 10px; flex-wrap: wrap;
+      padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    .meta-item {
+      font-size: 0.72rem; color: var(--grey-dark);
+      display: flex; align-items: center; gap: 4px;
+    }
+    .meta-item svg { width: 12px; height: 12px; stroke: var(--grey-dark); fill: none; stroke-width: 2; }
+    .sport-tag {
+      padding: 2px 8px; background: rgba(124,92,252,0.1);
+      border-radius: var(--radius-sm); font-size: 0.68rem; color: var(--purple); font-weight: 700;
+    }
+
+    .card-actions {
+      display: flex; gap: 7px;
+      padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.05);
+    }
+    .action-btn {
+      flex: 1; padding: 7px 10px; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07); border-radius: var(--radius-sm);
+      color: var(--grey); cursor: pointer; font-size: 0.75rem; font-weight: 600;
+      font-family: inherit; transition: all 0.15s;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+    }
+    .action-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .action-btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.15); color: var(--off-white); }
+    .action-btn.danger:hover { background: rgba(255,107,107,0.1); border-color: rgba(255,107,107,0.3); color: var(--coral); }
+
+    /* ── Empty State ── */
+    .empty-state { text-align: center; padding: 60px 20px; color: var(--grey); grid-column: 1/-1; }
+    .empty-state-icon {
+      width: 56px; height: 56px; border-radius: var(--radius-lg);
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+      display: flex; align-items: center; justify-content: center; margin: 0 auto 16px;
+    }
+    .empty-state-icon svg { width: 26px; height: 26px; stroke: var(--grey-dark); fill: none; stroke-width: 1.5; }
+    .empty-state-title { font-size: 1rem; font-weight: 700; color: var(--off-white); margin-bottom: 6px; }
+    .empty-state-sub { font-size: 0.82rem; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.7); backdrop-filter: blur(6px);
+      z-index: 500; align-items: center; justify-content: center; padding: 20px;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-xl); width: 100%; max-width: 560px;
+      max-height: 90vh; overflow-y: auto; padding: 28px;
+      display: flex; flex-direction: column; gap: 18px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    }
+    .modal-header {
+      font-size: 1.1rem; font-weight: 800; letter-spacing: -0.3px; margin-bottom: 2px;
+    }
+    .form-group { display: flex; flex-direction: column; gap: 6px; }
+    .form-label {
+      font-size: 0.68rem; font-weight: 700; color: var(--grey-dark);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .form-input, .form-select, .form-textarea {
+      padding: 10px 12px; background: var(--navy-light);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md);
+      color: var(--off-white); font-size: 0.88rem; font-family: inherit; outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus, .form-select:focus, .form-textarea:focus { border-color: rgba(124,92,252,0.5); }
+    .form-input::placeholder, .form-textarea::placeholder { color: var(--grey-dark); }
+    .form-textarea { resize: vertical; min-height: 80px; }
+    .form-select { cursor: pointer; }
+
+    .difficulty-chips { display: flex; gap: 8px; }
+    .difficulty-chip {
+      flex: 1; padding: 9px 12px; background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.08); border-radius: var(--radius-md);
+      color: var(--grey); cursor: pointer; font-weight: 700; font-size: 0.8rem;
+      font-family: inherit; transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .difficulty-chip:hover { border-color: rgba(124,92,252,0.35); color: var(--off-white); }
+    .difficulty-chip.active { background: rgba(124,92,252,0.15); border-color: var(--purple); color: var(--purple); }
+
+    .answer-inputs { display: flex; flex-direction: column; gap: 8px; }
+    .answer-input-row { display: flex; gap: 8px; align-items: center; }
+    .answer-radio { width: 17px; height: 17px; cursor: pointer; accent-color: var(--lime); flex-shrink: 0; }
+    .answer-input-row .form-input { flex: 1; }
+
+    .timer-row { display: flex; align-items: center; gap: 12px; }
+    .timer-slider { flex: 1; accent-color: var(--purple); }
+    .timer-value { font-weight: 700; color: var(--purple); min-width: 36px; text-align: right; font-size: 0.9rem; }
+
+    .modal-actions { display: flex; gap: 10px; margin-top: 6px; }
+    .btn-save {
+      flex: 1; padding: 12px; background: var(--purple); color: #fff; border: none;
+      border-radius: var(--radius-md); font-family: inherit; font-size: 0.9rem;
+      font-weight: 700; cursor: pointer; transition: opacity 0.15s, transform 0.15s;
+      box-shadow: 0 4px 16px rgba(124,92,252,0.3);
+    }
+    .btn-save:hover { opacity: 0.88; transform: translateY(-1px); }
+    .btn-cancel {
+      flex: 1; padding: 12px; background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md);
+      color: var(--grey); font-family: inherit; font-size: 0.9rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .btn-cancel:hover { background: rgba(255,255,255,0.09); color: var(--off-white); }
+
+    /* ── Confirm Modal ── */
+    .confirm-modal {
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-xl); padding: 28px; max-width: 380px; width: 100%;
+      display: flex; flex-direction: column; gap: 14px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    }
+    .confirm-icon {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.2);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .confirm-icon svg { width: 20px; height: 20px; stroke: var(--coral); fill: none; stroke-width: 2; }
+    .confirm-title { font-size: 1rem; font-weight: 800; }
+    .confirm-message { font-size: 0.82rem; color: var(--grey); line-height: 1.5; }
+    .confirm-actions { display: flex; gap: 10px; margin-top: 4px; }
+    .btn-confirm-del {
+      flex: 1; padding: 10px; background: var(--coral); color: #fff; border: none;
+      border-radius: var(--radius-md); font-family: inherit; font-weight: 700;
+      font-size: 0.85rem; cursor: pointer; transition: opacity 0.15s;
+    }
+    .btn-confirm-del:hover { opacity: 0.85; }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px;
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-md); padding: 13px 18px;
+      color: var(--off-white); font-size: 0.85rem; font-weight: 600;
+      display: none; align-items: center; gap: 10px; z-index: 2000;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    }
+    .toast.show { display: flex; }
+    .toast.success { border-left: 3px solid var(--lime); }
+    .toast.error   { border-left: 3px solid var(--coral); }
+
+    /* ── Responsive ── */
+    @media (max-width: 960px) {
+      .main { margin-left: 0; }
+      .mobile-menu-btn { display: flex; }
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .ai-content { grid-template-columns: 1fr 1fr; }
+      .questions-grid { grid-template-columns: 1fr; }
+      .topbar-search input { width: 180px; }
+    }
+    @media (max-width: 560px) {
+      .content { padding: 16px; }
+      .stats-row { grid-template-columns: 1fr 1fr; }
+      .ai-content { grid-template-columns: 1fr; }
+      .modal { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+  <div id="sidebar-placeholder"></div>
+
+  <div class="main">
+
+    <!-- Top Bar -->
+    <div class="topbar">
+      <button class="mobile-menu-btn" id="menuBtn">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-title">Question Bank</div>
+      <div class="topbar-search">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="searchInput" placeholder="Search questions…" />
+      </div>
+      <button class="btn-create" id="createBtn">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        New Question
+      </button>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- Page Header -->
+      <div class="page-header">
+        <h1>Question <span>Bank</span></h1>
+        <p>Create, manage, and reuse questions across all your events.</p>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat-card">
+          <div class="stat-label">Total Questions</div>
+          <div class="stat-value" id="totalQuestionsCount">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Question Types</div>
+          <div class="stat-value" id="byTypeBreakdown">0</div>
+          <div class="stat-meta" id="byTypeDetail"></div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Avg. Timer</div>
+          <div class="stat-value" id="avgTimer">0</div>
+          <div class="stat-meta">seconds per question</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Custom Questions</div>
+          <div class="stat-value" id="customCount">0</div>
+        </div>
+      </div>
+
+      <!-- AI Generate -->
+      <div class="ai-section">
+        <div class="ai-header">
+          <div class="ai-header-icon">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          Generate with AI
+        </div>
+        <div class="ai-content">
+          <div class="ai-form-group">
+            <label class="ai-label">Event / Match</label>
+            <select class="ai-select" id="aiEventSelect">
+              <option value="upcoming">Upcoming Match</option>
+              <option value="featured">Featured Event</option>
+              <option value="custom">Custom Event</option>
+            </select>
+          </div>
+          <div class="ai-form-group">
+            <label class="ai-label">Count</label>
+            <div class="slider-row">
+              <input type="range" id="aiCountSlider" min="5" max="20" value="10" />
+              <span class="slider-display" id="aiCountDisplay">10</span>
+            </div>
+          </div>
+          <div class="ai-form-group">
+            <label class="ai-label">Types</label>
+            <div class="ai-types-row">
+              <div class="checkbox-row"><input type="checkbox" id="aiTypeLive" checked /><label for="aiTypeLive">Live</label></div>
+              <div class="checkbox-row"><input type="checkbox" id="aiTypePrediction" checked /><label for="aiTypePrediction">Prediction</label></div>
+              <div class="checkbox-row"><input type="checkbox" id="aiTypeTrivia" checked /><label for="aiTypeTrivia">Trivia</label></div>
+            </div>
+          </div>
+          <button class="btn-generate" id="generateBtn">Generate</button>
+        </div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar">
+        <div class="filter-group">
+          <span class="filter-label">Type</span>
+          <button class="filter-chip active" data-filter="type" data-value="all">All</button>
+          <button class="filter-chip" data-filter="type" data-value="live">Live</button>
+          <button class="filter-chip" data-filter="type" data-value="prediction">Prediction</button>
+          <button class="filter-chip" data-filter="type" data-value="trivia">Trivia</button>
+          <button class="filter-chip" data-filter="type" data-value="news">News</button>
+        </div>
+        <div class="filter-group">
+          <span class="filter-label">Difficulty</span>
+          <button class="filter-chip active" data-filter="difficulty" data-value="all">All</button>
+          <button class="filter-chip" data-filter="difficulty" data-value="easy">Easy</button>
+          <button class="filter-chip" data-filter="difficulty" data-value="medium">Medium</button>
+          <button class="filter-chip" data-filter="difficulty" data-value="hard">Hard</button>
+        </div>
+        <div class="filter-group" style="margin-left:auto;">
+          <span class="filter-label">Sort</span>
+          <select class="sort-select" id="sortSelect">
+            <option value="newest">Newest</option>
+            <option value="oldest">Oldest</option>
+            <option value="mostused">Most Used</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Questions Grid -->
+      <div class="questions-grid" id="questionsGrid"></div>
+    </div>
+  </div>
+
+  <!-- Create / Edit Modal -->
+  <div class="modal-overlay" id="questionModal">
+    <div class="modal">
+      <div class="modal-header" id="modalTitle">New Question</div>
+
+      <div class="form-group">
+        <label class="form-label">Question Text</label>
+        <textarea class="form-textarea" id="questionText" placeholder="Enter the question…"></textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Question Type</label>
+        <select class="form-select" id="questionType">
+          <option value="live">Live</option>
+          <option value="prediction">Prediction</option>
+          <option value="trivia">Trivia</option>
+          <option value="news">News</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Sport</label>
+        <select class="form-select" id="questionSport">
+          <option value="football">Football</option>
+          <option value="basketball">Basketball</option>
+          <option value="tennis">Tennis</option>
+          <option value="mma">MMA</option>
+          <option value="baseball">Baseball</option>
+          <option value="hockey">Hockey</option>
+          <option value="golf">Golf</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Difficulty</label>
+        <div class="difficulty-chips">
+          <button class="difficulty-chip" data-difficulty="easy">Easy</button>
+          <button class="difficulty-chip active" data-difficulty="medium">Medium</button>
+          <button class="difficulty-chip" data-difficulty="hard">Hard</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Answer Options — select the correct one</label>
+        <div class="answer-inputs" id="answerInputs">
+          <div class="answer-input-row"><input type="radio" name="correctAnswer" value="0" class="answer-radio" checked /><input type="text" class="form-input answer-option" placeholder="Option 1" /></div>
+          <div class="answer-input-row"><input type="radio" name="correctAnswer" value="1" class="answer-radio" /><input type="text" class="form-input answer-option" placeholder="Option 2" /></div>
+          <div class="answer-input-row"><input type="radio" name="correctAnswer" value="2" class="answer-radio" /><input type="text" class="form-input answer-option" placeholder="Option 3" /></div>
+          <div class="answer-input-row"><input type="radio" name="correctAnswer" value="3" class="answer-radio" /><input type="text" class="form-input answer-option" placeholder="Option 4" /></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Timer</label>
+        <div class="timer-row">
+          <input type="range" class="timer-slider" id="timerSlider" min="5" max="30" value="12" />
+          <span class="timer-value" id="timerValue">12s</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Tags (optional)</label>
+        <input type="text" class="form-input" id="questionTags" placeholder="e.g. playoff, championship" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn-save" id="saveBtn">Save Question</button>
+        <button class="btn-cancel" id="cancelBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Confirm Delete Modal -->
+  <div class="modal-overlay" id="confirmModal">
+    <div class="confirm-modal">
+      <div class="confirm-icon">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+      </div>
+      <div class="confirm-title">Delete this question?</div>
+      <div class="confirm-message">This can't be undone. The question will be permanently removed from your bank.</div>
+      <div class="confirm-actions">
+        <button class="btn-confirm-del" id="confirmDeleteBtn">Delete</button>
+        <button class="btn-cancel" id="confirmCancelBtn">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-client.js"></script>
+  <script src="spontix-store.js"></script>
+  <script src="sidebar.js"></script>
+  <script>SpontixSidebar.init({ type: 'venue', active: 'venue-questions.html' });</script>
+  <script>
+    SpontixSidebar.gatePage({
+      feature: 'questionBank', requiredTier: 'Venue Pro', isVenue: true, icon: '❓',
+      title: 'Question Bank requires Venue Pro',
+      description: 'Save, edit, and reuse your favourite questions. Build custom question packs for any event. Upgrade to Venue Pro to unlock the Question Bank.'
+    });
+  </script>
+
+  <script>
+    const STORAGE_KEY = 'spontix_question_bank';
+    const SEED_QUESTIONS = [
+      { id:'seed-1', type:'live', typeLabel:'Live', text:'Which team will score next in the first half?', options:['Team A','Team B','Neither team','Both teams'], correct:0, time:15, sport:'football', difficulty:'easy', tags:['first-half'], source:'seed', usageCount:4, createdAt:new Date(Date.now()-2*864e5).toISOString() },
+      { id:'seed-2', type:'prediction', typeLabel:'Prediction', text:'Will the home team win this match?', options:['Yes','No','Draw','Undecided'], correct:0, time:20, sport:'football', difficulty:'medium', tags:['match-outcome'], source:'seed', usageCount:8, createdAt:new Date(Date.now()-5*864e5).toISOString() },
+      { id:'seed-3', type:'trivia', typeLabel:'Trivia', text:'Who holds the record for most goals in a single season?', options:['Player A','Player B','Player C','Player D'], correct:1, time:12, sport:'football', difficulty:'hard', tags:['records','history'], source:'seed', usageCount:2, createdAt:new Date(Date.now()-10*864e5).toISOString() },
+      { id:'seed-4', type:'news', typeLabel:'News', text:'Which player was recently transferred to the league?', options:['Player X','Player Y','Player Z','Player W'], correct:2, time:10, sport:'football', difficulty:'easy', tags:['transfers','news'], source:'seed', usageCount:6, createdAt:new Date(Date.now()-1*864e5).toISOString() },
+      { id:'seed-5', type:'live', typeLabel:'Live', text:'Will this shot go in?', options:['Yes','No','Blocked','Timeout'], correct:0, time:8, sport:'basketball', difficulty:'medium', tags:['live-play'], source:'seed', usageCount:5, createdAt:new Date(Date.now()-3*864e5).toISOString() },
+      { id:'seed-6', type:'prediction', typeLabel:'Prediction', text:'How many points will the leading scorer have?', options:['15-20','20-25','25-30','30+'], correct:2, time:18, sport:'basketball', difficulty:'hard', tags:['scoring'], source:'seed', usageCount:3, createdAt:new Date(Date.now()-7*864e5).toISOString() },
+      { id:'seed-7', type:'trivia', typeLabel:'Trivia', text:'Which team has won the most championships?', options:['Team 1','Team 2','Team 3','Team 4'], correct:0, time:12, sport:'basketball', difficulty:'medium', tags:['history','championships'], source:'seed', usageCount:7, createdAt:new Date(Date.now()-12*864e5).toISOString() },
+      { id:'seed-8', type:'news', typeLabel:'News', text:'Who was just signed as the new head coach?', options:['Coach A','Coach B','Coach C','Coach D'], correct:3, time:10, sport:'basketball', difficulty:'easy', tags:['coaching','news'], source:'seed', usageCount:4, createdAt:new Date(Date.now()-4*864e5).toISOString() },
+    ];
+
+    let allQuestions = [], filteredQuestions = [];
+    let currentFilters = { type:'all', difficulty:'all', search:'', sort:'newest' };
+    let currentEditId = null, deleteConfirmId = null;
+
+    function init() {
+      loadQuestions(); renderQuestions(); attachEventListeners(); updateStats();
+    }
+
+    function loadQuestions() {
+      const stored = localStorage.getItem(STORAGE_KEY);
+      allQuestions = stored ? JSON.parse(stored) : [...SEED_QUESTIONS];
+      if (!stored) saveQuestions();
+    }
+    function saveQuestions() { localStorage.setItem(STORAGE_KEY, JSON.stringify(allQuestions)); }
+
+    function applyFilters() {
+      filteredQuestions = allQuestions.filter(q => {
+        const typeOk = currentFilters.type === 'all' || q.type === currentFilters.type;
+        const diffOk = currentFilters.difficulty === 'all' || q.difficulty === currentFilters.difficulty;
+        const searchOk = q.text.toLowerCase().includes(currentFilters.search.toLowerCase());
+        return typeOk && diffOk && searchOk;
+      });
+      if (currentFilters.sort === 'newest') filteredQuestions.sort((a,b) => new Date(b.createdAt)-new Date(a.createdAt));
+      else if (currentFilters.sort === 'oldest') filteredQuestions.sort((a,b) => new Date(a.createdAt)-new Date(b.createdAt));
+      else if (currentFilters.sort === 'mostused') filteredQuestions.sort((a,b) => b.usageCount-a.usageCount);
+      renderQuestions();
+    }
+
+    const svgEdit = `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`;
+    const svgCopy = `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>`;
+    const svgTrash = `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/></svg>`;
+    const svgTick = `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+    const svgClock = `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
+
+    function renderQuestions() {
+      const grid = document.getElementById('questionsGrid');
+      if (filteredQuestions.length === 0) {
+        grid.innerHTML = `<div class="empty-state">
+          <div class="empty-state-icon"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
+          <div class="empty-state-title">No questions found</div>
+          <div class="empty-state-sub">Try adjusting filters or create your first question</div>
+        </div>`;
+        return;
+      }
+      grid.innerHTML = filteredQuestions.map(q => `
+        <div class="question-card">
+          <div class="card-header">
+            <span class="type-badge ${q.type}">${q.typeLabel}</span>
+            <span class="difficulty-badge ${q.difficulty}">${q.difficulty}</span>
+          </div>
+          <div class="question-text">${escapeHtml(q.text)}</div>
+          <div class="answer-options">
+            ${q.options.map((opt, i) => `
+              <div class="answer-pill ${i === q.correct ? 'correct' : ''}">
+                <span>${escapeHtml(opt)}</span>
+                ${i === q.correct ? `<div class="answer-correct-tick">${svgTick}</div>` : ''}
+              </div>`).join('')}
+          </div>
+          <div class="card-meta">
+            <span class="meta-item">${svgClock} ${q.time}s</span>
+            <span class="sport-tag">${q.sport}</span>
+            <span class="meta-item">Used ${q.usageCount}×</span>
+            <span class="meta-item">${getTimeAgo(q.createdAt)}</span>
+          </div>
+          <div class="card-actions">
+            <button class="action-btn" onclick="editQuestion('${q.id}')">${svgEdit} Edit</button>
+            <button class="action-btn" onclick="duplicateQuestion('${q.id}')">${svgCopy} Copy</button>
+            <button class="action-btn danger" onclick="deleteQuestion('${q.id}')">${svgTrash} Delete</button>
+          </div>
+        </div>`).join('');
+    }
+
+    function getTimeAgo(iso) {
+      const d = Math.floor((Date.now() - new Date(iso)) / 864e5);
+      if (d === 0) return 'Today';
+      if (d === 1) return 'Yesterday';
+      if (d < 7) return `${d}d ago`;
+      const w = Math.floor(d / 7);
+      if (w < 4) return `${w}w ago`;
+      return `${Math.floor(d / 30)}mo ago`;
+    }
+
+    function updateStats() {
+      document.getElementById('totalQuestionsCount').textContent = allQuestions.length;
+      const tc = { live:0, prediction:0, trivia:0, news:0 };
+      allQuestions.forEach(q => { if (tc[q.type] !== undefined) tc[q.type]++; });
+      document.getElementById('byTypeBreakdown').textContent = Object.values(tc).filter(c => c > 0).length;
+      document.getElementById('byTypeDetail').textContent = `Live ${tc.live} · Pred ${tc.prediction} · Trivia ${tc.trivia} · News ${tc.news}`;
+      const avg = allQuestions.length ? Math.round(allQuestions.reduce((s,q) => s+q.time, 0) / allQuestions.length) : 0;
+      document.getElementById('avgTimer').textContent = avg;
+      document.getElementById('customCount').textContent = allQuestions.filter(q => q.source === 'custom').length;
+    }
+
+    function openCreateModal() {
+      currentEditId = null;
+      document.getElementById('modalTitle').textContent = 'New Question';
+      document.getElementById('questionText').value = '';
+      document.getElementById('questionType').value = 'live';
+      document.getElementById('questionSport').value = 'football';
+      document.getElementById('questionTags').value = '';
+      document.querySelectorAll('.difficulty-chip').forEach((c,i) => c.classList.toggle('active', i===1));
+      document.querySelectorAll('.answer-option').forEach(i => i.value = '');
+      document.querySelectorAll('input[name="correctAnswer"]')[0].checked = true;
+      document.getElementById('timerSlider').value = 12;
+      document.getElementById('timerValue').textContent = '12s';
+      document.getElementById('questionModal').classList.add('active');
+    }
+
+    function editQuestion(id) {
+      const q = allQuestions.find(q => q.id === id);
+      if (!q) return;
+      currentEditId = id;
+      document.getElementById('modalTitle').textContent = 'Edit Question';
+      document.getElementById('questionText').value = q.text;
+      document.getElementById('questionType').value = q.type;
+      document.getElementById('questionSport').value = q.sport;
+      document.getElementById('questionTags').value = q.tags.join(', ');
+      document.querySelectorAll('.difficulty-chip').forEach(c => c.classList.toggle('active', c.dataset.difficulty === q.difficulty));
+      q.options.forEach((opt, i) => {
+        document.querySelectorAll('.answer-option')[i].value = opt;
+        document.querySelectorAll('input[name="correctAnswer"]')[i].checked = i === q.correct;
+      });
+      document.getElementById('timerSlider').value = q.time;
+      document.getElementById('timerValue').textContent = q.time + 's';
+      document.getElementById('questionModal').classList.add('active');
+    }
+
+    function saveQuestion() {
+      const text = document.getElementById('questionText').value.trim();
+      const type = document.getElementById('questionType').value;
+      const sport = document.getElementById('questionSport').value;
+      const difficulty = document.querySelector('.difficulty-chip.active')?.dataset.difficulty || 'medium';
+      const options = Array.from(document.querySelectorAll('.answer-option')).map(i => i.value.trim());
+      const correct = parseInt(document.querySelector('input[name="correctAnswer"]:checked').value);
+      const time = parseInt(document.getElementById('timerSlider').value);
+      const tags = document.getElementById('questionTags').value.split(',').map(t => t.trim()).filter(t => t);
+      if (!text || options.some(o => !o)) { showToast('Please fill in all fields', 'error'); return; }
+
+      if (currentEditId) {
+        const q = allQuestions.find(q => q.id === currentEditId);
+        if (q) Object.assign(q, { text, type, typeLabel: type.charAt(0).toUpperCase()+type.slice(1), sport, difficulty, options, correct, time, tags });
+      } else {
+        allQuestions.push({ id:'q-'+Date.now(), type, typeLabel: type.charAt(0).toUpperCase()+type.slice(1), text, options, correct, time, sport, difficulty, tags, source:'custom', usageCount:0, createdAt:new Date().toISOString() });
+      }
+      saveQuestions(); updateStats(); applyFilters(); closeModal();
+      showToast(currentEditId ? 'Question updated' : 'Question created', 'success');
+    }
+
+    function deleteQuestion(id) { deleteConfirmId = id; document.getElementById('confirmModal').classList.add('active'); }
+
+    function confirmDelete() {
+      allQuestions = allQuestions.filter(q => q.id !== deleteConfirmId);
+      saveQuestions(); updateStats(); applyFilters();
+      document.getElementById('confirmModal').classList.remove('active');
+      showToast('Question deleted', 'success');
+    }
+
+    function duplicateQuestion(id) {
+      const orig = allQuestions.find(q => q.id === id);
+      if (!orig) return;
+      allQuestions.push({ ...orig, id:'q-'+Date.now(), text: orig.text+' (Copy)', source:'custom', usageCount:0, createdAt:new Date().toISOString() });
+      saveQuestions(); updateStats(); applyFilters();
+      showToast('Question duplicated', 'success');
+    }
+
+    function closeModal() { document.getElementById('questionModal').classList.remove('active'); currentEditId = null; }
+
+    function showToast(msg, type='success') {
+      const t = document.getElementById('toast');
+      t.textContent = msg; t.className = `toast show ${type}`;
+      setTimeout(() => t.classList.remove('show'), 3000);
+    }
+
+    function generateAIQuestions() {
+      const count = parseInt(document.getElementById('aiCountSlider').value);
+      const types = [];
+      if (document.getElementById('aiTypeLive').checked) types.push('live');
+      if (document.getElementById('aiTypePrediction').checked) types.push('prediction');
+      if (document.getElementById('aiTypeTrivia').checked) types.push('trivia');
+      if (!types.length) { showToast('Select at least one question type', 'error'); return; }
+      const btn = document.getElementById('generateBtn');
+      btn.disabled = true; btn.textContent = 'Generating…';
+      setTimeout(() => {
+        const sports = ['football','basketball','tennis','mma','baseball','hockey'];
+        const diffs = ['easy','medium','hard'];
+        for (let i = 0; i < count; i++) {
+          const type = types[Math.floor(Math.random()*types.length)];
+          const sport = sports[Math.floor(Math.random()*sports.length)];
+          const difficulty = diffs[Math.floor(Math.random()*diffs.length)];
+          allQuestions.push({ id:'q-'+Date.now()+'-'+i, type, typeLabel: type.charAt(0).toUpperCase()+type.slice(1), text:`AI: ${type} question about ${sport}`, options:['Option A','Option B','Option C','Option D'], correct:Math.floor(Math.random()*4), time:5+Math.floor(Math.random()*20), sport, difficulty, tags:['ai-generated'], source:'ai', usageCount:0, createdAt:new Date().toISOString() });
+        }
+        saveQuestions(); updateStats(); applyFilters();
+        btn.disabled = false; btn.textContent = 'Generate';
+        showToast(`Generated ${count} questions`, 'success');
+      }, 1400);
+    }
+
+    function escapeHtml(t) { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; }
+
+    function attachEventListeners() {
+      document.getElementById('createBtn').addEventListener('click', openCreateModal);
+      document.getElementById('saveBtn').addEventListener('click', saveQuestion);
+      document.getElementById('cancelBtn').addEventListener('click', closeModal);
+      document.getElementById('confirmDeleteBtn').addEventListener('click', confirmDelete);
+      document.getElementById('confirmCancelBtn').addEventListener('click', () => document.getElementById('confirmModal').classList.remove('active'));
+      document.getElementById('searchInput').addEventListener('input', e => { currentFilters.search = e.target.value; applyFilters(); });
+      document.getElementById('sortSelect').addEventListener('change', e => { currentFilters.sort = e.target.value; applyFilters(); });
+      document.querySelectorAll('.filter-chip').forEach(chip => {
+        chip.addEventListener('click', e => {
+          const ft = e.target.dataset.filter, val = e.target.dataset.value;
+          document.querySelectorAll(`[data-filter="${ft}"]`).forEach(c => c.classList.toggle('active', c.dataset.value === val));
+          currentFilters[ft] = val; applyFilters();
+        });
+      });
+      document.querySelectorAll('.difficulty-chip').forEach(chip => {
+        chip.addEventListener('click', e => {
+          document.querySelectorAll('.difficulty-chip').forEach(c => c.classList.remove('active'));
+          e.target.classList.add('active');
+        });
+      });
+      document.getElementById('timerSlider').addEventListener('input', e => document.getElementById('timerValue').textContent = e.target.value+'s');
+      document.getElementById('aiCountSlider').addEventListener('input', e => document.getElementById('aiCountDisplay').textContent = e.target.value);
+      document.getElementById('generateBtn').addEventListener('click', generateAIQuestions);
+      document.getElementById('questionModal').addEventListener('click', e => { if (e.target === document.getElementById('questionModal')) closeModal(); });
+      document.getElementById('confirmModal').addEventListener('click', e => { if (e.target === document.getElementById('confirmModal')) document.getElementById('confirmModal').classList.remove('active'); });
+      document.getElementById('menuBtn').addEventListener('click', () => window.dispatchEvent(new CustomEvent('toggleMobileMenu')));
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

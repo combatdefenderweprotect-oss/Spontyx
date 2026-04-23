@@ -1,0 +1,2257 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Create a League</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy: #1A1A2E;
+      --navy-light: #22223A;
+      --navy-card: #2A2A44;
+      --navy-hover: #32325A;
+      --lime: #A8E10C;
+      --lime-dim: rgba(168,225,12,0.12);
+      --coral: #FF6B6B;
+      --teal: #4ECDC4;
+      --purple: #7C5CFC;
+      --off-white: #E8E8F0;
+      --grey: #9898B0;
+      --grey-dark: #5A5A78;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+      --radius-pill: 100px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--navy); color: var(--off-white);
+      min-height: 100vh; display: flex; flex-direction: column; align-items: center;
+    }
+
+    /* ══ TOP BAR ══ */
+    .topbar {
+      width: 100%; padding: 14px 32px; display: flex; align-items: center;
+      border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .topbar-back {
+      display: flex; align-items: center; gap: 6px; color: var(--grey); font-size: 0.8rem;
+      font-weight: 600; text-decoration: none; padding: 6px 12px 6px 8px;
+      border-radius: var(--radius-pill); transition: all 0.15s;
+    }
+    .topbar-back:hover { background: rgba(255,255,255,0.05); color: var(--off-white); }
+    .topbar-back svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .topbar-logo {
+      flex: 1; text-align: center; font-size: 1.1rem; font-weight: 900;
+      letter-spacing: -0.5px; display: flex; align-items: baseline; justify-content: center; gap: 2px;
+    }
+    .topbar-logo .dot { width: 6px; height: 6px; background: var(--lime); border-radius: 50%; margin-top: -6px; }
+    .topbar-spacer { width: 70px; }
+
+    /* ══ PROGRESS BAR ══ */
+    .wizard-progress {
+      width: 100%; max-width: 600px; padding: 28px 24px 0; display: flex; align-items: center; gap: 0;
+    }
+    .wizard-step-dot {
+      width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--grey-dark);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 800; color: var(--grey-dark);
+      background: none; transition: all 0.3s; flex-shrink: 0; position: relative;
+    }
+    .wizard-step-dot.active { border-color: var(--lime); color: var(--lime); background: var(--lime-dim); }
+    .wizard-step-dot.done { border-color: var(--lime); background: var(--lime); color: var(--navy); }
+    .wizard-step-dot.done svg { width: 14px; height: 14px; stroke: var(--navy); stroke-width: 3; fill: none; }
+    .wizard-step-line { flex: 1; height: 2px; background: var(--grey-dark); transition: background 0.3s; }
+    .wizard-step-line.done { background: var(--lime); }
+    .wizard-step-labels {
+      width: 100%; max-width: 600px; padding: 6px 24px 0; display: flex; justify-content: space-between;
+    }
+    .wizard-step-label { font-size: 0.6rem; font-weight: 600; color: var(--grey-dark); text-align: center; width: 70px; transition: color 0.3s; }
+    .wizard-step-label.active { color: var(--lime); }
+    .wizard-step-label.done { color: var(--grey); }
+
+    /* ══ WIZARD CONTAINER ══ */
+    .wizard { width: 100%; max-width: 600px; padding: 32px 24px; flex: 1; }
+    .wizard-panel { display: none; animation: fadeIn 0.35s ease; }
+    .wizard-panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+    .wizard-title { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .wizard-sub { color: var(--grey); font-size: 0.85rem; margin-bottom: 28px; line-height: 1.5; }
+
+    /* ══ TYPE CARDS ══ */
+    .type-cards { display: flex; flex-direction: column; gap: 12px; }
+    .type-card {
+      padding: 20px; border-radius: var(--radius-lg); border: 2px solid rgba(255,255,255,0.08);
+      background: var(--navy-card); cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; gap: 16px;
+    }
+    .type-card:hover { border-color: rgba(168,225,12,0.2); transform: translateY(-2px); }
+    .type-card.selected { border-color: var(--lime); background: var(--lime-dim); }
+    .type-card-icon {
+      width: 50px; height: 50px; border-radius: var(--radius-md); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .type-card-icon svg { width: 24px; height: 24px; stroke-width: 2; fill: none; }
+    .type-card-info { flex: 1; }
+    .type-card-name { font-size: 0.95rem; font-weight: 700; margin-bottom: 3px; }
+    .type-card-desc { font-size: 0.75rem; color: var(--grey); line-height: 1.4; }
+    .type-card-check {
+      width: 24px; height: 24px; border-radius: 50%; border: 2px solid var(--grey-dark);
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+    }
+    .type-card.selected .type-card-check {
+      border-color: var(--lime); background: var(--lime);
+    }
+    .type-card.selected .type-card-check svg { display: block; }
+    .type-card-check svg { width: 12px; height: 12px; stroke: var(--navy); stroke-width: 3; fill: none; display: none; }
+
+    /* Custom duration picker */
+    .custom-duration {
+      margin-top: 16px; padding: 18px; background: var(--navy-card); border: 1px solid rgba(78,205,196,0.2);
+      border-radius: var(--radius-lg); display: none; animation: fadeIn 0.3s ease;
+    }
+    .custom-duration.show { display: block; }
+    .custom-duration-label { font-size: 0.72rem; font-weight: 700; color: var(--teal); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px; }
+    .duration-options { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+    .duration-chip {
+      padding: 10px 8px; border-radius: var(--radius-md); border: 2px solid rgba(255,255,255,0.08);
+      background: var(--navy-light); cursor: pointer; transition: all 0.2s;
+      text-align: center; font-family: inherit; color: var(--off-white);
+    }
+    .duration-chip:hover { border-color: rgba(78,205,196,0.3); }
+    .duration-chip.selected { border-color: var(--teal); background: rgba(78,205,196,0.1); color: var(--teal); }
+    .duration-chip-val { font-size: 1rem; font-weight: 800; }
+    .duration-chip-label { font-size: 0.6rem; color: var(--grey); margin-top: 2px; }
+    .duration-chip.selected .duration-chip-label { color: var(--teal); }
+    .duration-custom-row { display: flex; gap: 10px; align-items: center; }
+    .duration-custom-row input {
+      width: 70px; padding: 10px; background: var(--navy-light); border: 2px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-md); color: var(--off-white); font-size: 0.9rem; font-weight: 700;
+      font-family: inherit; text-align: center; outline: none; transition: border-color 0.2s;
+    }
+    .duration-custom-row input:focus { border-color: var(--teal); }
+    .duration-custom-row select {
+      padding: 10px 28px 10px 12px; background: var(--navy-light); border: 2px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-md); color: var(--off-white); font-size: 0.8rem; font-weight: 600;
+      font-family: inherit; outline: none; appearance: none; cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239898B0' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 10px center;
+      transition: border-color 0.2s;
+    }
+    .duration-custom-row select:focus { border-color: var(--teal); }
+    .duration-custom-row span { font-size: 0.8rem; color: var(--grey); }
+
+    /* ══ RULES MODE TOGGLE ══ */
+    .rules-mode-toggle {
+      display: flex; gap: 4px; margin-bottom: 24px; background: var(--navy-light);
+      border-radius: var(--radius-sm); padding: 4px;
+    }
+    .rules-mode-btn {
+      flex: 1; padding: 10px 16px; border-radius: 6px; border: none; background: none;
+      color: var(--grey); font-size: 0.8rem; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: all 0.15s; text-align: center;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .rules-mode-btn:hover { color: var(--off-white); }
+    .rules-mode-btn.active { background: var(--navy-card); color: var(--lime); }
+    .rules-mode-btn svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .rules-panel { display: none; }
+    .rules-panel.active { display: block; animation: fadeIn 0.3s ease; }
+
+    /* ══ AI CHATBOT ══ */
+    .ai-chat {
+      background: var(--navy-card); border-radius: var(--radius-xl); border: 1px solid rgba(168,225,12,0.12);
+      overflow: hidden;
+    }
+    .ai-chat-header {
+      padding: 16px 20px; display: flex; align-items: center; gap: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      background: linear-gradient(135deg, rgba(168,225,12,0.06), rgba(124,92,252,0.04));
+    }
+    .ai-chat-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--lime), var(--teal));
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .ai-chat-avatar svg { width: 18px; height: 18px; stroke: var(--navy); stroke-width: 2; fill: none; }
+    .ai-chat-header-info {}
+    .ai-chat-header-name { font-size: 0.85rem; font-weight: 700; }
+    .ai-chat-header-status { font-size: 0.65rem; color: var(--lime); font-weight: 600; display: flex; align-items: center; gap: 4px; }
+    .ai-chat-header-status .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--lime); }
+
+    .ai-chat-messages {
+      padding: 16px 20px; min-height: 120px; max-height: 380px; overflow-y: auto;
+      display: flex; flex-direction: column; gap: 12px;
+      scrollbar-width: thin; scrollbar-color: var(--navy-hover) transparent;
+    }
+    .ai-msg { display: flex; gap: 10px; max-width: 95%; animation: fadeIn 0.3s ease; }
+    .ai-msg.bot { align-self: flex-start; }
+    .ai-msg.user { align-self: flex-end; flex-direction: row-reverse; }
+    .ai-msg-avatar {
+      width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.55rem; font-weight: 800;
+    }
+    .ai-msg.bot .ai-msg-avatar { background: linear-gradient(135deg, var(--lime), var(--teal)); }
+    .ai-msg.bot .ai-msg-avatar svg { width: 14px; height: 14px; stroke: var(--navy); stroke-width: 2; fill: none; }
+    .ai-msg.user .ai-msg-avatar { background: var(--lime); color: var(--navy); }
+    .ai-msg-bubble {
+      padding: 10px 14px; border-radius: var(--radius-md); font-size: 0.82rem; line-height: 1.5;
+    }
+    .ai-msg.bot .ai-msg-bubble { background: var(--navy-light); color: var(--off-white); border-bottom-left-radius: 4px; }
+    .ai-msg.user .ai-msg-bubble { background: var(--lime-dim); color: var(--lime); border-bottom-right-radius: 4px; font-weight: 600; }
+
+    .ai-suggestions { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 20px 8px; }
+    .ai-suggest-btn {
+      padding: 7px 14px; border-radius: var(--radius-pill); border: 1px solid rgba(168,225,12,0.2);
+      background: none; color: var(--lime); font-size: 0.72rem; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: all 0.15s;
+    }
+    .ai-suggest-btn:hover { background: var(--lime-dim); border-color: var(--lime); }
+
+    .ai-chat-input-row {
+      padding: 12px 16px; border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex; gap: 8px;
+    }
+    .ai-chat-input {
+      flex: 1; padding: 10px 14px; background: var(--navy-light);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-pill);
+      color: var(--off-white); font-size: 0.8rem; font-family: inherit; outline: none;
+      transition: border-color 0.2s;
+    }
+    .ai-chat-input:focus { border-color: rgba(168,225,12,0.3); }
+    .ai-chat-input::placeholder { color: var(--grey-dark); }
+    .ai-chat-send {
+      width: 38px; height: 38px; border-radius: 50%;
+      background: var(--lime); border: none; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; transition: opacity 0.2s;
+    }
+    .ai-chat-send:hover { opacity: 0.85; }
+    .ai-chat-send svg { width: 16px; height: 16px; stroke: var(--navy); stroke-width: 2; fill: none; }
+
+    .ai-config-applied {
+      margin-top: 16px; padding: 14px 18px; background: var(--lime-dim);
+      border: 1px solid rgba(168,225,12,0.2); border-radius: var(--radius-md);
+      display: none; animation: fadeIn 0.3s ease;
+    }
+    .ai-config-applied.show { display: block; }
+    .ai-config-applied h4 { font-size: 0.75rem; font-weight: 700; color: var(--lime); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
+    .ai-config-applied h4 svg { width: 14px; height: 14px; stroke: var(--lime); stroke-width: 2.5; fill: none; }
+    .ai-config-item { font-size: 0.72rem; color: var(--off-white); padding: 3px 0; display: flex; align-items: center; gap: 6px; }
+    .ai-config-item::before { content: '+'; color: var(--lime); font-weight: 700; }
+
+    .ai-typing { display: flex; gap: 4px; padding: 4px 0; }
+    .ai-typing span { width: 6px; height: 6px; border-radius: 50%; background: var(--grey); animation: typingDot 1.4s infinite; }
+    .ai-typing span:nth-child(2) { animation-delay: 0.2s; }
+    .ai-typing span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes typingDot { 0%,60%,100%{opacity:0.3;transform:translateY(0)} 30%{opacity:1;transform:translateY(-4px)} }
+
+    /* ══ FORM ELEMENTS ══ */
+    .form-group { margin-bottom: 20px; }
+    .form-label { display: block; font-size: 0.72rem; font-weight: 700; color: var(--grey); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-input {
+      width: 100%; padding: 13px 14px; background: var(--navy-card);
+      border: 2px solid rgba(255,255,255,0.08); border-radius: var(--radius-md);
+      color: var(--off-white); font-size: 0.9rem; font-family: inherit; outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: var(--lime); }
+    .form-input::placeholder { color: var(--grey-dark); }
+    select.form-input {
+      appearance: none; cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%239898B0' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 14px center;
+    }
+    .form-row { display: flex; gap: 14px; }
+    .form-row .form-group { flex: 1; }
+    .form-hint { font-size: 0.65rem; color: var(--grey-dark); margin-top: 4px; }
+
+    /* ══ OPTION GRID (question types, etc) ══ */
+    .option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .option-chip {
+      padding: 12px 14px; border-radius: var(--radius-md); border: 2px solid rgba(255,255,255,0.08);
+      background: var(--navy-card); cursor: pointer; transition: all 0.2s;
+      text-align: center; font-size: 0.8rem; font-weight: 600; font-family: inherit;
+      color: var(--off-white); position: relative;
+    }
+    .option-chip:hover { border-color: rgba(168,225,12,0.2); }
+    .option-chip.selected { border-color: var(--lime); background: var(--lime-dim); color: var(--lime); }
+    .option-chip.locked {
+      opacity: 0.5; cursor: not-allowed; position: relative;
+    }
+    .option-chip.locked:hover { border-color: rgba(255,255,255,0.08); transform: none; }
+    .option-chip .lock-badge {
+      position: absolute; top: -8px; right: -8px; background: var(--purple); color: #fff;
+      font-size: 0.5rem; font-weight: 800; padding: 2px 6px; border-radius: var(--radius-pill);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .option-chip-icon { font-size: 1.1rem; margin-bottom: 4px; }
+    .option-chip-label { font-size: 0.72rem; }
+
+    /* ══ SLIDER ══ */
+    .slider-group { margin-bottom: 20px; }
+    .slider-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .slider-value { font-size: 0.9rem; font-weight: 800; color: var(--lime); }
+    input[type="range"] {
+      width: 100%; appearance: none; height: 4px; background: rgba(255,255,255,0.08);
+      border-radius: 4px; outline: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none; width: 20px; height: 20px; border-radius: 50%;
+      background: var(--lime); cursor: pointer; border: 3px solid var(--navy);
+    }
+
+    /* ══ TOGGLE ══ */
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-info {}
+    .toggle-label { font-size: 0.85rem; font-weight: 600; }
+    .toggle-desc { font-size: 0.7rem; color: var(--grey); margin-top: 2px; }
+    .toggle-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-switch .slider {
+      position: absolute; inset: 0; background: var(--grey-dark); border-radius: 24px;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .toggle-switch .slider::before {
+      content: ''; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px;
+      background: #fff; border-radius: 50%; transition: transform 0.2s;
+    }
+    .toggle-switch input:checked + .slider { background: var(--lime); }
+    .toggle-switch input:checked + .slider::before { transform: translateX(20px); }
+    .toggle-switch.locked { opacity: 0.4; pointer-events: none; }
+    .tier-badge {
+      display: inline-block; font-size: 0.55rem; font-weight: 800; padding: 2px 6px;
+      border-radius: var(--radius-pill); text-transform: uppercase; letter-spacing: 0.5px;
+      margin-left: 6px; vertical-align: middle;
+    }
+    .tier-badge.pro { background: rgba(124,92,252,0.15); color: var(--purple); }
+    .tier-badge.elite { background: rgba(255,107,107,0.15); color: var(--coral); }
+
+    /* ── Team Mode ── */
+    .team-mode-section { margin-top: 24px; }
+    .mode-toggle {
+      display: flex; gap: 12px; margin-bottom: 16px;
+    }
+    .mode-card {
+      flex: 1; padding: 18px; background: var(--navy-card); border: 2px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s; text-align: center;
+    }
+    .mode-card:hover { border-color: rgba(255,255,255,0.15); }
+    .mode-card.selected { border-color: var(--lime); background: rgba(168,225,12,0.04); }
+    .mode-card-icon { width: 40px; height: 40px; margin: 0 auto 10px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; }
+    .mode-card-icon svg { width: 22px; height: 22px; fill: none; stroke-width: 1.8; }
+    .mode-card-name { font-size: 0.9rem; font-weight: 700; margin-bottom: 4px; }
+    .mode-card-desc { font-size: 0.72rem; color: var(--grey); line-height: 1.4; }
+    .team-config { display: none; margin-top: 16px; padding: 20px; background: var(--navy-card); border: 1px solid rgba(255,255,255,0.06); border-radius: var(--radius-md); }
+    .team-config.visible { display: block; }
+    .team-config-row { display: flex; gap: 16px; margin-bottom: 16px; }
+    .team-config-row .form-group { flex: 1; }
+    .team-tier-hint { font-size: 0.72rem; color: var(--grey); line-height: 1.5; margin-top: 8px; padding: 10px 14px; background: rgba(124,92,252,0.06); border-radius: var(--radius-sm); border-left: 3px solid var(--purple); }
+
+    /* ══ VISIBILITY TOGGLE ══ */
+    .visibility-section { margin-top: 24px; }
+    .visibility-toggle { display: flex; gap: 10px; margin-top: 10px; }
+    .vis-card {
+      flex: 1; padding: 16px; background: var(--navy-card); border: 2px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 12px;
+    }
+    .vis-card:hover { border-color: rgba(255,255,255,0.15); }
+    .vis-card.selected.public  { border-color: var(--lime);   background: rgba(168,225,12,0.05); }
+    .vis-card.selected.private { border-color: var(--coral);  background: rgba(255,107,107,0.05); }
+    .vis-card-icon {
+      width: 38px; height: 38px; border-radius: var(--radius-sm); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .vis-card-icon svg { width: 18px; height: 18px; fill: none; stroke-width: 2; }
+    .vis-card.public  .vis-card-icon { background: rgba(168,225,12,0.12); }
+    .vis-card.public  .vis-card-icon svg { stroke: var(--lime); }
+    .vis-card.private .vis-card-icon { background: rgba(255,107,107,0.12); }
+    .vis-card.private .vis-card-icon svg { stroke: var(--coral); }
+    .vis-card-text {}
+    .vis-card-name { font-size: 0.88rem; font-weight: 700; margin-bottom: 2px; }
+    .vis-card-desc { font-size: 0.7rem; color: var(--grey); line-height: 1.4; }
+    .vis-password {
+      display: none; margin-top: 14px; padding: 16px; background: var(--navy-card);
+      border: 1px solid rgba(255,107,107,0.2); border-radius: var(--radius-md);
+    }
+    .vis-password.show { display: block; }
+
+    /* ══ INVITE SECTION ══ */
+    .invite-methods { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+    .invite-code-display {
+      text-align: center; padding: 24px; background: var(--navy-card);
+      border: 2px dashed rgba(168,225,12,0.3); border-radius: var(--radius-lg);
+    }
+    .invite-code-label { font-size: 0.65rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .invite-code-value { font-size: 2rem; font-weight: 900; color: var(--lime); letter-spacing: 8px; margin-bottom: 12px; }
+    .invite-code-actions { display: flex; gap: 8px; justify-content: center; }
+    .invite-btn {
+      padding: 8px 16px; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.1);
+      background: none; color: var(--off-white); font-size: 0.75rem; font-weight: 600;
+      cursor: pointer; font-family: inherit; display: flex; align-items: center; gap: 5px;
+      transition: all 0.15s;
+    }
+    .invite-btn:hover { border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.04); }
+    .invite-btn.primary { background: var(--lime); color: var(--navy); border-color: var(--lime); }
+    .invite-btn.primary:hover { opacity: 0.85; }
+    .invite-btn svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+    .invite-contacts { background: var(--navy-card); border-radius: var(--radius-lg); padding: 18px; border: 1px solid rgba(255,255,255,0.06); }
+    .invite-contacts h4 { font-size: 0.8rem; font-weight: 700; margin-bottom: 12px; }
+    .invite-contact-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .invite-contact-row:last-child { border-bottom: none; }
+    .invite-contact-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.6rem; font-weight: 800; flex-shrink: 0;
+    }
+    .invite-contact-name { flex: 1; font-size: 0.8rem; font-weight: 600; }
+    .invite-contact-sub { font-size: 0.65rem; color: var(--grey); }
+    .invite-contact-btn {
+      padding: 5px 12px; border-radius: var(--radius-pill); border: 1px solid rgba(168,225,12,0.3);
+      background: none; color: var(--lime); font-size: 0.7rem; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: all 0.15s;
+    }
+    .invite-contact-btn:hover { background: var(--lime-dim); }
+    .invite-contact-btn.invited { background: var(--lime-dim); border-color: var(--lime); pointer-events: none; }
+
+    /* ══ REVIEW CARD ══ */
+    .review-card {
+      background: var(--navy-card); border-radius: var(--radius-lg); padding: 22px;
+      border: 1px solid rgba(255,255,255,0.06); margin-bottom: 16px;
+    }
+    .review-card h4 { font-size: 0.7rem; font-weight: 700; color: var(--grey-dark); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+    .review-row { display: flex; justify-content: space-between; padding: 6px 0; }
+    .review-label { font-size: 0.8rem; color: var(--grey); }
+    .review-value { font-size: 0.8rem; font-weight: 700; }
+    .review-value.lime { color: var(--lime); }
+
+    /* ══ BUTTONS ══ */
+    .wizard-actions { display: flex; gap: 12px; margin-top: 32px; }
+    .btn {
+      padding: 14px 28px; border-radius: var(--radius-md); border: none;
+      font-size: 0.9rem; font-weight: 700; font-family: inherit; cursor: pointer;
+      transition: all 0.2s; display: flex; align-items: center; gap: 8px;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn-primary { background: var(--lime); color: var(--navy); flex: 1; justify-content: center; }
+    .btn-primary:hover { opacity: 0.85; }
+    .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-secondary { background: var(--navy-card); color: var(--off-white); border: 1px solid rgba(255,255,255,0.1); }
+    .btn-secondary:hover { border-color: rgba(255,255,255,0.2); }
+    .btn svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .btn-launch { background: linear-gradient(135deg, var(--lime), #7BC400); color: var(--navy); flex: 1; justify-content: center; font-size: 1rem; padding: 16px; }
+
+    /* ══ TOAST ══ */
+    .toast {
+      position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(80px);
+      background: var(--lime); color: var(--navy); padding: 14px 28px; border-radius: var(--radius-pill);
+      font-weight: 700; font-size: 0.85rem; z-index: 2000; opacity: 0;
+      transition: transform 0.4s, opacity 0.4s; pointer-events: none;
+      box-shadow: 0 8px 32px rgba(168,225,12,0.3);
+    }
+    .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+    /* ══ UPGRADE NUDGE ══ */
+    .upgrade-nudge {
+      margin-top: 16px; padding: 14px 18px; background: linear-gradient(135deg, rgba(124,92,252,0.12), rgba(168,225,12,0.08));
+      border: 1px solid rgba(124,92,252,0.2); border-radius: var(--radius-md);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .upgrade-nudge-icon { width: 36px; height: 36px; border-radius: 50%; background: rgba(124,92,252,0.15); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .upgrade-nudge-icon svg { width: 16px; height: 16px; stroke: var(--purple); stroke-width: 2; fill: none; }
+    .upgrade-nudge-text { flex: 1; font-size: 0.75rem; color: var(--grey); line-height: 1.4; }
+    .upgrade-nudge-text strong { color: var(--purple); }
+    .upgrade-nudge-btn {
+      padding: 6px 14px; background: var(--purple); color: #fff; border: none;
+      border-radius: var(--radius-pill); font-size: 0.7rem; font-weight: 700;
+      cursor: pointer; font-family: inherit; white-space: nowrap; transition: opacity 0.2s;
+    }
+    .upgrade-nudge-btn:hover { opacity: 0.85; }
+
+    /* ══ TROPHY PICKER ══ */
+    .trophy-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .trophy-option {
+      padding: 16px 12px; border-radius: var(--radius-md); border: 2px solid rgba(255,255,255,0.08);
+      background: var(--navy-card); cursor: pointer; transition: all 0.2s;
+      text-align: center; font-family: inherit; color: var(--off-white); position: relative;
+    }
+    .trophy-option:hover { border-color: rgba(255,215,0,0.3); transform: translateY(-2px); }
+    .trophy-option.selected { border-color: #FFD700; background: rgba(255,215,0,0.08); }
+    .trophy-option.locked { opacity: 0.6; cursor: not-allowed; }
+    .trophy-option.locked:hover { transform: none; border-color: rgba(255,255,255,0.08); }
+    .trophy-option-icon {
+      width: 44px; height: 44px; margin: 0 auto 8px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; border: 2px solid;
+    }
+    .trophy-option-icon svg { width: 22px; height: 22px; stroke-width: 1.8; fill: none; }
+    .trophy-option-name { font-size: 0.78rem; font-weight: 700; margin-bottom: 2px; }
+    .trophy-option-rarity { font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .trophy-option .lock-badge {
+      position: absolute; top: -8px; right: -8px; background: var(--purple); color: #fff;
+      font-size: 0.5rem; font-weight: 800; padding: 2px 6px; border-radius: var(--radius-pill);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .trophy-preview-card {
+      background: linear-gradient(135deg, rgba(255,215,0,0.08), rgba(124,92,252,0.05));
+      border: 1px solid rgba(255,215,0,0.2); border-radius: var(--radius-md);
+      padding: 14px; display: flex; align-items: center; gap: 14px; margin-bottom: 10px;
+    }
+    .trophy-preview-icon {
+      width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; flex-shrink: 0; border: 2px solid #FFD700; background: rgba(255,215,0,0.1);
+    }
+    .trophy-preview-icon svg { width: 24px; height: 24px; stroke-width: 1.8; fill: none; stroke: #FFD700; }
+    .trophy-preview-name { font-size: 0.88rem; font-weight: 800; }
+    .trophy-preview-desc { font-size: 0.7rem; color: var(--grey); margin-top: 2px; }
+    .trophy-ai-input {
+      width: 100%; padding: 10px 14px; background: var(--navy-light);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+      color: var(--off-white); font-size: 0.82rem; font-family: inherit; outline: none; margin-bottom: 8px;
+    }
+    .trophy-ai-generate {
+      background: linear-gradient(135deg, #FFD700, #FF9F43); color: var(--navy);
+      border: none; border-radius: 10px; padding: 10px 16px; font-family: inherit;
+      font-size: 0.78rem; font-weight: 700; cursor: pointer; transition: transform 0.2s;
+    }
+    .trophy-ai-generate:hover { transform: translateY(-1px); }
+    .trophy-ai-wrapper { display: none; padding: 12px; background: rgba(255,215,0,0.04); border-radius: 10px; margin-bottom: 12px; }
+    .trophy-ai-wrapper.show { display: block; }
+
+    /* ══ SCOPE TOGGLE ══ */
+    .scope-toggle { display: flex; gap: 10px; }
+    .scope-card {
+      flex: 1; padding: 14px 12px; border-radius: var(--radius-md);
+      border: 1px solid rgba(255,255,255,0.08); background: var(--navy-card);
+      cursor: pointer; transition: all 0.15s; display: flex; align-items: flex-start; gap: 10px;
+    }
+    .scope-card:hover { border-color: rgba(255,255,255,0.18); }
+    .scope-card.selected { border-color: var(--lime); background: rgba(168,225,12,0.05); }
+    .scope-card-icon {
+      width: 32px; height: 32px; border-radius: 8px; background: var(--lime-dim);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;
+    }
+    .scope-card-icon svg { width: 15px; height: 15px; stroke: var(--lime); fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .scope-card-name { font-size: 0.85rem; font-weight: 700; }
+    .scope-card-desc { font-size: 0.68rem; color: var(--grey); line-height: 1.4; margin-top: 2px; }
+
+    /* ══ AI QUESTIONS SECTION ══ */
+    .ai-questions-card {
+      padding: 16px; border-radius: var(--radius-md);
+      border: 1px solid rgba(168,225,12,0.2); background: rgba(168,225,12,0.04);
+      margin-top: 8px;
+    }
+    .ai-questions-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .ai-toggle-wrap { display: flex; align-items: center; gap: 10px; }
+    .toggle-switch {
+      width: 42px; height: 24px; border-radius: 12px; background: var(--grey-dark);
+      cursor: pointer; position: relative; transition: background 0.2s; flex-shrink: 0;
+    }
+    .toggle-switch.on { background: var(--lime); }
+    .toggle-knob {
+      width: 18px; height: 18px; border-radius: 50%; background: #fff;
+      position: absolute; top: 3px; left: 3px; transition: transform 0.2s;
+    }
+    .toggle-switch.on .toggle-knob { transform: translateX(18px); }
+    .ai-quota-grid { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+    .ai-quota-pill {
+      padding: 4px 10px; border-radius: var(--radius-pill); font-size: 0.68rem; font-weight: 700;
+      background: rgba(168,225,12,0.12); color: var(--lime); border: 1px solid rgba(168,225,12,0.25);
+    }
+    .ai-questions-config { display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06); }
+    .ai-questions-config.visible { display: block; }
+
+    /* ══ RESPONSIVE ══ */
+    @media (max-width: 640px) {
+      .wizard { padding: 20px 16px; }
+      .form-row { flex-direction: column; gap: 0; }
+      .option-grid { grid-template-columns: 1fr; }
+      .scope-toggle { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Top Bar -->
+<header class="topbar">
+  <a href="dashboard.html" class="topbar-back">
+    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+    Back
+  </a>
+  <div class="topbar-logo">Spontyx<span class="dot"></span></div>
+  <div class="topbar-spacer"></div>
+</header>
+
+<!-- Progress Steps -->
+<div class="wizard-progress" id="wizard-progress">
+  <div class="wizard-step-dot active" id="dot-0">1</div>
+  <div class="wizard-step-line" id="line-0"></div>
+  <div class="wizard-step-dot" id="dot-1">2</div>
+  <div class="wizard-step-line" id="line-1"></div>
+  <div class="wizard-step-dot" id="dot-2">3</div>
+  <div class="wizard-step-line" id="line-2"></div>
+  <div class="wizard-step-dot" id="dot-3">4</div>
+  <div class="wizard-step-line" id="line-3"></div>
+  <div class="wizard-step-dot" id="dot-4">5</div>
+</div>
+<div class="wizard-step-labels">
+  <div class="wizard-step-label active" id="label-0">Type</div>
+  <div class="wizard-step-label" id="label-1">Details</div>
+  <div class="wizard-step-label" id="label-2">Rules</div>
+  <div class="wizard-step-label" id="label-3">Invite</div>
+  <div class="wizard-step-label" id="label-4">Launch</div>
+</div>
+
+<!-- Wizard Panels -->
+<div class="wizard">
+
+  <!-- STEP 1: League Type -->
+  <div class="wizard-panel active" id="step-0">
+    <h1 class="wizard-title">What kind of league?</h1>
+    <p class="wizard-sub">Pick the format that fits your crew. You can always adjust settings later.</p>
+
+    <div class="type-cards">
+      <div class="type-card" onclick="selectType(this, 'season')">
+        <div class="type-card-icon" style="background:var(--lime-dim);">
+          <svg viewBox="0 0 24 24" stroke="var(--lime)" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div class="type-card-info">
+          <div class="type-card-name">Season-Long League <span class="tier-badge elite">Elite</span></div>
+          <div class="type-card-desc">Run a league across an entire competition — LaLiga, Premier League, Champions League. Every matchday adds to the standings all season.</div>
+        </div>
+        <div class="type-card-check"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+
+      <div class="type-card" onclick="selectType(this, 'event')">
+        <div class="type-card-icon" style="background:rgba(124,92,252,0.12);">
+          <svg viewBox="0 0 24 24" stroke="var(--purple)" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <div class="type-card-info">
+          <div class="type-card-name">Event League</div>
+          <div class="type-card-desc">Build a league around a specific event — NFL Draft, World Cup Final, a boxing match. Perfect for one-off spectacles.</div>
+        </div>
+        <div class="type-card-check"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+
+      <div class="type-card" onclick="selectType(this, 'match')">
+        <div class="type-card-icon" style="background:rgba(255,107,107,0.12);">
+          <svg viewBox="0 0 24 24" stroke="var(--coral)" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+        </div>
+        <div class="type-card-info">
+          <div class="type-card-name">Match Night</div>
+          <div class="type-card-desc">Quick league for a single match. Create it, share the link, play tonight. No commitment, pure fun.</div>
+        </div>
+        <div class="type-card-check"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+
+      <div class="type-card" onclick="selectType(this, 'custom')">
+        <div class="type-card-icon" style="background:rgba(78,205,196,0.12);">
+          <svg viewBox="0 0 24 24" stroke="var(--teal)" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div class="type-card-info">
+          <div class="type-card-name">Custom League</div>
+          <div class="type-card-desc">Set your own duration — a weekend tournament, a 2-week challenge, a month-long battle. You decide when it starts and ends.</div>
+        </div>
+        <div class="type-card-check"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+      </div>
+    </div>
+
+    <div class="custom-duration" id="custom-duration">
+      <div class="custom-duration-label">How long should it last?</div>
+      <div class="duration-options">
+        <button class="duration-chip" onclick="selectDuration(this, '3 Days')"><div class="duration-chip-val">3</div><div class="duration-chip-label">Days</div></button>
+        <button class="duration-chip" onclick="selectDuration(this, '1 Week')"><div class="duration-chip-val">1</div><div class="duration-chip-label">Week</div></button>
+        <button class="duration-chip selected" onclick="selectDuration(this, '2 Weeks')"><div class="duration-chip-val">2</div><div class="duration-chip-label">Weeks</div></button>
+        <button class="duration-chip" onclick="selectDuration(this, '1 Month')"><div class="duration-chip-val">1</div><div class="duration-chip-label">Month</div></button>
+        <button class="duration-chip" onclick="selectDuration(this, '3 Months')"><div class="duration-chip-val">3</div><div class="duration-chip-label">Months</div></button>
+        <button class="duration-chip" onclick="selectDuration(this, 'custom')"><div class="duration-chip-val" style="font-size:0.85rem;">...</div><div class="duration-chip-label">Custom</div></button>
+      </div>
+      <div class="duration-custom-row" id="duration-custom-row" style="display:none;">
+        <input type="number" id="duration-num" value="10" min="1" max="365" />
+        <select id="duration-unit">
+          <option value="days">Days</option>
+          <option value="weeks">Weeks</option>
+          <option value="months">Months</option>
+        </select>
+        <span>from launch date</span>
+      </div>
+    </div>
+
+    <div class="upgrade-nudge" id="season-nudge" style="display:none;">
+      <div class="upgrade-nudge-icon"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg></div>
+      <div class="upgrade-nudge-text"><strong>Season-Long leagues</strong> are an Elite feature. Upgrade to unlock full-season competition with unlimited questions.</div>
+      <button class="upgrade-nudge-btn">Upgrade</button>
+    </div>
+
+    <div class="wizard-actions">
+      <button class="btn btn-primary" id="btn-next-0" disabled onclick="nextStep()">
+        Continue
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 2: Details -->
+  <div class="wizard-panel" id="step-1">
+    <h1 class="wizard-title">League details</h1>
+    <p class="wizard-sub">Name it, pick your sport, and choose the competition.</p>
+
+    <div class="form-group">
+      <label class="form-label">League Name</label>
+      <input type="text" class="form-input" id="league-name" placeholder="e.g. LaLiga Legends, Draft Night Crew..." oninput="validateStep1()" />
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Sport</label>
+        <select class="form-input" id="league-sport" onchange="onSportChange()">
+          <option value="football">Football (Soccer)</option>
+          <!-- MVP: non-football sports hidden until adapters verified end-to-end. Re-enable post-launch. -->
+          <option value="hockey" disabled hidden>Ice Hockey (coming soon)</option>
+          <option value="tennis" disabled hidden>Tennis (coming soon)</option>
+          <option value="other"  disabled hidden>Other (coming soon)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Competition</label>
+        <select class="form-input" id="league-comp" onchange="onCompetitionChange(); validateStep1()">
+          <option value="">Loading...</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Coverage Scope -->
+    <div class="form-group">
+      <label class="form-label">Coverage Scope</label>
+      <div class="scope-toggle">
+        <div class="scope-card selected" id="scope-full" onclick="selectScope('full_league')">
+          <div class="scope-card-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+          </div>
+          <div>
+            <div class="scope-card-name">All Matches</div>
+            <div class="scope-card-desc">Questions cover every game in the competition.</div>
+          </div>
+        </div>
+        <div class="scope-card" id="scope-team" onclick="selectScope('team_specific')">
+          <div class="scope-card-icon">
+            <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          </div>
+          <div>
+            <div class="scope-card-name">One Team</div>
+            <div class="scope-card-desc">AI questions focus only on a single team's games and players.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Team Picker (team_specific only) -->
+    <div class="form-group" id="scoped-team-group" style="display:none;">
+      <label class="form-label">Pick Your Team</label>
+      <select class="form-input" id="league-scoped-team" onchange="onTeamChange()">
+        <option value="">Select a competition first</option>
+      </select>
+    </div>
+
+    <!-- League Duration -->
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">Start Date</label>
+        <input type="date" class="form-input" id="league-start-date" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">End Date</label>
+        <input type="date" class="form-input" id="league-end-date" />
+      </div>
+    </div>
+    <div class="form-hint" style="margin-top:-8px;margin-bottom:8px;">Used to calculate your AI question quota for the league duration.</div>
+
+    <div class="form-group" id="match-select-group" style="display:none;">
+      <label class="form-label">Match / Event</label>
+      <select class="form-input" id="league-match">
+        <option value="">Select a match or event...</option>
+        <option value="custom">Custom event (enter details)</option>
+      </select>
+    </div>
+
+    <!-- Team Mode -->
+    <div class="team-mode-section">
+      <label class="form-label">Play Mode</label>
+      <div class="mode-toggle">
+        <div class="mode-card selected" onclick="selectPlayMode('individual')">
+          <div class="mode-card-icon" style="background:var(--lime-dim);">
+            <svg viewBox="0 0 24 24" stroke="var(--lime)" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div class="mode-card-name">Individual</div>
+          <div class="mode-card-desc">Every player for themselves. Standard leaderboard.</div>
+        </div>
+        <div class="mode-card" onclick="selectPlayMode('team')">
+          <div class="mode-card-icon" style="background:rgba(124,92,252,0.12);">
+            <svg viewBox="0 0 24 24" stroke="var(--purple)" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          </div>
+          <div class="mode-card-name">Team Mode</div>
+          <div class="mode-card-desc">Players grouped into teams. Individual tips count towards team score.</div>
+        </div>
+      </div>
+
+      <div class="team-config" id="team-config">
+        <div class="team-config-row">
+          <div class="form-group">
+            <label class="form-label">Number of Teams</label>
+            <select class="form-input" id="team-count" onchange="updateTeamPreview()">
+              <option value="2">2 teams</option>
+              <option value="3">3 teams</option>
+              <option value="4">4 teams</option>
+              <option value="5">5 teams</option>
+              <option value="6">6 teams</option>
+              <option value="8">8 teams</option>
+              <option value="10">10 teams</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Players per Team</label>
+            <select class="form-input" id="team-size" onchange="updateTeamPreview()">
+              <option value="2">2 players</option>
+              <option value="3" selected>3 players</option>
+              <option value="4">4 players</option>
+              <option value="5">5 players</option>
+              <option value="6">6 players</option>
+              <option value="8">8 players</option>
+              <option value="10">10 players</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-hint" id="team-preview">2 teams × 3 players = 6 total players</div>
+        <div class="team-tier-hint">
+          <strong>Free:</strong> 2 teams, 3 per team · <strong style="color:var(--purple);">Pro:</strong> 6 teams, 5 per team · <strong style="color:var(--coral);">Elite:</strong> Unlimited teams, 10 per team
+        </div>
+      </div>
+    </div>
+
+    <!-- League Visibility -->
+    <div class="visibility-section">
+      <label class="form-label">League Access</label>
+      <div class="visibility-toggle">
+        <div class="vis-card public selected" onclick="selectVisibility('public')">
+          <div class="vis-card-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+          </div>
+          <div class="vis-card-text">
+            <div class="vis-card-name">Public</div>
+            <div class="vis-card-desc">Anyone can find and join this league from Discover.</div>
+          </div>
+        </div>
+        <div class="vis-card private" onclick="selectVisibility('private')">
+          <div class="vis-card-icon">
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+          </div>
+          <div class="vis-card-text">
+            <div class="vis-card-name">Private</div>
+            <div class="vis-card-desc">Hidden from Discover. Members need a password to join.</div>
+          </div>
+        </div>
+      </div>
+      <div class="vis-password" id="vis-password-box">
+        <label class="form-label">Join Password</label>
+        <input type="text" class="form-input" id="league-password" placeholder="e.g. gooners2026" autocomplete="off" />
+        <div class="form-hint" style="margin-top:6px;">Share this with the people you want to invite.</div>
+      </div>
+    </div>
+
+    <div class="wizard-actions">
+      <button class="btn btn-secondary" onclick="prevStep()">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </button>
+      <button class="btn btn-primary" id="btn-next-1" onclick="nextStep()">
+        Continue
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 3: Rules & Preferences -->
+  <div class="wizard-panel" id="step-2">
+    <h1 class="wizard-title">Set the rules</h1>
+    <p class="wizard-sub">Choose how your league plays. Premium options are shown but require an upgrade.</p>
+
+    <!-- Rules Mode Toggle -->
+    <div class="rules-mode-toggle">
+      <button class="rules-mode-btn active" onclick="switchRulesMode('manual')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        Manual Setup
+      </button>
+      <button class="rules-mode-btn" onclick="switchRulesMode('ai')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 014 4v1a2 2 0 012 2v1a2 2 0 01-2 2H8a2 2 0 01-2-2V9a2 2 0 012-2V6a4 4 0 014-4z"/><path d="M9 22v-4h6v4"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
+        AI Setup
+      </button>
+    </div>
+
+    <!-- MANUAL RULES PANEL -->
+    <div class="rules-panel active" id="rules-manual">
+
+    <div class="form-group">
+      <label class="form-label">Question Types</label>
+      <div class="option-grid" id="q-types">
+        <div class="option-chip selected" onclick="toggleChip(this)">
+          <div class="option-chip-label">Live Predictions</div>
+        </div>
+        <div class="option-chip" onclick="toggleChip(this)">
+          <div class="option-chip-label">Pre-match</div>
+        </div>
+        <div class="option-chip" onclick="toggleChip(this)" data-min-tier="pro" data-feature="News & Rumours questions">
+          <span class="lock-badge">Pro</span>
+          <div class="option-chip-label">News & Rumours</div>
+        </div>
+        <div class="option-chip" onclick="toggleChip(this)" data-min-tier="pro" data-feature="History & Trivia questions">
+          <span class="lock-badge">Pro</span>
+          <div class="option-chip-label">History & Trivia</div>
+        </div>
+        <div class="option-chip" onclick="toggleChip(this)" data-min-tier="elite" data-feature="Custom Questions">
+          <span class="lock-badge">Elite</span>
+          <div class="option-chip-label">Custom Questions</div>
+        </div>
+        <div class="option-chip" onclick="toggleChip(this)" data-min-tier="elite" data-feature="Scheduled Questions">
+          <span class="lock-badge">Elite</span>
+          <div class="option-chip-label">Scheduled Qs</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="slider-group">
+      <div class="slider-header">
+        <label class="form-label" style="margin-bottom:0;">Max Players</label>
+        <div class="slider-value" id="player-count">10</div>
+      </div>
+      <input type="range" min="2" max="50" value="10" id="player-slider" oninput="updatePlayerCount(this)" />
+      <div class="form-hint">Free: up to 10 · <span style="color:var(--purple);">Pro: up to 25</span> · <span style="color:var(--coral);">Elite: up to 50</span></div>
+    </div>
+
+    <div style="margin-bottom:4px;">
+      <label class="form-label">Game Mechanics</label>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-label">Risky Answers <span class="tier-badge pro">Pro</span></div>
+        <div class="toggle-desc">Players can double down for 2x points</div>
+      </div>
+      <label class="toggle-switch" data-min-tier="pro" data-feature="Risky Answers"><input type="checkbox" /><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-label">Streak Bonuses <span class="tier-badge pro">Pro</span></div>
+        <div class="toggle-desc">Consecutive correct answers earn multipliers</div>
+      </div>
+      <label class="toggle-switch" data-min-tier="pro" data-feature="Streak Bonuses"><input type="checkbox" /><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-label">Live Stats Feed <span class="tier-badge elite">Elite</span></div>
+        <div class="toggle-desc">Real-time match data alongside questions</div>
+      </div>
+      <label class="toggle-switch" data-min-tier="elite" data-feature="Live Stats Feed"><input type="checkbox" /><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-label">Betting-Style Predictions <span class="tier-badge elite">Elite</span></div>
+        <div class="toggle-desc">Odds, spreads, and over/under questions</div>
+      </div>
+      <label class="toggle-switch" data-min-tier="elite" data-feature="Betting-Style Predictions"><input type="checkbox" /><span class="slider"></span></label>
+    </div>
+    <div class="toggle-row">
+      <div class="toggle-info">
+        <div class="toggle-label">Standard Leaderboard</div>
+        <div class="toggle-desc">Track rankings throughout the league</div>
+      </div>
+      <label class="toggle-switch"><input type="checkbox" checked /><span class="slider"></span></label>
+    </div>
+
+    <!-- ── League Trophy ── -->
+    <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06);">
+      <label class="form-label" style="display:flex;align-items:center;gap:8px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0012 0V2Z"/></svg>
+        Winner's Trophy
+      </label>
+      <p class="form-hint" style="margin-bottom:12px;">Pick what the league champion will win. Appears in their Trophy Room.</p>
+
+      <div class="trophy-picker">
+        <div class="trophy-option selected" data-trophy="league_champion" onclick="selectTrophy(this)">
+          <div class="trophy-option-icon" style="background:rgba(255,215,0,0.1); border-color:#FFD700;">
+            <svg viewBox="0 0 24 24" stroke="#FFD700" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0012 0V2Z"/></svg>
+          </div>
+          <div class="trophy-option-name">League Champion</div>
+          <div class="trophy-option-rarity" style="color:#FFD700;">Legendary</div>
+        </div>
+        <div class="trophy-option" data-trophy="league_podium" onclick="selectTrophy(this)" data-min-tier="pro">
+          <span class="lock-badge">Pro</span>
+          <div class="trophy-option-icon" style="background:rgba(78,205,196,0.1); border-color:#4ECDC4;">
+            <svg viewBox="0 0 24 24" stroke="#4ECDC4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="13" width="6" height="7"/><rect x="9" y="8" width="6" height="12"/><rect x="16" y="15" width="6" height="5"/></svg>
+          </div>
+          <div class="trophy-option-name">Podium Finisher</div>
+          <div class="trophy-option-rarity" style="color:#4ECDC4;">Rare</div>
+        </div>
+        <div class="trophy-option" data-trophy="undefeated_season" onclick="selectTrophy(this)" data-min-tier="pro">
+          <span class="lock-badge">Pro</span>
+          <div class="trophy-option-icon" style="background:rgba(124,92,252,0.1); border-color:#7C5CFC;">
+            <svg viewBox="0 0 24 24" stroke="#7C5CFC" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L3 7v6c0 5 3.5 9.5 9 11 5.5-1.5 9-6 9-11V7l-9-5z"/><polyline points="9 12 11 14 15 10"/></svg>
+          </div>
+          <div class="trophy-option-name">Undefeated</div>
+          <div class="trophy-option-rarity" style="color:#7C5CFC;">Epic</div>
+        </div>
+        <div class="trophy-option" data-trophy="season_champion" onclick="selectTrophy(this)" data-min-tier="pro">
+          <span class="lock-badge">Pro</span>
+          <div class="trophy-option-icon" style="background:rgba(255,215,0,0.1); border-color:#FFD700;">
+            <svg viewBox="0 0 24 24" stroke="#FFD700" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
+          </div>
+          <div class="trophy-option-name">Season Champion</div>
+          <div class="trophy-option-rarity" style="color:#FFD700;">Legendary</div>
+        </div>
+        <div class="trophy-option" data-trophy="custom" onclick="selectTrophy(this)" data-min-tier="elite">
+          <span class="lock-badge">Elite</span>
+          <div class="trophy-option-icon" style="background:linear-gradient(135deg,rgba(255,215,0,0.1),rgba(255,107,107,0.1)); border-color:#FFD700;">
+            <svg viewBox="0 0 24 24" stroke="#FFD700" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 014 4v1a2 2 0 012 2v1a2 2 0 01-2 2H8a2 2 0 01-2-2V9a2 2 0 012-2V6a4 4 0 014-4z"/><path d="M9 22v-4h6v4"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
+          </div>
+          <div class="trophy-option-name">AI Custom</div>
+          <div class="trophy-option-rarity" style="background:linear-gradient(90deg,#FFD700,#FF6B6B);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">Any Rarity</div>
+        </div>
+      </div>
+
+      <!-- AI Custom Trophy Input -->
+      <div class="trophy-ai-wrapper" id="trophy-ai-wrapper">
+        <label class="form-label" style="font-size:0.72rem;">Describe your trophy</label>
+        <input type="text" class="trophy-ai-input" id="trophy-ai-prompt" placeholder="e.g. The Sunday Warrior — for the bravest predictor" maxlength="50" />
+        <button class="trophy-ai-generate" onclick="generateCustomTrophy()">✨ Generate with AI</button>
+      </div>
+
+      <!-- Trophy Preview -->
+      <div class="trophy-preview-card" id="trophy-preview" style="display:none;">
+        <div class="trophy-preview-icon" id="trophy-preview-icon">
+          <svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/></svg>
+        </div>
+        <div style="flex:1;">
+          <div class="trophy-preview-name" id="trophy-preview-name">League Champion</div>
+          <div class="trophy-preview-desc" id="trophy-preview-desc">Won a full league season</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="upgrade-nudge">
+      <div class="upgrade-nudge-icon"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22C12 22 4 16 4 10C4 6 7 3 10 3C11.2 3 12 3.6 12 3.6S12.8 3 14 3C17 3 20 6 20 10C20 16 12 22 12 22Z"/></svg></div>
+      <div class="upgrade-nudge-text">Unlock <strong>Risky Answers, Streak Bonuses</strong>, all question types, and more with Pro — just $5.99/mo.</div>
+      <button class="upgrade-nudge-btn">Upgrade</button>
+    </div>
+
+    <!-- ── AI Real World Questions ── -->
+    <div class="form-group" style="margin-top:24px;">
+      <div class="ai-questions-card">
+        <div class="ai-questions-header">
+          <div style="flex:1;">
+            <div style="font-size:0.9rem;font-weight:700;display:flex;align-items:center;gap:8px;">
+              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--lime)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              AI Real World Questions
+              <span style="font-size:0.6rem;background:rgba(168,225,12,0.15);color:var(--lime);padding:2px 8px;border-radius:100px;font-weight:800;">NEW</span>
+            </div>
+            <div class="form-hint" style="margin-top:4px;">AI generates questions based on real matches, injuries, and news. Goes live automatically.</div>
+          </div>
+          <div class="ai-toggle-wrap">
+            <div class="toggle-switch" id="ai-toggle" onclick="toggleAIQuestions()">
+              <div class="toggle-knob"></div>
+            </div>
+          </div>
+        </div>
+        <div class="ai-questions-config" id="ai-questions-config">
+          <div style="font-size:0.72rem;color:var(--grey);margin-bottom:8px;">Your quota based on tier and league duration:</div>
+          <div class="ai-quota-grid" id="ai-quota-grid">
+            <span class="ai-quota-pill" id="ai-quota-weekly">— / week</span>
+            <span class="ai-quota-pill" id="ai-quota-total">— total</span>
+            <span class="ai-quota-pill" id="ai-quota-mode" style="background:rgba(78,205,196,0.12);color:var(--teal);border-color:rgba(78,205,196,0.25);">— coverage</span>
+          </div>
+          <div class="form-hint" style="margin-top:10px;">Questions are labelled <strong style="color:var(--lime);">Real World</strong> in the league feed so players know they're based on live events.</div>
+        </div>
+      </div>
+    </div>
+
+    </div><!-- end rules-manual -->
+
+    <!-- AI SETUP PANEL -->
+    <div class="rules-panel" id="rules-ai">
+      <div class="ai-chat">
+        <div class="ai-chat-header">
+          <div class="ai-chat-avatar">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 014 4v1a2 2 0 012 2v1a2 2 0 01-2 2H8a2 2 0 01-2-2V9a2 2 0 012-2V6a4 4 0 014-4z"/><path d="M9 22v-4h6v4"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg>
+          </div>
+          <div class="ai-chat-header-info">
+            <div class="ai-chat-header-name">Spontyx AI</div>
+            <div class="ai-chat-header-status"><span class="dot"></span> Online — ready to help</div>
+          </div>
+        </div>
+
+        <div class="ai-chat-messages" id="ai-messages">
+          <!-- Messages injected by JS -->
+        </div>
+
+        <div class="ai-suggestions" id="ai-suggestions">
+          <!-- Suggestion chips injected by JS -->
+        </div>
+
+        <div class="ai-chat-input-row">
+          <input type="text" class="ai-chat-input" id="ai-input" placeholder="Type your preferences..." onkeydown="if(event.key==='Enter')sendAiMessage()" />
+          <button class="ai-chat-send" onclick="sendAiMessage()">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Config Applied Summary (shown after AI finishes) -->
+      <div class="ai-config-applied" id="ai-config-applied">
+        <h4>
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Configuration Applied
+        </h4>
+        <div id="ai-config-items"></div>
+      </div>
+    </div><!-- end rules-ai -->
+
+    <div class="wizard-actions">
+      <button class="btn btn-secondary" onclick="prevStep()">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </button>
+      <button class="btn btn-primary" onclick="nextStep()">
+        Continue
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 4: Invite Mates -->
+  <div class="wizard-panel" id="step-3">
+    <h1 class="wizard-title">Invite the crew</h1>
+    <p class="wizard-sub">Share the code or invite people directly. You can always add more later.</p>
+
+    <div class="invite-code-display">
+      <div class="invite-code-label">Your League Code</div>
+      <div class="invite-code-value" id="generated-code">—</div>
+      <div class="invite-code-actions">
+        <button class="invite-btn primary" onclick="showToast('Code copied to clipboard!')">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          Copy Code
+        </button>
+        <button class="invite-btn" onclick="showToast('Link copied!')">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+          Copy Link
+        </button>
+      </div>
+    </div>
+
+    <div style="display:flex;gap:8px;margin:16px 0;">
+      <button class="invite-btn" style="flex:1;justify-content:center;" onclick="showToast('Opening WhatsApp...')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
+        WhatsApp
+      </button>
+      <button class="invite-btn" style="flex:1;justify-content:center;" onclick="showToast('Opening iMessage...')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        iMessage
+      </button>
+      <button class="invite-btn" style="flex:1;justify-content:center;" onclick="showToast('Opening Discord...')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+        Discord
+      </button>
+    </div>
+
+    <div class="invite-contacts">
+      <h4>Invite from your leagues</h4>
+      <div class="invite-contact-row">
+        <div class="invite-contact-avatar" style="background:var(--purple);color:#fff;">JR</div>
+        <div><div class="invite-contact-name">Jake R.</div><div class="invite-contact-sub">In 2 leagues with you</div></div>
+        <button class="invite-contact-btn" onclick="inviteContact(this)">Invite</button>
+      </div>
+      <div class="invite-contact-row">
+        <div class="invite-contact-avatar" style="background:var(--coral);color:#fff;">MT</div>
+        <div><div class="invite-contact-name">Marcus T.</div><div class="invite-contact-sub">In 2 leagues with you</div></div>
+        <button class="invite-contact-btn" onclick="inviteContact(this)">Invite</button>
+      </div>
+      <div class="invite-contact-row">
+        <div class="invite-contact-avatar" style="background:var(--teal);color:var(--navy);">IL</div>
+        <div><div class="invite-contact-name">Ines L.</div><div class="invite-contact-sub">In 1 league with you</div></div>
+        <button class="invite-contact-btn" onclick="inviteContact(this)">Invite</button>
+      </div>
+      <div class="invite-contact-row">
+        <div class="invite-contact-avatar" style="background:rgba(255,255,255,0.08);color:var(--off-white);">DO</div>
+        <div><div class="invite-contact-name">Dan O.</div><div class="invite-contact-sub">In 1 league with you</div></div>
+        <button class="invite-contact-btn" onclick="inviteContact(this)">Invite</button>
+      </div>
+      <div class="invite-contact-row">
+        <div class="invite-contact-avatar" style="background:rgba(124,92,252,0.2);color:var(--purple);">KW</div>
+        <div><div class="invite-contact-name">Kai W.</div><div class="invite-contact-sub">In 1 league with you</div></div>
+        <button class="invite-contact-btn" onclick="inviteContact(this)">Invite</button>
+      </div>
+    </div>
+
+    <div class="wizard-actions">
+      <button class="btn btn-secondary" onclick="prevStep()">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </button>
+      <button class="btn btn-primary" onclick="nextStep()">
+        Continue
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 5: Review & Launch -->
+  <div class="wizard-panel" id="step-4">
+    <h1 class="wizard-title">Ready to launch?</h1>
+    <p class="wizard-sub">Review your league settings. Hit launch and the questions start flying.</p>
+
+    <div class="review-card">
+      <h4>League Info</h4>
+      <div class="review-row"><span class="review-label">Name</span><span class="review-value" id="review-name">—</span></div>
+      <div class="review-row"><span class="review-label">Type</span><span class="review-value" id="review-type">—</span></div>
+      <div class="review-row"><span class="review-label">Sport</span><span class="review-value" id="review-sport">—</span></div>
+      <div class="review-row"><span class="review-label">Competition</span><span class="review-value" id="review-comp">—</span></div>
+      <div class="review-row" id="review-scope-row"><span class="review-label">Scope</span><span class="review-value" id="review-scope">All Matches</span></div>
+      <div class="review-row" id="review-team-row" style="display:none;"><span class="review-label">Team</span><span class="review-value" id="review-team" style="color:var(--lime);">—</span></div>
+      <div class="review-row" id="review-duration-row"><span class="review-label">Duration</span><span class="review-value" id="review-duration" style="color:var(--teal);">—</span></div>
+    </div>
+
+    <div class="review-card">
+      <h4>Rules</h4>
+      <div class="review-row"><span class="review-label">Play Mode</span><span class="review-value" id="review-mode">—</span></div>
+      <div class="review-row" id="review-teams-row" style="display:none;"><span class="review-label">Teams</span><span class="review-value" id="review-teams">—</span></div>
+      <div class="review-row"><span class="review-label">Question Types</span><span class="review-value" id="review-qtypes">—</span></div>
+      <div class="review-row"><span class="review-label">Max Players</span><span class="review-value" id="review-players">—</span></div>
+      <div class="review-row"><span class="review-label">Risky Answers</span><span class="review-value" id="review-risky">—</span></div>
+      <div class="review-row"><span class="review-label">Streaks</span><span class="review-value" id="review-streaks">—</span></div>
+      <div class="review-row"><span class="review-label">AI Questions</span><span class="review-value" id="review-ai-questions" style="color:var(--grey);">Off</span></div>
+      <div class="review-row"><span class="review-label">Winner's Trophy</span><span class="review-value" id="review-trophy" style="color:#FFD700;">League Champion</span></div>
+    </div>
+
+    <div class="review-card">
+      <h4>Invites</h4>
+      <div class="review-row"><span class="review-label">League Code</span><span class="review-value lime" id="review-code">—</span></div>
+      <div class="review-row"><span class="review-label">Invited</span><span class="review-value" id="review-invited">—</span></div>
+    </div>
+
+    <div class="wizard-actions">
+      <button class="btn btn-secondary" onclick="prevStep()">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </button>
+      <button class="btn btn-launch" onclick="launchLeague()">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Launch League
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+<script src="sidebar.js"></script>
+<script>
+// ═══════════════════════════════
+//  WIZARD STATE
+// ═══════════════════════════════
+let currentStep = 0;
+const totalSteps = 5;
+let leagueType = '';
+let invitedCount = 0;
+let leagueScope = 'full_league';
+let aiQuestionsEnabled = false;
+// Holds the full row from sports_competitions for the chosen competition
+let selectedCompetition = null;
+// Holds the full row from sports_teams for the chosen team
+let selectedScopedTeam = null;
+let selectedTrophy = { type: 'league_champion', name: 'League Champion', desc: 'Won a full league season', icon: 'trophy-gold', rarity: 'legendary', custom: false };
+
+// ── Trophy Picker ──
+const TROPHY_DEFS = {
+  'league_champion': { name: 'League Champion', desc: 'Won a full league season', icon: 'trophy-gold', rarity: 'legendary' },
+  'league_podium':   { name: 'Podium Finisher', desc: 'Finished in the top 3 of a league', icon: 'podium', rarity: 'rare' },
+  'undefeated_season': { name: 'Undefeated', desc: 'Went through a season without a loss', icon: 'shield-star', rarity: 'epic' },
+  'season_champion':   { name: 'Season Champion', desc: 'Won a full season-long league', icon: 'medal-gold', rarity: 'legendary' },
+};
+
+function selectTrophy(el) {
+  // Tier gating
+  var minTier = el.dataset.minTier;
+  if (minTier) {
+    var player = SpontixStore.getPlayer();
+    var currentTier = player.tier || 'starter';
+    var ranks = { starter: 0, pro: 1, elite: 2 };
+    if ((ranks[currentTier] || 0) < (ranks[minTier] || 0)) {
+      SpontixSidebar.showUpgradeModal({
+        feature: minTier === 'elite' ? 'AI Custom Trophies' : 'Premium Trophy',
+        requiredTier: minTier === 'elite' ? 'Elite' : 'Pro',
+        isVenue: false,
+        icon: '🏆',
+        description: 'Reward your league winners with exclusive trophies. Upgrade to unlock.',
+        benefits: minTier === 'elite'
+          ? ['Design your own custom trophies with AI', 'Unique one-of-a-kind rewards', 'All premium trophy types', 'Stand out from the crowd']
+          : ['Premium trophy types', 'Exclusive rewards for winners', 'All question types', 'Risky answers & streaks']
+      });
+      return;
+    }
+  }
+
+  document.querySelectorAll('.trophy-option').forEach(function(o) { o.classList.remove('selected'); });
+  el.classList.add('selected');
+  var type = el.dataset.trophy;
+
+  var wrapper = document.getElementById('trophy-ai-wrapper');
+  if (type === 'custom') {
+    wrapper.classList.add('show');
+    document.getElementById('trophy-preview').style.display = 'none';
+    return;
+  }
+  wrapper.classList.remove('show');
+
+  var def = TROPHY_DEFS[type];
+  selectedTrophy = { type: type, name: def.name, desc: def.desc, icon: def.icon, rarity: def.rarity, custom: false };
+  showTrophyPreview(selectedTrophy);
+}
+
+function generateCustomTrophy() {
+  var prompt = document.getElementById('trophy-ai-prompt').value.trim();
+  if (!prompt) { showToast('Describe your trophy first'); return; }
+  var generated = SpontixStore.generateAITrophy(prompt, '');
+  selectedTrophy = {
+    type: 'custom',
+    name: generated.name,
+    desc: generated.desc,
+    icon: generated.icon,
+    rarity: generated.rarity,
+    custom: true,
+  };
+  showTrophyPreview(selectedTrophy);
+  showToast('✨ AI Trophy generated!');
+}
+
+function showTrophyPreview(trophy) {
+  var card = document.getElementById('trophy-preview');
+  card.style.display = 'flex';
+  var rarity = SpontixStore.TROPHY_RARITY[trophy.rarity] || SpontixStore.TROPHY_RARITY.common;
+  var iconSvg = SpontixStore.TROPHY_ICONS[trophy.icon] || SpontixStore.TROPHY_ICONS['trophy-gold'];
+  var iconWrap = document.getElementById('trophy-preview-icon');
+  iconWrap.style.borderColor = rarity.color;
+  iconWrap.style.background = rarity.glow;
+  iconWrap.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="' + rarity.color + '" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' + iconSvg + '</svg>';
+  document.getElementById('trophy-preview-name').textContent = trophy.name;
+  document.getElementById('trophy-preview-desc').textContent = trophy.desc + ' · ' + rarity.label;
+}
+
+// ── Prefill wizard from URL params (e.g. from Browse Matches "Invite players") ──
+function readPrefill() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('prefill_match') !== '1') return;
+
+  const home        = params.get('home') || '';
+  const away        = params.get('away') || '';
+  const apiLeagueId = params.get('api_league_id');
+  const kickoff     = params.get('kickoff');
+
+  // League name
+  const nameEl = document.getElementById('league-name');
+  if (nameEl && home && away) {
+    nameEl.value = `${home} vs ${away} — Match Night`;
+  }
+
+  // Start + end date from kickoff timestamp
+  if (kickoff) {
+    const d = new Date(kickoff);
+    if (!isNaN(d)) {
+      const dateStr = d.toISOString().slice(0, 10);
+      const startEl = document.getElementById('league-start-date');
+      const endEl   = document.getElementById('league-end-date');
+      if (startEl) startEl.value = dateStr;
+      if (endEl)   endEl.value   = dateStr;
+      updateAIQuotaDisplay();
+    }
+  }
+
+  // Select competition by api_league_id (options already loaded by onSportChange)
+  if (apiLeagueId) {
+    const compEl = document.getElementById('league-comp');
+    const match = Array.from(compEl.options).find(o => {
+      try { return String(JSON.parse(o.dataset.row || '{}').api_league_id) === String(apiLeagueId); }
+      catch (e) { return false; }
+    });
+    if (match) {
+      compEl.value = match.value;
+      onCompetitionChange();
+    }
+  }
+
+  validateStep1();
+}
+
+// Initialize on load
+document.addEventListener('DOMContentLoaded', async function() {
+  if (typeof SpontixStore !== 'undefined') showTrophyPreview(selectedTrophy);
+
+  // Load competitions first, then apply any URL prefill
+  await onSportChange();
+  readPrefill();
+
+  // Wire date inputs to quota display
+  document.getElementById('league-start-date').addEventListener('change', updateAIQuotaDisplay);
+  document.getElementById('league-end-date').addEventListener('change', updateAIQuotaDisplay);
+});
+
+function updateProgress() {
+  for (let i = 0; i < totalSteps; i++) {
+    const dot = document.getElementById('dot-' + i);
+    const label = document.getElementById('label-' + i);
+    dot.className = 'wizard-step-dot';
+    label.className = 'wizard-step-label';
+    if (i < currentStep) {
+      dot.className = 'wizard-step-dot done';
+      dot.innerHTML = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+      label.className = 'wizard-step-label done';
+    } else if (i === currentStep) {
+      dot.className = 'wizard-step-dot active';
+      dot.textContent = i + 1;
+      label.className = 'wizard-step-label active';
+    } else {
+      dot.textContent = i + 1;
+    }
+    if (i < totalSteps - 1) {
+      document.getElementById('line-' + i).className = i < currentStep ? 'wizard-step-line done' : 'wizard-step-line';
+    }
+  }
+  // Show/hide panels
+  document.querySelectorAll('.wizard-panel').forEach((p, i) => {
+    p.classList.toggle('active', i === currentStep);
+  });
+}
+
+function nextStep() {
+  if (currentStep === 0 && !leagueType) return;
+  if (currentStep === 3 && !generatedCode) generateCode();
+  if (currentStep < totalSteps - 1) {
+    currentStep++;
+    updateProgress();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (currentStep === 4) populateReview();
+  }
+}
+
+function prevStep() {
+  if (currentStep > 0) {
+    currentStep--;
+    updateProgress();
+    restoreStepState(currentStep);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+}
+
+// Restore visual selections when going back to a previous step
+function restoreStepState(step) {
+  if (step === 0 && leagueType) {
+    // Re-highlight the selected type card
+    document.querySelectorAll('.type-card').forEach(c => {
+      const onclick = c.getAttribute('onclick') || '';
+      c.classList.toggle('selected', onclick.includes("'" + leagueType + "'"));
+    });
+    document.getElementById('btn-next-0').disabled = false;
+    document.getElementById('season-nudge').style.display = leagueType === 'season' ? 'flex' : 'none';
+    document.getElementById('custom-duration').classList.toggle('show', leagueType === 'custom');
+  }
+  if (step === 1) {
+    // Play mode cards
+    document.querySelectorAll('.mode-card').forEach((c, i) => {
+      c.classList.toggle('selected', (i === 0 && playMode === 'individual') || (i === 1 && playMode === 'team'));
+    });
+    document.getElementById('team-config').classList.toggle('visible', playMode === 'team');
+    // Name and competition values persist in input elements automatically
+    validateStep1();
+  }
+  // Steps 2 & 3 — chip selections and slider values persist in DOM naturally
+}
+
+// ── Step 1: Type Selection ──
+function selectType(card, type) {
+  document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
+  card.classList.add('selected');
+  leagueType = type;
+  document.getElementById('btn-next-0').disabled = false;
+
+  // Show season upgrade nudge
+  document.getElementById('season-nudge').style.display = type === 'season' ? 'flex' : 'none';
+  // Show custom duration picker
+  document.getElementById('custom-duration').classList.toggle('show', type === 'custom');
+}
+
+let customDurationText = '2 Weeks';
+
+function selectDuration(chip, val) {
+  document.querySelectorAll('.duration-chip').forEach(c => c.classList.remove('selected'));
+  chip.classList.add('selected');
+  const customRow = document.getElementById('duration-custom-row');
+  if (val === 'custom') {
+    customRow.style.display = 'flex';
+    customDurationText = document.getElementById('duration-num').value + ' ' + document.getElementById('duration-unit').value;
+  } else {
+    customRow.style.display = 'none';
+    customDurationText = val;
+  }
+}
+
+// ── Step 2: Validation ──
+function validateStep1() {
+  const name = document.getElementById('league-name').value.trim();
+  const comp = document.getElementById('league-comp').value;
+  document.getElementById('btn-next-1').disabled = !(name.length > 0 && comp && comp !== '');
+}
+
+// ── Sport / Competition / Team dynamic loading ──
+async function onSportChange() {
+  const sport = document.getElementById('league-sport').value;
+  const compEl = document.getElementById('league-comp');
+  compEl.innerHTML = '<option value="">Loading…</option>';
+  selectedCompetition = null;
+  selectedScopedTeam  = null;
+  validateStep1();
+
+  if (!window.sb) return;
+  const { data } = await window.sb
+    .from('sports_competitions')
+    .select('*')
+    .eq('sport', sport)
+    .eq('is_active', true)
+    .order('display_order');
+
+  compEl.innerHTML = '<option value="">Select competition…</option>';
+  (data || []).forEach(c => {
+    const opt = document.createElement('option');
+    opt.value       = c.id;
+    opt.textContent = c.name;
+    opt.dataset.row = JSON.stringify(c);
+    compEl.appendChild(opt);
+  });
+  validateStep1();
+}
+
+async function onCompetitionChange() {
+  const compEl   = document.getElementById('league-comp');
+  const selected = compEl.options[compEl.selectedIndex];
+  selectedCompetition = selected && selected.dataset.row
+    ? JSON.parse(selected.dataset.row)
+    : null;
+  selectedScopedTeam = null;
+  updateAIQuotaDisplay();
+  await loadTeamsForCompetition();
+}
+
+async function loadTeamsForCompetition() {
+  const teamEl = document.getElementById('league-scoped-team');
+  teamEl.innerHTML = '<option value="">Loading teams…</option>';
+  if (!selectedCompetition || !window.sb) return;
+
+  const { data } = await window.sb
+    .from('sports_teams')
+    .select('*')
+    .eq('sport', selectedCompetition.sport)
+    .eq('api_league_id', selectedCompetition.api_league_id)
+    .eq('is_active', true)
+    .order('name');
+
+  teamEl.innerHTML = '<option value="">Pick a team…</option>';
+  (data || []).forEach(t => {
+    const opt = document.createElement('option');
+    opt.value       = t.id;
+    opt.textContent = t.name;
+    opt.dataset.row = JSON.stringify(t);
+    teamEl.appendChild(opt);
+  });
+}
+
+function onTeamChange() {
+  const teamEl   = document.getElementById('league-scoped-team');
+  const selected = teamEl.options[teamEl.selectedIndex];
+  selectedScopedTeam = selected && selected.dataset.row
+    ? JSON.parse(selected.dataset.row)
+    : null;
+}
+
+// ── Scope selection ──
+function selectScope(scope) {
+  leagueScope = scope;
+  document.getElementById('scope-full').classList.toggle('selected', scope === 'full_league');
+  document.getElementById('scope-team').classList.toggle('selected', scope === 'team_specific');
+  document.getElementById('scoped-team-group').style.display =
+    scope === 'team_specific' ? 'block' : 'none';
+  updateAIQuotaDisplay();
+}
+
+// ── AI questions toggle ──
+function toggleAIQuestions() {
+  aiQuestionsEnabled = !aiQuestionsEnabled;
+  document.getElementById('ai-toggle').classList.toggle('on', aiQuestionsEnabled);
+  document.getElementById('ai-questions-config').classList.toggle('visible', aiQuestionsEnabled);
+  if (aiQuestionsEnabled) updateAIQuotaDisplay();
+}
+
+// ── AI quota display ──
+function updateAIQuotaDisplay() {
+  const weeklyEl  = document.getElementById('ai-quota-weekly');
+  const totalEl   = document.getElementById('ai-quota-total');
+  const modeEl    = document.getElementById('ai-quota-mode');
+  if (!weeklyEl) return;
+
+  const player    = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
+  const tier      = player ? (player.tier || 'starter') : 'starter';
+  const weekly    = tier === 'elite' ? 10 : tier === 'pro' ? 5 : 2;
+
+  const startVal  = document.getElementById('league-start-date').value;
+  const endVal    = document.getElementById('league-end-date').value;
+  let totalQuota  = weekly;
+  let durationTxt = '1 week';
+
+  if (startVal && endVal) {
+    const diffMs    = new Date(endVal) - new Date(startVal);
+    const weeks     = Math.max(1, Math.ceil(diffMs / (7 * 24 * 60 * 60 * 1000)));
+    totalQuota      = weekly * weeks;
+    durationTxt     = weeks === 1 ? '1 week' : weeks + ' weeks';
+  }
+
+  weeklyEl.textContent = weekly + ' / week';
+  totalEl.textContent  = totalQuota + ' total';
+  modeEl.textContent   = leagueScope === 'team_specific' ? 'Team focused' : 'Full competition';
+}
+
+// ── Play Mode (Individual / Team) ──
+let playMode = 'individual';
+function selectPlayMode(mode) {
+  playMode = mode;
+  document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
+  event.currentTarget.closest('.mode-card') ? event.currentTarget.closest('.mode-card').classList.add('selected') : document.querySelectorAll('.mode-card')[mode==='individual'?0:1].classList.add('selected');
+  document.getElementById('team-config').classList.toggle('visible', mode === 'team');
+  if (mode === 'team') updateTeamPreview();
+}
+let leagueVisibility = 'public';
+function selectVisibility(vis) {
+  leagueVisibility = vis;
+  document.querySelectorAll('.vis-card').forEach(c => c.classList.remove('selected'));
+  document.querySelector('.vis-card.' + vis).classList.add('selected');
+  document.getElementById('vis-password-box').classList.toggle('show', vis === 'private');
+}
+
+function updateTeamPreview() {
+  const teams = document.getElementById('team-count').value;
+  const size = document.getElementById('team-size').value;
+  document.getElementById('team-preview').textContent = teams + ' teams × ' + size + ' players = ' + (teams * size) + ' total players';
+}
+
+// ── Step 3: Chips & Sliders ──
+function toggleChip(chip) {
+  if (chip.classList.contains('locked')) return;
+  chip.classList.toggle('selected');
+}
+
+// ── Tier Gating ──
+function applyTierGating() {
+  const player = SpontixStore.getPlayer();
+  const tier = player.tier;
+  const tierRank = { 'starter': 0, 'pro': 1, 'elite': 2 };
+  const userRank = tierRank[tier] || 0;
+
+  // Gate chips and toggles with data-min-tier
+  document.querySelectorAll('[data-min-tier]').forEach(el => {
+    const requiredRank = tierRank[el.dataset.minTier] || 0;
+    if (userRank < requiredRank) {
+      el.classList.add('locked');
+      const featureName = el.dataset.feature || el.textContent.trim();
+      const reqTier = el.dataset.minTier === 'elite' ? 'Elite' : 'Pro';
+      // Override onclick to show upgrade modal
+      const origOnClick = el.onclick;
+      el.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        SpontixSidebar.showUpgradeModal({
+          feature: featureName,
+          requiredTier: reqTier,
+          isVenue: false,
+          icon: '🔒',
+          description: 'Unlock <strong>' + featureName + '</strong> by upgrading to ' + reqTier + '.',
+          benefits: reqTier === 'Elite'
+            ? ['Season-long leagues', 'Custom questions', 'Live stats feed', 'Betting-style predictions', 'Unlimited everything']
+            : ['All question types (news, history, live)', 'Risky answers & streak bonuses', '500 AI questions/month', 'Up to 5 leagues/week', 'Ad-free experience']
+        });
+      };
+    }
+  });
+
+  // Gate Season-Long league type
+  const seasonCard = document.querySelector('[data-type="season"]') || document.querySelector('.type-card:last-child');
+  if (seasonCard && userRank < 2) { // Elite only
+    // The existing tier-badge elite is fine, just ensure clicking shows modal
+    seasonCard.style.opacity = '0.5';
+    const origClick = seasonCard.onclick;
+    seasonCard.onclick = function(e) {
+      e.preventDefault();
+      SpontixSidebar.showUpgradeModal({
+        feature: 'Season-Long Leagues',
+        requiredTier: 'Elite',
+        isVenue: false,
+        icon: '🏆',
+        description: 'Run leagues that span entire seasons. Upgrade to <strong>Elite</strong> to unlock Season-Long leagues.',
+        benefits: ['Full season leagues', 'Up to 50 players', 'League admin tools', 'Custom scoring rules', 'Unlimited league creation']
+      });
+    };
+  }
+
+  // Enforce max players slider limit based on tier
+  const limits = SpontixStore.getTierLimits(tier);
+  const maxSlider = document.getElementById('player-slider') || document.querySelector('input[type="range"]');
+  if (maxSlider && limits.leagueMaxPlayers) {
+    maxSlider.max = limits.leagueMaxPlayers;
+    if (parseInt(maxSlider.value) > limits.leagueMaxPlayers) {
+      maxSlider.value = limits.leagueMaxPlayers;
+    }
+    // Update the display
+    const display = document.getElementById('player-count');
+    if (display) display.textContent = maxSlider.value;
+  }
+}
+
+function updatePlayerCount(slider) {
+  const val = parseInt(slider.value);
+  const display = document.getElementById('player-count');
+  display.textContent = val;
+  if (val > 25) {
+    display.style.color = 'var(--coral)';
+    slider.style.accentColor = 'var(--coral)';
+  } else if (val > 10) {
+    display.style.color = 'var(--purple)';
+    slider.style.accentColor = 'var(--purple)';
+  } else {
+    display.style.color = 'var(--lime)';
+    slider.style.accentColor = 'var(--lime)';
+  }
+}
+
+// ── Step 4: Invite ──
+let generatedCode = '';
+function generateCode() {
+  if (generatedCode) {
+    document.getElementById('generated-code').textContent = generatedCode;
+    return;
+  }
+  if (leagueVisibility === 'private') {
+    // Use the user-entered password, or the autogenerated one from launchLeague
+    const entered = document.getElementById('league-password').value.trim();
+    generatedCode = entered || Math.random().toString(36).slice(2, 8).toUpperCase();
+    document.getElementById('generated-code').textContent = generatedCode;
+    document.getElementById('generated-code').style.color = 'var(--coral)';
+    document.querySelector('.invite-code-label').textContent = 'Join Password — share this to invite members';
+  } else {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    generatedCode = code;
+    document.getElementById('generated-code').textContent = code;
+    document.getElementById('generated-code').style.color = 'var(--lime)';
+    document.querySelector('.invite-code-label').textContent = 'Your League Code';
+  }
+}
+
+function inviteContact(btn) {
+  btn.textContent = 'Invited';
+  btn.classList.add('invited');
+  invitedCount++;
+  showToast('Invite sent!');
+}
+
+// ── Step 5: Review ──
+function populateReview() {
+  const typeNames = { season: 'Season-Long', event: 'Event League', match: 'Match Night', custom: 'Custom League' };
+  document.getElementById('review-name').textContent = document.getElementById('league-name').value || '—';
+  document.getElementById('review-type').textContent = typeNames[leagueType] || '—';
+
+  const sportEl = document.getElementById('league-sport');
+  document.getElementById('review-sport').textContent = sportEl.options[sportEl.selectedIndex].text;
+
+  // Competition — now a select, use name from selectedCompetition object or fallback to option text
+  const compEl = document.getElementById('league-comp');
+  const compName = selectedCompetition
+    ? selectedCompetition.name
+    : (compEl.selectedIndex > 0 ? compEl.options[compEl.selectedIndex].text : '—');
+  document.getElementById('review-comp').textContent = compName;
+
+  // Scope + Team
+  document.getElementById('review-scope').textContent = leagueScope === 'team_specific' ? 'Team Specific' : 'Full League';
+  if (leagueScope === 'team_specific' && selectedScopedTeam) {
+    document.getElementById('review-team-row').style.display = 'flex';
+    document.getElementById('review-team').textContent = selectedScopedTeam.name;
+  } else {
+    document.getElementById('review-team-row').style.display = 'none';
+  }
+
+  // Match / Event
+  const matchEl = document.getElementById('league-match');
+  if (matchEl && matchEl.value) {
+    document.getElementById('review-match-row').style.display = 'flex';
+    document.getElementById('review-match').textContent = matchEl.options[matchEl.selectedIndex].text;
+  } else {
+    document.getElementById('review-match-row').style.display = 'none';
+  }
+
+  // Duration — show start/end dates if set, otherwise custom league duration
+  const startVal = document.getElementById('league-start-date').value;
+  const endVal   = document.getElementById('league-end-date').value;
+  if (startVal && endVal) {
+    document.getElementById('review-duration-row').style.display = 'flex';
+    document.getElementById('review-duration').textContent = startVal + ' → ' + endVal;
+  } else if (leagueType === 'custom') {
+    document.getElementById('review-duration-row').style.display = 'flex';
+    const customRow = document.getElementById('duration-custom-row');
+    if (customRow && customRow.style.display === 'flex') {
+      document.getElementById('review-duration').textContent = document.getElementById('duration-num').value + ' ' + document.getElementById('duration-unit').value;
+    } else {
+      document.getElementById('review-duration').textContent = customDurationText;
+    }
+  } else {
+    document.getElementById('review-duration-row').style.display = 'none';
+  }
+
+  // Play mode
+  document.getElementById('review-mode').textContent = playMode === 'team' ? 'Team Mode' : 'Individual';
+  if (playMode === 'team') {
+    const teams = document.getElementById('team-count').value;
+    const size = document.getElementById('team-size').value;
+    document.getElementById('review-teams-row').style.display = 'flex';
+    document.getElementById('review-teams').textContent = teams + ' teams × ' + size + ' players';
+  } else {
+    document.getElementById('review-teams-row').style.display = 'none';
+  }
+
+  // Question types
+  const selectedTypes = [];
+  document.querySelectorAll('#q-types .option-chip.selected:not(.locked)').forEach(c => {
+    selectedTypes.push(c.querySelector('.option-chip-label').textContent);
+  });
+  document.getElementById('review-qtypes').textContent = selectedTypes.join(', ') || 'None selected';
+
+  document.getElementById('review-players').textContent = document.getElementById('player-slider').value;
+  document.getElementById('review-risky').textContent = 'Locked (Pro)';
+  document.getElementById('review-risky').style.color = 'var(--grey-dark)';
+  document.getElementById('review-streaks').textContent = 'Locked (Pro)';
+  document.getElementById('review-streaks').style.color = 'var(--grey-dark)';
+  document.getElementById('review-code').textContent = document.getElementById('generated-code').textContent;
+  document.getElementById('review-invited').textContent = invitedCount > 0 ? invitedCount + ' people' : 'None yet — share the code!';
+
+  // AI Questions
+  const aiEl = document.getElementById('review-ai-questions');
+  if (aiQuestionsEnabled && selectedCompetition) {
+    const player  = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
+    const tier    = player ? (player.tier || 'starter') : 'starter';
+    const weekly  = tier === 'elite' ? 10 : tier === 'pro' ? 5 : 2;
+    const diffMs  = startVal && endVal ? new Date(endVal) - new Date(startVal) : 0;
+    const weeks   = diffMs > 0 ? Math.max(1, Math.ceil(diffMs / (7 * 24 * 60 * 60 * 1000))) : 1;
+    const total   = weekly * weeks;
+    aiEl.textContent = `On — ${total} questions (${weekly}/week)`;
+    aiEl.style.color = 'var(--lime)';
+  } else {
+    aiEl.textContent = 'Off';
+    aiEl.style.color = 'var(--grey)';
+  }
+
+  // Trophy review
+  var trophyEl = document.getElementById('review-trophy');
+  if (trophyEl && selectedTrophy) {
+    var rarity = SpontixStore.TROPHY_RARITY[selectedTrophy.rarity] || SpontixStore.TROPHY_RARITY.common;
+    trophyEl.textContent = selectedTrophy.name + (selectedTrophy.custom ? ' ✨' : '');
+    trophyEl.style.color = rarity.color;
+  }
+}
+
+// ── Launch ──
+async function launchLeague() {
+  // Enforce league creation limit
+  const player = SpontixStore.getPlayer();
+  const limits = SpontixStore.getTierLimits(player.tier);
+  if (limits.leaguesCreatePerWeek !== Infinity) {
+    const leagues = SpontixStore.getLeagues();
+    const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+    const createdThisWeek = leagues.filter(l => l.isOwner && new Date(l.createdAt).getTime() > oneWeekAgo).length;
+    if (createdThisWeek >= limits.leaguesCreatePerWeek) {
+      SpontixSidebar.showUpgradeModal({
+        feature: 'More Leagues',
+        requiredTier: limits.leaguesCreatePerWeek <= 1 ? 'Pro' : 'Elite',
+        isVenue: false,
+        icon: '⚽',
+        description: 'You\'ve created <strong>' + createdThisWeek + '/' + limits.leaguesCreatePerWeek + '</strong> leagues this week. Upgrade to create more.',
+        benefits: ['Create up to ' + (limits.leaguesCreatePerWeek <= 1 ? '5' : 'unlimited') + ' leagues per week', 'Join up to ' + (limits.leaguesCreatePerWeek <= 1 ? '10' : 'unlimited') + ' leagues', 'Bigger leagues with more players']
+      });
+      return;
+    }
+  }
+
+  // Save to Supabase (falls back to localStorage if offline)
+  const sportEl   = document.getElementById('league-sport');
+  const startVal  = document.getElementById('league-start-date').value;
+  const endVal    = document.getElementById('league-end-date').value;
+
+  // Compute AI quota
+  const tier      = player ? (player.tier || 'starter') : 'starter';
+  const weekly    = tier === 'elite' ? 10 : tier === 'pro' ? 5 : 2;
+  const diffMs    = startVal && endVal ? new Date(endVal) - new Date(startVal) : 0;
+  const weeks     = diffMs > 0 ? Math.max(1, Math.ceil(diffMs / (7 * 24 * 60 * 60 * 1000))) : 1;
+
+  const leagueData = {
+    name: document.getElementById('league-name').value || 'Untitled League',
+    sport: sportEl.options[sportEl.selectedIndex].value,
+    region: 'Europe',
+    type: leagueVisibility,
+    joinPassword: leagueVisibility === 'private'
+      ? (document.getElementById('league-password').value.trim() || Math.random().toString(36).slice(2, 8).toUpperCase())
+      : null,
+    mode: playMode,
+    maxMembers: parseInt(document.getElementById('player-slider').value) || 50,
+    trophy: selectedTrophy,
+    // AI / sports fields
+    scope:                leagueScope,
+    scoped_team_id:       leagueScope === 'team_specific' && selectedScopedTeam ? selectedScopedTeam.api_team_id : null,
+    scoped_team_name:     leagueScope === 'team_specific' && selectedScopedTeam ? selectedScopedTeam.name : null,
+    api_sports_league_id: selectedCompetition ? selectedCompetition.api_league_id : null,
+    api_sports_team_id:   leagueScope === 'team_specific' && selectedScopedTeam ? selectedScopedTeam.api_team_id : null,
+    api_sports_season:    selectedCompetition ? selectedCompetition.season : null,
+    league_start_date:    startVal || null,
+    league_end_date:      endVal   || null,
+    ai_questions_enabled: aiQuestionsEnabled && !!selectedCompetition,
+    ai_weekly_quota:      aiQuestionsEnabled ? weekly : null,
+    ai_total_quota:       aiQuestionsEnabled ? weekly * weeks : null,
+  };
+
+  var newLeagueId = null;
+  try {
+    const result = await SpontixStoreAsync.createLeague(leagueData);
+    if (result && result.ok && result.data) {
+      newLeagueId = result.data.id;
+    } else if (result && !result.ok) {
+      console.warn('[launchLeague] create failed:', result.error);
+      var local = SpontixStore.createLeague(leagueData);
+      newLeagueId = local.id;
+    }
+  } catch (err) {
+    console.warn('[launchLeague] async error, using local fallback:', err);
+    var local = SpontixStore.createLeague(leagueData);
+    newLeagueId = local.id;
+  }
+
+  showToast('League launched! Redirecting...');
+  var dest = newLeagueId ? 'league.html?id=' + newLeagueId : 'league.html';
+  setTimeout(() => { window.location.href = dest; }, 1500);
+}
+
+// ── Toast ──
+function showToast(msg) {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 3000);
+}
+
+// ═══════════════════════════════
+//  AI CHATBOT (Step 3)
+// ═══════════════════════════════
+let aiStep = 0;
+let aiConfigDone = false;
+
+function switchRulesMode(mode) {
+  document.querySelectorAll('.rules-mode-btn').forEach((b, i) => {
+    b.classList.toggle('active', (mode === 'manual' && i === 0) || (mode === 'ai' && i === 1));
+  });
+  document.getElementById('rules-manual').classList.toggle('active', mode === 'manual');
+  document.getElementById('rules-ai').classList.toggle('active', mode === 'ai');
+
+  // Start AI conversation on first open
+  if (mode === 'ai' && aiStep === 0) {
+    startAiConversation();
+  }
+}
+
+function addAiMessage(text, sender, callback) {
+  const container = document.getElementById('ai-messages');
+
+  // Show typing indicator for bot messages
+  if (sender === 'bot') {
+    const typing = document.createElement('div');
+    typing.className = 'ai-msg bot';
+    typing.id = 'ai-typing-indicator';
+    typing.innerHTML = `
+      <div class="ai-msg-avatar"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 014 4v1a2 2 0 012 2v1a2 2 0 01-2 2H8a2 2 0 01-2-2V9a2 2 0 012-2V6a4 4 0 014-4z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg></div>
+      <div class="ai-msg-bubble"><div class="ai-typing"><span></span><span></span><span></span></div></div>
+    `;
+    container.appendChild(typing);
+    container.scrollTop = container.scrollHeight;
+
+    setTimeout(() => {
+      typing.remove();
+      appendMessage(text, sender, container);
+      if (callback) callback();
+    }, 900 + Math.random() * 600);
+  } else {
+    appendMessage(text, sender, container);
+    if (callback) callback();
+  }
+}
+
+function appendMessage(text, sender, container) {
+  const msg = document.createElement('div');
+  msg.className = 'ai-msg ' + sender;
+  if (sender === 'bot') {
+    msg.innerHTML = `
+      <div class="ai-msg-avatar"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a4 4 0 014 4v1a2 2 0 012 2v1a2 2 0 01-2 2H8a2 2 0 01-2-2V9a2 2 0 012-2V6a4 4 0 014-4z"/><circle cx="9" cy="9" r="1"/><circle cx="15" cy="9" r="1"/></svg></div>
+      <div class="ai-msg-bubble">${text}</div>
+    `;
+  } else {
+    msg.innerHTML = `
+      <div class="ai-msg-avatar">You</div>
+      <div class="ai-msg-bubble">${text}</div>
+    `;
+  }
+  container.appendChild(msg);
+  container.scrollTop = container.scrollHeight;
+}
+
+function setAiSuggestions(chips) {
+  const container = document.getElementById('ai-suggestions');
+  container.innerHTML = '';
+  chips.forEach(chip => {
+    const btn = document.createElement('button');
+    btn.className = 'ai-suggest-btn';
+    btn.textContent = chip.label;
+    btn.onclick = () => handleAiChip(chip);
+    container.appendChild(btn);
+  });
+}
+
+function clearAiSuggestions() {
+  document.getElementById('ai-suggestions').innerHTML = '';
+}
+
+// Conversation flow — each step asks a question and provides chip options
+const aiConversation = [
+  {
+    botMessage: "Hey! I'm here to help you set up your league rules. Let's make this quick. First — what kind of vibe are you going for?",
+    suggestions: [
+      { label: "Casual & fun", value: "casual" },
+      { label: "Competitive", value: "competitive" },
+      { label: "Hardcore mode", value: "hardcore" }
+    ],
+    key: 'vibe'
+  },
+  {
+    botMessage: "Got it! Now — which days should questions go live? Pick what works for your crew.",
+    suggestions: [
+      { label: "Match days only", value: "matchdays" },
+      { label: "Weekends", value: "weekends" },
+      { label: "Every day", value: "daily" },
+      { label: "Custom schedule", value: "custom" }
+    ],
+    key: 'schedule'
+  },
+  {
+    botMessage: "Nice. What types of questions do you want in the mix?",
+    suggestions: [
+      { label: "Live predictions", value: "live" },
+      { label: "Pre-match picks", value: "prematch" },
+      { label: "Trivia & history", value: "trivia" },
+      { label: "Mix of everything", value: "mix" }
+    ],
+    key: 'questionTypes'
+  },
+  {
+    botMessage: "Last one — how many people are you expecting?",
+    suggestions: [
+      { label: "Just mates (2-5)", value: "small" },
+      { label: "Squad (6-10)", value: "medium" },
+      { label: "Big league (11-25)", value: "large" },
+      { label: "Massive (25+)", value: "huge" }
+    ],
+    key: 'size'
+  }
+];
+
+const aiAnswers = {};
+
+function startAiConversation() {
+  aiStep = 0;
+  aiConfigDone = false;
+  document.getElementById('ai-messages').innerHTML = '';
+  document.getElementById('ai-config-applied').classList.remove('show');
+  askNextAiQuestion();
+}
+
+function askNextAiQuestion() {
+  if (aiStep >= aiConversation.length) {
+    finishAiConfig();
+    return;
+  }
+  const step = aiConversation[aiStep];
+  addAiMessage(step.botMessage, 'bot', () => {
+    setAiSuggestions(step.suggestions.map(s => ({ ...s, stepKey: step.key })));
+  });
+}
+
+function handleAiChip(chip) {
+  clearAiSuggestions();
+
+  // Handle post-config chips
+  if (chip.stepKey === '_done') {
+    addAiMessage(chip.label, 'user', () => {
+      addAiMessage("You're all set! Hit Continue whenever you're ready.", 'bot');
+    });
+    return;
+  }
+  if (chip.stepKey === '_switch') {
+    switchRulesMode('manual');
+    return;
+  }
+
+  addAiMessage(chip.label, 'user', () => {
+    aiAnswers[chip.stepKey || aiConversation[aiStep].key] = chip.value;
+    aiStep++;
+
+    // Quick acknowledgement before next question
+    const acks = ["Sweet!", "Love it.", "Perfect.", "Nice choice."];
+    const ack = acks[Math.floor(Math.random() * acks.length)];
+
+    if (aiStep < aiConversation.length) {
+      addAiMessage(ack + " " + aiConversation[aiStep].botMessage, 'bot', () => {
+        setAiSuggestions(aiConversation[aiStep].suggestions.map(s => ({ ...s, stepKey: aiConversation[aiStep].key })));
+      });
+    } else {
+      finishAiConfig();
+    }
+  });
+}
+
+function sendAiMessage() {
+  const input = document.getElementById('ai-input');
+  const text = input.value.trim();
+  if (!text) return;
+  input.value = '';
+
+  if (aiConfigDone) {
+    addAiMessage(text, 'user', () => {
+      addAiMessage("Your league is already configured! You can tweak things in Manual Setup, or just hit Continue to move on.", 'bot');
+    });
+    return;
+  }
+
+  // Treat typed message as a free-text answer
+  clearAiSuggestions();
+  addAiMessage(text, 'user', () => {
+    aiAnswers[aiConversation[aiStep].key] = text;
+    aiStep++;
+
+    if (aiStep < aiConversation.length) {
+      askNextAiQuestion();
+    } else {
+      finishAiConfig();
+    }
+  });
+}
+
+function finishAiConfig() {
+  aiConfigDone = true;
+
+  // Map AI answers to actual config
+  const config = buildConfigFromAnswers(aiAnswers);
+
+  // Apply to manual form
+  applyAiConfig(config);
+
+  // Show summary message
+  addAiMessage("All set! Here's what I've configured for your league. You can tweak anything in Manual Setup, or just hit Continue.", 'bot', () => {
+    // Show config summary
+    const itemsContainer = document.getElementById('ai-config-items');
+    itemsContainer.innerHTML = '';
+    config.forEach(item => {
+      const div = document.createElement('div');
+      div.className = 'ai-config-item';
+      div.textContent = item.label + ': ' + item.value;
+      itemsContainer.appendChild(div);
+    });
+    document.getElementById('ai-config-applied').classList.add('show');
+    setAiSuggestions([
+      { label: "Looks great!", value: "done", stepKey: '_done' },
+      { label: "Switch to Manual Setup", value: "manual", stepKey: '_switch' }
+    ]);
+  });
+}
+
+function buildConfigFromAnswers(answers) {
+  const config = [];
+
+  // Vibe → game mechanics
+  if (answers.vibe === 'casual') {
+    config.push({ label: 'Vibe', value: 'Casual & Fun', mechanic: 'standard' });
+  } else if (answers.vibe === 'competitive') {
+    config.push({ label: 'Vibe', value: 'Competitive', mechanic: 'streaks' });
+  } else if (answers.vibe === 'hardcore') {
+    config.push({ label: 'Vibe', value: 'Hardcore Mode', mechanic: 'risky+streaks' });
+  } else {
+    config.push({ label: 'Vibe', value: answers.vibe || 'Custom' });
+  }
+
+  // Schedule
+  const scheduleMap = { matchdays: 'Match Days Only', weekends: 'Weekends (Sat & Sun)', daily: 'Every Day', custom: 'Custom Schedule' };
+  config.push({ label: 'Schedule', value: scheduleMap[answers.schedule] || answers.schedule || 'Match Days' });
+
+  // Question types
+  const qMap = { live: 'Live Predictions', prematch: 'Pre-match Picks', trivia: 'Trivia & History', mix: 'Live Predictions, Pre-match, Trivia' };
+  config.push({ label: 'Question Types', value: qMap[answers.questionTypes] || answers.questionTypes || 'Live Predictions' });
+
+  // Size
+  const sizeMap = { small: '5 players', medium: '10 players', large: '25 players', huge: '50 players' };
+  config.push({ label: 'Max Players', value: sizeMap[answers.size] || answers.size || '10 players' });
+
+  return config;
+}
+
+function applyAiConfig(config) {
+  // Apply question types to manual form
+  const qtypeChips = document.querySelectorAll('#q-types .option-chip:not(.locked)');
+  qtypeChips.forEach(c => c.classList.remove('selected'));
+
+  const qAnswer = aiAnswers.questionTypes;
+  if (qAnswer === 'live' || qAnswer === 'mix') {
+    qtypeChips[0]?.classList.add('selected'); // Live Predictions
+  }
+  if (qAnswer === 'prematch' || qAnswer === 'mix') {
+    qtypeChips[1]?.classList.add('selected'); // Pre-match
+  }
+
+  // Apply player count
+  const sizeVal = { small: 5, medium: 10, large: 25, huge: 50 };
+  const playerVal = sizeVal[aiAnswers.size] || 10;
+  const slider = document.getElementById('player-slider');
+  slider.value = playerVal;
+  updatePlayerCount(slider);
+}
+
+// Init
+generateCode();
+applyTierGating();
+</script>
+
+</body>
+</html>

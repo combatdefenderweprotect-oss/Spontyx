@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Trivia</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy: #1A1A2E;
+      --navy-light: #22223A;
+      --navy-card: #2A2A44;
+      --navy-hover: #32325A;
+      --lime: #A8E10C;
+      --lime-dim: rgba(168,225,12,0.12);
+      --coral: #FF6B6B;
+      --teal: #4ECDC4;
+      --purple: #7C5CFC;
+      --orange: #FF9F43;
+      --gold: #FFD700;
+      --off-white: #E8E8F0;
+      --grey: #9898B0;
+      --grey-dark: #5A5A78;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+      --radius-pill: 100px;
+      --shadow: 0 4px 24px rgba(0,0,0,0.25);
+      --shadow-lg: 0 8px 40px rgba(0,0,0,0.35);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--navy); color: var(--off-white);
+      min-height: 100vh; overflow-x: hidden;
+    }
+
+    /* ══ TOP BAR ══ */
+    .topbar {
+      display: flex; align-items: center; padding: 12px 24px;
+      background: var(--navy-light); border-bottom: 1px solid rgba(255,255,255,0.06);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .topbar-back {
+      display: flex; align-items: center; gap: 6px; color: var(--grey); font-size: 0.8rem;
+      font-weight: 600; text-decoration: none; padding: 6px 12px 6px 8px;
+      border-radius: var(--radius-pill); transition: all 0.15s;
+    }
+    .topbar-back:hover { background: rgba(255,255,255,0.05); color: var(--off-white); }
+    .topbar-back svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .topbar-center { flex: 1; text-align: center; }
+    .topbar-match { font-size: 0.65rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+    .topbar-title { font-size: 1rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .topbar-title .trivia-badge {
+      background: linear-gradient(135deg, var(--teal), #3BA89F); color: #fff;
+      padding: 3px 10px; border-radius: var(--radius-pill); font-size: 0.6rem;
+      font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .topbar-spacer { width: 70px; }
+
+    /* ══ SCREENS ══ */
+    .screen { display: none; min-height: calc(100vh - 54px); }
+    .screen.active { display: flex; flex-direction: column; }
+
+    /* ═══════════════════════════════
+       HUB SCREEN
+    ═══════════════════════════════ */
+    .hub { align-items: center; padding: 32px 24px; }
+    .hub-profile {
+      background: var(--navy-card); border-radius: var(--radius-xl); padding: 24px 28px;
+      border: 1px solid rgba(255,255,255,0.06); width: 100%; max-width: 560px;
+      margin-bottom: 28px; display: flex; align-items: center; gap: 20px;
+    }
+    .hub-avatar {
+      width: 64px; height: 64px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--teal), #3BA89F);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.5rem; font-weight: 900; color: #fff; flex-shrink: 0;
+      position: relative;
+    }
+    .hub-level-badge {
+      position: absolute; bottom: -4px; right: -4px;
+      background: var(--gold); color: var(--navy); font-size: 0.6rem;
+      font-weight: 900; width: 24px; height: 24px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--navy-card);
+    }
+    .hub-profile-info { flex: 1; }
+    .hub-profile-name { font-size: 1.1rem; font-weight: 800; margin-bottom: 2px; }
+    .hub-profile-title { font-size: 0.75rem; color: var(--teal); font-weight: 600; margin-bottom: 8px; }
+    .hub-xp-bar { height: 6px; background: rgba(255,255,255,0.08); border-radius: 6px; overflow: hidden; margin-bottom: 4px; }
+    .hub-xp-fill { height: 100%; background: linear-gradient(90deg, var(--teal), var(--lime)); border-radius: 6px; transition: width 0.6s; }
+    .hub-xp-text { font-size: 0.65rem; color: var(--grey); display: flex; justify-content: space-between; }
+
+    .hub-stats {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+      width: 100%; max-width: 560px; margin-bottom: 32px;
+    }
+    .hub-stat {
+      background: var(--navy-card); border-radius: var(--radius-md); padding: 14px 12px;
+      text-align: center; border: 1px solid rgba(255,255,255,0.06);
+    }
+    .hub-stat-val { font-size: 1.2rem; font-weight: 800; color: var(--off-white); }
+    .hub-stat-val.teal { color: var(--teal); }
+    .hub-stat-val.lime { color: var(--lime); }
+    .hub-stat-val.gold { color: var(--gold); }
+    .hub-stat-val.coral { color: var(--coral); }
+    .hub-stat-label { font-size: 0.6rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+
+    .hub-modes-title {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+      color: var(--grey-dark); margin-bottom: 14px; width: 100%; max-width: 560px; text-align: left;
+    }
+    .hub-modes {
+      display: flex; flex-direction: column; gap: 12px;
+      width: 100%; max-width: 560px; margin-bottom: 32px;
+    }
+    .hub-mode {
+      background: var(--navy-card); border-radius: var(--radius-lg); padding: 20px 24px;
+      border: 1px solid rgba(255,255,255,0.06); cursor: pointer;
+      display: flex; align-items: center; gap: 16px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .hub-mode:hover { border-color: rgba(78,205,196,0.3); transform: translateY(-2px); }
+    .hub-mode-icon {
+      width: 52px; height: 52px; border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .hub-mode-icon svg { width: 26px; height: 26px; stroke-width: 2; fill: none; }
+    .hub-mode-icon.solo { background: rgba(78,205,196,0.12); }
+    .hub-mode-icon.solo svg { stroke: var(--teal); }
+    .hub-mode-icon.duel { background: rgba(255,107,107,0.12); }
+    .hub-mode-icon.duel svg { stroke: var(--coral); }
+    .hub-mode-icon.party { background: rgba(124,92,252,0.12); }
+    .hub-mode-icon.party svg { stroke: var(--purple); }
+    .hub-mode-info { flex: 1; }
+    .hub-mode-name { font-size: 1rem; font-weight: 700; margin-bottom: 3px; }
+    .hub-mode-desc { font-size: 0.75rem; color: var(--grey); line-height: 1.4; }
+    .hub-mode-arrow { color: var(--grey-dark); font-size: 1.2rem; }
+    .hub-mode-arrow svg { width: 20px; height: 20px; stroke: var(--grey-dark); stroke-width: 2; fill: none; }
+
+    .hub-recent-title {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
+      color: var(--grey-dark); margin-bottom: 14px; width: 100%; max-width: 560px; text-align: left;
+    }
+    .hub-recent {
+      display: flex; flex-direction: column; gap: 8px;
+      width: 100%; max-width: 560px;
+    }
+    .hub-recent-item {
+      background: var(--navy-card); border-radius: var(--radius-md); padding: 14px 18px;
+      border: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 14px;
+    }
+    .hub-recent-icon {
+      width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 800; flex-shrink: 0;
+    }
+    .hub-recent-info { flex: 1; }
+    .hub-recent-topic { font-size: 0.85rem; font-weight: 600; }
+    .hub-recent-meta { font-size: 0.68rem; color: var(--grey); margin-top: 2px; }
+    .hub-recent-score { font-size: 0.85rem; font-weight: 800; }
+
+    /* ═══════════════════════════════
+       SETUP SCREEN
+    ═══════════════════════════════ */
+    .setup { align-items: center; padding: 32px 24px; }
+    .setup-card {
+      background: var(--navy-card); border-radius: var(--radius-xl); padding: 28px;
+      border: 1px solid rgba(255,255,255,0.06); width: 100%; max-width: 560px;
+      margin-bottom: 20px;
+    }
+    .setup-card h3 {
+      font-size: 0.9rem; font-weight: 700; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .setup-card h3 .step-num {
+      background: var(--teal); color: #fff; width: 22px; height: 22px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800;
+    }
+    .topic-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
+    }
+    .topic-chip {
+      padding: 14px 10px; border-radius: var(--radius-md); border: 2px solid rgba(255,255,255,0.08);
+      background: var(--navy-light); text-align: center; cursor: pointer;
+      transition: all 0.15s; display: flex; flex-direction: column; align-items: center; gap: 6px;
+    }
+    .topic-chip:hover { border-color: rgba(78,205,196,0.3); }
+    .topic-chip.selected { border-color: var(--teal); background: rgba(78,205,196,0.1); }
+    .topic-chip-icon { font-size: 1.3rem; }
+    .topic-chip-icon svg { width: 28px; height: 28px; stroke-width: 1.8; fill: none; }
+    .topic-chip-label { font-size: 0.72rem; font-weight: 600; }
+
+    .topic-custom {
+      margin-top: 12px; display: flex; align-items: center; gap: 10px;
+      padding: 12px 16px; border-radius: var(--radius-md); border: 2px solid rgba(255,255,255,0.08);
+      background: var(--navy-light); transition: all 0.2s;
+    }
+    .topic-custom:focus-within { border-color: var(--teal); background: rgba(78,205,196,0.06); }
+    .topic-custom-icon {
+      flex-shrink: 0; width: 32px; height: 32px; border-radius: 50%;
+      background: rgba(78,205,196,0.12); display: flex; align-items: center; justify-content: center;
+    }
+    .topic-custom-icon svg { width: 18px; height: 18px; stroke: var(--teal); fill: none; stroke-width: 2; }
+    .topic-custom input {
+      flex: 1; background: none; border: none; outline: none; color: var(--off-white);
+      font-family: inherit; font-size: 0.85rem; font-weight: 600;
+    }
+    .topic-custom input::placeholder { color: var(--grey-dark); font-weight: 500; }
+    .topic-custom-hint {
+      font-size: 0.6rem; color: var(--grey-dark); font-weight: 600; white-space: nowrap; flex-shrink: 0;
+    }
+    .topic-custom-hint span { color: var(--teal); }
+    .topic-custom-examples {
+      margin-top: 8px; display: flex; flex-wrap: wrap; gap: 6px;
+    }
+    .topic-example {
+      padding: 4px 12px; border-radius: var(--radius-pill); border: 1px solid rgba(78,205,196,0.15);
+      background: rgba(78,205,196,0.04); color: var(--grey); font-size: 0.62rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .topic-example:hover { border-color: var(--teal); color: var(--teal); background: rgba(78,205,196,0.1); }
+
+    .diff-options { display: flex; flex-direction: column; gap: 8px; }
+    .diff-option {
+      padding: 14px 18px; border-radius: var(--radius-md); border: 2px solid rgba(255,255,255,0.08);
+      background: var(--navy-light); cursor: pointer; transition: all 0.15s;
+      display: flex; align-items: center; gap: 14px;
+    }
+    .diff-option:hover { border-color: rgba(78,205,196,0.3); }
+    .diff-option.selected { border-color: var(--teal); background: rgba(78,205,196,0.1); }
+    .diff-dot {
+      width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+    }
+    .diff-dot.easy { background: var(--lime); }
+    .diff-dot.medium { background: var(--orange); }
+    .diff-dot.hard { background: var(--coral); }
+    .diff-dot.adaptive { background: var(--purple); }
+    .diff-dot.escalating { background: linear-gradient(135deg, var(--lime), var(--coral)); }
+    .diff-info { flex: 1; }
+    .diff-name { font-size: 0.85rem; font-weight: 600; }
+    .diff-desc { font-size: 0.68rem; color: var(--grey); margin-top: 2px; }
+    .diff-xp { font-size: 0.65rem; font-weight: 700; color: var(--teal); margin-top: 2px; }
+
+    .round-picker { display: flex; gap: 10px; }
+    .round-chip {
+      flex: 1; padding: 12px; text-align: center; border-radius: var(--radius-md);
+      border: 2px solid rgba(255,255,255,0.08); background: var(--navy-light);
+      cursor: pointer; transition: all 0.15s;
+    }
+    .round-chip:hover { border-color: rgba(78,205,196,0.3); }
+    .round-chip.selected { border-color: var(--teal); background: rgba(78,205,196,0.1); }
+    .round-chip-num { font-size: 1.2rem; font-weight: 800; }
+    .round-chip-label { font-size: 0.6rem; color: var(--grey); font-weight: 600; text-transform: uppercase; margin-top: 2px; }
+
+    .setup-start {
+      width: 100%; max-width: 560px; padding: 16px; border: none;
+      border-radius: var(--radius-lg); font-family: inherit; font-size: 1rem;
+      font-weight: 800; cursor: pointer; transition: all 0.2s;
+      background: linear-gradient(135deg, var(--teal), #3BA89F); color: #fff;
+      letter-spacing: 0.5px;
+    }
+    .setup-start:hover { transform: translateY(-2px); box-shadow: 0 6px 24px rgba(78,205,196,0.3); }
+
+    /* ═══════════════════════════════
+       PLAY SCREEN (SHARED)
+    ═══════════════════════════════ */
+    .play { align-items: center; padding: 24px; }
+    .play-header {
+      width: 100%; max-width: 600px; display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 16px;
+    }
+    .play-round {
+      font-size: 0.7rem; font-weight: 700; color: var(--grey); text-transform: uppercase; letter-spacing: 1px;
+    }
+    .play-round strong { color: var(--off-white); }
+    .play-score-strip { display: flex; gap: 16px; }
+    .play-score-item { text-align: center; }
+    .play-score-item .val { font-size: 1rem; font-weight: 800; }
+    .play-score-item .val.teal { color: var(--teal); }
+    .play-score-item .val.lime { color: var(--lime); }
+    .play-score-item .val.coral { color: var(--coral); }
+    .play-score-item .lbl { font-size: 0.55rem; color: var(--grey); font-weight: 600; text-transform: uppercase; }
+
+    .play-round-pips {
+      display: flex; gap: 6px; margin-bottom: 20px;
+    }
+    .play-pip {
+      width: 28px; height: 5px; border-radius: 4px; background: rgba(255,255,255,0.08);
+      transition: background 0.3s;
+    }
+    .play-pip.correct { background: var(--teal); }
+    .play-pip.wrong { background: var(--coral); }
+    .play-pip.current { background: var(--off-white); animation: pip-pulse 1.5s infinite; }
+    @keyframes pip-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    .play-timer-ring {
+      width: 80px; height: 80px; margin-bottom: 16px; position: relative;
+    }
+    .play-timer-ring svg { width: 80px; height: 80px; transform: rotate(-90deg); }
+    .play-timer-ring .ring-bg { stroke: rgba(255,255,255,0.06); stroke-width: 4; fill: none; }
+    .play-timer-ring .ring-fg { stroke: var(--teal); stroke-width: 4; fill: none; stroke-linecap: round; transition: stroke-dashoffset 0.3s linear; }
+    .play-timer-ring .ring-fg.warning { stroke: var(--orange); }
+    .play-timer-ring .ring-fg.critical { stroke: var(--coral); animation: ring-pulse 0.5s infinite; }
+    @keyframes ring-pulse { 0%,100%{opacity:1}50%{opacity:0.5} }
+    .play-timer-text {
+      position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem; font-weight: 900;
+    }
+
+    .play-question-card {
+      background: var(--navy-card); border-radius: var(--radius-xl); padding: 28px;
+      border: 1px solid rgba(255,255,255,0.06); width: 100%; max-width: 600px;
+      margin-bottom: 20px; text-align: center;
+    }
+    .play-q-category {
+      font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--teal); margin-bottom: 10px;
+    }
+    .play-q-difficulty {
+      display: inline-block; padding: 3px 10px; border-radius: var(--radius-pill);
+      font-size: 0.6rem; font-weight: 700; margin-bottom: 12px;
+    }
+    .play-q-difficulty.easy { background: rgba(168,225,12,0.15); color: var(--lime); }
+    .play-q-difficulty.medium { background: rgba(255,159,67,0.15); color: var(--orange); }
+    .play-q-difficulty.hard { background: rgba(255,107,107,0.15); color: var(--coral); }
+    .play-q-text {
+      font-size: 1.15rem; font-weight: 700; line-height: 1.5; margin-bottom: 24px;
+    }
+    .play-options { display: flex; flex-direction: column; gap: 10px; }
+    .play-option {
+      padding: 16px 20px; border-radius: var(--radius-md); border: 2px solid rgba(255,255,255,0.08);
+      background: var(--navy-light); cursor: pointer; font-family: inherit;
+      font-size: 0.9rem; font-weight: 600; color: var(--off-white);
+      text-align: left; transition: all 0.15s; display: flex; align-items: center; gap: 12px;
+    }
+    .play-option:hover { border-color: rgba(78,205,196,0.3); background: rgba(78,205,196,0.05); }
+    .play-option .opt-letter {
+      width: 28px; height: 28px; border-radius: 50%; background: rgba(255,255,255,0.06);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 800; color: var(--grey); flex-shrink: 0;
+    }
+    .play-option.selected { border-color: var(--teal); background: rgba(78,205,196,0.1); }
+    .play-option.selected .opt-letter { background: var(--teal); color: #fff; }
+    .play-option.correct { border-color: var(--lime); background: rgba(168,225,12,0.1); }
+    .play-option.correct .opt-letter { background: var(--lime); color: var(--navy); }
+    .play-option.wrong { border-color: var(--coral); background: rgba(255,107,107,0.1); }
+    .play-option.wrong .opt-letter { background: var(--coral); color: #fff; }
+    .play-option.disabled { pointer-events: none; opacity: 0.5; }
+    .play-option .opt-icon { margin-left: auto; display: none; }
+    .play-option.correct .opt-icon, .play-option.wrong .opt-icon { display: block; }
+    .play-option .opt-icon svg { width: 18px; height: 18px; stroke-width: 2.5; fill: none; }
+    .play-option.correct .opt-icon svg { stroke: var(--lime); }
+    .play-option.wrong .opt-icon svg { stroke: var(--coral); }
+
+    .play-xp-toast {
+      position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+      background: rgba(78,205,196,0.9); color: #fff; font-size: 0.85rem; font-weight: 800;
+      padding: 8px 20px; border-radius: var(--radius-pill);
+      opacity: 0; transition: all 0.3s; pointer-events: none;
+    }
+    .play-xp-toast.show { opacity: 1; transform: translateX(-50%) translateY(-8px); }
+
+    /* ═══════════════════════════════
+       1v1 DUEL EXTRAS
+    ═══════════════════════════════ */
+    .duel-vs-strip {
+      width: 100%; max-width: 600px; display: flex; align-items: center;
+      justify-content: space-between; margin-bottom: 20px;
+      background: var(--navy-card); border-radius: var(--radius-lg); padding: 14px 20px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .duel-player { display: flex; align-items: center; gap: 10px; }
+    .duel-player-avatar {
+      width: 40px; height: 40px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; font-weight: 800;
+    }
+    .duel-player-name { font-size: 0.8rem; font-weight: 700; }
+    .duel-player-score { font-size: 0.65rem; font-weight: 600; }
+    .duel-player-score.leading { color: var(--teal); }
+    .duel-vs { font-size: 0.7rem; font-weight: 900; color: var(--grey-dark); text-transform: uppercase; letter-spacing: 1px; }
+
+    /* ═══════════════════════════════
+       LOBBY SCREEN (1v1 & PARTY)
+    ═══════════════════════════════ */
+    .lobby { align-items: center; justify-content: center; padding: 32px 24px; text-align: center; }
+    .lobby-card {
+      background: var(--navy-card); border-radius: var(--radius-xl); padding: 36px 32px;
+      border: 1px solid rgba(255,255,255,0.06); width: 100%; max-width: 480px;
+    }
+    .lobby-icon {
+      width: 72px; height: 72px; border-radius: 50%; margin: 0 auto 20px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .lobby-icon svg { width: 36px; height: 36px; stroke-width: 1.8; fill: none; }
+    .lobby-icon.duel { background: rgba(255,107,107,0.12); }
+    .lobby-icon.duel svg { stroke: var(--coral); }
+    .lobby-icon.party { background: rgba(124,92,252,0.12); }
+    .lobby-icon.party svg { stroke: var(--purple); }
+    .lobby-title { font-size: 1.3rem; font-weight: 800; margin-bottom: 6px; }
+    .lobby-subtitle { font-size: 0.8rem; color: var(--grey); margin-bottom: 24px; }
+
+    .lobby-searching {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      margin-bottom: 20px;
+    }
+    .lobby-searching .dots { display: flex; gap: 6px; }
+    .lobby-searching .dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--teal);
+      animation: dot-bounce 1.4s infinite;
+    }
+    .lobby-searching .dot:nth-child(2) { animation-delay: 0.2s; }
+    .lobby-searching .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dot-bounce {
+      0%, 80%, 100% { opacity: 0.3; transform: scale(0.8); }
+      40% { opacity: 1; transform: scale(1.2); }
+    }
+    .lobby-searching-text { font-size: 0.8rem; color: var(--grey); font-weight: 600; }
+
+    .lobby-room-code {
+      background: var(--navy-light); border-radius: var(--radius-md); padding: 16px;
+      margin-bottom: 20px;
+    }
+    .lobby-room-code-label { font-size: 0.6rem; font-weight: 700; color: var(--grey); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+    .lobby-room-code-val { font-size: 2rem; font-weight: 900; letter-spacing: 6px; color: var(--purple); }
+
+    .lobby-players { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin-bottom: 24px; }
+    .lobby-player {
+      width: 52px; text-align: center;
+    }
+    .lobby-player-avatar {
+      width: 44px; height: 44px; border-radius: 50%; margin: 0 auto 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 800;
+    }
+    .lobby-player-avatar.empty { border: 2px dashed rgba(255,255,255,0.12); background: transparent; }
+    .lobby-player-name { font-size: 0.6rem; color: var(--grey); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .lobby-start-btn {
+      padding: 14px 40px; border: none; border-radius: var(--radius-lg);
+      font-family: inherit; font-size: 0.9rem; font-weight: 800; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .lobby-start-btn.duel { background: linear-gradient(135deg, var(--coral), #E84545); color: #fff; }
+    .lobby-start-btn.party { background: linear-gradient(135deg, var(--purple), #5B3FD4); color: #fff; }
+    .lobby-start-btn:hover { transform: translateY(-2px); }
+
+    /* ═══════════════════════════════
+       PARTY PLAY EXTRAS
+    ═══════════════════════════════ */
+    .party-standings {
+      width: 100%; max-width: 600px; background: var(--navy-card);
+      border-radius: var(--radius-lg); padding: 16px 20px;
+      border: 1px solid rgba(255,255,255,0.06); margin-bottom: 16px;
+    }
+    .party-standings-title {
+      font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--grey-dark); margin-bottom: 10px;
+    }
+    .party-standings-row {
+      display: flex; align-items: center; gap: 10px; padding: 6px 0;
+    }
+    .party-standings-row.you { background: rgba(78,205,196,0.06); border-radius: var(--radius-sm); padding: 6px 8px; margin: 0 -8px; }
+    .party-standings-pos { font-size: 0.75rem; font-weight: 800; width: 20px; text-align: center; }
+    .party-standings-pos.gold { color: var(--gold); }
+    .party-standings-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.6rem; font-weight: 800; flex-shrink: 0;
+    }
+    .party-standings-name { flex: 1; font-size: 0.8rem; font-weight: 600; }
+    .party-standings-score { font-size: 0.8rem; font-weight: 800; }
+    .party-standings-score.teal { color: var(--teal); }
+
+    /* ═══════════════════════════════
+       RESULTS SCREEN
+    ═══════════════════════════════ */
+    .results { align-items: center; padding: 40px 24px; }
+    .results-trophy {
+      width: 96px; height: 96px; margin-bottom: 24px; animation: trophy-float 3s ease-in-out infinite;
+    }
+    @keyframes trophy-float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-8px); }
+    }
+    .results-title { font-size: 1.5rem; font-weight: 900; margin-bottom: 4px; }
+    .results-subtitle { font-size: 0.85rem; color: var(--grey); margin-bottom: 28px; }
+
+    .results-stars { display: flex; gap: 8px; margin-bottom: 28px; }
+    .results-star svg { width: 40px; height: 40px; }
+    .results-star.filled svg { fill: var(--gold); stroke: var(--gold); }
+    .results-star.empty svg { fill: none; stroke: var(--grey-dark); }
+
+    .results-card {
+      background: var(--navy-card); border-radius: var(--radius-xl); padding: 24px 28px;
+      border: 1px solid rgba(255,255,255,0.06); width: 100%; max-width: 480px;
+      margin-bottom: 20px;
+    }
+    .results-card-title {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--grey-dark); margin-bottom: 14px;
+    }
+    .results-stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .results-stat { text-align: center; }
+    .results-stat .val { font-size: 1.3rem; font-weight: 800; }
+    .results-stat .lbl { font-size: 0.6rem; color: var(--grey); font-weight: 600; text-transform: uppercase; margin-top: 2px; }
+
+    .results-xp-card {
+      background: var(--navy-card); border-radius: var(--radius-xl); padding: 24px 28px;
+      border: 1px solid rgba(78,205,196,0.2); width: 100%; max-width: 480px;
+      margin-bottom: 24px;
+    }
+    .results-xp-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .results-xp-earned { font-size: 1.4rem; font-weight: 900; color: var(--teal); }
+    .results-xp-label { font-size: 0.65rem; color: var(--grey); font-weight: 600; }
+    .results-level-info { text-align: right; }
+    .results-level-num { font-size: 0.85rem; font-weight: 800; }
+    .results-level-title { font-size: 0.65rem; color: var(--teal); font-weight: 600; }
+    .results-xp-bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 8px; overflow: hidden; margin-bottom: 4px; }
+    .results-xp-fill { height: 100%; background: linear-gradient(90deg, var(--teal), var(--lime)); border-radius: 8px; transition: width 1.5s ease; }
+    .results-xp-text { font-size: 0.6rem; color: var(--grey); display: flex; justify-content: space-between; }
+
+    .results-levelup {
+      background: linear-gradient(135deg, rgba(78,205,196,0.15), rgba(168,225,12,0.1));
+      border: 1px solid rgba(78,205,196,0.3); border-radius: var(--radius-lg);
+      padding: 16px 20px; width: 100%; max-width: 480px; margin-bottom: 24px;
+      text-align: center; animation: glow-pulse 2s infinite;
+    }
+    @keyframes glow-pulse {
+      0%, 100% { box-shadow: 0 0 0 rgba(78,205,196,0); }
+      50% { box-shadow: 0 0 20px rgba(78,205,196,0.2); }
+    }
+    .results-levelup-text { font-size: 0.9rem; font-weight: 800; color: var(--teal); }
+    .results-levelup-title { font-size: 0.75rem; color: var(--off-white); margin-top: 4px; }
+    .results-levelup { display: none; }
+    .results-levelup.show { display: block; }
+
+    .results-actions { display: flex; gap: 12px; width: 100%; max-width: 480px; }
+    .results-btn {
+      flex: 1; padding: 14px; border: none; border-radius: var(--radius-lg);
+      font-family: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .results-btn:hover { transform: translateY(-2px); }
+    .results-btn.primary { background: linear-gradient(135deg, var(--teal), #3BA89F); color: #fff; }
+    .results-btn.secondary { background: var(--navy-card); color: var(--off-white); border: 1px solid rgba(255,255,255,0.08); }
+
+    /* ══ CONFETTI ══ */
+    .confetti-container { position: fixed; inset: 0; pointer-events: none; z-index: 1000; overflow: hidden; }
+    .confetti-piece {
+      position: absolute; top: -20px; width: 10px; height: 10px; border-radius: 2px;
+      animation: confetti-fall 3s linear forwards;
+    }
+    @keyframes confetti-fall {
+      0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
+    }
+
+    /* ══ DEMO NAV ══ */
+    .demo-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
+      background: rgba(26,26,46,0.95); border-top: 1px solid rgba(255,255,255,0.08);
+      padding: 8px 12px; display: flex; gap: 6px; overflow-x: auto;
+      backdrop-filter: blur(10px);
+    }
+    .demo-nav button {
+      padding: 6px 14px; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.1);
+      background: var(--navy-card); color: var(--grey); font-family: inherit;
+      font-size: 0.68rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .demo-nav button:hover { background: var(--navy-hover); color: var(--off-white); }
+    .demo-nav button.active { background: var(--teal); color: #fff; border-color: var(--teal); }
+
+    /* ══ TOAST ══ */
+    .toast {
+      position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%);
+      background: var(--navy-card); color: var(--off-white); padding: 12px 24px;
+      border-radius: var(--radius-pill); font-size: 0.8rem; font-weight: 600;
+      border: 1px solid rgba(255,255,255,0.1); box-shadow: var(--shadow-lg);
+      opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 300;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(-8px); }
+  </style>
+</head>
+<body>
+
+<!-- ══ TOP BAR ══ -->
+<div class="topbar">
+  <a href="dashboard.html" class="topbar-back">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    Back
+  </a>
+  <div class="topbar-center">
+    <div class="topbar-match">Sports Knowledge</div>
+    <div class="topbar-title">Trivia <span class="trivia-badge">Quiz</span></div>
+  </div>
+  <div class="topbar-spacer"></div>
+</div>
+
+<!-- ═══════════════════════════════
+     SCREEN 1 — HUB
+═══════════════════════════════ -->
+<div id="screen-hub" class="screen hub active">
+
+  <!-- Player Profile -->
+  <div class="hub-profile">
+    <div class="hub-avatar">
+      BW
+      <div class="hub-level-badge">12</div>
+    </div>
+    <div class="hub-profile-info">
+      <div class="hub-profile-name">BranWilson</div>
+      <div class="hub-profile-title">Sports Scholar — Level 12</div>
+      <div class="hub-xp-bar"><div class="hub-xp-fill" style="width:62%"></div></div>
+      <div class="hub-xp-text"><span>3,100 / 5,000 XP</span><span>Level 13</span></div>
+    </div>
+  </div>
+
+  <!-- Quick Stats -->
+  <div class="hub-stats">
+    <div class="hub-stat">
+      <div class="hub-stat-val teal">143</div>
+      <div class="hub-stat-label">Games Played</div>
+    </div>
+    <div class="hub-stat">
+      <div class="hub-stat-val lime">72%</div>
+      <div class="hub-stat-label">Accuracy</div>
+    </div>
+    <div class="hub-stat">
+      <div class="hub-stat-val gold">18</div>
+      <div class="hub-stat-label">Win Streak</div>
+    </div>
+    <div class="hub-stat">
+      <div class="hub-stat-val coral">9</div>
+      <div class="hub-stat-label">1v1 Wins</div>
+    </div>
+  </div>
+
+  <!-- Game Modes -->
+  <div class="hub-modes-title">Choose Game Mode</div>
+  <div class="hub-modes">
+    <div class="hub-mode" onclick="selectMode('solo')">
+      <div class="hub-mode-icon solo">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+      </div>
+      <div class="hub-mode-info">
+        <div class="hub-mode-name">Solo Challenge</div>
+        <div class="hub-mode-desc">Test your knowledge against AI-generated questions. Choose your topic and difficulty.</div>
+      </div>
+      <div class="hub-mode-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </div>
+    <div class="hub-mode" onclick="selectMode('duel')">
+      <div class="hub-mode-icon duel">
+        <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="hub-mode-info">
+        <div class="hub-mode-name">1v1 Duel</div>
+        <div class="hub-mode-desc">Go head-to-head against another player. Fastest correct answer wins each round.</div>
+      </div>
+      <div class="hub-mode-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </div>
+    <div class="hub-mode" onclick="selectMode('party')">
+      <div class="hub-mode-icon party">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      </div>
+      <div class="hub-mode-info">
+        <div class="hub-mode-name">Party Room</div>
+        <div class="hub-mode-desc">Invite 2–8 friends to compete. Same questions, live standings. Top score wins.</div>
+      </div>
+      <div class="hub-mode-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+    </div>
+  </div>
+
+  <div class="tier-hint" style="font-size:0.7rem;color:#5A5A78;margin-top:4px;margin-bottom:16px;">
+    <strong style="color:var(--teal);">Free:</strong> Solo only, 5/day &nbsp;·&nbsp; <strong style="color:var(--purple);">Pro:</strong> Solo + 1v1, 15/day &nbsp;·&nbsp; <strong style="color:var(--coral);">Elite:</strong> All modes, unlimited
+  </div>
+
+  <!-- Recent Games -->
+  <div class="hub-recent-title">Recent Games</div>
+  <div class="hub-recent">
+    <div class="hub-recent-item">
+      <div class="hub-recent-icon" style="background:rgba(78,205,196,0.12);color:var(--teal);">S</div>
+      <div class="hub-recent-info">
+        <div class="hub-recent-topic">Premier League History</div>
+        <div class="hub-recent-meta">Solo · 10 rounds · Hard · 2h ago</div>
+      </div>
+      <div class="hub-recent-score" style="color:var(--teal)">8/10</div>
+    </div>
+    <div class="hub-recent-item">
+      <div class="hub-recent-icon" style="background:rgba(255,107,107,0.12);color:var(--coral);">D</div>
+      <div class="hub-recent-info">
+        <div class="hub-recent-topic">NBA All-Time Records</div>
+        <div class="hub-recent-meta">1v1 Duel · vs MarkH · Won · Yesterday</div>
+      </div>
+      <div class="hub-recent-score" style="color:var(--lime)">W</div>
+    </div>
+    <div class="hub-recent-item">
+      <div class="hub-recent-icon" style="background:rgba(124,92,252,0.12);color:var(--purple);">P</div>
+      <div class="hub-recent-info">
+        <div class="hub-recent-topic">World Cup Legends</div>
+        <div class="hub-recent-meta">Party · 5 players · 2nd place · 3d ago</div>
+      </div>
+      <div class="hub-recent-score" style="color:var(--gold)">2nd</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════
+     SCREEN 2 — SETUP
+═══════════════════════════════ -->
+<div id="screen-setup" class="screen setup">
+
+  <!-- Topic Selection -->
+  <div class="setup-card">
+    <h3><span class="step-num">1</span> Choose Topic</h3>
+    <div class="topic-grid">
+      <div class="topic-chip selected" onclick="selectTopic(this)">
+        <div class="topic-chip-icon"><svg viewBox="0 0 24 24" stroke="var(--teal)" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 2 C12 2 7 8 7 12 7 16 12 22 12 22 12 22 17 16 17 12 17 8 12 2 12 2z"/><line x1="2" y1="12" x2="22" y2="12"/></svg></div>
+        <div class="topic-chip-label">Football</div>
+      </div>
+      <div class="topic-chip" onclick="selectTopic(this)">
+        <div class="topic-chip-icon"><svg viewBox="0 0 24 24" stroke="var(--coral)" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93 19.07 19.07"/><path d="M19.07 4.93 4.93 19.07"/></svg></div>
+        <div class="topic-chip-label">Basketball</div>
+      </div>
+      <div class="topic-chip" onclick="selectTopic(this)">
+        <div class="topic-chip-icon"><svg viewBox="0 0 24 24" stroke="var(--orange)" fill="none" stroke-width="1.8"><ellipse cx="12" cy="12" rx="10" ry="5"/><path d="M12 7v10"/><path d="M7 12h10"/></svg></div>
+        <div class="topic-chip-label">MMA / UFC</div>
+      </div>
+      <div class="topic-chip" onclick="selectTopic(this)">
+        <div class="topic-chip-icon"><svg viewBox="0 0 24 24" stroke="var(--lime)" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg></div>
+        <div class="topic-chip-label">Tennis</div>
+      </div>
+      <div class="topic-chip" onclick="selectTopic(this)">
+        <div class="topic-chip-icon"><svg viewBox="0 0 24 24" stroke="var(--gold)" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="2" x2="12" y2="22"/><path d="M5 6h14"/><path d="M5 18h14"/></svg></div>
+        <div class="topic-chip-label">Cricket</div>
+      </div>
+      <div class="topic-chip" onclick="selectTopic(this)">
+        <div class="topic-chip-icon"><svg viewBox="0 0 24 24" stroke="var(--purple)" fill="none" stroke-width="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg></div>
+        <div class="topic-chip-label">Mixed / All</div>
+      </div>
+    </div>
+
+    <div class="topic-custom" id="topicCustom">
+      <div class="topic-custom-icon">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L9 9l-7 1 5 5-1.5 7L12 18l6.5 4L17 15l5-5-7-1z"/></svg>
+      </div>
+      <input type="text" id="topicCustomInput" placeholder="Or type any topic... e.g. Green Bay Packers" oninput="onCustomTopic(this)" />
+      <div class="topic-custom-hint"><span>AI</span> Generated</div>
+    </div>
+    <div class="topic-custom-examples">
+      <span class="topic-example" onclick="setCustomTopic('Green Bay Packers')">Green Bay Packers</span>
+      <span class="topic-example" onclick="setCustomTopic('Champions League Finals')">Champions League Finals</span>
+      <span class="topic-example" onclick="setCustomTopic('LeBron James')">LeBron James</span>
+      <span class="topic-example" onclick="setCustomTopic('F1 Constructors')">F1 Constructors</span>
+      <span class="topic-example" onclick="setCustomTopic('World Cup 2022')">World Cup 2022</span>
+      <span class="topic-example" onclick="setCustomTopic('UFC Heavyweight')">UFC Heavyweight</span>
+    </div>
+  </div>
+
+  <!-- Difficulty -->
+  <div class="setup-card">
+    <h3><span class="step-num">2</span> Select Difficulty</h3>
+    <div class="diff-options">
+      <div class="diff-option" onclick="selectDiff(this, 'easy')">
+        <div class="diff-dot easy"></div>
+        <div class="diff-info">
+          <div class="diff-name">Easy</div>
+          <div class="diff-desc">Casual sports knowledge — great for warming up</div>
+          <div class="diff-xp">+5 XP per correct</div>
+        </div>
+      </div>
+      <div class="diff-option selected" onclick="selectDiff(this, 'medium')">
+        <div class="diff-dot medium"></div>
+        <div class="diff-info">
+          <div class="diff-name">Medium</div>
+          <div class="diff-desc">Solid sports fan territory — requires real knowledge</div>
+          <div class="diff-xp">+10 XP per correct</div>
+        </div>
+      </div>
+      <div class="diff-option" onclick="selectDiff(this, 'hard')">
+        <div class="diff-dot hard"></div>
+        <div class="diff-info">
+          <div class="diff-name">Hard</div>
+          <div class="diff-desc">Deep cuts, obscure stats, expert-level challenges</div>
+          <div class="diff-xp">+20 XP per correct</div>
+        </div>
+      </div>
+      <div class="diff-option" onclick="selectDiff(this, 'adaptive')">
+        <div class="diff-dot adaptive"></div>
+        <div class="diff-info">
+          <div class="diff-name">Adaptive AI</div>
+          <div class="diff-desc">AI adjusts difficulty in real-time based on your performance</div>
+          <div class="diff-xp">+8–25 XP per correct (scales)</div>
+        </div>
+      </div>
+      <div class="diff-option" onclick="selectDiff(this, 'escalating')">
+        <div class="diff-dot escalating"></div>
+        <div class="diff-info">
+          <div class="diff-name">Escalating</div>
+          <div class="diff-desc">Starts easy, gets progressively harder each round — quiz show style</div>
+          <div class="diff-xp">+5–30 XP per correct (increases)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Round Count -->
+  <div class="setup-card">
+    <h3><span class="step-num">3</span> Number of Rounds</h3>
+    <div class="round-picker">
+      <div class="round-chip selected" onclick="selectRounds(this, 10)">
+        <div class="round-chip-num">10</div>
+        <div class="round-chip-label">Quick</div>
+      </div>
+      <div class="round-chip" onclick="selectRounds(this, 15)">
+        <div class="round-chip-num">15</div>
+        <div class="round-chip-label">Standard</div>
+      </div>
+      <div class="round-chip" onclick="selectRounds(this, 20)">
+        <div class="round-chip-num">20</div>
+        <div class="round-chip-label">Marathon</div>
+      </div>
+    </div>
+  </div>
+
+  <button class="setup-start" onclick="startGame()">Start Trivia</button>
+</div>
+
+<!-- ═══════════════════════════════
+     SCREEN 3 — SOLO PLAY
+═══════════════════════════════ -->
+<div id="screen-solo" class="screen play">
+
+  <!-- Header -->
+  <div class="play-header">
+    <div class="play-round">Round <strong id="solo-round-num">1</strong> / <span id="solo-round-total">10</span></div>
+    <div class="play-score-strip">
+      <div class="play-score-item"><div class="val teal" id="solo-correct">0</div><div class="lbl">Correct</div></div>
+      <div class="play-score-item"><div class="val coral" id="solo-wrong">0</div><div class="lbl">Wrong</div></div>
+      <div class="play-score-item"><div class="val lime" id="solo-xp">0</div><div class="lbl">XP</div></div>
+    </div>
+  </div>
+
+  <!-- Round Pips -->
+  <div class="play-round-pips" id="solo-pips"></div>
+
+  <!-- Timer -->
+  <div class="play-timer-ring">
+    <svg viewBox="0 0 80 80">
+      <circle class="ring-bg" cx="40" cy="40" r="36" />
+      <circle class="ring-fg" id="solo-ring" cx="40" cy="40" r="36"
+        stroke-dasharray="226.2" stroke-dashoffset="0" />
+    </svg>
+    <div class="play-timer-text" id="solo-timer-text">20</div>
+  </div>
+
+  <!-- Question -->
+  <div class="play-question-card">
+    <div class="play-q-category" id="solo-q-cat">Football — Premier League</div>
+    <div class="play-q-difficulty medium" id="solo-q-diff">Medium</div>
+    <div class="play-q-text" id="solo-q-text">Which club holds the record for the most consecutive Premier League titles?</div>
+    <div class="play-options" id="solo-options">
+      <!-- filled by JS -->
+    </div>
+  </div>
+
+  <div class="play-xp-toast" id="solo-xp-toast">+10 XP</div>
+</div>
+
+<!-- ═══════════════════════════════
+     SCREEN 4 — 1v1 LOBBY
+═══════════════════════════════ -->
+<div id="screen-duel-lobby" class="screen lobby">
+  <div class="lobby-card">
+    <div class="lobby-icon duel">
+      <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </div>
+    <div class="lobby-title">1v1 Duel</div>
+    <div class="lobby-subtitle">Football — Medium — 10 Rounds</div>
+    <div class="lobby-searching">
+      <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+      <div class="lobby-searching-text">Finding opponent...</div>
+    </div>
+    <div class="lobby-players">
+      <div class="lobby-player">
+        <div class="lobby-player-avatar" style="background:var(--teal);color:#fff;">BW</div>
+        <div class="lobby-player-name">You</div>
+      </div>
+      <div class="lobby-player">
+        <div class="lobby-player-avatar" style="background:var(--navy-light);color:var(--grey);font-size:1rem;">⚡</div>
+        <div class="lobby-player-name">VS</div>
+      </div>
+      <div class="lobby-player" id="duel-opponent">
+        <div class="lobby-player-avatar empty"></div>
+        <div class="lobby-player-name">Waiting...</div>
+      </div>
+    </div>
+    <div style="margin-top:24px;">
+      <button class="lobby-start-btn duel" onclick="startDuel()">Opponent Found — Start!</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════
+     SCREEN 5 — 1v1 PLAY
+═══════════════════════════════ -->
+<div id="screen-duel-play" class="screen play">
+
+  <!-- VS Strip -->
+  <div class="duel-vs-strip">
+    <div class="duel-player">
+      <div class="duel-player-avatar" style="background:var(--teal);color:#fff;">BW</div>
+      <div>
+        <div class="duel-player-name">You</div>
+        <div class="duel-player-score leading" id="duel-your-score">Score: 0</div>
+      </div>
+    </div>
+    <div class="duel-vs">VS</div>
+    <div class="duel-player">
+      <div>
+        <div class="duel-player-name" style="text-align:right">AlexR</div>
+        <div class="duel-player-score" id="duel-opp-score" style="text-align:right">Score: 0</div>
+      </div>
+      <div class="duel-player-avatar" style="background:var(--coral);color:#fff;">AR</div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="play-header">
+    <div class="play-round">Round <strong id="duel-round-num">1</strong> / 10</div>
+    <div class="play-score-strip">
+      <div class="play-score-item"><div class="val teal" id="duel-correct">0</div><div class="lbl">Yours</div></div>
+      <div class="play-score-item"><div class="val coral" id="duel-opp-correct">0</div><div class="lbl">Theirs</div></div>
+    </div>
+  </div>
+
+  <div class="play-round-pips" id="duel-pips"></div>
+
+  <div class="play-timer-ring">
+    <svg viewBox="0 0 80 80">
+      <circle class="ring-bg" cx="40" cy="40" r="36" />
+      <circle class="ring-fg" id="duel-ring" cx="40" cy="40" r="36"
+        stroke-dasharray="226.2" stroke-dashoffset="0" />
+    </svg>
+    <div class="play-timer-text" id="duel-timer-text">15</div>
+  </div>
+
+  <div class="play-question-card">
+    <div class="play-q-category" id="duel-q-cat">Football — Champions League</div>
+    <div class="play-q-difficulty medium" id="duel-q-diff">Medium</div>
+    <div class="play-q-text" id="duel-q-text">Who scored the fastest hat-trick in Champions League history?</div>
+    <div class="play-options" id="duel-options"></div>
+  </div>
+
+  <div class="play-xp-toast" id="duel-xp-toast">+10 XP</div>
+</div>
+
+<!-- ═══════════════════════════════
+     SCREEN 6 — PARTY LOBBY
+═══════════════════════════════ -->
+<div id="screen-party-lobby" class="screen lobby">
+  <div class="lobby-card">
+    <div class="lobby-icon party">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    </div>
+    <div class="lobby-title">Party Room</div>
+    <div class="lobby-subtitle">Football — Medium — 10 Rounds</div>
+
+    <div class="lobby-room-code">
+      <div class="lobby-room-code-label">Room Code</div>
+      <div class="lobby-room-code-val">SPNTX-742</div>
+    </div>
+
+    <div class="lobby-players">
+      <div class="lobby-player">
+        <div class="lobby-player-avatar" style="background:var(--teal);color:#fff;">BW</div>
+        <div class="lobby-player-name">You</div>
+      </div>
+      <div class="lobby-player">
+        <div class="lobby-player-avatar" style="background:var(--coral);color:#fff;">MH</div>
+        <div class="lobby-player-name">MarkH</div>
+      </div>
+      <div class="lobby-player">
+        <div class="lobby-player-avatar" style="background:var(--purple);color:#fff;">SJ</div>
+        <div class="lobby-player-name">SarahJ</div>
+      </div>
+      <div class="lobby-player">
+        <div class="lobby-player-avatar" style="background:var(--orange);color:#fff;">DK</div>
+        <div class="lobby-player-name">DaveK</div>
+      </div>
+      <div class="lobby-player">
+        <div class="lobby-player-avatar empty"></div>
+        <div class="lobby-player-name">Empty</div>
+      </div>
+      <div class="lobby-player">
+        <div class="lobby-player-avatar empty"></div>
+        <div class="lobby-player-name">Empty</div>
+      </div>
+    </div>
+    <div style="margin-top:24px;display:flex;gap:10px;justify-content:center;">
+      <button class="lobby-start-btn party" onclick="startParty()" style="flex:1;max-width:200px;">Start Game</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════
+     SCREEN 7 — PARTY PLAY
+═══════════════════════════════ -->
+<div id="screen-party-play" class="screen play">
+
+  <!-- Live Standings -->
+  <div class="party-standings">
+    <div class="party-standings-title">Live Standings</div>
+    <div class="party-standings-row you">
+      <div class="party-standings-pos gold">1st</div>
+      <div class="party-standings-avatar" style="background:var(--teal);color:#fff;">BW</div>
+      <div class="party-standings-name">You</div>
+      <div class="party-standings-score teal" id="party-your-score">0</div>
+    </div>
+    <div class="party-standings-row">
+      <div class="party-standings-pos">2nd</div>
+      <div class="party-standings-avatar" style="background:var(--coral);color:#fff;">MH</div>
+      <div class="party-standings-name">MarkH</div>
+      <div class="party-standings-score" id="party-mark-score">0</div>
+    </div>
+    <div class="party-standings-row">
+      <div class="party-standings-pos">3rd</div>
+      <div class="party-standings-avatar" style="background:var(--purple);color:#fff;">SJ</div>
+      <div class="party-standings-name">SarahJ</div>
+      <div class="party-standings-score" id="party-sarah-score">0</div>
+    </div>
+    <div class="party-standings-row">
+      <div class="party-standings-pos">4th</div>
+      <div class="party-standings-avatar" style="background:var(--orange);color:#fff;">DK</div>
+      <div class="party-standings-name">DaveK</div>
+      <div class="party-standings-score" id="party-dave-score">0</div>
+    </div>
+  </div>
+
+  <!-- Header -->
+  <div class="play-header">
+    <div class="play-round">Round <strong id="party-round-num">1</strong> / 10</div>
+    <div class="play-score-strip">
+      <div class="play-score-item"><div class="val teal" id="party-correct">0</div><div class="lbl">Correct</div></div>
+      <div class="play-score-item"><div class="val lime" id="party-xp">0</div><div class="lbl">XP</div></div>
+    </div>
+  </div>
+
+  <div class="play-round-pips" id="party-pips"></div>
+
+  <div class="play-timer-ring">
+    <svg viewBox="0 0 80 80">
+      <circle class="ring-bg" cx="40" cy="40" r="36" />
+      <circle class="ring-fg" id="party-ring" cx="40" cy="40" r="36"
+        stroke-dasharray="226.2" stroke-dashoffset="0" />
+    </svg>
+    <div class="play-timer-text" id="party-timer-text">20</div>
+  </div>
+
+  <div class="play-question-card">
+    <div class="play-q-category" id="party-q-cat">Football — World Cup</div>
+    <div class="play-q-difficulty medium" id="party-q-diff">Medium</div>
+    <div class="play-q-text" id="party-q-text">Which country has won the most FIFA World Cup titles?</div>
+    <div class="play-options" id="party-options"></div>
+  </div>
+
+  <div class="play-xp-toast" id="party-xp-toast">+10 XP</div>
+</div>
+
+<!-- ═══════════════════════════════
+     SCREEN 8 — RESULTS
+═══════════════════════════════ -->
+<div id="screen-results" class="screen results">
+
+  <!-- Trophy SVG -->
+  <div class="results-trophy">
+    <svg viewBox="0 0 96 96" fill="none">
+      <path d="M30 18h36v6c0 12-8 24-18 28-10-4-18-16-18-28v-6z" fill="var(--gold)" opacity="0.2" stroke="var(--gold)" stroke-width="2"/>
+      <path d="M30 24H18c0 10 6 18 12 20" stroke="var(--gold)" stroke-width="2" fill="none"/>
+      <path d="M66 24h12c0 10-6 18-12 20" stroke="var(--gold)" stroke-width="2" fill="none"/>
+      <rect x="42" y="52" width="12" height="14" rx="2" fill="var(--gold)" opacity="0.3" stroke="var(--gold)" stroke-width="2"/>
+      <rect x="34" y="66" width="28" height="6" rx="3" fill="var(--gold)" opacity="0.2" stroke="var(--gold)" stroke-width="2"/>
+      <circle cx="48" cy="36" r="6" fill="var(--gold)" opacity="0.3" stroke="var(--gold)" stroke-width="1.5"/>
+      <path d="M45 36l2 2 4-4" stroke="var(--gold)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
+  </div>
+
+  <div class="results-title" id="results-title">Great Performance!</div>
+  <div class="results-subtitle" id="results-subtitle">You answered 8 out of 10 correctly</div>
+
+  <!-- Stars -->
+  <div class="results-stars" id="results-stars">
+    <div class="results-star filled"><svg viewBox="0 0 24 24" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg></div>
+    <div class="results-star filled"><svg viewBox="0 0 24 24" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg></div>
+    <div class="results-star filled"><svg viewBox="0 0 24 24" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg></div>
+  </div>
+
+  <!-- Score Card -->
+  <div class="results-card">
+    <div class="results-card-title">Performance Summary</div>
+    <div class="results-stats-grid">
+      <div class="results-stat"><div class="val" style="color:var(--teal)" id="res-correct">8</div><div class="lbl">Correct</div></div>
+      <div class="results-stat"><div class="val" style="color:var(--coral)" id="res-wrong">2</div><div class="lbl">Wrong</div></div>
+      <div class="results-stat"><div class="val" style="color:var(--off-white)" id="res-avg-time">4.2s</div><div class="lbl">Avg Time</div></div>
+    </div>
+  </div>
+
+  <!-- XP Card -->
+  <div class="results-xp-card">
+    <div class="results-xp-header">
+      <div>
+        <div class="results-xp-earned" id="res-xp-earned">+80 XP</div>
+        <div class="results-xp-label">Earned this game</div>
+      </div>
+      <div class="results-level-info">
+        <div class="results-level-num">Level 12</div>
+        <div class="results-level-title">Sports Scholar</div>
+      </div>
+    </div>
+    <div class="results-xp-bar"><div class="results-xp-fill" id="res-xp-fill" style="width:0%"></div></div>
+    <div class="results-xp-text"><span id="res-xp-current">3,100 / 5,000 XP</span><span>Level 13</span></div>
+  </div>
+
+  <!-- Level Up (hidden by default) -->
+  <div class="results-levelup" id="results-levelup">
+    <div class="results-levelup-text">Level Up! You're now Level 13</div>
+    <div class="results-levelup-title">New Title: Trivia Veteran</div>
+  </div>
+
+  <!-- Actions -->
+  <div class="results-actions">
+    <button class="results-btn primary" onclick="goScreen('screen-setup')">Play Again</button>
+    <button class="results-btn secondary" onclick="goScreen('screen-hub')">Back to Hub</button>
+  </div>
+</div>
+
+<!-- ══ CONFETTI CONTAINER ══ -->
+<div class="confetti-container" id="confetti-container"></div>
+
+<!-- ══ TOAST ══ -->
+<div class="toast" id="toast"></div>
+
+<!-- ══ DEMO NAV ══ -->
+<div class="demo-nav">
+  <button class="active" onclick="goScreen('screen-hub')">Hub</button>
+  <button onclick="goScreen('screen-setup')">Setup</button>
+  <button onclick="goScreen('screen-solo')">Solo Play</button>
+  <button onclick="goScreen('screen-duel-lobby')">1v1 Lobby</button>
+  <button onclick="goScreen('screen-duel-play')">1v1 Play</button>
+  <button onclick="goScreen('screen-party-lobby')">Party Lobby</button>
+  <button onclick="goScreen('screen-party-play')">Party Play</button>
+  <button onclick="goScreen('screen-results')">Results</button>
+</div>
+
+<script>
+/* ═══ STATE ═══ */
+let currentMode = 'solo';
+let selectedTopic = 'Football';
+let selectedDiff = 'medium';
+let selectedRounds = 10;
+let currentRound = 1;
+let correctCount = 0;
+let wrongCount = 0;
+let totalXP = 0;
+let timerInterval = null;
+let timerSeconds = 20;
+const CIRC = 226.2;
+
+/* ═══ QUESTIONS BANK ═══ */
+const questions = {
+  Football: [
+    { q: "Which club holds the record for the most consecutive Premier League titles?", opts: ["Manchester United","Manchester City","Chelsea","Arsenal"], correct: 1, cat: "Football — Premier League", diff: "medium" },
+    { q: "Who scored the fastest hat-trick in Champions League history?", opts: ["Bafétimbi Gomis","Mike Owen","Luiz Adriano","Robert Lewandowski"], correct: 3, cat: "Football — Champions League", diff: "medium" },
+    { q: "Which country has won the most FIFA World Cup titles?", opts: ["Germany","Argentina","Italy","Brazil"], correct: 3, cat: "Football — World Cup", diff: "easy" },
+    { q: "Who is the all-time top scorer in the Premier League?", opts: ["Wayne Rooney","Thierry Henry","Alan Shearer","Andrew Cole"], correct: 2, cat: "Football — Premier League", diff: "medium" },
+    { q: "Which manager has won the most Champions League trophies?", opts: ["Carlo Ancelotti","Zinedine Zidane","Bob Paisley","Pep Guardiola"], correct: 0, cat: "Football — Champions League", diff: "hard" },
+    { q: "In which year did Leicester City win the Premier League?", opts: ["2014","2015","2016","2017"], correct: 2, cat: "Football — Premier League", diff: "easy" },
+    { q: "Who holds the record for most goals in a single World Cup tournament?", opts: ["Pelé","Just Fontaine","Gerd Müller","Ronaldo"], correct: 1, cat: "Football — World Cup", diff: "hard" },
+    { q: "Which club won the first-ever Premier League season?", opts: ["Arsenal","Liverpool","Manchester United","Blackburn"], correct: 2, cat: "Football — Premier League", diff: "easy" },
+    { q: "What is the most red cards shown in a single Premier League match?", opts: ["3","4","5","6"], correct: 0, cat: "Football — Premier League", diff: "hard" },
+    { q: "Which stadium is known as 'The Theatre of Dreams'?", opts: ["Anfield","Old Trafford","Santiago Bernabéu","Camp Nou"], correct: 1, cat: "Football — General", diff: "easy" },
+    { q: "Who was the first player to score 100 Premier League goals?", opts: ["Alan Shearer","Robbie Fowler","Les Ferdinand","Andy Cole"], correct: 0, cat: "Football — Premier League", diff: "medium" },
+    { q: "Which nation won the 2022 FIFA World Cup?", opts: ["France","Brazil","Argentina","Croatia"], correct: 2, cat: "Football — World Cup", diff: "easy" },
+    { q: "Who has the most assists in Champions League history?", opts: ["Cristiano Ronaldo","Lionel Messi","Ryan Giggs","Neymar"], correct: 0, cat: "Football — Champions League", diff: "hard" },
+    { q: "How many teams compete in the group stage of the Champions League (pre-2024 format)?", opts: ["24","28","32","36"], correct: 2, cat: "Football — Champions League", diff: "medium" },
+    { q: "Which goalkeeper holds the record for most Premier League clean sheets?", opts: ["David James","Peter Schmeichel","Petr Čech","Edwin van der Sar"], correct: 2, cat: "Football — Premier League", diff: "medium" },
+    { q: "Who scored the 'Hand of God' goal?", opts: ["Pelé","Diego Maradona","Zinedine Zidane","Ronaldo"], correct: 1, cat: "Football — World Cup", diff: "easy" },
+    { q: "Which club has never been relegated from the English top flight?", opts: ["Liverpool","Arsenal","Everton","Manchester United"], correct: 2, cat: "Football — Premier League", diff: "hard" },
+    { q: "What is the record for the fastest goal in Premier League history?", opts: ["7.69 seconds","9.11 seconds","10.52 seconds","12.97 seconds"], correct: 0, cat: "Football — Premier League", diff: "hard" },
+    { q: "Who won the Ballon d'Or in 2023?", opts: ["Erling Haaland","Kylian Mbappé","Lionel Messi","Kevin De Bruyne"], correct: 2, cat: "Football — Awards", diff: "easy" },
+    { q: "In which city was the first FIFA World Cup held?", opts: ["Rio de Janeiro","Montevideo","Rome","Paris"], correct: 1, cat: "Football — World Cup", diff: "medium" }
+  ]
+};
+
+/* ═══ LEVEL SYSTEM ═══ */
+const levels = [
+  { lvl: 1, title: "Rookie", xp: 0 },
+  { lvl: 2, title: "Fan", xp: 100 },
+  { lvl: 3, title: "Supporter", xp: 250 },
+  { lvl: 4, title: "Enthusiast", xp: 500 },
+  { lvl: 5, title: "Buff", xp: 800 },
+  { lvl: 6, title: "Analyst", xp: 1200 },
+  { lvl: 7, title: "Expert", xp: 1700 },
+  { lvl: 8, title: "Pundit", xp: 2300 },
+  { lvl: 9, title: "Specialist", xp: 3000 },
+  { lvl: 10, title: "Mastermind", xp: 3800 },
+  { lvl: 11, title: "Sage", xp: 4700 },
+  { lvl: 12, title: "Scholar", xp: 5700 },
+  { lvl: 13, title: "Veteran", xp: 6800 },
+  { lvl: 14, title: "Legend", xp: 8000 },
+  { lvl: 15, title: "Champion", xp: 10000 },
+];
+
+/* ═══ SCREEN NAV ═══ */
+function goScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.demo-nav button').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.demo-nav button').forEach(b => {
+    if (b.textContent.trim() === screenLabel(id)) b.classList.add('active');
+  });
+  if (id === 'screen-solo') initPlay('solo');
+  if (id === 'screen-duel-play') initPlay('duel');
+  if (id === 'screen-party-play') initPlay('party');
+  if (id === 'screen-results') showResults();
+}
+function screenLabel(id) {
+  const map = { 'screen-hub':'Hub','screen-setup':'Setup','screen-solo':'Solo Play','screen-duel-lobby':'1v1 Lobby','screen-duel-play':'1v1 Play','screen-party-lobby':'Party Lobby','screen-party-play':'Party Play','screen-results':'Results' };
+  return map[id] || '';
+}
+
+/* ═══ HUB ═══ */
+function selectMode(mode) {
+  // Tier gate: restrict modes by tier
+  if (typeof SpontixStore !== 'undefined') {
+    const player = SpontixStore.getPlayer();
+    const limits = SpontixStore.getTierLimits(player.tier);
+    const allowed = limits.triviaModesAllowed || ['solo'];
+
+    const modeMap = { 'solo': 'solo', 'duel': '1v1', 'party': 'party-room' };
+    const mapped = modeMap[mode] || mode;
+
+    if (!allowed.includes(mapped)) {
+      const reqTier = mode === 'party' ? 'Elite' : 'Pro';
+      SpontixSidebar.showUpgradeModal({
+        feature: mode === 'party' ? 'Party Room' : '1v1 Duel',
+        requiredTier: reqTier,
+        isVenue: false,
+        icon: mode === 'party' ? '🎉' : '⚔️',
+        description: 'Upgrade to <strong>' + reqTier + '</strong> to unlock ' + (mode === 'party' ? 'Party Room trivia' : '1v1 Duel mode') + '.',
+        benefits: reqTier === 'Elite'
+          ? ['All trivia modes unlocked', 'Unlimited games per day', 'Party Room with friends', 'Custom trivia packs']
+          : ['Solo + 1v1 Duel modes', '15 games per day', 'All question types', 'Ad-free experience']
+      });
+      return;
+    }
+  }
+
+  currentMode = mode;
+  goScreen('screen-setup');
+}
+
+/* ═══ SETUP ═══ */
+function selectTopic(el) {
+  document.querySelectorAll('.topic-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedTopic = el.querySelector('.topic-chip-label').textContent;
+  // Clear custom input when a preset is picked
+  const customInput = document.getElementById('topicCustomInput');
+  if (customInput) { customInput.value = ''; }
+  document.getElementById('topicCustom').style.borderColor = 'rgba(255,255,255,0.08)';
+  document.getElementById('topicCustom').style.background = 'var(--navy-light)';
+}
+function onCustomTopic(input) {
+  const val = input.value.trim();
+  if (val.length > 0) {
+    // Deselect preset chips
+    document.querySelectorAll('.topic-chip').forEach(c => c.classList.remove('selected'));
+    selectedTopic = val;
+  } else {
+    // If cleared, re-select Football as default
+    const firstChip = document.querySelector('.topic-chip');
+    if (firstChip) { firstChip.classList.add('selected'); selectedTopic = 'Football'; }
+  }
+}
+function setCustomTopic(topic) {
+  const input = document.getElementById('topicCustomInput');
+  input.value = topic;
+  onCustomTopic(input);
+  input.focus();
+}
+function selectDiff(el, diff) {
+  document.querySelectorAll('.diff-option').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedDiff = diff;
+}
+function selectRounds(el, n) {
+  document.querySelectorAll('.round-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedRounds = n;
+}
+function startGame() {
+  // Tier gate: enforce daily trivia limit
+  if (typeof SpontixStore !== 'undefined') {
+    const player = SpontixStore.getPlayer();
+    const limits = SpontixStore.getTierLimits(player.tier);
+    const dailyLimit = limits.triviaGamesPerDay;
+    if (dailyLimit !== Infinity) {
+      const today = new Date().toDateString();
+      const triviaKey = 'spontix_trivia_plays_' + today;
+      const played = parseInt(localStorage.getItem(triviaKey) || '0');
+      if (played >= dailyLimit) {
+        SpontixSidebar.showUpgradeModal({
+          feature: 'More Trivia Games',
+          requiredTier: dailyLimit <= 3 ? 'Pro' : 'Elite',
+          isVenue: false,
+          icon: '🧠',
+          description: 'You\'ve played all <strong>' + dailyLimit + ' trivia games</strong> for today. Upgrade for more!',
+          benefits: dailyLimit <= 3
+            ? ['15 trivia games per day', '1v1 Duel mode', 'All question types', 'Ad-free']
+            : ['Unlimited trivia games', 'Party Room mode', 'All modes unlocked']
+        });
+        return;
+      }
+      localStorage.setItem(triviaKey, (played + 1).toString());
+    }
+  }
+
+  if (currentMode === 'solo') goScreen('screen-solo');
+  else if (currentMode === 'duel') goScreen('screen-duel-lobby');
+  else goScreen('screen-party-lobby');
+}
+function startDuel() { goScreen('screen-duel-play'); }
+function startParty() { goScreen('screen-party-play'); }
+
+/* ═══ PLAY ENGINE ═══ */
+let playQuestions = [];
+let playPrefix = '';
+
+function initPlay(mode) {
+  playPrefix = mode;
+  currentRound = 1;
+  correctCount = 0;
+  wrongCount = 0;
+  totalXP = 0;
+  clearInterval(timerInterval);
+
+  // build question set
+  const pool = questions['Football'] || questions['Football'];
+  playQuestions = shuffleArray([...pool]).slice(0, selectedRounds);
+
+  // render pips
+  renderPips(playPrefix);
+  updateScoreDisplay(playPrefix);
+  loadQuestion(playPrefix);
+}
+
+function renderPips(prefix) {
+  const cont = document.getElementById(prefix + '-pips');
+  cont.innerHTML = '';
+  for (let i = 0; i < selectedRounds; i++) {
+    const pip = document.createElement('div');
+    pip.className = 'play-pip' + (i === 0 ? ' current' : '');
+    cont.appendChild(pip);
+  }
+}
+
+function loadQuestion(prefix) {
+  if (currentRound > selectedRounds) {
+    goScreen('screen-results');
+    return;
+  }
+
+  clearInterval(timerInterval);
+  const q = playQuestions[currentRound - 1];
+  const roundEl = document.getElementById(prefix + '-round-num');
+  if (roundEl) roundEl.textContent = currentRound;
+
+  const catEl = document.getElementById(prefix + '-q-cat');
+  const diffEl = document.getElementById(prefix + '-q-diff');
+  const textEl = document.getElementById(prefix + '-q-text');
+  const optsEl = document.getElementById(prefix + '-options');
+
+  if (catEl) catEl.textContent = q.cat;
+  if (diffEl) {
+    const d = getDiffLabel();
+    diffEl.textContent = d.label;
+    diffEl.className = 'play-q-difficulty ' + d.cls;
+  }
+  if (textEl) textEl.textContent = q.q;
+
+  const letters = ['A','B','C','D'];
+  optsEl.innerHTML = q.opts.map((o, i) => `
+    <button class="play-option" onclick="answerQuestion('${prefix}', ${i}, ${q.correct})">
+      <span class="opt-letter">${letters[i]}</span>
+      ${o}
+      <span class="opt-icon"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+    </button>
+  `).join('');
+
+  // start timer
+  const timeLimit = prefix === 'duel' ? 15 : 20;
+  timerSeconds = timeLimit;
+  const ring = document.getElementById(prefix + '-ring');
+  const timerText = document.getElementById(prefix + '-timer-text');
+  ring.style.strokeDashoffset = '0';
+  ring.className = 'ring-fg';
+  timerText.textContent = timeLimit;
+
+  timerInterval = setInterval(() => {
+    timerSeconds--;
+    timerText.textContent = timerSeconds;
+    const offset = ((timeLimit - timerSeconds) / timeLimit) * CIRC;
+    ring.style.strokeDashoffset = offset;
+
+    if (timerSeconds <= 5) ring.className = 'ring-fg critical';
+    else if (timerSeconds <= 8) ring.className = 'ring-fg warning';
+
+    if (timerSeconds <= 0) {
+      clearInterval(timerInterval);
+      answerQuestion(prefix, -1, playQuestions[currentRound - 1].correct);
+    }
+  }, 1000);
+}
+
+function answerQuestion(prefix, chosen, correctIdx) {
+  clearInterval(timerInterval);
+  const opts = document.querySelectorAll('#' + prefix + '-options .play-option');
+  opts.forEach((o, i) => {
+    o.classList.add('disabled');
+    if (i === correctIdx) o.classList.add('correct');
+    if (i === chosen && chosen !== correctIdx) o.classList.add('wrong');
+  });
+
+  const pips = document.querySelectorAll('#' + prefix + '-pips .play-pip');
+  const isCorrect = chosen === correctIdx;
+
+  if (isCorrect) {
+    correctCount++;
+    const xp = getXPForDiff();
+    totalXP += xp;
+    pips[currentRound - 1].className = 'play-pip correct';
+    showXPToast(prefix, xp);
+
+    // simulate opponent in duel/party
+    if (prefix === 'duel') simulateDuelOpponent(false);
+    if (prefix === 'party') simulatePartyScores(true);
+  } else {
+    wrongCount++;
+    pips[currentRound - 1].className = 'play-pip wrong';
+
+    if (prefix === 'duel') simulateDuelOpponent(true);
+    if (prefix === 'party') simulatePartyScores(false);
+  }
+
+  updateScoreDisplay(prefix);
+
+  // next question after delay
+  setTimeout(() => {
+    currentRound++;
+    if (currentRound <= selectedRounds) {
+      const nextPip = pips[currentRound - 1];
+      if (nextPip) nextPip.className = 'play-pip current';
+    }
+    loadQuestion(prefix);
+  }, 1800);
+}
+
+function updateScoreDisplay(prefix) {
+  const c = document.getElementById(prefix + '-correct');
+  const w = document.getElementById(prefix + '-wrong');
+  const x = document.getElementById(prefix + '-xp');
+  if (c) c.textContent = correctCount;
+  if (w) w.textContent = wrongCount;
+  if (x) x.textContent = totalXP;
+}
+
+function getDiffLabel() {
+  const map = {
+    easy: { label: 'Easy', cls: 'easy' },
+    medium: { label: 'Medium', cls: 'medium' },
+    hard: { label: 'Hard', cls: 'hard' },
+    adaptive: { label: 'Adaptive', cls: 'medium' },
+    escalating: { label: 'Round ' + currentRound, cls: currentRound <= 4 ? 'easy' : currentRound <= 7 ? 'medium' : 'hard' }
+  };
+  return map[selectedDiff] || map.medium;
+}
+
+function getXPForDiff() {
+  const map = { easy: 5, medium: 10, hard: 20, adaptive: 12, escalating: 5 + currentRound * 2 };
+  return map[selectedDiff] || 10;
+}
+
+function showXPToast(prefix, xp) {
+  const toast = document.getElementById(prefix + '-xp-toast');
+  if (!toast) return;
+  toast.textContent = '+' + xp + ' XP';
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 1200);
+}
+
+/* ═══ DUEL SIMULATION ═══ */
+let duelOppScore = 0;
+function simulateDuelOpponent(youGotWrong) {
+  // opponent gets it right ~60% of time
+  const oppCorrect = youGotWrong ? Math.random() > 0.3 : Math.random() > 0.5;
+  if (oppCorrect) duelOppScore++;
+  document.getElementById('duel-your-score').textContent = 'Score: ' + correctCount;
+  document.getElementById('duel-opp-score').textContent = 'Score: ' + duelOppScore;
+  document.getElementById('duel-opp-correct').textContent = duelOppScore;
+
+  const yours = document.getElementById('duel-your-score');
+  const theirs = document.getElementById('duel-opp-score');
+  yours.className = 'duel-player-score' + (correctCount >= duelOppScore ? ' leading' : '');
+  theirs.className = 'duel-player-score' + (duelOppScore > correctCount ? ' leading' : '');
+}
+
+/* ═══ PARTY SIMULATION ═══ */
+let partyScores = { mark: 0, sarah: 0, dave: 0 };
+function simulatePartyScores(youCorrect) {
+  if (Math.random() > 0.4) partyScores.mark += Math.floor(Math.random() * 15) + 5;
+  if (Math.random() > 0.5) partyScores.sarah += Math.floor(Math.random() * 15) + 5;
+  if (Math.random() > 0.6) partyScores.dave += Math.floor(Math.random() * 15) + 5;
+
+  document.getElementById('party-your-score').textContent = totalXP;
+  document.getElementById('party-mark-score').textContent = partyScores.mark;
+  document.getElementById('party-sarah-score').textContent = partyScores.sarah;
+  document.getElementById('party-dave-score').textContent = partyScores.dave;
+}
+
+/* ═══ RESULTS ═══ */
+function showResults() {
+  clearInterval(timerInterval);
+
+  document.getElementById('res-correct').textContent = correctCount;
+  document.getElementById('res-wrong').textContent = wrongCount;
+  document.getElementById('res-avg-time').textContent = (Math.random() * 4 + 3).toFixed(1) + 's';
+  document.getElementById('res-xp-earned').textContent = '+' + totalXP + ' XP';
+
+  // star rating
+  const pct = correctCount / selectedRounds;
+  const stars = pct >= 0.9 ? 3 : pct >= 0.6 ? 2 : pct >= 0.3 ? 1 : 0;
+  const starsEl = document.getElementById('results-stars');
+  starsEl.innerHTML = '';
+  for (let i = 0; i < 3; i++) {
+    starsEl.innerHTML += `<div class="results-star ${i < stars ? 'filled' : 'empty'}"><svg viewBox="0 0 24 24" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg></div>`;
+  }
+
+  // title
+  const titles = ['Keep Practicing!', 'Not Bad!', 'Great Performance!', 'Outstanding!'];
+  document.getElementById('results-title').textContent = titles[stars];
+  document.getElementById('results-subtitle').textContent = `You answered ${correctCount} out of ${selectedRounds} correctly`;
+
+  // XP bar animation
+  const baseXP = 3100;
+  const newXP = baseXP + totalXP;
+  const xpPct = Math.min((newXP % 5000) / 5000 * 100, 100);
+  setTimeout(() => {
+    document.getElementById('res-xp-fill').style.width = xpPct + '%';
+  }, 300);
+  document.getElementById('res-xp-current').textContent = newXP.toLocaleString() + ' / 5,000 XP';
+
+  // confetti for 3 stars
+  if (stars === 3) spawnConfetti();
+
+  // Award trophies based on mode and performance
+  if (typeof SpontixStore !== 'undefined') {
+    if (currentMode === 'duel') {
+      // In duel mode, player won if they got more correct
+      SpontixStore.awardTrophy('trivia_1v1_champion', { mode: 'duel', event: 'Trivia 1v1 Victory' });
+    } else if (currentMode === 'party') {
+      SpontixStore.awardTrophy('trivia_party_winner', { mode: 'party', event: 'Trivia Party Victory' });
+    }
+    // Perfect score trophy
+    if (wrongCount === 0 && correctCount > 0) {
+      SpontixStore.awardTrophy('trivia_perfect', { mode: currentMode, event: 'Perfect Trivia Score' });
+    }
+  }
+}
+
+/* ═══ CONFETTI ═══ */
+function spawnConfetti() {
+  const container = document.getElementById('confetti-container');
+  container.innerHTML = '';
+  const colors = ['#4ECDC4','#A8E10C','#FFD700','#FF6B6B','#7C5CFC','#FF9F43'];
+  for (let i = 0; i < 60; i++) {
+    const piece = document.createElement('div');
+    piece.className = 'confetti-piece';
+    piece.style.left = Math.random() * 100 + '%';
+    piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+    piece.style.width = (Math.random() * 8 + 4) + 'px';
+    piece.style.height = (Math.random() * 8 + 4) + 'px';
+    piece.style.animationDelay = (Math.random() * 2) + 's';
+    piece.style.animationDuration = (Math.random() * 2 + 2) + 's';
+    container.appendChild(piece);
+  }
+  setTimeout(() => container.innerHTML = '', 5000);
+}
+
+/* ═══ UTILS ═══ */
+function shuffleArray(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+/* ═══ INIT ═══ */
+// Simulate duel opponent found after 2s
+setTimeout(() => {
+  const opp = document.getElementById('duel-opponent');
+  if (opp) {
+    opp.querySelector('.lobby-player-avatar').classList.remove('empty');
+    opp.querySelector('.lobby-player-avatar').style.background = 'var(--coral)';
+    opp.querySelector('.lobby-player-avatar').style.color = '#fff';
+    opp.querySelector('.lobby-player-avatar').textContent = 'AR';
+    opp.querySelector('.lobby-player-name').textContent = 'AlexR';
+  }
+}, 2000);
+
+/* ═══ TIER GATING VISUAL INDICATORS ═══ */
+document.addEventListener('DOMContentLoaded', function() {
+  if (typeof SpontixStore === 'undefined') return;
+  const player = SpontixStore.getPlayer();
+  const limits = SpontixStore.getTierLimits(player.tier);
+  const allowed = limits.triviaModesAllowed || ['solo'];
+
+  // Mark locked mode cards
+  document.querySelectorAll('.hub-mode, [onclick*="selectMode"]').forEach(card => {
+    const onclick = card.getAttribute('onclick') || '';
+    const match = onclick.match(/selectMode\(['"](\w+)['"]\)/);
+    if (match) {
+      const mode = match[1];
+      const modeMap = { 'solo': 'solo', 'duel': '1v1', 'party': 'party-room' };
+      const mapped = modeMap[mode] || mode;
+      if (!allowed.includes(mapped)) {
+        card.style.opacity = '0.5';
+        card.style.position = 'relative';
+        const badge = document.createElement('span');
+        badge.textContent = mode === 'party' ? 'Elite' : 'Pro';
+        badge.style.cssText = 'position:absolute;top:8px;right:8px;background:linear-gradient(135deg,#7C5CFC,#A855F7);color:#fff;font-size:0.6rem;font-weight:800;padding:2px 8px;border-radius:6px;text-transform:uppercase;';
+        card.appendChild(badge);
+      }
+    }
+  });
+});
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+<script src="sidebar.js"></script>
+</body>
+</html>

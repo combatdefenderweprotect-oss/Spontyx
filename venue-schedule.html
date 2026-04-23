@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Venue Schedule</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+
+    /* ── Venue Sidebar ── */
+    
+    /* ── Main ── */    .topbar {
+      padding: 16px 32px; display: flex; align-items: center; gap: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-search { flex: 1; max-width: 400px; position: relative; }
+    .topbar-search input {
+      width: 100%; padding: 10px 14px 10px 40px; background: var(--navy-light);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-pill);
+      color: var(--off-white); font-size: 0.85rem; font-family: inherit; outline: none;
+      transition: border-color 0.2s;
+    }
+    .topbar-search input::placeholder { color: var(--grey-dark); }
+    .topbar-search input:focus { border-color: rgba(168,225,12,0.3); }
+    .topbar-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--grey-dark); }
+    .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .topbar-btn {
+      width: 40px; height: 40px; border-radius: 50%; border: none;
+      background: var(--navy-light); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; position: relative; transition: background 0.2s;
+      text-decoration: none;
+    }
+    .topbar-btn:hover { background: var(--navy-hover); }
+    .topbar-btn svg { width: 18px; height: 18px; stroke: var(--grey); fill: none; stroke-width: 1.8; }
+    .topbar-btn .notif-dot {
+      position: absolute; top: 8px; right: 8px; width: 8px; height: 8px;
+      background: var(--coral); border-radius: 50%; border: 2px solid var(--navy);
+    }
+
+    .content { padding: 32px; flex: 1; max-width: 1200px; }
+
+    /* ── Page Header ── */
+    .page-header { margin-bottom: 28px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .page-header-left h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .page-header-left h1 span { color: var(--purple); }
+    .page-header-left p { color: var(--grey); font-size: 0.85rem; }
+    .header-btn {
+      display: flex; align-items: center; gap: 8px; padding: 10px 18px;
+      border-radius: var(--radius-pill); border: none; cursor: pointer;
+      font-family: inherit; font-size: 0.8rem; font-weight: 700;
+      transition: all 0.2s; text-decoration: none;
+    }
+    .header-btn svg { width: 16px; height: 16px; stroke-width: 2; fill: none; }
+    .header-btn.primary { background: var(--purple); color: #fff; }
+    .header-btn.primary svg { stroke: var(--navy); }
+    .header-btn.primary:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    /* ── Week Navigator ── */
+    .week-nav {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 28px;
+      padding: 14px 20px; background: var(--navy-card); border-radius: var(--radius-lg);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .week-nav-btn {
+      width: 36px; height: 36px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.08);
+      background: transparent; color: var(--grey); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+    }
+    .week-nav-btn:hover { border-color: rgba(255,255,255,0.2); color: var(--off-white); background: var(--navy-hover); }
+    .week-nav-btn svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .week-nav-label { flex: 1; text-align: center; }
+    .week-nav-title { font-size: 1rem; font-weight: 800; letter-spacing: -0.3px; }
+    .week-nav-sub { font-size: 0.7rem; color: var(--grey); margin-top: 2px; }
+    .week-nav-today {
+      padding: 6px 14px; border-radius: var(--radius-pill); border: 1px solid rgba(124,92,252,0.3);
+      background: rgba(124,92,252,0.08); color: var(--purple); font-size: 0.72rem; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: all 0.15s;
+    }
+    .week-nav-today:hover { background: rgba(124,92,252,0.15); border-color: rgba(124,92,252,0.5); }
+
+    /* ── Day Columns ── */
+    .week-grid {
+      display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; margin-bottom: 36px;
+    }
+    .day-col {
+      min-height: 120px;
+    }
+    .day-header {
+      text-align: center; padding: 10px 8px; margin-bottom: 8px;
+      border-radius: var(--radius-md); background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+    .day-header.today { border-color: rgba(124,92,252,0.3); background: rgba(124,92,252,0.08); }
+    .day-header-name { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--grey-dark); }
+    .day-header.today .day-header-name { color: var(--purple); }
+    .day-header-date { font-size: 1.1rem; font-weight: 900; margin-top: 2px; color: var(--off-white); }
+    .day-header.today .day-header-date { color: var(--purple); }
+    .day-header-count { font-size: 0.58rem; color: var(--grey-dark); margin-top: 2px; font-weight: 600; }
+
+    .day-events { display: flex; flex-direction: column; gap: 6px; }
+
+    /* ── Schedule Event Item ── */
+    .sched-item {
+      padding: 10px 12px; border-radius: var(--radius-md);
+      background: var(--navy-card); border-left: 3px solid var(--grey-dark);
+      cursor: pointer; transition: all 0.15s; position: relative;
+    }
+    .sched-item:hover { transform: translateY(-1px); }
+    .sched-item.type-event { border-left-color: var(--purple); }
+    .sched-item.type-league { border-left-color: var(--purple); }
+    .sched-item.type-recurring { border-left-color: var(--teal); }
+    .sched-item.is-live { border-left-color: var(--coral); }
+
+    .sched-item-time { font-size: 0.6rem; font-weight: 700; color: var(--grey); margin-bottom: 3px; display: flex; align-items: center; gap: 5px; }
+    .sched-item-time .live-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--coral); animation: pulse-live 2s infinite; }
+    @keyframes pulse-live { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .sched-item-title { font-size: 0.75rem; font-weight: 700; line-height: 1.3; margin-bottom: 3px; }
+    .sched-item-meta { font-size: 0.6rem; color: var(--grey-dark); line-height: 1.3; }
+    .sched-item-tag {
+      display: inline-flex; align-items: center; gap: 3px; padding: 1px 6px; border-radius: var(--radius-pill);
+      font-size: 0.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.3px; margin-top: 5px;
+    }
+    .sched-item-tag.event { background: rgba(124,92,252,0.12); color: var(--purple); }
+    .sched-item-tag.league { background: rgba(124,92,252,0.12); color: var(--purple); }
+    .sched-item-tag.recurring { background: rgba(78,205,196,0.12); color: var(--teal); }
+    .sched-item-tag.live { background: rgba(255,107,107,0.15); color: var(--coral); }
+    .sched-item.type-saved { border-left-color: var(--lime); }
+    .sched-item-tag.saved { background: rgba(168,225,12,0.1); color: var(--lime); }
+
+    /* ── Upcoming Section (below the grid) ── */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; margin-top: 8px;
+    }
+    .section-header h2 { font-size: 1.05rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .section-header a {
+      font-size: 0.78rem; color: var(--purple); text-decoration: none; font-weight: 600;
+      font-family: inherit; transition: opacity 0.15s;
+    }
+    .section-header a:hover { opacity: 0.8; }
+
+    .upcoming-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 36px; }
+
+    .upcoming-card {
+      display: flex; align-items: center; gap: 16px; padding: 16px 20px;
+      background: var(--navy-card); border-radius: var(--radius-lg);
+      border: 1px solid rgba(255,255,255,0.06); transition: all 0.2s; cursor: pointer;
+    }
+    .upcoming-card:hover { border-color: rgba(124,92,252,0.2); transform: translateY(-1px); }
+
+    .upcoming-date {
+      width: 52px; height: 52px; border-radius: var(--radius-md); flex-shrink: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: rgba(124,92,252,0.08); border: 1px solid rgba(124,92,252,0.15);
+    }
+    .upcoming-date-day { font-size: 1.1rem; font-weight: 900; color: var(--purple); line-height: 1; }
+    .upcoming-date-month { font-size: 0.5rem; font-weight: 700; color: var(--grey); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 1px; }
+
+    .upcoming-info { flex: 1; min-width: 0; }
+    .upcoming-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 2px; }
+    .upcoming-meta { font-size: 0.72rem; color: var(--grey); }
+    .upcoming-tag {
+      display: inline-flex; padding: 2px 8px; border-radius: var(--radius-pill);
+      font-size: 0.58rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.3px;
+      margin-left: 8px; vertical-align: middle;
+    }
+    .upcoming-tag.event { background: rgba(124,92,252,0.12); color: var(--purple); }
+    .upcoming-tag.league { background: rgba(124,92,252,0.12); color: var(--purple); }
+    .upcoming-tag.recurring { background: rgba(78,205,196,0.12); color: var(--teal); }
+
+    .upcoming-details { text-align: right; flex-shrink: 0; }
+    .upcoming-time { font-size: 0.82rem; font-weight: 700; color: var(--off-white); }
+    .upcoming-teams { font-size: 0.65rem; color: var(--grey); margin-top: 2px; }
+
+    .upcoming-arrow { color: var(--grey-dark); flex-shrink: 0; }
+    .upcoming-arrow svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .upcoming-card:hover .upcoming-arrow { color: var(--off-white); }
+
+    /* ── Recurring Section ── */
+    .recurring-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; margin-bottom: 36px;
+    }
+    .recurring-card {
+      display: flex; align-items: center; gap: 14px; padding: 16px 18px;
+      background: var(--navy-card); border-radius: var(--radius-lg);
+      border: 1px solid rgba(78,205,196,0.15); transition: all 0.2s; cursor: pointer;
+    }
+    .recurring-card:hover { border-color: rgba(78,205,196,0.35); transform: translateY(-1px); }
+    .recurring-icon {
+      width: 44px; height: 44px; border-radius: var(--radius-md); flex-shrink: 0;
+      background: rgba(78,205,196,0.12); display: flex; align-items: center; justify-content: center;
+    }
+    .recurring-icon svg { width: 20px; height: 20px; stroke: var(--teal); stroke-width: 2; fill: none; }
+    .recurring-body { flex: 1; min-width: 0; }
+    .recurring-title { font-size: 0.85rem; font-weight: 700; margin-bottom: 2px; }
+    .recurring-meta { font-size: 0.68rem; color: var(--grey); }
+    .recurring-day {
+      flex-shrink: 0; padding: 4px 10px; border-radius: var(--radius-pill);
+      background: rgba(78,205,196,0.08); border: 1px solid rgba(78,205,196,0.15);
+      font-size: 0.62rem; font-weight: 800; color: var(--teal); text-transform: uppercase; letter-spacing: 0.3px;
+    }
+
+
+    /* ── Responsive ── */
+    @media (max-width: 1100px) {
+      .week-grid { grid-template-columns: repeat(4, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .week-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ── SIDEBAR ── -->
+  <div id="sidebar-placeholder"></div>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+    <header class="topbar">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Search events, leagues..." />
+      </div>
+      <div class="topbar-right">
+        <a href="notifications.html" class="topbar-btn" title="Notifications" style="text-decoration:none;">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="notif-dot"></span>
+        </a>
+        <button class="topbar-btn" title="Messages">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- Page Header -->
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Venue <span>Schedule</span></h1>
+          <p>Plan and manage your events, league fixtures, and recurring nights.</p>
+        </div>
+        <a href="venue-create-event.html" class="header-btn primary" style="text-decoration:none;">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Create Event
+        </a>
+      </div>
+
+      <!-- Week Navigator -->
+      <div class="week-nav">
+        <button class="week-nav-btn">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="week-nav-label">
+          <div class="week-nav-title">7 — 13 April 2026</div>
+          <div class="week-nav-sub">This Week · 9 events scheduled</div>
+        </div>
+        <button class="week-nav-today">Today</button>
+        <button class="week-nav-btn">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+
+      <!-- Weekly Grid -->
+      <div class="week-grid">
+
+        <!-- Monday -->
+        <div class="day-col">
+          <div class="day-header">
+            <div class="day-header-name">Mon</div>
+            <div class="day-header-date">7</div>
+            <div class="day-header-count">1 event</div>
+          </div>
+          <div class="day-events">
+            <div class="sched-item type-league" onclick="showToast('Opening Monday League Night...')">
+              <div class="sched-item-time">7:30 PM</div>
+              <div class="sched-item-title">Monday League Night</div>
+              <div class="sched-item-meta">Premier League · 4 teams</div>
+              <span class="sched-item-tag league">League</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tuesday -->
+        <div class="day-col">
+          <div class="day-header">
+            <div class="day-header-name">Tue</div>
+            <div class="day-header-date">8</div>
+            <div class="day-header-count">No events</div>
+          </div>
+          <div class="day-events"></div>
+        </div>
+
+        <!-- Wednesday -->
+        <div class="day-col">
+          <div class="day-header">
+            <div class="day-header-name">Wed</div>
+            <div class="day-header-date">9</div>
+            <div class="day-header-count">1 event</div>
+          </div>
+          <div class="day-events">
+            <div class="sched-item type-recurring" onclick="showToast('Opening Wednesday Quiz Night...')">
+              <div class="sched-item-time">8:00 PM</div>
+              <div class="sched-item-title">Pub Quiz Night</div>
+              <div class="sched-item-meta">Trivia · Recurring weekly</div>
+              <span class="sched-item-tag recurring">Recurring</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Thursday -->
+        <div class="day-col">
+          <div class="day-header">
+            <div class="day-header-name">Thu</div>
+            <div class="day-header-date">10</div>
+            <div class="day-header-count">1 event</div>
+          </div>
+          <div class="day-events">
+            <div class="sched-item type-league" onclick="showToast('Opening Champions League night...')">
+              <div class="sched-item-time">8:00 PM</div>
+              <div class="sched-item-title">Champions League</div>
+              <div class="sched-item-meta">Barcelona vs PSG · 5 teams</div>
+              <span class="sched-item-tag league">League</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Friday (Today) -->
+        <div class="day-col">
+          <div class="day-header today">
+            <div class="day-header-name">Fri</div>
+            <div class="day-header-date">11</div>
+            <div class="day-header-count">4 events</div>
+          </div>
+          <div class="day-events">
+            <div class="sched-item is-live" onclick="showToast('Opening El Clásico...')">
+              <div class="sched-item-time"><span class="live-dot"></span> Live — 63'</div>
+              <div class="sched-item-title">Barcelona vs Real Madrid</div>
+              <div class="sched-item-meta">La Liga · 6 teams</div>
+              <span class="sched-item-tag live">Live</span>
+            </div>
+            <div class="sched-item is-live" onclick="showToast('Opening Lakers vs Warriors...')">
+              <div class="sched-item-time"><span class="live-dot"></span> Live — Q3</div>
+              <div class="sched-item-title">Lakers vs Warriors</div>
+              <div class="sched-item-meta">NBA · 4 teams</div>
+              <span class="sched-item-tag live">Live</span>
+            </div>
+            <div class="sched-item type-event" onclick="showToast('Opening UFC 312...')">
+              <div class="sched-item-time">9:45 PM</div>
+              <div class="sched-item-title">UFC 312 Main Card</div>
+              <div class="sched-item-meta">MMA · 3 teams</div>
+              <span class="sched-item-tag event">Event</span>
+            </div>
+            <div class="sched-item type-recurring" onclick="showToast('Opening Friday Football Night...')">
+              <div class="sched-item-time">All day</div>
+              <div class="sched-item-title">Friday Football Night</div>
+              <div class="sched-item-meta">Recurring · Multi-match</div>
+              <span class="sched-item-tag recurring">Recurring</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Saturday -->
+        <div class="day-col">
+          <div class="day-header">
+            <div class="day-header-name">Sat</div>
+            <div class="day-header-date">12</div>
+            <div class="day-header-count">2 events</div>
+          </div>
+          <div class="day-events">
+            <div class="sched-item type-event" onclick="showToast('Opening PL Marathon...')">
+              <div class="sched-item-time">12:00 PM</div>
+              <div class="sched-item-title">PL Marathon</div>
+              <div class="sched-item-meta">Football · All-day · 0 teams</div>
+              <span class="sched-item-tag event">Event</span>
+            </div>
+            <div class="sched-item type-league" onclick="showToast('Opening Saturday League...')">
+              <div class="sched-item-time">5:30 PM</div>
+              <div class="sched-item-title">Weekend League R4</div>
+              <div class="sched-item-meta">Multi-sport · 6 teams</div>
+              <span class="sched-item-tag league">League</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sunday -->
+        <div class="day-col">
+          <div class="day-header">
+            <div class="day-header-name">Sun</div>
+            <div class="day-header-date">13</div>
+            <div class="day-header-count">No events</div>
+          </div>
+          <div class="day-events"></div>
+        </div>
+
+      </div>
+
+      <!-- Upcoming Events (dynamically rendered from Supabase) -->
+      <div class="section-header">
+        <h2>Coming Up Next</h2>
+        <a href="venue-create-event.html">+ Create Event</a>
+      </div>
+      <div class="upcoming-list" id="upcomingList"></div>
+
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+  <script src="sidebar.js"></script>
+  <script>
+    SpontixSidebar.init({ type: 'venue', active: 'venue-schedule.html' });
+    // Tier gate — Event Scheduling requires Venue Pro+
+    SpontixSidebar.gatePage({
+      feature: 'eventScheduling',
+      requiredTier: 'Venue Pro',
+      isVenue: true,
+      icon: '📅',
+      title: 'Event Scheduling requires Venue Pro',
+      description: 'Plan your events in advance with a visual calendar. Schedule recurring match nights and manage your event pipeline. Upgrade to Venue Pro to unlock Scheduling.'
+    });
+  </script>
+  <script>
+    // ── Week Navigation State ──
+    let currentWeekOffset = 0;
+    const TODAY = new Date();
+    let savedMatchItems = []; // venue-saved fixtures loaded async
+    // ── Get the start date of a week (Monday) for a given offset ──
+    function getWeekStartDate(offset) {
+      const d = new Date(TODAY);
+      d.setDate(d.getDate() + offset * 7);
+      // Find the Monday of this week
+      const day = d.getDay();
+      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+      d.setDate(diff);
+      return d;
+    }
+
+    // ── Get all 7 days of a week (Mon-Sun) ──
+    function getWeekDays(offset) {
+      const start = getWeekStartDate(offset);
+      const days = [];
+      for (let i = 0; i < 7; i++) {
+        const d = new Date(start);
+        d.setDate(start.getDate() + i);
+        days.push(d);
+      }
+      return days;
+    }
+
+    // ── Format date as YYYY-MM-DD ──
+    function formatDateISO(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    // ── Get earliest week with events ──
+    function getEarliestEventWeek() {
+      const events = SpontixStore.getVenueEvents();
+      if (events.length === 0) return 0;
+
+      const earliestDate = new Date(Math.min(...events.map(e => new Date(e.date))));
+      const weekStart = getWeekStartDate(0);
+      const diffMs = earliestDate - weekStart;
+      const diffWeeks = Math.floor(diffMs / (7 * 24 * 60 * 60 * 1000));
+      return diffWeeks;
+    }
+
+    // ── Filter events for a specific week ──
+    function getEventsForWeek(offset) {
+      const events = SpontixStore.getVenueEvents();
+      const weekDays = getWeekDays(offset);
+      const weekStart = formatDateISO(weekDays[0]);
+      const weekEnd = formatDateISO(weekDays[6]);
+
+      return events.filter(e => {
+        const eventDate = e.date;
+        return eventDate >= weekStart && eventDate <= weekEnd;
+      });
+    }
+
+    // ── Render the week navigation header ──
+    function renderWeekHeader(offset) {
+      const days = getWeekDays(offset);
+      const startDay = days[0].getDate();
+      const startMonth = days[0].toLocaleDateString('en-US', { month: 'short' });
+      const endDay = days[6].getDate();
+      const endMonth = days[6].toLocaleDateString('en-US', { month: 'short' });
+      const year = days[0].getFullYear();
+
+      const title = startMonth === endMonth
+        ? `${startDay} — ${endDay} ${startMonth}, ${year}`
+        : `${startDay} ${startMonth} — ${endDay} ${endMonth}, ${year}`;
+
+      let subtitle = 'Other week';
+      if (offset === 0) {
+        subtitle = 'This week';
+      } else if (offset === 1) {
+        subtitle = 'Next week';
+      } else if (offset === -1) {
+        subtitle = 'Last week';
+      }
+
+      const weekEvents = getEventsForWeek(offset);
+      const eventCount = weekEvents.length;
+      subtitle += ` · ${eventCount} event${eventCount !== 1 ? 's' : ''} scheduled`;
+
+      const titleEl = document.querySelector('.week-nav-title');
+      const subEl = document.querySelector('.week-nav-sub');
+      if (titleEl) titleEl.textContent = title;
+      if (subEl) subEl.textContent = subtitle;
+    }
+
+    // ── Load saved venue matches async ──
+    async function loadVenueSavedMatches() {
+      try {
+        const user = SpontixStore.Session.getCurrentUser();
+        if (!user) return;
+        const venues = await SpontixStoreAsync.getVenues();
+        const myVenue = (venues || []).find(v => v.owner_id === user.id);
+        if (!myVenue) return;
+        const rows = await SpontixStoreAsync.getSavedMatches({ venueId: myVenue.id });
+        savedMatchItems = rows || [];
+        updateWeekDisplay();
+      } catch (e) {
+        console.warn('[venue-schedule] saved matches load failed', e);
+      }
+    }
+
+    // ── Format a kickoff_at timestamp to HH:MM AM/PM ──
+    function formatKickoffTime(kickoffAt) {
+      if (!kickoffAt) return '';
+      const d = new Date(kickoffAt);
+      const h = d.getHours();
+      const m = String(d.getMinutes()).padStart(2, '0');
+      const ampm = h >= 12 ? 'PM' : 'AM';
+      const h12 = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+      return `${h12}:${m} ${ampm}`;
+    }
+
+    // ── Render the week grid with events ──
+    function renderWeekGrid(offset) {
+      const days = getWeekDays(offset);
+      const weekEvents = getEventsForWeek(offset);
+
+      // Group regular events by date
+      const eventsByDate = {};
+      weekEvents.forEach(e => {
+        if (!eventsByDate[e.date]) eventsByDate[e.date] = [];
+        eventsByDate[e.date].push(e);
+      });
+
+      // Group saved matches by date
+      const savedByDate = {};
+      savedMatchItems.forEach(s => {
+        if (!s.kickoff_at) return;
+        const dateStr = formatDateISO(new Date(s.kickoff_at));
+        if (!savedByDate[dateStr]) savedByDate[dateStr] = [];
+        savedByDate[dateStr].push(s);
+      });
+
+      const dayCols = document.querySelectorAll('.day-col');
+      const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+      dayCols.forEach((col, idx) => {
+        const dayDate = days[idx];
+        const dayName = dayNames[idx];
+        const dayDateStr = formatDateISO(dayDate);
+        const dayNum = dayDate.getDate();
+
+        const header = col.querySelector('.day-header');
+        const isToday = dayDate.toDateString() === TODAY.toDateString();
+        if (isToday) { header.classList.add('today'); } else { header.classList.remove('today'); }
+
+        const headerName = col.querySelector('.day-header-name');
+        const headerDate = col.querySelector('.day-header-date');
+        const headerCount = col.querySelector('.day-header-count');
+
+        headerName.textContent = dayName;
+        headerDate.textContent = dayNum;
+
+        const dayEvts = eventsByDate[dayDateStr] || [];
+        const daySaved = savedByDate[dayDateStr] || [];
+        const totalCount = dayEvts.length + daySaved.length;
+
+        headerCount.textContent = totalCount === 0 ? 'No events' : totalCount + ' event' + (totalCount !== 1 ? 's' : '');
+
+        const eventsContainer = col.querySelector('.day-events');
+        eventsContainer.innerHTML = '';
+
+        if (totalCount === 0) {
+          eventsContainer.innerHTML = '<div style="color: var(--grey-dark); font-size: 0.75rem; padding: 12px 8px; text-align: center;">No events</div>';
+          return;
+        }
+
+        dayEvts.forEach(evt => {
+          const item = document.createElement('div');
+          item.className = 'sched-item type-event';
+          item.onclick = () => showToast(`Opening ${evt.name}...`);
+          const type = evt.sport && evt.sport.toLowerCase().includes('league') ? 'league' : 'event';
+          if (type === 'league') item.classList.add('type-league');
+          item.innerHTML = `
+            <div class="sched-item-time">${evt.time}</div>
+            <div class="sched-item-title">${evt.name}</div>
+            <div class="sched-item-meta">${evt.matchTitle || evt.sport || ''} · ${evt.registered}/${evt.maxPlayers} registered</div>
+            <span class="sched-item-tag ${type}">${type === 'league' ? 'League' : 'Event'}</span>
+          `;
+          eventsContainer.appendChild(item);
+        });
+
+        daySaved.forEach(s => {
+          const item = document.createElement('div');
+          item.className = 'sched-item type-saved';
+          item.onclick = () => window.location.href = 'matches.html';
+          item.innerHTML = `
+            <div class="sched-item-time">${formatKickoffTime(s.kickoff_at)}</div>
+            <div class="sched-item-title">${s.home_team} vs ${s.away_team}</div>
+            <div class="sched-item-meta">${s.competition || 'Football'}</div>
+            <span class="sched-item-tag saved">Match</span>
+          `;
+          eventsContainer.appendChild(item);
+        });
+      });
+    }
+
+    // ── Update week when navigation buttons are clicked ──
+    function previousWeek() {
+      const earliestWeek = getEarliestEventWeek();
+      if (currentWeekOffset > earliestWeek) {
+        currentWeekOffset--;
+        updateWeekDisplay();
+      } else {
+        showToast('No earlier events to display');
+      }
+    }
+
+    function nextWeek() {
+      currentWeekOffset++;
+      updateWeekDisplay();
+    }
+
+    function goToToday() {
+      currentWeekOffset = 0;
+      updateWeekDisplay();
+    }
+
+    // ── Render the "Coming Up Next" list from live event data ──
+    function renderUpcomingList() {
+      var container = document.getElementById('upcomingList');
+      if (!container) return;
+      var events = SpontixStore.getVenueEvents();
+      var todayStr = formatDateISO(TODAY);
+      // Show upcoming & live events sorted by date
+      var upcoming = events
+        .filter(function (e) { return e.status !== 'ended' && e.status !== 'cancelled' && e.date >= todayStr; })
+        .sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+
+      if (upcoming.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:#8E8EA0;padding:24px 0;">No upcoming events. <a href="venue-create-event.html" style="color:#A8E10C;">Create one</a></div>';
+        return;
+      }
+
+      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      container.innerHTML = upcoming.map(function (ev) {
+        var d = new Date(ev.date + 'T00:00:00');
+        var day = d.getDate();
+        var month = months[d.getMonth()];
+        var timeStr = ev.time || '';
+        // Format time from 24h to display
+        if (timeStr && timeStr.indexOf(':') !== -1) {
+          var parts = timeStr.split(':');
+          var h = parseInt(parts[0]);
+          var m = parts[1];
+          var ampm = h >= 12 ? 'PM' : 'AM';
+          h = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+          timeStr = h + ':' + m + ' ' + ampm;
+        }
+        var statusTag = ev.status === 'live'
+          ? '<span class="upcoming-tag" style="background:rgba(255,107,107,0.15);color:#FF6B6B;">Live</span>'
+          : '<span class="upcoming-tag event">Event</span>';
+        var meta = (ev.matchTitle ? ev.matchTitle + ' · ' : '') + ev.sport + ' · ' + ev.registered + '/' + ev.maxPlayers + ' players';
+        return '<div class="upcoming-card" onclick="showToast(\'Opening ' + ev.name.replace(/'/g, "\\'") + '...\')">'
+          + '<div class="upcoming-date"><div class="upcoming-date-day">' + day + '</div><div class="upcoming-date-month">' + month + '</div></div>'
+          + '<div class="upcoming-info"><div class="upcoming-title">' + ev.name + ' ' + statusTag + '</div><div class="upcoming-meta">' + meta + '</div></div>'
+          + '<div class="upcoming-details"><div class="upcoming-time">' + timeStr + '</div></div>'
+          + '<div class="upcoming-arrow"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>'
+          + '</div>';
+      }).join('');
+    }
+
+    // ── Update the entire week display ──
+    function updateWeekDisplay() {
+      renderWeekHeader(currentWeekOffset);
+      renderWeekGrid(currentWeekOffset);
+      renderUpcomingList();
+      updateNavButtonStates();
+    }
+
+    // ── Update button states ──
+    function updateNavButtonStates() {
+      const prevBtn = document.querySelector('.week-nav-btn:first-of-type');
+      const earliestWeek = getEarliestEventWeek();
+
+      if (currentWeekOffset <= earliestWeek) {
+        prevBtn.disabled = true;
+        prevBtn.style.opacity = '0.5';
+        prevBtn.style.cursor = 'not-allowed';
+      } else {
+        prevBtn.disabled = false;
+        prevBtn.style.opacity = '1';
+        prevBtn.style.cursor = 'pointer';
+      }
+    }
+
+    // ── Initialize on page load ──
+    document.addEventListener('DOMContentLoaded', () => {
+      // Wire up the buttons (may not exist if tier-gated)
+      const navBtns = document.querySelectorAll('.week-nav-btn');
+      const todayBtn = document.querySelector('.week-nav-today');
+
+      if (navBtns.length >= 2) {
+        navBtns[0].onclick = previousWeek;
+        navBtns[1].onclick = nextWeek;
+      }
+      if (todayBtn) todayBtn.onclick = goToToday;
+
+      // Initial render
+      updateWeekDisplay();
+
+      // Re-render when events cache is refreshed from Supabase
+      window.addEventListener('spontix-events-refreshed', () => {
+        updateWeekDisplay();
+      });
+
+      // Load venue-saved matches async
+      loadVenueSavedMatches();
+    });
+  </script>
+</body>
+</html>

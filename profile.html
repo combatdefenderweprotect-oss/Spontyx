@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Profile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+<style>/* ══ SIDEBAR ══ */
+
+    /* ══ MAIN ══ */
+    .main { margin-left: 260px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* Top Bar */
+    .topbar {
+      padding: 16px 32px; display: flex; align-items: center; gap: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-search { flex: 1; max-width: 400px; position: relative; }
+    .topbar-search input {
+      width: 100%; padding: 10px 14px 10px 40px; background: var(--navy-light);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-pill);
+      color: var(--off-white); font-size: 0.85rem; font-family: inherit; outline: none;
+      transition: border-color 0.2s;
+    }
+    .topbar-search input::placeholder { color: var(--grey-dark); }
+    .topbar-search input:focus { border-color: rgba(168,225,12,0.3); }
+    .topbar-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--grey-dark); }
+    .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .topbar-btn {
+      width: 40px; height: 40px; border-radius: 50%; border: none;
+      background: var(--navy-light); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; position: relative; transition: background 0.2s;
+    }
+    .topbar-btn:hover { background: var(--navy-hover); }
+    .topbar-btn svg { width: 18px; height: 18px; stroke: var(--grey); fill: none; stroke-width: 1.8; }
+    .topbar-btn .notif-dot {
+      position: absolute; top: 8px; right: 8px; width: 8px; height: 8px;
+      background: var(--coral); border-radius: 50%; border: 2px solid var(--navy);
+    }
+
+    /* Content */
+    .content { padding: 32px; flex: 1; width: 100%; }
+
+    /* ══ PROFILE HEADER ══ */
+    .profile-header {
+      display: flex; align-items: center; gap: 24px; margin-bottom: 36px;
+      padding: 28px; background: var(--navy-card); border-radius: var(--radius-xl);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .profile-header-avatar {
+      width: 80px; height: 80px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; position: relative; cursor: pointer;
+      /* overflow must stay visible so the edit button isn't clipped */
+    }
+    /* Inner layer clips images to the circle without hiding the edit button */
+    .profile-header-avatar .avatar-inner {
+      position: absolute; inset: 0; border-radius: 50%; overflow: hidden;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .profile-header-avatar .avatar-inner img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .profile-header-avatar .edit-avatar {
+      position: absolute; bottom: -3px; right: -3px; width: 28px; height: 28px;
+      background: var(--lime); border: 2px solid var(--navy); border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; cursor: pointer;
+      z-index: 3; transition: transform 0.15s, background 0.15s;
+    }
+    .profile-header-avatar:hover .edit-avatar { transform: scale(1.12); background: #c4f033; }
+    .profile-header-avatar .edit-avatar svg { width: 12px; height: 12px; stroke: var(--navy); stroke-width: 2.2; fill: none; }
+
+    /* ══ AVATAR PICKER MODAL ══ */
+    .avatar-modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+      z-index: 1000; display: none; align-items: center; justify-content: center;
+      backdrop-filter: blur(6px);
+    }
+    .avatar-modal-overlay.open { display: flex; }
+    .avatar-modal {
+      background: var(--navy-card); border-radius: var(--radius-xl); padding: 28px;
+      border: 1px solid rgba(255,255,255,0.08); max-width: 480px; width: 94%;
+      max-height: 90vh; display: flex; flex-direction: column; gap: 0;
+    }
+    .avatar-modal-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 18px;
+    }
+    .avatar-modal-title { font-size: 1rem; font-weight: 800; }
+    .avatar-modal-close {
+      width: 32px; height: 32px; border-radius: 50%; border: none;
+      background: var(--navy-light); color: var(--grey); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 1rem;
+      line-height: 1; transition: all 0.15s;
+    }
+    .avatar-modal-close:hover { background: rgba(255,255,255,0.08); color: var(--off-white); }
+    /* Preview row */
+    .avatar-preview-row {
+      display: flex; align-items: center; gap: 18px; margin-bottom: 18px;
+      padding: 14px 16px; background: var(--navy-light); border-radius: var(--radius-lg);
+    }
+    .avatar-preview-circle {
+      width: 64px; height: 64px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      overflow: hidden; font-size: 1.6rem; font-weight: 900;
+    }
+    .avatar-preview-circle img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+    .avatar-preview-meta { flex: 1; }
+    .avatar-preview-label { font-size: 0.8rem; font-weight: 700; margin-bottom: 4px; }
+    .avatar-preview-sublabel { font-size: 0.7rem; color: var(--grey); margin-bottom: 10px; }
+    .avatar-save-btn {
+      padding: 8px 20px; border-radius: var(--radius-pill); border: none;
+      background: var(--lime); color: var(--navy); font-size: 0.78rem; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: opacity 0.2s;
+    }
+    .avatar-save-btn:hover { opacity: 0.85; }
+    /* Tabs */
+    .avatar-picker-tabs {
+      display: flex; gap: 4px; margin-bottom: 14px; background: var(--navy-light);
+      border-radius: var(--radius-sm); padding: 4px; flex-shrink: 0;
+    }
+    .avatar-picker-tab {
+      flex: 1; padding: 8px 10px; border-radius: 6px; border: none; background: none;
+      color: var(--grey); font-size: 0.75rem; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+    }
+    .avatar-picker-tab.active { background: var(--navy-card); color: var(--lime); }
+    .avatar-tab-panel { display: none; overflow-y: auto; }
+    .avatar-tab-panel.active { display: block; }
+    /* Color grid */
+    .avatar-color-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+      padding: 4px 2px;
+    }
+    .avatar-color-item { text-align: center; cursor: pointer; }
+    .avatar-color-swatch {
+      width: 100%; aspect-ratio: 1; border-radius: 50%; border: 3px solid transparent;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; font-weight: 900; transition: transform 0.15s, border-color 0.15s;
+      box-sizing: border-box;
+    }
+    .avatar-color-swatch:hover { transform: scale(1.07); }
+    .avatar-color-item.selected .avatar-color-swatch { border-color: var(--off-white); box-shadow: 0 0 0 2px var(--navy-card); }
+    .avatar-color-name { font-size: 0.62rem; color: var(--grey); margin-top: 5px; font-weight: 600; }
+    /* Preset grid */
+    .avatar-preset-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+      padding: 4px 2px;
+    }
+    .avatar-preset-item { text-align: center; cursor: pointer; }
+    .avatar-preset-circle {
+      width: 100%; aspect-ratio: 1; border-radius: 50%; border: 3px solid transparent;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; font-weight: 900; transition: transform 0.15s, border-color 0.15s;
+      box-sizing: border-box;
+    }
+    .avatar-preset-circle:hover { transform: scale(1.07); }
+    .avatar-preset-item.selected .avatar-preset-circle { border-color: var(--off-white); box-shadow: 0 0 0 2px var(--navy-card); }
+    .avatar-preset-name { font-size: 0.62rem; color: var(--grey); margin-top: 5px; font-weight: 600; }
+    /* Upload */
+    .avatar-upload-area {
+      border: 2px dashed rgba(255,255,255,0.14); border-radius: var(--radius-lg);
+      padding: 36px 20px; text-align: center; cursor: pointer; transition: all 0.2s;
+    }
+    .avatar-upload-area:hover { border-color: rgba(168,225,12,0.4); background: rgba(168,225,12,0.03); }
+    .avatar-upload-icon { width: 44px; height: 44px; stroke: var(--grey-dark); margin: 0 auto 12px; display: block; }
+    .avatar-upload-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 4px; }
+    .avatar-upload-hint { font-size: 0.72rem; color: var(--grey-dark); }
+    .avatar-upload-preview {
+      display: flex; align-items: center; gap: 14px; padding: 14px;
+      background: var(--navy-light); border-radius: var(--radius-md); margin-top: 14px;
+    }
+    .avatar-upload-thumb { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; flex-shrink: 0; }
+    .avatar-upload-filename { font-size: 0.78rem; color: var(--grey); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .avatar-upload-remove {
+      background: none; border: none; color: var(--coral); cursor: pointer;
+      font-size: 0.75rem; font-weight: 600; font-family: inherit; padding: 4px 8px;
+    }
+    .profile-header-info { flex: 1; }
+    .profile-header-name { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 2px; }
+    .profile-header-handle { font-size: 0.85rem; color: var(--grey); margin-bottom: 8px; }
+    .profile-header-meta { display: flex; gap: 16px; flex-wrap: wrap; }
+    .profile-meta-item { font-size: 0.75rem; color: var(--grey); display: flex; align-items: center; gap: 5px; }
+    .profile-meta-item svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .profile-meta-item strong { color: var(--off-white); font-weight: 700; }
+    .profile-header-actions { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+    .profile-edit-btn {
+      padding: 9px 20px; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.12);
+      background: none; color: var(--off-white); font-size: 0.78rem; font-weight: 600;
+      cursor: pointer; font-family: inherit; transition: all 0.15s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .profile-edit-btn:hover { border-color: rgba(168,225,12,0.3); background: rgba(255,255,255,0.03); }
+    .profile-edit-btn svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .profile-share-btn {
+      padding: 9px 20px; border-radius: var(--radius-pill); border: none;
+      background: var(--lime); color: var(--navy); font-size: 0.78rem; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: opacity 0.2s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .profile-share-btn:hover { opacity: 0.85; }
+    .profile-share-btn svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+    /* ══ TABS ══ */
+    .profile-tabs {
+      display: flex; gap: 4px; margin-bottom: 28px; background: var(--navy-light);
+      border-radius: var(--radius-sm); padding: 4px; overflow-x: auto;
+    }
+    .profile-tab {
+      padding: 10px 18px; border-radius: 6px; border: none; background: none;
+      color: var(--grey); font-size: 0.8rem; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .profile-tab:hover { color: var(--off-white); }
+    .profile-tab.active { background: var(--navy-card); color: var(--lime); }
+    .profile-tab svg { width: 15px; height: 15px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .tab-panel { display: none; animation: fadeIn 0.3s ease; }
+    .tab-panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ══ STAT CARDS ══ */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
+    .stat-card {
+      background: var(--navy-card); border-radius: var(--radius-lg); padding: 20px;
+      border: 1px solid rgba(255,255,255,0.06); text-align: center;
+    }
+    .stat-card-value { font-size: 1.6rem; font-weight: 900; margin-bottom: 4px; }
+    .stat-card-value.lime { color: var(--lime); }
+    .stat-card-value.coral { color: var(--coral); }
+    .stat-card-value.teal { color: var(--teal); }
+    .stat-card-value.purple { color: var(--purple); }
+    .stat-card-label { font-size: 0.7rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* ══ TEAM PERFORMANCE ══ */
+    .team-performance {
+      margin-bottom: 28px;
+      padding: 20px;
+      background: var(--navy-card);
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(124,92,252,0.2);
+    }
+    .team-performance-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: var(--purple);
+      margin-bottom: 16px;
+    }
+    .team-stats {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+    .team-stat-item {
+      text-align: center;
+      padding: 12px;
+      background: rgba(124,92,252,0.08);
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(124,92,252,0.15);
+    }
+    .team-stat-value {
+      font-size: 1.4rem;
+      font-weight: 900;
+      color: var(--purple);
+      margin-bottom: 4px;
+    }
+    .team-stat-label {
+      font-size: 0.65rem;
+      color: var(--grey);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* ══ HISTORY / RECENT ══ */
+    .section-title { font-size: 1rem; font-weight: 700; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+    .section-title svg { width: 18px; height: 18px; stroke: var(--lime); stroke-width: 2; fill: none; }
+
+    .history-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+    .history-item {
+      display: flex; align-items: center; gap: 14px; padding: 14px 18px;
+      background: var(--navy-card); border-radius: var(--radius-md);
+      border: 1px solid rgba(255,255,255,0.04); transition: border-color 0.15s;
+    }
+    .history-item:hover { border-color: rgba(168,225,12,0.12); }
+    .history-icon {
+      width: 40px; height: 40px; border-radius: var(--radius-sm); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .history-icon svg { width: 18px; height: 18px; stroke-width: 2; fill: none; }
+    .history-info { flex: 1; }
+    .history-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 2px; }
+    .history-sub { font-size: 0.72rem; color: var(--grey); }
+    .history-result { text-align: right; }
+    .history-points { font-size: 0.9rem; font-weight: 800; }
+    .history-points.positive { color: var(--lime); }
+    .history-rank { font-size: 0.65rem; color: var(--grey); }
+
+    /* ══ ACCURACY BAR ══ */
+    .accuracy-section { margin-bottom: 28px; }
+    .accuracy-bars { display: flex; flex-direction: column; gap: 12px; }
+    .accuracy-row { display: flex; align-items: center; gap: 12px; }
+    .accuracy-label { width: 110px; font-size: 0.78rem; font-weight: 600; color: var(--grey); flex-shrink: 0; }
+    .accuracy-track { flex: 1; height: 8px; background: rgba(255,255,255,0.06); border-radius: 8px; overflow: hidden; }
+    .accuracy-fill { height: 100%; border-radius: 8px; transition: width 0.6s ease; }
+    .accuracy-pct { width: 42px; font-size: 0.78rem; font-weight: 800; text-align: right; }
+
+    /* ══ BADGES GRID ══ */
+    .badges-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px; }
+    .badge-card {
+      background: var(--navy-card); border-radius: var(--radius-lg); padding: 22px 16px;
+      border: 1px solid rgba(255,255,255,0.06); text-align: center;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .badge-card:hover { transform: translateY(-2px); border-color: rgba(168,225,12,0.12); }
+    .badge-card.locked { opacity: 0.4; }
+    .badge-card.locked:hover { transform: none; border-color: rgba(255,255,255,0.06); }
+    .badge-icon {
+      width: 52px; height: 52px; border-radius: 50%; margin: 0 auto 12px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .badge-icon svg { width: 24px; height: 24px; stroke-width: 2; fill: none; }
+    .badge-name { font-size: 0.78rem; font-weight: 700; margin-bottom: 4px; }
+    .badge-desc { font-size: 0.65rem; color: var(--grey); line-height: 1.4; }
+    .badge-progress { margin-top: 8px; }
+    .badge-progress-track { height: 4px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+    .badge-progress-fill { height: 100%; border-radius: 4px; }
+    .badge-progress-label { font-size: 0.6rem; color: var(--grey-dark); margin-top: 4px; }
+    .badge-earned-date { font-size: 0.6rem; color: var(--lime); font-weight: 600; margin-top: 6px; }
+    .badge-filter {
+      padding: 6px 14px; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.08);
+      background: transparent; color: var(--grey); font-size: 0.72rem; font-weight: 600;
+      font-family: inherit; cursor: pointer; transition: all 0.2s;
+    }
+    .badge-filter.active { background: var(--lime); color: var(--navy); border-color: var(--lime); }
+    .badge-filter:not(.active):hover { border-color: rgba(255,255,255,0.15); color: #fff; }
+
+    /* ══ TROPHY ROOM ══ */
+    .trophy-stats-bar {
+      display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap;
+    }
+    .trophy-stat-box {
+      flex: 1; min-width: 80px; background: var(--navy-card); border-radius: var(--radius-lg);
+      padding: 16px; border: 1px solid rgba(255,255,255,0.06); text-align: center;
+    }
+    .trophy-stat-val { font-size: 1.6rem; font-weight: 800; }
+    .trophy-stat-label { font-size: 0.65rem; color: var(--grey); font-weight: 600; margin-top: 2px; }
+    .trophy-filters {
+      display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap;
+    }
+    .trophy-filter {
+      padding: 6px 14px; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.08);
+      background: transparent; color: var(--grey); font-size: 0.72rem; font-weight: 600;
+      font-family: inherit; cursor: pointer; transition: all 0.2s;
+    }
+    .trophy-filter.active { background: var(--lime); color: var(--navy); border-color: var(--lime); }
+    .trophy-filter:not(.active):hover { border-color: rgba(255,255,255,0.15); color: #fff; }
+    .trophy-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 14px;
+    }
+    .trophy-card {
+      background: var(--navy-card); border-radius: var(--radius-lg); padding: 22px 16px;
+      border: 1px solid rgba(255,255,255,0.06); text-align: center; position: relative;
+      overflow: hidden; transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+    .trophy-card:hover { transform: translateY(-3px); }
+    .trophy-card[data-rarity="legendary"] { border-color: rgba(255,217,61,0.25); }
+    .trophy-card[data-rarity="legendary"]:hover { box-shadow: 0 8px 30px rgba(255,217,61,0.12); }
+    .trophy-card[data-rarity="epic"] { border-color: rgba(124,92,252,0.2); }
+    .trophy-card[data-rarity="epic"]:hover { box-shadow: 0 8px 30px rgba(124,92,252,0.1); }
+    .trophy-card[data-rarity="rare"] { border-color: rgba(78,205,196,0.15); }
+    .trophy-card[data-rarity="rare"]:hover { box-shadow: 0 8px 30px rgba(78,205,196,0.08); }
+    .trophy-glow {
+      position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+      width: 80px; height: 80px; border-radius: 50%; filter: blur(25px); opacity: 0.5;
+    }
+    .trophy-icon {
+      width: 56px; height: 56px; border-radius: 50%; margin: 0 auto 12px;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid transparent; position: relative; z-index: 1;
+    }
+    .trophy-icon svg { width: 28px; height: 28px; }
+    .trophy-rarity-tag {
+      font-size: 0.55rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.8px;
+      padding: 2px 8px; border-radius: var(--radius-pill); display: inline-block; margin-bottom: 8px;
+    }
+    .trophy-name { font-size: 0.82rem; font-weight: 700; margin-bottom: 3px; position: relative; z-index: 1; }
+    .trophy-subtitle { font-size: 0.65rem; color: var(--grey); line-height: 1.3; margin-bottom: 4px; }
+    .trophy-date { font-size: 0.58rem; color: var(--grey-dark); }
+    .trophy-custom-tag {
+      display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: var(--radius-pill);
+      font-size: 0.52rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+      background: rgba(124,92,252,0.12); color: var(--purple); border: 1px solid rgba(124,92,252,0.2);
+    }
+    .trophy-ai-cta {
+      margin-top: 24px; padding: 24px; border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, rgba(168,225,12,0.04), rgba(124,92,252,0.06));
+      border: 1px solid rgba(168,225,12,0.15); text-align: center;
+    }
+    .trophy-ai-btn {
+      padding: 10px 28px; border-radius: var(--radius-pill); border: none; cursor: pointer;
+      background: var(--lime); color: var(--navy); font-weight: 700; font-size: 0.82rem;
+      font-family: inherit; transition: all 0.2s;
+    }
+    .trophy-ai-btn:hover { background: var(--lime-hover); transform: translateY(-1px); }
+    .trophy-pill {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 24px; height: 24px; border-radius: 50%; border: 1.5px solid;
+      background: rgba(255,255,255,0.03);
+    }
+    .trophy-pill-more {
+      width: auto; padding: 0 8px; border-radius: var(--radius-pill);
+      font-size: 0.55rem; font-weight: 700; color: var(--grey); border-color: rgba(255,255,255,0.1);
+    }
+
+    /* ══ SUBSCRIPTION ══ */
+    .sub-card {
+      background: var(--navy-card); border-radius: var(--radius-xl); padding: 28px;
+      border: 1px solid rgba(255,255,255,0.06); margin-bottom: 20px;
+    }
+    .sub-card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .sub-plan-name { font-size: 1.1rem; font-weight: 800; }
+    .sub-plan-badge {
+      padding: 5px 14px; border-radius: var(--radius-pill); font-size: 0.7rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .sub-plan-badge.free { background: rgba(255,255,255,0.08); color: var(--grey); }
+    .sub-plan-badge.trial { background: rgba(168,225,12,0.12); color: var(--lime); }
+    .sub-plan-badge.active { background: var(--lime); color: var(--navy); }
+
+    .trial-countdown {
+      background: linear-gradient(135deg, rgba(168,225,12,0.08), rgba(124,92,252,0.06));
+      border: 1px solid rgba(168,225,12,0.18); border-radius: var(--radius-lg);
+      padding: 20px 24px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px;
+    }
+    .trial-countdown-ring {
+      width: 64px; height: 64px; flex-shrink: 0; position: relative;
+    }
+    .trial-countdown-ring svg { width: 64px; height: 64px; transform: rotate(-90deg); }
+    .trial-countdown-ring .ring-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 4; }
+    .trial-countdown-ring .ring-fill { fill: none; stroke: var(--lime); stroke-width: 4; stroke-linecap: round; transition: stroke-dashoffset 0.3s; }
+    .trial-countdown-days {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+    .trial-countdown-days .num { font-size: 1.3rem; font-weight: 900; color: var(--lime); line-height: 1; }
+    .trial-countdown-days .label { font-size: 0.55rem; color: var(--grey); font-weight: 600; text-transform: uppercase; }
+    .trial-countdown-info { flex: 1; }
+    .trial-countdown-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 4px; }
+    .trial-countdown-desc { font-size: 0.78rem; color: var(--grey); line-height: 1.5; }
+    .trial-countdown-actions { display: flex; gap: 8px; margin-top: 10px; }
+    .trial-btn {
+      padding: 7px 16px; border-radius: var(--radius-pill); font-size: 0.72rem; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: all 0.15s;
+    }
+    .trial-btn.upgrade { background: var(--lime); color: var(--navy); border: none; }
+    .trial-btn.upgrade:hover { opacity: 0.85; }
+    .trial-btn.cancel { background: none; color: var(--grey); border: 1px solid rgba(255,255,255,0.1); }
+    .trial-btn.cancel:hover { border-color: var(--coral); color: var(--coral); }
+
+    .sub-details { display: flex; flex-direction: column; gap: 12px; }
+    .sub-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .sub-row:last-child { border-bottom: none; }
+    .sub-row-label { font-size: 0.82rem; color: var(--grey); }
+    .sub-row-value { font-size: 0.82rem; font-weight: 600; }
+    .sub-row-value.lime { color: var(--lime); }
+
+    .plan-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 20px; }
+    .plan-card {
+      background: var(--navy-light); border-radius: var(--radius-lg); padding: 20px;
+      border: 2px solid rgba(255,255,255,0.06); text-align: center; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .plan-card:hover { border-color: rgba(168,225,12,0.2); transform: translateY(-2px); }
+    .plan-card.current { border-color: var(--lime); background: var(--lime-dim); }
+    .plan-card-name { font-size: 0.9rem; font-weight: 800; margin-bottom: 4px; }
+    .plan-card-price { font-size: 1.2rem; font-weight: 900; color: var(--lime); margin-bottom: 2px; }
+    .plan-card-price span { font-size: 0.7rem; font-weight: 500; color: var(--grey); }
+    .plan-card-current { font-size: 0.65rem; font-weight: 700; color: var(--lime); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px; }
+
+    /* Billing history */
+    .billing-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    .billing-table th {
+      text-align: left; font-size: 0.68rem; font-weight: 700; color: var(--grey-dark);
+      text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .billing-table td {
+      font-size: 0.8rem; padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .billing-status {
+      padding: 3px 10px; border-radius: var(--radius-pill); font-size: 0.65rem; font-weight: 700;
+    }
+    .billing-status.paid { background: rgba(168,225,12,0.12); color: var(--lime); }
+    .billing-status.pending { background: rgba(255,107,107,0.12); color: var(--coral); }
+
+    /* ══ SETTINGS FORM ══ */
+    .settings-card {
+      background: var(--navy-card); border-radius: var(--radius-xl); padding: 28px;
+      border: 1px solid rgba(255,255,255,0.06); margin-bottom: 20px;
+    }
+    .settings-card-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+    .settings-card-title svg { width: 18px; height: 18px; stroke: var(--lime); stroke-width: 2; fill: none; }
+    .form-group { margin-bottom: 18px; }
+    .form-label { display: block; font-size: 0.72rem; font-weight: 700; color: var(--grey); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-input {
+      width: 100%; padding: 12px 14px; background: var(--navy-light);
+      border: 2px solid rgba(255,255,255,0.08); border-radius: var(--radius-md);
+      color: var(--off-white); font-size: 0.88rem; font-family: inherit; outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: var(--lime); }
+    .form-input::placeholder { color: var(--grey-dark); }
+    .form-row { display: flex; gap: 14px; }
+    .form-row .form-group { flex: 1; }
+    .form-hint { font-size: 0.65rem; color: var(--grey-dark); margin-top: 4px; }
+
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255,255,255,0.04); }
+    .toggle-row:last-child { border-bottom: none; }
+    .toggle-label { font-size: 0.85rem; font-weight: 600; }
+    .toggle-desc { font-size: 0.7rem; color: var(--grey); margin-top: 2px; }
+    .toggle-switch { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-switch .slider {
+      position: absolute; inset: 0; background: var(--grey-dark); border-radius: 24px;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .toggle-switch .slider::before {
+      content: ''; position: absolute; width: 18px; height: 18px; left: 3px; bottom: 3px;
+      background: #fff; border-radius: 50%; transition: transform 0.2s;
+    }
+    .toggle-switch input:checked + .slider { background: var(--lime); }
+    .toggle-switch input:checked + .slider::before { transform: translateX(20px); }
+
+    .btn-save {
+      padding: 12px 28px; background: var(--lime); color: var(--navy); border: none;
+      border-radius: var(--radius-pill); font-size: 0.82rem; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: opacity 0.2s;
+    }
+    .btn-save:hover { opacity: 0.85; }
+
+    .danger-zone {
+      margin-top: 28px; padding: 20px; border: 1px solid rgba(255,107,107,0.2);
+      border-radius: var(--radius-lg); background: rgba(255,107,107,0.04);
+    }
+    .danger-zone h4 { font-size: 0.82rem; font-weight: 700; color: var(--coral); margin-bottom: 8px; }
+    .danger-zone p { font-size: 0.75rem; color: var(--grey); margin-bottom: 12px; line-height: 1.5; }
+    .danger-btn {
+      padding: 8px 20px; border-radius: var(--radius-pill); border: 1px solid var(--coral);
+      background: none; color: var(--coral); font-size: 0.75rem; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: all 0.15s;
+    }
+    .danger-btn:hover { background: rgba(255,107,107,0.1); }
+
+    /* Toast */
+
+    /* ══ RESPONSIVE ══ */
+    
+      .plan-cards { grid-template-columns: 1fr; }
+      .profile-header { flex-direction: column; text-align: center; }
+      .profile-header-meta { justify-content: center; }
+      .profile-header-actions { flex-direction: row; }
+    }
+    @media (max-width: 640px) {
+      .content { padding: 20px 16px; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .badges-grid { grid-template-columns: repeat(2, 1fr); }
+      .form-row { flex-direction: column; gap: 0; }
+    }</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar-placeholder"></div>
+
+<!-- Main Content -->
+<div class="main">
+  <!-- Top Bar -->
+  <header class="topbar">
+    <div class="topbar-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Search leagues, matches, players..." />
+    </div>
+    <div class="topbar-right">
+      <a href="notifications.html" class="topbar-btn" title="Notifications" style="text-decoration:none;">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        <span class="notif-dot"></span>
+      </a>
+      <button class="topbar-btn">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- Profile Header -->
+    <div class="profile-header">
+      <div class="profile-header-avatar" id="profileAvatarWrap" onclick="openAvatarPicker()">
+        <!-- filled by renderProfileAvatar() -->
+        <div class="edit-avatar">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        </div>
+      </div>
+      <div class="profile-header-info">
+        <div class="profile-header-name">Bran</div>
+        <div class="profile-header-handle">@bran_predicts</div>
+        <div class="profile-header-meta">
+          <div class="profile-meta-item">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+            <strong>3</strong> leagues
+          </div>
+          <div class="profile-meta-item">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20V14"/></svg>
+            <strong>1,240</strong> points
+          </div>
+          <div class="profile-meta-item">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5" fill="none"/><path d="M12 13l-3 7h6l-3-7z"/></svg>
+            <strong>6</strong> badges
+          </div>
+          <div class="profile-meta-item">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+            <strong>4</strong> teams
+          </div>
+          <div class="profile-meta-item">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            Joined <strong>Mar 2026</strong>
+          </div>
+        </div>
+      </div>
+      <div class="profile-header-actions">
+        <button class="profile-share-btn" onclick="shareProfile()">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          Share Profile
+        </button>
+        <button class="profile-edit-btn" onclick="switchTab('settings')">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          Edit Profile
+        </button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="profile-tabs">
+      <button class="profile-tab active" onclick="switchTab('stats')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20V14"/></svg>
+        Stats
+      </button>
+      <button class="profile-tab" onclick="switchTab('trophies')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5H6M18 9h1.5a2.5 2.5 0 000-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22M18 2H6v7a6 6 0 0012 0V2z"/></svg>
+        Trophies
+      </button>
+      <button class="profile-tab" onclick="switchTab('badges')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5" fill="none"/><path d="M12 13l-3 7h6l-3-7z"/></svg>
+        Badges
+      </button>
+      <button class="profile-tab" onclick="switchTab('subscription')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+        Subscription
+      </button>
+      <button class="profile-tab" onclick="switchTab('settings')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </button>
+    </div>
+
+    <!-- ═══ TAB: STATS ═══ -->
+    <div class="tab-panel active" id="tab-stats">
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-card-value lime">1,240</div>
+          <div class="stat-card-label">Total Points</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value teal">68%</div>
+          <div class="stat-card-label">Accuracy</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value purple">7</div>
+          <div class="stat-card-label">Best Streak</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value coral">142</div>
+          <div class="stat-card-label">Qs Answered</div>
+        </div>
+      </div>
+
+      <!-- Team Performance -->
+      <div class="team-performance">
+        <div class="team-performance-title">Team Performance</div>
+        <div class="team-stats">
+          <div class="team-stat-item">
+            <div class="team-stat-value">4</div>
+            <div class="team-stat-label">Teams Joined</div>
+          </div>
+          <div class="team-stat-item">
+            <div class="team-stat-value">2</div>
+            <div class="team-stat-label">Team Wins</div>
+          </div>
+          <div class="team-stat-item">
+            <div class="team-stat-value">68%</div>
+            <div class="team-stat-label">Team Win Rate</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Accuracy Breakdown -->
+      <div class="accuracy-section">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+          Accuracy by Type
+        </div>
+        <div class="accuracy-bars">
+          <div class="accuracy-row">
+            <div class="accuracy-label">Live Predictions</div>
+            <div class="accuracy-track"><div class="accuracy-fill" style="width:72%; background:var(--lime);"></div></div>
+            <div class="accuracy-pct" style="color:var(--lime);">72%</div>
+          </div>
+          <div class="accuracy-row">
+            <div class="accuracy-label">Pre-match</div>
+            <div class="accuracy-track"><div class="accuracy-fill" style="width:61%; background:var(--teal);"></div></div>
+            <div class="accuracy-pct" style="color:var(--teal);">61%</div>
+          </div>
+          <div class="accuracy-row">
+            <div class="accuracy-label">Trivia & History</div>
+            <div class="accuracy-track"><div class="accuracy-fill" style="width:85%; background:var(--purple);"></div></div>
+            <div class="accuracy-pct" style="color:var(--purple);">85%</div>
+          </div>
+          <div class="accuracy-row">
+            <div class="accuracy-label">News & Rumours</div>
+            <div class="accuracy-track"><div class="accuracy-fill" style="width:54%; background:var(--coral);"></div></div>
+            <div class="accuracy-pct" style="color:var(--coral);">54%</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Match History -->
+      <div class="section-title">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Recent Matches
+      </div>
+      <div class="history-list">
+        <div class="history-item">
+          <div class="history-icon" style="background:var(--lime-dim);">
+            <svg viewBox="0 0 24 24" stroke="var(--lime)" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+          </div>
+          <div class="history-info">
+            <div class="history-title">Barcelona 2 — 1 Real Madrid</div>
+            <div class="history-sub">LaLiga Legends · Matchday 32 · 6/8 correct</div>
+          </div>
+          <div class="history-result">
+            <div class="history-points positive">+185 pts</div>
+            <div class="history-rank">2nd of 8</div>
+          </div>
+        </div>
+        <div class="history-item">
+          <div class="history-icon" style="background:rgba(124,92,252,0.12);">
+            <svg viewBox="0 0 24 24" stroke="var(--purple)" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+          </div>
+          <div class="history-info">
+            <div class="history-title">Arsenal 0 — 0 Man City</div>
+            <div class="history-sub">LaLiga Legends · Matchday 31 · 4/8 correct</div>
+          </div>
+          <div class="history-result">
+            <div class="history-points positive">+95 pts</div>
+            <div class="history-rank">4th of 8</div>
+          </div>
+        </div>
+        <div class="history-item">
+          <div class="history-icon" style="background:rgba(78,205,196,0.12);">
+            <svg viewBox="0 0 24 24" stroke="var(--teal)" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+          </div>
+          <div class="history-info">
+            <div class="history-title">Bayern 3 — 2 Inter Milan</div>
+            <div class="history-sub">UCL Knockout Crew · QF Leg 2 · 7/8 correct</div>
+          </div>
+          <div class="history-result">
+            <div class="history-points positive">+210 pts</div>
+            <div class="history-rank">1st of 6</div>
+          </div>
+        </div>
+        <div class="history-item">
+          <div class="history-icon" style="background:rgba(255,107,107,0.12);">
+            <svg viewBox="0 0 24 24" stroke="var(--coral)" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+          </div>
+          <div class="history-info">
+            <div class="history-title">NFL Draft 2026 — Round 1</div>
+            <div class="history-sub">Draft Night Crew · Event League · 3/10 correct</div>
+          </div>
+          <div class="history-result">
+            <div class="history-points positive">+60 pts</div>
+            <div class="history-rank">5th of 10</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ TAB: TROPHY ROOM ═══ -->
+    <div class="tab-panel" id="tab-trophies">
+      <!-- Trophy stats bar -->
+      <div class="trophy-stats-bar">
+        <div class="trophy-stat-box">
+          <div id="trophyTotalCount" class="trophy-stat-val" style="color:var(--lime);">0</div>
+          <div class="trophy-stat-label">Total</div>
+        </div>
+        <div class="trophy-stat-box">
+          <div id="trophyLegendary" class="trophy-stat-val" style="color:#FFD93D;">0</div>
+          <div class="trophy-stat-label">Legendary</div>
+        </div>
+        <div class="trophy-stat-box">
+          <div id="trophyEpic" class="trophy-stat-val" style="color:#7C5CFC;">0</div>
+          <div class="trophy-stat-label">Epic</div>
+        </div>
+        <div class="trophy-stat-box">
+          <div id="trophyRare" class="trophy-stat-val" style="color:#4ECDC4;">0</div>
+          <div class="trophy-stat-label">Rare</div>
+        </div>
+      </div>
+      <!-- Filter tabs -->
+      <div class="trophy-filters" id="trophyFilterTabs">
+        <button class="trophy-filter active" onclick="filterTrophies('all', this)">All</button>
+        <button class="trophy-filter" onclick="filterTrophies('league', this)">Leagues</button>
+        <button class="trophy-filter" onclick="filterTrophies('battle-royale', this)">Battle Royale</button>
+        <button class="trophy-filter" onclick="filterTrophies('trivia', this)">Trivia</button>
+        <button class="trophy-filter" onclick="filterTrophies('venue', this)">Venue</button>
+        <button class="trophy-filter" onclick="filterTrophies('milestone', this)">Milestones</button>
+      </div>
+      <!-- Trophy grid -->
+      <div class="trophy-grid" id="trophyGrid">
+        <!-- Dynamically populated -->
+      </div>
+      <!-- AI create CTA — Elite players design trophies for leagues they CREATE (not self-award) -->
+      <div class="trophy-ai-cta" id="trophyAiCta" style="display:none;">
+        <div style="font-size:0.75rem; font-weight:800; color:var(--lime); text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Elite Feature</div>
+        <div style="font-size:1rem; font-weight:700; margin-bottom:4px;">Design a Custom AI Trophy</div>
+        <div style="font-size:0.8rem; color:var(--grey-mid); margin-bottom:14px;">Create a league and design a one-of-a-kind AI trophy for the champion. Trophies are awarded to the actual winner — not to the creator.</div>
+        <a href="create-league.html" class="trophy-ai-btn" style="display:inline-block;text-decoration:none;">Create a League</a>
+      </div>
+    </div>
+
+    <!-- ═══ TAB: BADGES & ACHIEVEMENTS ═══ -->
+    <div class="tab-panel" id="tab-badges">
+      <!-- Badge summary bar -->
+      <div style="display:flex; gap:12px; margin-bottom:20px; flex-wrap:wrap;">
+        <div style="flex:1; min-width:120px; background:var(--navy-card); border-radius:var(--radius-lg); padding:16px; border:1px solid rgba(255,255,255,0.06); text-align:center;">
+          <div id="badgesEarnedCount" style="font-size:1.6rem; font-weight:800; color:var(--lime);">0</div>
+          <div style="font-size:0.7rem; color:var(--grey); font-weight:600;">Earned</div>
+        </div>
+        <div style="flex:1; min-width:120px; background:var(--navy-card); border-radius:var(--radius-lg); padding:16px; border:1px solid rgba(255,255,255,0.06); text-align:center;">
+          <div id="badgesTotalCount" style="font-size:1.6rem; font-weight:800; color:var(--grey-dark);">0</div>
+          <div style="font-size:0.7rem; color:var(--grey); font-weight:600;">Total</div>
+        </div>
+        <div style="flex:1; min-width:120px; background:var(--navy-card); border-radius:var(--radius-lg); padding:16px; border:1px solid rgba(255,255,255,0.06); text-align:center;">
+          <div id="badgesNextUp" style="font-size:0.75rem; font-weight:700; color:var(--teal); margin-bottom:2px;">—</div>
+          <div style="font-size:0.7rem; color:var(--grey); font-weight:600;">Closest Next</div>
+        </div>
+      </div>
+      <!-- Filter tabs -->
+      <div style="display:flex; gap:6px; margin-bottom:16px; flex-wrap:wrap;" id="badgeFilterTabs">
+        <button class="badge-filter active" onclick="filterBadges('all', this)">All</button>
+        <button class="badge-filter" onclick="filterBadges('earned', this)">Earned</button>
+        <button class="badge-filter" onclick="filterBadges('in-progress', this)">In Progress</button>
+        <button class="badge-filter" onclick="filterBadges('locked', this)">Locked</button>
+      </div>
+      <div class="badges-grid" id="badgesGrid">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+
+    <!-- ═══ TAB: SUBSCRIPTION ═══ -->
+    <div class="tab-panel" id="tab-subscription">
+
+      <div class="sub-card">
+        <div class="sub-card-header">
+          <div class="sub-plan-name">Pro Plan</div>
+          <div class="sub-plan-badge trial">Free Trial</div>
+        </div>
+
+        <!-- Trial Countdown -->
+        <div class="trial-countdown">
+          <div class="trial-countdown-ring">
+            <svg viewBox="0 0 64 64">
+              <circle class="ring-bg" cx="32" cy="32" r="28" />
+              <circle class="ring-fill" cx="32" cy="32" r="28"
+                stroke-dasharray="175.93"
+                stroke-dashoffset="75.4" />
+            </svg>
+            <div class="trial-countdown-days">
+              <div class="num">4</div>
+              <div class="label">days left</div>
+            </div>
+          </div>
+          <div class="trial-countdown-info">
+            <div class="trial-countdown-title">Your free trial ends Apr 14</div>
+            <div class="trial-countdown-desc">You've created 1 league with Pro features unlocked. Cancel before Apr 14 and you won't be charged. Otherwise your monthly subscription starts at <strong style="color:var(--lime);">$5.99/mo</strong>.</div>
+            <div class="trial-countdown-actions">
+              <button class="trial-btn upgrade" onclick="showToast('Subscribed to Pro! Welcome aboard.')">Keep Pro</button>
+              <button class="trial-btn cancel" onclick="showToast('Trial cancelled. You won\'t be charged.')">Cancel Trial</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="sub-details">
+          <div class="sub-row">
+            <div class="sub-row-label">Plan</div>
+            <div class="sub-row-value">Pro (Free Trial)</div>
+          </div>
+          <div class="sub-row">
+            <div class="sub-row-label">Trial started</div>
+            <div class="sub-row-value">Apr 7, 2026</div>
+          </div>
+          <div class="sub-row">
+            <div class="sub-row-label">Trial ends</div>
+            <div class="sub-row-value" style="color:var(--coral);">Apr 14, 2026</div>
+          </div>
+          <div class="sub-row">
+            <div class="sub-row-label">Trial league created</div>
+            <div class="sub-row-value lime">1 / 1 used</div>
+          </div>
+          <div class="sub-row">
+            <div class="sub-row-label">Payment method</div>
+            <div class="sub-row-value">Visa ending 4242</div>
+          </div>
+          <div class="sub-row">
+            <div class="sub-row-label">Next charge (if kept)</div>
+            <div class="sub-row-value">$5.99 on Apr 14, 2026</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Switch Plan -->
+      <div class="sub-card">
+        <div class="sub-card-header">
+          <div class="sub-plan-name">Switch Plan</div>
+        </div>
+        <div class="plan-cards">
+          <div class="plan-card">
+            <div class="plan-card-name">Starter</div>
+            <div class="plan-card-price">$0 <span>/ forever</span></div>
+          </div>
+          <div class="plan-card current">
+            <div class="plan-card-name">Pro</div>
+            <div class="plan-card-price">$5.99 <span>/ mo</span></div>
+            <div class="plan-card-current">Current Plan</div>
+          </div>
+          <div class="plan-card" onclick="showToast('Upgrading to Elite...')">
+            <div class="plan-card-name">Elite</div>
+            <div class="plan-card-price">$14.99 <span>/ mo</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Billing History -->
+      <div class="sub-card">
+        <div class="sub-card-header">
+          <div class="sub-plan-name">Billing History</div>
+        </div>
+        <table class="billing-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Description</th>
+              <th>Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Apr 7, 2026</td>
+              <td>Pro — Free Trial started</td>
+              <td style="color:var(--lime);">$0.00</td>
+              <td><span class="billing-status paid">Active</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <!-- ═══ TAB: SETTINGS ═══ -->
+    <div class="tab-panel" id="tab-settings">
+
+      <div class="settings-card">
+        <div class="settings-card-title">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          Account
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Display Name</label>
+            <input type="text" class="form-input" id="settingsName" value="" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">Username</label>
+            <input type="text" class="form-input" id="settingsHandle" value="" />
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email</label>
+          <input type="email" class="form-input" id="settingsEmail" value="" disabled />
+          <div class="form-hint">Email is managed through your login account.</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">New Password</label>
+          <input type="password" class="form-input" placeholder="Leave blank to keep current" />
+        </div>
+        <button class="btn-save" onclick="saveProfileSettings()">Save Changes</button>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-card-title">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          Notifications
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Match starting soon</div>
+            <div class="toggle-desc">Get notified 15 minutes before a match</div>
+          </div>
+          <label class="toggle-switch"><input type="checkbox" checked /><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Question results</div>
+            <div class="toggle-desc">See results as they come in</div>
+          </div>
+          <label class="toggle-switch"><input type="checkbox" checked /><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">League invites</div>
+            <div class="toggle-desc">When someone invites you to a league</div>
+          </div>
+          <label class="toggle-switch"><input type="checkbox" checked /><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Streak milestones</div>
+            <div class="toggle-desc">Celebrate when you hit a new streak</div>
+          </div>
+          <label class="toggle-switch"><input type="checkbox" checked /><span class="slider"></span></label>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Marketing emails</div>
+            <div class="toggle-desc">New features, tips, and offers</div>
+          </div>
+          <label class="toggle-switch"><input type="checkbox" /><span class="slider"></span></label>
+        </div>
+      </div>
+
+      <div class="settings-card">
+        <div class="settings-card-title">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+          Linked Accounts
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Google</div>
+            <div class="toggle-desc" style="color:var(--lime);">Connected</div>
+          </div>
+          <button class="profile-edit-btn" onclick="showToast('Google account disconnected')" style="padding:6px 14px; font-size:0.72rem;">Disconnect</button>
+        </div>
+        <div class="toggle-row">
+          <div>
+            <div class="toggle-label">Apple</div>
+            <div class="toggle-desc">Not connected</div>
+          </div>
+          <button class="profile-edit-btn" onclick="showToast('Connecting Apple account...')" style="padding:6px 14px; font-size:0.72rem;">Connect</button>
+        </div>
+      </div>
+
+      <div class="danger-zone">
+        <h4>Danger Zone</h4>
+        <p>Permanently delete your account, all your leagues, and your data. This action cannot be undone.</p>
+        <button class="danger-btn" onclick="showToast('Account deletion requested. Check your email to confirm.')">Delete Account</button>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+<!-- Avatar Picker Modal -->
+<div class="avatar-modal-overlay" id="avatarModalOverlay" onclick="if(event.target===this)closeAvatarPicker()">
+  <div class="avatar-modal">
+    <div class="avatar-modal-header">
+      <div class="avatar-modal-title">Profile Photo</div>
+      <button class="avatar-modal-close" onclick="closeAvatarPicker()">✕</button>
+    </div>
+
+    <!-- Live preview -->
+    <div class="avatar-preview-row">
+      <div class="avatar-preview-circle" id="avatarPreviewCircle"></div>
+      <div class="avatar-preview-meta">
+        <div class="avatar-preview-label" id="avatarPreviewLabel">Choose a style below</div>
+        <div class="avatar-preview-sublabel" id="avatarPreviewSublabel">Color, preset, or your own photo</div>
+        <button class="avatar-save-btn" id="avatarSaveBtn" onclick="saveAvatarChoice()">Save Photo</button>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="avatar-picker-tabs">
+      <button class="avatar-picker-tab active" id="atab-colors" onclick="switchAvatarTab('colors')">Colors</button>
+      <button class="avatar-picker-tab" id="atab-presets" onclick="switchAvatarTab('presets')">Presets</button>
+      <button class="avatar-picker-tab" id="atab-upload" onclick="switchAvatarTab('upload')">Upload Photo</button>
+    </div>
+
+    <!-- Colors tab -->
+    <div class="avatar-tab-panel active" id="avatar-tab-colors">
+      <div class="avatar-color-grid" id="avatarColorGrid"></div>
+    </div>
+
+    <!-- Presets tab -->
+    <div class="avatar-tab-panel" id="avatar-tab-presets">
+      <div class="avatar-preset-grid" id="avatarPresetGrid"></div>
+    </div>
+
+    <!-- Upload tab -->
+    <div class="avatar-tab-panel" id="avatar-tab-upload">
+      <div class="avatar-upload-area" id="avatarUploadArea" onclick="document.getElementById('avatarFileInput').click()">
+        <svg class="avatar-upload-icon" viewBox="0 0 24 24" fill="none" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+          <polyline points="21 15 16 10 5 21"/>
+        </svg>
+        <div class="avatar-upload-title">Drop a photo or click to browse</div>
+        <div class="avatar-upload-hint">JPG, PNG, GIF · up to 5 MB</div>
+      </div>
+      <div class="avatar-upload-preview" id="avatarUploadPreview" style="display:none;">
+        <img class="avatar-upload-thumb" id="avatarUploadThumb" src="" alt="Preview" />
+        <div class="avatar-upload-filename" id="avatarUploadFilename"></div>
+        <button class="avatar-upload-remove" onclick="clearAvatarUpload()">Remove</button>
+      </div>
+      <input type="file" id="avatarFileInput" accept="image/*" style="display:none" onchange="handleAvatarFileUpload(this)" />
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Tab switching loads first so UI is interactive immediately -->
+<script>
+function switchTab(tab) {
+  document.querySelectorAll('.profile-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.profile-tab').forEach(t => {
+    var lbl = t.textContent.trim().toLowerCase();
+    if (lbl === tab.toLowerCase()) t.classList.add('active');
+  });
+  var panel = document.getElementById('tab-' + tab);
+  if (panel) panel.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+// Handle hash-based tab navigation (e.g. profile.html#badges)
+(function() {
+  var hash = window.location.hash.replace('#', '');
+  if (hash && document.getElementById('tab-' + hash)) switchTab(hash);
+})();
+</script>
+
+<script src="utils.js"></script>
+<script src="sidebar.js"></script>
+<script>SpontixSidebar.init({ type: 'player', active: 'profile.html' });</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+<script>
+// ══ PUBLIC PROFILE SUPPORT ══
+// If ?user=<userId> is in the URL, show that user's public profile (read-only).
+// Otherwise show the current logged-in user's profile (editable).
+var viewingUserId = null;
+var isPublicView = false;
+
+(function detectPublicView() {
+  var params = new URLSearchParams(window.location.search);
+  var uid = params.get('user');
+  if (uid) {
+    var currentUserId = SpontixStore.Session.getCurrentUserId();
+    if (uid !== currentUserId) {
+      viewingUserId = uid;
+      isPublicView = true;
+    }
+  }
+})();
+
+// Hide edit controls + private tabs for public view
+if (isPublicView) {
+  // Hide edit button, settings tab, subscription tab
+  var editBtn = document.querySelector('.profile-edit-btn');
+  if (editBtn) editBtn.style.display = 'none';
+  var editAvatar = document.querySelector('.edit-avatar');
+  if (editAvatar) editAvatar.style.display = 'none';
+  // Hide settings and subscription tabs
+  document.querySelectorAll('.profile-tab').forEach(function(tab) {
+    var label = tab.textContent.trim().toLowerCase();
+    if (label === 'settings' || label === 'subscription') tab.style.display = 'none';
+  });
+  // Update share button to copy this public URL
+  var shareBtn = document.querySelector('.profile-share-btn');
+  if (shareBtn) {
+    shareBtn.onclick = function() {
+      navigator.clipboard.writeText(window.location.href).then(function() {
+        showToast('Profile link copied!');
+      });
+    };
+  }
+  // Update page title
+  document.title = 'Trophy Room — Spontyx';
+}
+
+// ══ HYDRATE PROFILE FROM STORE ══
+function hydrateProfile() {
+  const player = isPublicView ? (window._publicProfile || SpontixStore.getPlayer()) : SpontixStore.getPlayer();
+  const history = SpontixStore.getGameHistory();
+
+  // ── Sidebar Profile ──
+  document.querySelectorAll('.sidebar-avatar').forEach(el => {
+    el.textContent = player.avatar;
+  });
+  document.querySelector('.sidebar-profile-name').textContent = player.name;
+  document.querySelector('.sidebar-profile-tier').textContent = SpontixStore.getTierLabel(player.tier);
+
+  // ── Profile Header ──
+  renderProfileAvatar(player);
+  document.querySelector('.profile-header-name').textContent = player.name;
+  document.querySelector('.profile-header-handle').textContent = player.handle;
+
+  // ── Profile Meta Stats ──
+  const metaItems = document.querySelectorAll('.profile-meta-item');
+  metaItems[0].innerHTML = `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg><strong>${player.leaguesJoined}</strong> leagues`;
+  metaItems[1].innerHTML = `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20V14"/></svg><strong>${SpontixStore.formatNumber(player.totalPoints)}</strong> points`;
+  metaItems[2].innerHTML = `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5" fill="none"/><path d="M12 13l-3 7h6l-3-7z"/></svg><strong>${player.badges}</strong> badges`;
+  metaItems[3].innerHTML = `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><strong>${player.teamsJoined}</strong> teams`;
+
+  // ── Stats Grid ──
+  const statCards = document.querySelectorAll('.stat-card');
+  const winRate = SpontixStore.getWinRate(player);
+  const questionsAnswered = player.totalCorrect + player.totalWrong;
+  statCards[0].querySelector('.stat-card-value').textContent = SpontixStore.formatNumber(player.totalPoints);
+  statCards[1].querySelector('.stat-card-value').textContent = winRate + '%';
+  statCards[2].querySelector('.stat-card-value').textContent = player.bestStreak;
+  statCards[3].querySelector('.stat-card-value').textContent = SpontixStore.formatNumber(questionsAnswered);
+
+  // ── Team Stats ──
+  const teamStats = document.querySelectorAll('.team-stat-item');
+  teamStats[0].querySelector('.team-stat-value').textContent = player.teamsJoined;
+  teamStats[1].querySelector('.team-stat-value').textContent = player.teamWins;
+  const teamWinRate = player.teamsJoined > 0 ? Math.round(player.teamWins / player.teamsJoined * 100) : 0;
+  teamStats[2].querySelector('.team-stat-value').textContent = teamWinRate + '%';
+
+  // ── Accuracy Breakdown ──
+  const accuracyRows = document.querySelectorAll('.accuracy-row');
+  const types = ['live', 'prematch', 'trivia', 'news'];
+  const colors = ['var(--lime)', 'var(--teal)', 'var(--purple)', 'var(--coral)'];
+  types.forEach((type, idx) => {
+    const row = accuracyRows[idx];
+    const pct = player.accuracy[type];
+    row.querySelector('.accuracy-track .accuracy-fill').style.width = pct + '%';
+    row.querySelector('.accuracy-track .accuracy-fill').style.background = colors[idx];
+    row.querySelector('.accuracy-pct').textContent = pct + '%';
+    row.querySelector('.accuracy-pct').style.color = colors[idx];
+  });
+
+  // ── Recent Match History ──
+  const historyList = document.querySelector('.history-list');
+  historyList.innerHTML = '';
+
+  const colorBgs = ['var(--lime-dim)', 'rgba(124,92,252,0.12)', 'rgba(78,205,196,0.12)', 'rgba(255,107,107,0.12)'];
+  const colorStrokes = ['var(--lime)', 'var(--purple)', 'var(--teal)', 'var(--coral)'];
+
+  history.forEach((game, idx) => {
+    const colorIdx = idx % 4;
+    const rankText = game.rank && game.totalPlayers ? `${game.rank}${getOrdinalSuffix(game.rank)} of ${game.totalPlayers}` : '—';
+    const historyItem = document.createElement('div');
+    historyItem.className = 'history-item';
+    historyItem.innerHTML = `
+      <div class="history-icon" style="background:${colorBgs[colorIdx]};">
+        <svg viewBox="0 0 24 24" stroke="${colorStrokes[colorIdx]}" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+      </div>
+      <div class="history-info">
+        <div class="history-title">${game.matchTitle}</div>
+        <div class="history-sub">${game.matchScore} · ${game.correct}/${game.total} correct</div>
+      </div>
+      <div class="history-result">
+        <div class="history-points positive">+${game.points} pts</div>
+        <div class="history-rank">${rankText}</div>
+      </div>
+    `;
+    historyList.appendChild(historyItem);
+  });
+}
+
+// Helper for ordinal suffixes (1st, 2nd, 3rd, 4th...)
+function getOrdinalSuffix(num) {
+  const j = num % 10;
+  const k = num % 100;
+  if (j === 1 && k !== 11) return 'st';
+  if (j === 2 && k !== 12) return 'nd';
+  if (j === 3 && k !== 13) return 'rd';
+  return 'th';
+}
+
+// ══ BADGES SYSTEM ══
+let allBadgeList = [];
+
+function hydrateBadges() {
+  allBadgeList = SpontixStore.getPlayerBadgeList();
+  const earned = allBadgeList.filter(b => b.earned);
+  const total = allBadgeList.length;
+
+  document.getElementById('badgesEarnedCount').textContent = earned.length;
+  document.getElementById('badgesTotalCount').textContent = total;
+
+  // Find closest next badge
+  const inProgress = allBadgeList.filter(b => !b.earned && b.progressPct > 0);
+  if (inProgress.length > 0) {
+    document.getElementById('badgesNextUp').textContent = inProgress[0].name + ' (' + inProgress[0].progressPct + '%)';
+  }
+
+  // Update player badge count in header
+  const player = SpontixStore.getPlayer();
+  player.badges = earned.length;
+  SpontixStore.savePlayer(player);
+
+  renderBadges('all');
+}
+
+function renderBadges(filter) {
+  let badges = allBadgeList;
+  if (filter === 'earned') badges = badges.filter(b => b.earned);
+  else if (filter === 'in-progress') badges = badges.filter(b => !b.earned && b.progressPct > 0);
+  else if (filter === 'locked') badges = badges.filter(b => !b.earned && b.progressPct === 0);
+
+  const grid = document.getElementById('badgesGrid');
+  grid.innerHTML = badges.map(b => SpontixStore.renderBadgeCard(b)).join('');
+}
+
+function filterBadges(filter, btn) {
+  document.querySelectorAll('.badge-filter').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderBadges(filter);
+}
+
+// ══ TROPHY ROOM ══
+function hydrateTrophies(filter) {
+  filter = filter || 'all';
+  const trophies = SpontixStore.getTrophyList(filter);
+  const stats = SpontixStore.getTrophyStats();
+
+  document.getElementById('trophyTotalCount').textContent = stats.total;
+  document.getElementById('trophyLegendary').textContent = stats.legendary;
+  document.getElementById('trophyEpic').textContent = stats.epic;
+  document.getElementById('trophyRare').textContent = stats.rare;
+
+  const grid = document.getElementById('trophyGrid');
+  if (trophies.length === 0) {
+    grid.innerHTML = '<div style="text-align:center; padding:40px 20px; grid-column:1/-1; color:var(--grey);">' +
+      '<div style="font-size:2rem; margin-bottom:8px;">🏆</div>' +
+      '<div style="font-size:0.9rem; font-weight:600;">No trophies yet in this category</div>' +
+      '<div style="font-size:0.75rem; margin-top:4px;">Win leagues, Battle Royale, or trivia to earn trophies!</div></div>';
+  } else {
+    grid.innerHTML = trophies.map(t => SpontixStore.renderTrophyCard(t)).join('');
+  }
+
+  // Show AI trophy creation for Elite tier
+  const player = SpontixStore.getPlayer();
+  const cta = document.getElementById('trophyAiCta');
+  if (player.tier === 'elite') {
+    cta.style.display = 'block';
+  }
+
+  // Update player trophy count in header meta
+  const metaItems = document.querySelectorAll('.profile-meta-item');
+  if (metaItems.length >= 3) {
+    metaItems[2].innerHTML = '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5H6M18 9h1.5a2.5 2.5 0 000-5H18M4 22h16M18 2H6v7a6 6 0 0012 0V2z"/></svg><strong>' + stats.total + '</strong> trophies';
+  }
+}
+
+function filterTrophies(filter, btn) {
+  document.querySelectorAll('.trophy-filter').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  hydrateTrophies(filter);
+}
+
+// NOTE: Self-award of trophies has been removed. Trophies are earned by winning
+// leagues, events, or matches — never created by the player themselves.
+// Elite users can DESIGN custom trophies via the Create League wizard, but
+// those trophies are awarded to the league champion when the league ends.
+
+// Call on page load
+if (isPublicView) {
+  // Fetch the public user's profile + trophies from Supabase
+  (async function loadPublicProfile() {
+    try {
+      var profile = await SpontixStoreAsync.getProfile(viewingUserId);
+      window._publicProfile = profile;
+      hydrateProfile();
+      document.title = (profile.name || 'Player') + ' — Spontyx';
+    } catch (e) {
+      hydrateProfile();
+    }
+    // Fetch their trophies
+    try {
+      var trophies = await SpontixStoreAsync.getTrophies(viewingUserId);
+      // Store in a temp key so getTrophyList reads them
+      localStorage.setItem(SpontixStore.KEYS.trophies, JSON.stringify(trophies));
+      hydrateTrophies();
+    } catch (e) {
+      hydrateTrophies();
+    }
+    hydrateBadges();
+  })();
+} else {
+  hydrateProfile();
+  hydrateBadges();
+  hydrateTrophies();
+}
+
+// Re-render when badge cache is refreshed from Supabase
+window.addEventListener('spontix-player-badges-refreshed', function() {
+  hydrateBadges();
+});
+
+// Re-render when trophies are refreshed from Supabase
+window.addEventListener('spontix-trophies-refreshed', function() {
+  hydrateTrophies();
+});
+
+// Re-render when game history is refreshed from Supabase
+window.addEventListener('spontix-game-history-refreshed', function() {
+  hydrateProfile();
+});
+
+// Re-render when profile is refreshed from Supabase
+window.addEventListener('spontix-profile-refreshed', function() {
+  hydrateProfile();
+  hydrateSettingsForm();
+});
+
+// ══ AVATAR RENDERING ══
+// Renders the player's avatar into #profileAvatarWrap, preserving the edit button.
+function renderProfileAvatar(player) {
+  var wrap = document.getElementById('profileAvatarWrap');
+  if (!wrap) return;
+  var style = SpontixStore.getPlayerAvatarStyle(player);
+  var editBtn = '<div class="edit-avatar"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg></div>';
+
+  if (style.type === 'image') {
+    wrap.style.background = 'none';
+    wrap.innerHTML = '<div class="avatar-inner"><img src="' + style.src + '" alt="' + style.initial + '" /></div>' + editBtn;
+  } else {
+    wrap.style.background = style.gradient;
+    wrap.innerHTML = '<div class="avatar-inner"><span style="font-size:2rem;font-weight:900;color:' + (style.textColor || 'var(--navy)') + ';">' + style.initial + '</span></div>' + editBtn;
+  }
+}
+
+// ══ AVATAR PICKER ══
+var _avatarPick = { type: 'color', id: 'color_lime', url: null };
+
+function openAvatarPicker() {
+  if (isPublicView) return;
+  // Seed state from player's current choice
+  var player = SpontixStore.getPlayer();
+  _avatarPick.type = player.profilePhotoType || 'color';
+  _avatarPick.id   = player.profilePhotoId   || 'color_lime';
+  _avatarPick.url  = player.profilePhotoUrl  || null;
+
+  _buildColorGrid(player);
+  _buildPresetGrid(player);
+  _updateAvatarPreview(player);
+  document.getElementById('avatarModalOverlay').classList.add('open');
+  switchAvatarTab(_avatarPick.type === 'preset' ? 'presets' : (_avatarPick.type === 'custom' ? 'upload' : 'colors'));
+}
+
+function closeAvatarPicker() {
+  document.getElementById('avatarModalOverlay').classList.remove('open');
+  clearAvatarUpload();
+}
+
+function switchAvatarTab(tab) {
+  ['colors','presets','upload'].forEach(function(t) {
+    document.getElementById('atab-' + t).classList.toggle('active', t === tab);
+    document.getElementById('avatar-tab-' + t).classList.toggle('active', t === tab);
+  });
+}
+
+function _buildColorGrid(player) {
+  var initial = (player.name || player.avatar || 'P')[0].toUpperCase();
+  var grid = document.getElementById('avatarColorGrid');
+  grid.innerHTML = SpontixStore.PLAYER_AVATAR_COLORS.map(function(c) {
+    var sel = (_avatarPick.type === 'color' && _avatarPick.id === c.id) ? ' selected' : '';
+    return '<div class="avatar-color-item' + sel + '" onclick="_pickColor(\'' + c.id + '\')">' +
+      '<div class="avatar-color-swatch" style="background:' + c.gradient + ';color:' + c.textColor + ';">' + initial + '</div>' +
+      '<div class="avatar-color-name">' + c.label + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+function _buildPresetGrid(player) {
+  var initial = (player.name || player.avatar || 'P')[0].toUpperCase();
+  var grid = document.getElementById('avatarPresetGrid');
+  grid.innerHTML = SpontixStore.PLAYER_PRESET_AVATARS.map(function(p) {
+    var sel = (_avatarPick.type === 'preset' && _avatarPick.id === p.id) ? ' selected' : '';
+    return '<div class="avatar-preset-item' + sel + '" onclick="_pickPreset(\'' + p.id + '\')">' +
+      '<div class="avatar-preset-circle" style="background:' + p.gradient + ';color:' + p.textColor + ';">' + initial + '</div>' +
+      '<div class="avatar-preset-name">' + p.label + '</div>' +
+      '</div>';
+  }).join('');
+}
+
+function _pickColor(colorId) {
+  _avatarPick.type = 'color';
+  _avatarPick.id   = colorId;
+  _avatarPick.url  = null;
+  document.querySelectorAll('.avatar-color-item').forEach(function(el) { el.classList.remove('selected'); });
+  var target = document.querySelector('.avatar-color-item[onclick="_pickColor(\'' + colorId + '\')"]');
+  if (target) target.classList.add('selected');
+  _updateAvatarPreview(SpontixStore.getPlayer());
+}
+
+function _pickPreset(presetId) {
+  _avatarPick.type = 'preset';
+  _avatarPick.id   = presetId;
+  _avatarPick.url  = null;
+  document.querySelectorAll('.avatar-preset-item').forEach(function(el) { el.classList.remove('selected'); });
+  var target = document.querySelector('.avatar-preset-item[onclick="_pickPreset(\'' + presetId + '\')"]');
+  if (target) target.classList.add('selected');
+  _updateAvatarPreview(SpontixStore.getPlayer());
+}
+
+function _updateAvatarPreview(player) {
+  var initial = (player.name || player.avatar || 'P')[0].toUpperCase();
+  var circle  = document.getElementById('avatarPreviewCircle');
+  var label   = document.getElementById('avatarPreviewLabel');
+  var sub     = document.getElementById('avatarPreviewSublabel');
+  if (!circle) return;
+
+  if (_avatarPick.type === 'custom' && _avatarPick.url) {
+    circle.style.background = 'none';
+    circle.innerHTML = '<img src="' + _avatarPick.url + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" />';
+    if (label) label.textContent = 'Custom photo';
+    if (sub)   sub.textContent   = 'Your uploaded image';
+  } else if (_avatarPick.type === 'preset' && _avatarPick.id) {
+    var preset = SpontixStore.PLAYER_PRESET_AVATARS.find(function(p) { return p.id === _avatarPick.id; });
+    if (preset) {
+      circle.style.background = preset.gradient;
+      circle.innerHTML = '<span style="font-size:1.6rem;font-weight:900;color:' + preset.textColor + ';">' + initial + '</span>';
+      if (label) label.textContent = preset.label + ' preset';
+      if (sub)   sub.textContent   = 'Gradient avatar';
+    }
+  } else {
+    var color = SpontixStore.PLAYER_AVATAR_COLORS.find(function(c) { return c.id === _avatarPick.id; }) || SpontixStore.PLAYER_AVATAR_COLORS[0];
+    circle.style.background = color.gradient;
+    circle.innerHTML = '<span style="font-size:1.6rem;font-weight:900;color:' + color.textColor + ';">' + initial + '</span>';
+    if (label) label.textContent = color.label + ' color';
+    if (sub)   sub.textContent   = 'Gradient color';
+  }
+}
+
+function handleAvatarFileUpload(input) {
+  var file = input.files && input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { showToast('File too large — max 5 MB'); return; }
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    _avatarPick.type = 'custom';
+    _avatarPick.id   = null;
+    _avatarPick.url  = e.target.result;
+    // Show preview strip
+    document.getElementById('avatarUploadThumb').src    = e.target.result;
+    document.getElementById('avatarUploadFilename').textContent = file.name;
+    document.getElementById('avatarUploadPreview').style.display = 'flex';
+    _updateAvatarPreview(SpontixStore.getPlayer());
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearAvatarUpload() {
+  document.getElementById('avatarFileInput').value = '';
+  document.getElementById('avatarUploadPreview').style.display = 'none';
+  document.getElementById('avatarUploadThumb').src = '';
+  if (_avatarPick.type === 'custom') {
+    _avatarPick.type = 'color';
+    _avatarPick.id   = 'color_lime';
+    _avatarPick.url  = null;
+    _updateAvatarPreview(SpontixStore.getPlayer());
+  }
+}
+
+async function saveAvatarChoice() {
+  var btn = document.getElementById('avatarSaveBtn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Saving…'; }
+
+  try {
+    var result;
+    if (_avatarPick.type === 'custom' && _avatarPick.url) {
+      result = await SpontixStoreAsync.uploadPlayerPhoto(_avatarPick.url);
+    } else if (_avatarPick.type === 'preset') {
+      result = await SpontixStoreAsync.setPlayerAvatarPreset(_avatarPick.id);
+    } else {
+      result = await SpontixStoreAsync.setPlayerAvatarColor(_avatarPick.id || 'color_lime');
+    }
+
+    if (result && result.ok === false) {
+      showToast('Could not save: ' + (result.error || 'Unknown error'));
+    } else {
+      closeAvatarPicker();
+      renderProfileAvatar(SpontixStore.getPlayer());
+      // Fire profile-refreshed so sidebar updates too
+      window.dispatchEvent(new CustomEvent('spontix-profile-refreshed', { detail: { profile: SpontixStore.getPlayer() } }));
+      showToast('Profile photo updated!');
+    }
+  } catch(e) {
+    showToast('Error saving photo');
+  }
+
+  if (btn) { btn.disabled = false; btn.textContent = 'Save Photo'; }
+}
+
+// ── Settings form hydration ──
+function hydrateSettingsForm() {
+  var player = SpontixStore.getPlayer();
+  var nameInput = document.getElementById('settingsName');
+  var handleInput = document.getElementById('settingsHandle');
+  var emailInput = document.getElementById('settingsEmail');
+  if (nameInput) nameInput.value = player.name || '';
+  if (handleInput) handleInput.value = (player.handle || '').replace(/^@/, '');
+  if (emailInput) emailInput.value = player.email || '';
+}
+
+function shareProfile() {
+  var uid = viewingUserId || SpontixStore.Session.getCurrentUserId();
+  if (!uid) { showToast('No profile to share'); return; }
+  var url = window.location.origin + '/profile.html?user=' + uid;
+  navigator.clipboard.writeText(url).then(function() {
+    showToast('Profile link copied!');
+  }).catch(function() {
+    showToast(url);
+  });
+}
+
+async function saveProfileSettings() {
+  var name = (document.getElementById('settingsName').value || '').trim();
+  var handle = (document.getElementById('settingsHandle').value || '').trim().replace(/^@/, '');
+  if (!name) { showToast('Please enter a display name'); return; }
+
+  var patch = { name: name, handle: '@' + handle, avatar: name[0].toUpperCase() };
+  try {
+    var result = await SpontixStoreAsync.updateProfile(patch);
+    if (result && !result.ok) {
+      showToast('Error: ' + (result.error || 'Could not save'));
+      return;
+    }
+  } catch (err) {
+    // Sync fallback
+    var player = SpontixStore.getPlayer();
+    Object.assign(player, patch);
+    SpontixStore.savePlayer(player);
+  }
+  hydrateProfile();
+  showToast('Profile updated!');
+}
+
+// Hydrate settings on load
+hydrateSettingsForm();
+</script>
+
+</body>
+</html>

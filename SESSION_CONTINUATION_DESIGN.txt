@@ -1,0 +1,675 @@
+SPONTIX — SESSION CONTINUATION DESIGN
+======================================
+Written: 2026-04-17
+Updated: 2026-04-17 — blowout suppression removed, question type adaptation added
+Updated: 2026-04-17 — time-driven live questions added as second generation layer
+Updated: 2026-04-17 — two league types defined; match-level budget scoped to single-match only
+Status: For review — no code yet
+
+
+THE TWO LEAGUE TYPES — READ THIS FIRST
+----------------------------------------
+These are not the same system with different parameters.
+They have different logic, different constraints, and different UX.
+Know which type you are designing for before reading anything else.
+
+
+LEAGUE TYPE 1 — SINGLE-MATCH LIVE LEAGUE
+This is a CLOSED GAME SESSION.
+
+The user chooses one specific match. This behaves like a game mode
+with a defined start, a defined end, and controlled pacing throughout.
+
+The league creator configures:
+  - Which half: first half / second half / full match
+  - Total question budget: minimum 5, maximum 20
+  - Mode: pre-match only / live only / hybrid
+
+The budget is fixed. Questions are paced across the match to fill it.
+Event-driven and time-driven questions both apply — but both count
+against the ceiling. When the match ends, the session is over.
+
+This is where session design — chaining, holding cards, match summary —
+is most important. The user is in an active game. Keep them in it.
+
+
+LEAGUE TYPE 2 — SEASON OR LONG-TERM LEAGUE
+This is an ONGOING SYSTEM, not a session.
+
+There is no game mode start or end per match. The league runs
+continuously across multiple matches over weeks or a full season.
+Questions are generated and resolved as matches happen, and players
+accumulate points over time.
+
+There is no fixed per-match question budget.
+There is no session pacing tied to a single match.
+The AI quota (weekly/total) applies across the whole league, not per match.
+
+Session continuation UI (chaining, holding cards) can improve experience
+here, but the underlying generation is not session-constrained.
+
+
+WHAT THIS MEANS FOR THE REST OF THIS DOCUMENT:
+
+"Question budget" → Type 1 only.
+"Session pacing" → Type 1 only.
+"Continuous generation" → Type 2 only.
+"Event-driven questions" → both types.
+"Time-driven as gap filler" → Type 1 only.
+"Time-driven as core engagement driver" → Type 2 only.
+"Blowout adaptation" → both types.
+"Holding card" → both types (but critical for Type 1).
+"Match summary card" → both types.
+"Notification timing" → both types (always match-driven).
+
+
+THE CORE IDEA
+-------------
+A notification is a door. The app is the room.
+Don't keep knocking — make the room worth staying in.
+
+Once a user opens the app from a notification, you have their attention.
+The goal is to keep them engaged using what's already inside the app —
+not by sending more notifications.
+
+
+THE PROBLEM WE'RE SOLVING
+--------------------------
+Right now, if you want a user to do something else after their first
+action, you'd have to send another notification. That's wasteful and
+annoying. Each extra notification costs you trust. Eventually users
+turn them off.
+
+Instead: after they enter the app, the app itself should guide them
+forward. No more messages needed.
+
+
+WHERE USERS LAND WHEN THEY ARRIVE
+-----------------------------------
+Different notifications bring users to different places:
+
+- "New question" notification → drops them on the league page,
+  questions tab, ready to answer
+
+- "Live question" notification → drops them directly onto that
+  specific question card, countdown already running
+
+- "Your result is in" notification → drops them on the resolved
+  question card, result shown immediately
+
+- "Trophy / badge earned" notification → quick celebration, then
+  redirects to their league or profile
+
+The key point: every notification should deep-link. Never drop a user
+on a generic home screen and make them hunt for what you just told them
+about.
+
+
+HOW TO CHAIN QUESTIONS (THE MAIN MECHANIC)
+-------------------------------------------
+After a user answers a question, the app should never go silent.
+It should immediately show them what's next. Here's the priority order:
+
+1. ANOTHER LIVE QUESTION EXISTS (deadline under 10 minutes)
+   The next question slides into view right below the one they just
+   answered. No tapping required. It's just there, with a live
+   countdown. This is the smoothest possible experience.
+
+2. MORE OPEN QUESTIONS FOR THIS MATCH (deadline over 10 minutes)
+   A quiet prompt appears below their answered card:
+   "2 more questions open for this match"
+   One tap scrolls them to the next unanswered one.
+
+3. MATCH IS LIVE BUT NO QUESTIONS ACTIVE RIGHT NOW
+   Show a holding card in the feed. It says something like:
+   "Next moment dropping soon — stay tuned"
+   It looks alive (gentle animation, current score if we have it).
+   When the next question arrives, it replaces the holding card
+   automatically — the user doesn't need to refresh anything.
+
+4. MATCH HASN'T STARTED YET
+   The user answered all their pre-match questions. Good.
+   Show them a countdown: "Match kicks off in 1h 24m"
+   Offer an opt-in reminder tap inside that card — not an automatic
+   notification. They choose it. That's important.
+
+5. MATCH IS OVER
+   The match has ended. All questions have closed. This is the only
+   moment "nothing left" is a valid state. Show them the match summary
+   card (points earned, leaderboard position), then offer a prompt
+   to check other leagues or browse upcoming matches.
+
+   NOTE: "Nothing left" should NEVER appear while a match is still live.
+   If the match is live and there's no open question, that's a holding
+   state — not an end state. The next question is coming. Say so.
+
+
+HOW A LIVE MATCH SESSION SHOULD FEEL
+--------------------------------------
+During an active match (from kickoff to final whistle), the league page
+should feel different. It should feel alive.
+
+Here's what that looks like:
+
+- At the top of the question feed, there's a live match bar.
+  It shows the current score and match status.
+  This updates from data we already store on questions — no new feeds needed.
+
+- When a new live question is generated (triggered by a match event
+  like a goal or red card), it appears at the top of the feed
+  automatically. The user doesn't refresh. It just shows up.
+  A smooth animation slides it in.
+
+- The user answers it. The app chains to the next state (see above).
+  The whole thing feels like a second-screen experience alongside
+  the match — which is exactly what Spontix is.
+
+This is the single biggest session-retention feature we can build.
+A user sitting with the app open during a match should never feel
+like they're waiting. Questions appear. They answer. Score updates.
+Next question. It flows.
+
+
+TWO TYPES OF LIVE QUESTIONS
+----------------------------
+This is a critical design decision. Live questions are not a single thing.
+There are two distinct types, and both are needed to maintain session flow.
+
+TYPE 1 — EVENT-DRIVEN QUESTIONS
+Triggered by something that just happened in the match.
+Examples: a goal is scored, a red card shown, a penalty awarded.
+These are reactive — something happens, a question follows immediately.
+They feel exciting and timely. Players love them.
+
+The problem: events don't happen on a schedule.
+A match can go 15–20 minutes with nothing significant.
+If event-driven is your only layer, the session dies in quiet spells.
+
+TYPE 2 — TIME-DRIVEN QUESTIONS
+Triggered by the clock, not by match events.
+They fire when no event-driven question has been generated for a set
+window — typically 8 to 12 minutes. They fill the gaps.
+
+Examples:
+- "Will a goal be scored in the next 10 minutes?"
+- "Will there be a yellow card before the 75th minute?"
+- "Will there be a corner in the next 5 minutes?"
+- "Will the home team keep a clean sheet?"
+- "Will the final score exceed 3 goals?"
+
+These questions are intentionally simple. They are based on observable
+events — things a scoreboard or referee can answer without interpretation.
+They do not require judgment calls about pressure, momentum, or dominance.
+They just need to give the user something clear to answer right now.
+
+CHARACTERISTICS OF TIME-DRIVEN QUESTIONS:
+- Short deadlines: 5 to 10 minutes
+- Simple and fast to answer: yes/no or under/over
+- Easy to resolve: the stats we already collect can answer them
+- Neutral framing: they're about what happens next, not what just happened
+
+HOW THE TWO TYPES WORK TOGETHER:
+Event-driven questions take priority. If a goal just happened, that
+question fires. The time-driven clock resets.
+
+If 10 minutes pass with no significant event, the time-driven layer
+activates and drops a question automatically.
+
+The result: there is always something to answer, regardless of whether
+the match is eventful or quiet.
+
+PRIORITY LOGIC:
+1. Event fires → event-driven question generated immediately
+2. No event for 8–12 minutes → time-driven question generated
+3. Event fires while time-driven question is still open → event-driven
+   question queued for after the current one closes (or shown alongside
+   if both can fit within the per-match cap)
+
+LIMITS:
+
+For single-match live leagues (Type 1 — CLOSED SESSION):
+- Total question budget: min 5, max 20, fixed at creation
+- Both event-driven and time-driven questions count against this budget
+- Max 3 live questions active at any one time within that budget
+- Cooldown between questions: minimum 3 minutes
+- When the budget is exhausted, no more questions for that match
+
+For season / long-term leagues (Type 2 — ONGOING SYSTEM):
+- No fixed per-match question budget
+- Max 3 live questions active at any one time per match
+- Cooldown between questions: minimum 3 minutes
+- AI quota (weekly/total from league settings) applies across the whole league — not per match
+- Generation continues for every new match; there is no session ceiling to hit
+
+QUESTION DIVERSITY CONTROL
+---------------------------
+Repetition makes the system feel mechanical. If a user sees three
+corner questions in a row, or "next 5 minutes" used four times,
+they stop feeling like each question is meaningful. Variety is what
+makes the question feed feel alive.
+
+WHAT TO TRACK PER LEAGUE (in-memory, current match only):
+  - Last question type: stat / event / player / outcome
+  - Last stat or event focus: corners / cards / shots / goals / etc.
+  - Last time window used: 3 min / 5 min / 8 min / 10 min / etc.
+
+RULES (checked before generating each new question):
+
+1. Do not repeat the same question type consecutively.
+   If the last question was a stat question, the next must be event,
+   player, or outcome. Rotate through categories.
+   Ideal rotation: stat → event → player → outcome → repeat
+
+2. Do not repeat the same stat or event focus back to back.
+   If the last question was about corners, the next stat question
+   must use a different focus (shots, cards, goals).
+
+3. Vary time windows.
+   Do not use the same time window multiple times in a row.
+   If the last window was "next 5 minutes", next must be different:
+   "before the 75th minute", "before half time", "next 8 minutes".
+
+4. If no valid diverse option exists:
+   Prefer a different category over repeating. If all categories
+   have been recently used, prefer a different time window or stat
+   focus within the lowest-priority available category.
+
+WHAT THIS LOOKS LIKE IN PRACTICE:
+  Bad sequence: corners → corners → cards → corners
+  Good sequence: corners → goal (event) → shots (stat) → equaliser (outcome)
+
+  Bad sequence: "next 5 min" → "next 5 min" → "next 5 min"
+  Good sequence: "next 5 min" → "before the 80th min" → "next 8 min"
+
+TRACKING SCOPE:
+  Track in-memory for the duration of the current match only.
+  No need to persist diversity state across matches or sessions.
+  Reset at kickoff.
+
+
+GAME STATE AWARENESS
+---------------------
+Match phase tells you where you are in time.
+Game state tells you what is actually happening.
+Both must be considered together when selecting a question type.
+
+The two key variables are: score difference and time remaining.
+
+CLOSE GAME (margin of 0 or 1 goal — e.g. 0-0, 1-1, 2-1):
+  Outcome questions are valid and feel meaningful.
+  - "Will there be an equaliser?"
+  - "Who wins the match?"
+  - "Will the home team keep a clean sheet?"
+  - "Will a goal be scored in the next 5 minutes?"
+  These questions carry natural tension because the result is genuinely open.
+
+ONE-SIDED GAME (margin of 2+ goals — e.g. 3-0, 4-0):
+  Outcome questions are unrealistic. Do not ask them.
+  Avoid: "Will there be an equaliser?", "Will the away team win?"
+  Shift entirely to stat-based and event-based questions:
+  - "Will the leading team score again before full time?"
+  - "How many corners in the second half?"
+  - "Will there be a red card before full time?"
+  - "Will the striker score a hat-trick?"
+
+LATE PHASE + CLOSE GAME (70+ min, margin of 0 or 1):
+  This is the highest-tension combination. Maximise it.
+  - Prioritise outcome and next-event questions
+  - Shorten deadlines to 3–5 minutes
+  - Do not use low-value fillers here
+  - "Will there be an equaliser before full time?"
+  - "Will a goal be scored in the next 5 minutes?"
+  - "Who scores next?"
+
+LATE PHASE + ONE-SIDED GAME (70+ min, margin of 2+):
+  High phase intensity, but outcome questions remain off the table.
+  - "Will the final score exceed 4 goals?"
+  - "Will there be a goal in the next 5 minutes?"
+  - "Will the striker score again?"
+
+THE RULE ON USER TRUST:
+  Asking "Will there be an equaliser?" at 4-0 in the 85th minute
+  breaks the user's trust in the system. It signals that the app
+  is not paying attention to the match. Once broken, that trust
+  is hard to rebuild. Questions must always feel relevant to what
+  is actually happening on the pitch.
+
+PHASE + STATE COMBINED (decision matrix):
+  Early + close     → medium/low questions, no outcome pressure yet
+  Early + one-sided → stat questions, accept the scoreline early
+  Mid + close       → full mix, outcome questions allowed
+  Mid + one-sided   → stat and player questions only
+  Late + close      → maximum tension, outcome and next-event only
+  Late + one-sided  → stat questions with late-phase urgency
+
+
+MATCH PHASE AWARENESS
+----------------------
+A football match is not uniform. Pacing questions evenly across 90
+minutes creates a flat experience. Instead, question intensity should
+scale with the clock to create a natural tension curve.
+
+EARLY PHASE (0–20 minutes):
+  Intensity: low.
+  The match is settling. Teams are finding their shape. Early goals
+  happen but the overall tempo is lower.
+  - Prefer medium and low questions
+  - High-value triggers still fire on events, but don't push frequency
+  - Time windows: 8–10 minutes
+  - Do not burn the question budget or quota here
+
+MID PHASE (20–70 minutes):
+  Intensity: balanced.
+  The match has developed. Events are meaningful. Full mix available.
+  - Allow high-value triggers when events occur
+  - Time-driven questions use medium questions where possible
+  - Time windows: 5–8 minutes
+  - Standard frequency and cooldowns apply
+
+LATE PHASE (70–90+ minutes):
+  Intensity: high.
+  Every minute matters. Score lines are being decided. This is where
+  the experience should feel most alive and most urgent.
+  - Prioritise high-value questions
+  - Shorten time windows to 3–5 minutes
+  - Increase frequency slightly (reduce time-driven cooldown)
+  - Even low-value questions feel urgent at this stage because of
+    match context — use them more freely than earlier phases
+  - Extra time and injury time count as late phase
+
+PHASE AWARENESS APPLIES TO BOTH LEAGUE TYPES:
+  Type 1 (single-match): phases apply within the match session.
+  If the user selected "second half only", the session starts in
+  mid phase and ends in late phase.
+  Type 2 (season): same phase logic applies per match. No change
+  to continuous generation outside of match windows.
+
+THE GOAL:
+  The first 20 minutes should feel calm but engaged.
+  The middle should build.
+  The last 20 minutes should feel urgent.
+  That curve is what makes a match session feel like a match.
+
+
+QUESTION PRIORITY TIERS
+------------------------
+Not all questions have the same engagement value. The system must
+prefer higher-value questions and only fall back when nothing better
+is available. Flooding the user with low-value filler destroys the
+sense that each question is worth answering.
+
+HIGH — event-driven, always generated immediately:
+  Goals, penalties, red cards.
+  These are the moments that define a match. When one of these occurs,
+  a question fires immediately. No waiting for the time-driven clock.
+  These always take priority over anything else.
+
+MEDIUM — time-driven preferred:
+  Shots on target, corners.
+  Objectively interesting, clearly resolvable, not dependent on a
+  dramatic event. When the time-driven clock fires, the system should
+  look here first before reaching for general fillers.
+
+LOW — fallback only:
+  General time-window fillers: "Will a goal be scored in the next
+  10 minutes?", "Will there be a card before the 75th minute?"
+  Only used when no medium-value event can anchor a question.
+  Do not use as default. Do not chain multiple low-value questions
+  back to back.
+
+GENERATION PRIORITY ORDER:
+  1. High-value event fires → generate immediately (event-driven)
+  2. Time-driven clock fires → generate medium-value question if possible
+  3. No medium anchor available → generate low-value filler
+  4. Budget exhausted (Type 1) or cooldown active → hold, wait
+
+THE ROLE OF TIME-DRIVEN QUESTIONS DIFFERS BY LEAGUE TYPE:
+
+Type 1 (single-match — closed session):
+  Time-driven = gap filler.
+  Fires when no event-driven question has appeared for 8–12 minutes.
+  Secondary to event-driven. Counts against the fixed budget.
+  Without it, quiet spells kill the session.
+
+Type 2 (season — ongoing system):
+  Time-driven = continuous engagement driver.
+  There is no session pacing or per-match budget to rely on.
+  Time-driven questions are responsible for keeping the system active
+  across quiet stretches. They are not a fallback. They are a core
+  generation mechanism. Without them, a low-event match in a season
+  league produces almost no engagement.
+
+THE PRINCIPLE:
+Event-driven questions are the highlight reel.
+Time-driven questions are the connective tissue — and in season leagues,
+they are also the backbone.
+Both are required. Neither alone is enough.
+
+
+BLOWOUT MATCHES — QUESTION TYPE ADAPTATION
+--------------------------------------------
+This is a deliberate design decision about how we handle one-sided matches.
+
+THE OLD THINKING (REJECTED):
+Stop generating questions when the score margin gets too large.
+The logic was: a 4-0 match is boring, so don't bother.
+
+WHY WE'RE NOT DOING THAT:
+Spontix is not a match predictor. It's a competition between players
+in a league. Even in a blowout, players are still competing against
+each other for points. The match being one-sided doesn't end that
+competition — it just changes the shape of it.
+
+Stopping questions mid-match because of the scoreline is the worst thing
+we can do for engagement. It punishes users who showed up.
+
+THE NEW APPROACH — ADAPT, DON'T STOP:
+When a match is close, use questions about outcome and momentum.
+When a match is one-sided, switch to a different question type.
+Never stop entirely while the match is live.
+
+Here's how question types shift based on match state.
+
+IMPORTANT: do not attempt to infer subjective match states like pressure,
+dominance, or momentum from statistics. These are unreliable and often
+wrong. Stick to questions based on observable events — things a
+scoreboard or referee can answer without interpretation.
+
+CLOSE MATCH (score within 1 goal, or first half):
+- State questions: "Will the home team keep a clean sheet?"
+- Outcome questions: "Will there be an equaliser?"
+- Next-event questions: "Will a goal be scored before half time?"
+
+ONE-SIDED MATCH (2+ goal margin, second half):
+- Stat questions: "How many corners in the second half — over or under 4?"
+- Card questions: "Will there be a red card before full time?"
+- Goal total questions: "Will the final score exceed 4 goals?"
+- Player questions: "Will the striker score again before full time?"
+- Time-window questions: "Will a goal be scored in the next 10 minutes?"
+
+END-TO-END LIVE MATCH FLOW:
+As long as the match clock is running, there is always either:
+  a) an open question waiting to be answered, OR
+  b) a holding card telling the user the next question is coming
+
+There is no third state during a live match. The match being 4-0
+does not change this. The match ending does.
+
+THE PRINCIPLE:
+We are not optimising for the best possible question.
+We are optimising for continuous engagement while the match is live.
+A stat-based question in a blowout is better than silence.
+
+
+IN-APP TRIGGERS (THESE ARE NOT NOTIFICATIONS)
+----------------------------------------------
+These are things that appear inside the app while the user is already
+there. They guide the session without sending any messages.
+
+THE HOLDING CARD
+When no live question is active mid-match, a card appears in the feed:
+current score, current minute, "next moment dropping soon."
+It's a placeholder that keeps the feed from going dead.
+When the next question arrives, it replaces itself automatically.
+
+THE "WHAT'S NEXT" PROMPT
+Right after a user submits an answer, a brief prompt appears below
+the card they just answered. It adapts to what's available:
+more questions, a countdown, a leaderboard check. It disappears
+after a few seconds. It's a gentle nudge, not a shout.
+
+THE MATCH SUMMARY CARD
+When the match ends and all answers are scored, a summary card
+appears at the top of the feed:
+- How many points they earned this match
+- Their current position in the league
+- One tap to see the full leaderboard
+
+If a user was already in the app when the match ended, they don't
+need a "your result is in" notification. They already have this card.
+The notification only goes to users who weren't present.
+
+THE LIVE DOT ON THE DASHBOARD
+On the main dashboard, any league with an active match gets a small
+live indicator next to it. Something like: "Live now — 2 questions open."
+If a user wandered off the league page mid-session, this brings them
+back without any external push. They see it. They tap it. They're back.
+(This is a future wiring task — dashboard is currently decorative.)
+
+
+THE RULE ABOUT NOTIFICATIONS DURING ACTIVE SESSIONS
+-----------------------------------------------------
+Simple: if the user is already in the app, don't send them a notification
+for something that just happened.
+
+If they're on the league page watching a match and a new live question
+appears in the feed in front of them — don't also send them a push
+notification about that same question. That's redundant and annoying.
+
+We don't have the technical infrastructure to perfectly detect whether
+someone is "in the app" right now, but we can make reasonable
+approximations:
+- If they answered a question in the last 5 minutes, they were probably
+  in the app. Don't send a result notification — they'll see the result
+  card in the feed.
+- The 4-hour cooldown on "new question" notifications already helps here.
+- More precise session detection comes later when we add live websockets.
+
+
+THE SESSION LIFECYCLE (PLAIN ENGLISH)
+---------------------------------------
+Here's how a complete session should flow, start to finish.
+This example includes a quiet spell (time-driven) and a blowout second
+half (adaptation) so you can see both layers working together.
+
+1. User gets a notification: "New question in your league — answer before kickoff"
+
+2. They tap it. They land directly on the question card.
+
+3. They answer. Their selection highlights immediately.
+   A prompt appears: "2 more questions open for this match →"
+   They tap. They answer the next ones.
+
+4. Match kicks off. The live match bar appears at the top of the feed.
+
+5. 12 minutes in — goal scored. EVENT-DRIVEN question slides in:
+   "Will the scoring team score again before half time? — 8 min to answer"
+   They answer it. Time-driven clock resets.
+
+6. Holding card: "Next moment dropping soon — stay tuned"
+
+7. 22 minutes — nothing has happened. No events for 10 minutes.
+   TIME-DRIVEN question fires automatically:
+   "Will there be a corner in the next 5 minutes?"
+   They answer it. Simple, fast, resolves itself shortly.
+
+8. 38 minutes — goal. EVENT-DRIVEN question:
+   "Will there be a goal in the last 7 minutes of the half?"
+   They answer it.
+
+9. Half time. Score 3-0. Match is a blowout.
+   The system does NOT stop. It adapts.
+   TIME-DRIVEN question drops for the second half:
+   "How many corners in the second half — over or under 4?"
+   They answer it.
+
+10. 65 minutes — quiet spell again, 12 minutes without an event.
+    TIME-DRIVEN question fires:
+    "Will the home team score again before full time?"
+    They answer it.
+
+11. Final whistle. Score 4-0. All answers scored. Summary card appears:
+    "You earned 50 pts this match. You're 2nd in the league."
+    They tap to see the leaderboard.
+
+12. They close the app.
+
+Throughout that whole session: one notification. One.
+The quiet spells didn't kill the session — time-driven questions filled them.
+The blowout didn't end the session — question types adapted.
+Everything else was the app doing its job.
+
+
+WHAT WE DON'T WANT TO BUILD
+------------------------------
+We don't want a system where:
+- Every match event triggers a new push notification
+- Users have 8 unread notifications by the time they open the app
+- The app goes quiet the moment they answer one question
+- Users feel like they need to leave and come back to get more content
+
+All of those things happen when notifications are used as the only
+engagement tool. This design replaces most of them with in-app mechanics.
+
+
+WHAT NEEDS TO BE BUILT (ROUGH SEQUENCE)
+-----------------------------------------
+1. Deep-linking from notifications into specific question cards
+   (most impactful, relatively simple — just pass IDs in notification context)
+
+2. Question chaining UI — the "what's next" prompt after answering
+   (pure frontend, works with existing data)
+
+3. The holding card in the feed during live match windows
+   (pure frontend, uses context data already on questions)
+
+4. The match summary card on result
+   (pure frontend, triggered when is_correct is populated)
+
+5. Time-driven question generation layer
+   - A background check (run alongside the existing resolver cron)
+   - For each live match: check how long since the last live question was generated
+   - If > 8–12 minutes and no event-driven question is pending → generate a time-driven one
+   - Question templates are simple and pre-defined (corners, shots, cards, goals)
+   - Resolution uses the same stat data the resolver already fetches
+   (backend work — extends the existing resolver/generator infrastructure)
+
+6. Realtime question feed — new live questions appear without refresh
+   (requires Supabase Realtime — a separate sprint, but the biggest payoff)
+
+7. Live dot on dashboard
+   (requires dashboard to query live match state — future sprint)
+
+
+SUMMARY
+--------
+Notifications bring users in.
+In-app flow keeps them there.
+
+The question feed is the core session surface. It should feel alive
+during matches, chain naturally between questions, and always offer
+a next step. Never let the session go silent while there's still
+something happening.
+
+A match being one-sided is not a reason to stop. It's a reason to
+ask different questions. The competition between players in the league
+continues regardless of the scoreline. Honour that.
+
+The two states during a live match are:
+  - Question is open → user answers it
+  - No question open → holding card, next one is coming
+
+There is no third state. Silence during a live match is a bug, not a feature.
+
+The less we rely on notifications to drive engagement inside a session,
+the more valuable each notification becomes when we do send one.

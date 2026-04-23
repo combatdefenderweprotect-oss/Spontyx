@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Teams</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+
+        
+    /* ── Main ── */    .topbar {
+      padding: 16px 32px; display: flex; align-items: center; gap: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .topbar-btn {
+      width: 40px; height: 40px; border-radius: 50%; border: none;
+      background: var(--navy-light); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; position: relative; transition: background 0.2s; text-decoration: none;
+    }
+    .topbar-btn:hover { background: var(--navy-hover); }
+    .topbar-btn svg { width: 18px; height: 18px; stroke: var(--grey); fill: none; stroke-width: 1.8; }
+    .topbar-btn .notif-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; background: var(--coral); border-radius: 50%; border: 2px solid var(--navy); }
+    .content { padding: 32px; flex: 1; max-width: 1100px; }
+
+    /* ── Page Header ── */
+    .page-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 28px; flex-wrap: wrap; gap: 12px; }
+    .page-header-left h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .page-header-left h1 span { color: var(--purple); }
+    .page-header-left p { color: var(--grey); font-size: 0.85rem; }
+    .page-header-actions { display: flex; gap: 10px; }
+    .btn {
+      padding: 10px 20px; border-radius: var(--radius-pill); border: none;
+      font-size: 0.8rem; font-weight: 700; font-family: inherit; cursor: pointer;
+      display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;
+    }
+    .btn svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .btn-primary { background: var(--purple); color: #fff; }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-secondary { background: var(--navy-card); color: var(--off-white); border: 1px solid rgba(255,255,255,0.08); }
+    .btn-secondary:hover { border-color: rgba(255,255,255,0.2); }
+    .btn-sm { padding: 6px 12px; font-size: 0.68rem; border-radius: var(--radius-pill); }
+    .btn-ghost { background: transparent; color: var(--grey); border: 1px solid rgba(255,255,255,0.08); }
+    .btn-ghost:hover { color: var(--off-white); border-color: rgba(255,255,255,0.15); }
+
+    /* ── Summary Strip ── */
+    .summary-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin-bottom: 24px; }
+    .summary-card {
+      background: var(--navy-card); border-radius: var(--radius-md); padding: 16px 18px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .summary-label { font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--grey); margin-bottom: 6px; }
+    .summary-value { font-size: 1.3rem; font-weight: 900; letter-spacing: -0.5px; }
+    .summary-sub { font-size: 0.62rem; color: var(--grey); margin-top: 2px; }
+
+    /* ── Filter Tabs ── */
+    .filter-row { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+    .filter-tabs { display: flex; gap: 4px; background: var(--navy-card); border-radius: var(--radius-pill); padding: 3px; }
+    .filter-tab {
+      padding: 7px 16px; border-radius: var(--radius-pill); border: none;
+      background: transparent; color: var(--grey); font-size: 0.72rem; font-weight: 700;
+      font-family: inherit; cursor: pointer; transition: all 0.15s;
+    }
+    .filter-tab.active { background: var(--purple); color: #fff; }
+    .filter-tab:hover:not(.active) { color: var(--off-white); }
+    .search-box {
+      margin-left: auto; display: flex; align-items: center; gap: 8px;
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-pill); padding: 7px 14px;
+    }
+    .search-box svg { width: 16px; height: 16px; stroke: var(--grey); stroke-width: 2; fill: none; flex-shrink: 0; }
+    .search-box input {
+      background: transparent; border: none; color: var(--off-white);
+      font-size: 0.78rem; font-family: inherit; outline: none; width: 160px;
+    }
+    .search-box input::placeholder { color: var(--grey-dark); }
+
+    /* ── Team Cards ── */
+    .teams-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .team-card {
+      background: var(--navy-card); border-radius: var(--radius-lg); padding: 0;
+      border: 1px solid rgba(255,255,255,0.06); overflow: hidden; transition: all 0.2s;
+    }
+    .team-card:hover { border-color: rgba(255,255,255,0.12); transform: translateY(-2px); box-shadow: var(--shadow); }
+    .team-card-header {
+      display: flex; align-items: center; gap: 14px; padding: 18px 20px 14px;
+    }
+    .team-avatar {
+      width: 48px; height: 48px; border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 900; font-size: 0.85rem; color: var(--navy); flex-shrink: 0;
+    }
+    .team-header-info { flex: 1; min-width: 0; }
+    .team-name { font-size: 1rem; font-weight: 800; letter-spacing: -0.3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .team-meta { display: flex; align-items: center; gap: 8px; margin-top: 3px; }
+    .team-meta-item { font-size: 0.65rem; color: var(--grey); font-weight: 600; display: flex; align-items: center; gap: 3px; }
+    .team-meta-item svg { width: 12px; height: 12px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .team-status-badge {
+      padding: 4px 10px; border-radius: var(--radius-pill);
+      font-size: 0.58rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.3px;
+      flex-shrink: 0;
+    }
+    .team-status-badge.live { background: rgba(168,225,12,0.12); color: var(--lime); }
+    .team-status-badge.active { background: rgba(124,92,252,0.12); color: var(--purple); }
+    .team-status-badge.idle { background: rgba(152,152,176,0.12); color: var(--grey); }
+
+    /* Stats Row */
+    .team-stats {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+      background: rgba(255,255,255,0.03); border-top: 1px solid rgba(255,255,255,0.04);
+    }
+    .team-stat {
+      padding: 12px 14px; text-align: center;
+      background: var(--navy-card);
+    }
+    .team-stat-value { font-size: 0.95rem; font-weight: 900; }
+    .team-stat-label { font-size: 0.55rem; color: var(--grey); font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; margin-top: 2px; }
+
+    /* Accuracy bar */
+    .accuracy-bar {
+      height: 4px; background: rgba(255,255,255,0.06); border-radius: 4px;
+      margin-top: 6px; overflow: hidden;
+    }
+    .accuracy-fill { height: 100%; border-radius: 4px; }
+
+    /* Bottom row */
+    .team-card-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 20px; border-top: 1px solid rgba(255,255,255,0.04);
+    }
+    .team-table-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: var(--radius-pill);
+      background: rgba(255,255,255,0.04); font-size: 0.62rem; font-weight: 700; color: var(--grey);
+    }
+    .team-table-badge svg { width: 12px; height: 12px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .team-actions { display: flex; gap: 6px; }
+
+    /* ── Capacity Alert ── */
+    .capacity-alert {
+      display: flex; align-items: center; gap: 12px; padding: 14px 20px;
+      background: rgba(255,107,107,0.06); border: 1px solid rgba(255,107,107,0.15);
+      border-radius: var(--radius-md); margin-bottom: 24px;
+    }
+    .capacity-alert-icon {
+      width: 36px; height: 36px; border-radius: 50%; background: rgba(255,107,107,0.12);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .capacity-alert-icon svg { width: 18px; height: 18px; stroke: var(--coral); stroke-width: 2; fill: none; }
+    .capacity-alert-text { flex: 1; }
+    .capacity-alert-text strong { font-size: 0.82rem; color: var(--coral); }
+    .capacity-alert-text p { font-size: 0.72rem; color: var(--grey); margin-top: 2px; }
+
+    /* ── Modal ── */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 200;
+      display: none; align-items: center; justify-content: center;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--navy-card); border-radius: var(--radius-xl); padding: 28px;
+      width: 420px; max-width: 90vw; border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: var(--shadow-lg);
+    }
+    .modal h3 { font-size: 1.1rem; font-weight: 800; margin-bottom: 4px; }
+    .modal p { font-size: 0.78rem; color: var(--grey); margin-bottom: 20px; }
+    .modal-field { margin-bottom: 14px; }
+    .modal-field label { display: block; font-size: 0.68rem; font-weight: 700; color: var(--grey); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .modal-field input, .modal-field select {
+      width: 100%; padding: 10px 14px; border-radius: var(--radius-sm);
+      border: 1px solid rgba(255,255,255,0.08); background: var(--navy-light);
+      color: var(--off-white); font-size: 0.82rem; font-family: inherit; font-weight: 600;
+      outline: none; transition: border-color 0.15s;
+    }
+    .modal-field input:focus, .modal-field select:focus { border-color: var(--purple); }
+    .modal-color-row { display: flex; gap: 8px; margin-top: 4px; }
+    .color-swatch {
+      width: 32px; height: 32px; border-radius: 50%; cursor: pointer; border: 3px solid transparent;
+      transition: all 0.15s;
+    }
+    .color-swatch:hover, .color-swatch.selected { border-color: #fff; transform: scale(1.15); }
+    .modal-actions { display: flex; gap: 8px; margin-top: 20px; }
+    .modal-actions .btn { flex: 1; justify-content: center; }
+
+
+  </style>
+</head>
+<body>
+
+  <!-- ── SIDEBAR ── -->
+  <div id="sidebar-placeholder"></div>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+    <header class="topbar">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-right">
+        <a href="notifications.html" class="topbar-btn" title="Notifications" style="text-decoration:none;">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="notif-dot"></span>
+        </a>
+        <button class="topbar-btn" title="Messages">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- Header -->
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Team <span>Management</span></h1>
+          <p>View, create, and manage all teams across your venue events.</p>
+        </div>
+        <div class="page-header-actions">
+          <button class="btn btn-secondary" onclick="showToast('Exporting teams to CSV...')">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Export
+          </button>
+          <button class="btn btn-primary" onclick="openModal()">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Create Team
+          </button>
+        </div>
+      </div>
+
+      <!-- Capacity Alert -->
+      <div class="capacity-alert">
+        <div class="capacity-alert-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        </div>
+        <div class="capacity-alert-text">
+          <strong>Team limit reached — 4 of 4 teams</strong>
+          <p>Your Venue Starter plan supports up to 4 teams. Upgrade to Venue Pro for up to 12 teams.</p>
+        </div>
+        <button class="btn btn-sm btn-primary" onclick="showToast('Opening upgrade options...')">Upgrade</button>
+      </div>
+
+      <!-- Summary Strip -->
+      <div class="summary-strip">
+        <div class="summary-card">
+          <div class="summary-label">Total Teams</div>
+          <div class="summary-value" style="color: var(--purple);">4</div>
+          <div class="summary-sub">of 4 max (Starter)</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Total Players</div>
+          <div class="summary-value" style="color: var(--lime);">14</div>
+          <div class="summary-sub">across all teams</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Playing Now</div>
+          <div class="summary-value" style="color: var(--teal);">3</div>
+          <div class="summary-sub">teams in live events</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Avg Accuracy</div>
+          <div class="summary-value" style="color: var(--purple);">74%</div>
+          <div class="summary-sub">across all answers</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-label">Events Played</div>
+          <div class="summary-value" style="color: var(--gold);">38</div>
+          <div class="summary-sub">combined total</div>
+        </div>
+      </div>
+
+      <!-- Filter Row -->
+      <div class="filter-row">
+        <div class="filter-tabs">
+          <button class="filter-tab active" onclick="filterTeams('all', this)">All</button>
+          <button class="filter-tab" onclick="filterTeams('live', this)">Live</button>
+          <button class="filter-tab" onclick="filterTeams('active', this)">Active</button>
+          <button class="filter-tab" onclick="filterTeams('idle', this)">Idle</button>
+        </div>
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" placeholder="Search teams..." oninput="searchTeams(this.value)" />
+        </div>
+      </div>
+
+      <!-- Team Cards Grid -->
+      <div class="teams-grid" id="teamsGrid">
+
+        <!-- Team 1: The Foxes — Live -->
+        <div class="team-card" data-status="live" data-name="the foxes">
+          <div class="team-card-header">
+            <div class="team-avatar" style="background: var(--lime);">TF</div>
+            <div class="team-header-info">
+              <div class="team-name">The Foxes</div>
+              <div class="team-meta">
+                <span class="team-meta-item">
+                  <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  4 players
+                </span>
+                <span class="team-meta-item">
+                  <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  12 events
+                </span>
+              </div>
+            </div>
+            <span class="team-status-badge live">Live</span>
+          </div>
+          <div class="team-stats">
+            <div class="team-stat">
+              <div class="team-stat-value" style="color: var(--purple);">1,280</div>
+              <div class="team-stat-label">Score</div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-value" style="color: var(--lime);">82%</div>
+              <div class="team-stat-label">Accuracy</div>
+              <div class="accuracy-bar"><div class="accuracy-fill" style="width: 82%; background: var(--lime);"></div></div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-value" style="color: var(--teal);">3.2s</div>
+              <div class="team-stat-label">Avg Response</div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-value" style="color: var(--purple);">5</div>
+              <div class="team-stat-label">Win Streak</div>
+            </div>
+          </div>
+          <div class="team-card-footer">
+            <span class="team-table-badge">
+              <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/></svg>
+              Table 1 · Main Floor
+            </span>
+            <div class="team-actions">
+              <button class="btn btn-sm btn-ghost" onclick="showToast('Managing The Foxes...')">Manage</button>
+              <button class="btn btn-sm btn-ghost" onclick="showToast('Inviting players...')">Invite</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Team 2: Barca Boyz — Live -->
+        <div class="team-card" data-status="live" data-name="barca boyz">
+          <div class="team-card-header">
+            <div class="team-avatar" style="background: var(--coral);">BB</div>
+            <div class="team-header-info">
+              <div class="team-name">Barca Boyz</div>
+              <div class="team-meta">
+                <span class="team-meta-item">
+                  <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  3 players
+                </span>
+                <span class="team-meta-item">
+                  <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  10 events
+                </span>
+              </div>
+            </div>
+            <span class="team-status-badge live">Live</span>
+          </div>
+          <div class="team-stats">
+            <div class="team-stat">
+              <div class="team-stat-value" style="color: var(--purple);">1,105</div>
+              <div class="team-stat-label">Score</div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-value" style="color: var(--lime);">76%</div>
+              <div class="team-stat-label">Accuracy</div>
+              <div class="accuracy-bar"><div class="accuracy-fill" style="width: 76%; background: var(--lime);"></div></div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-value" style="color: var(--teal);">4.1s</div>
+              <div class="team-stat-label">Avg Response</div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-value" style="color: var(--purple);">2</div>
+              <div class="team-stat-label">Win Streak</div>
+            </div>
+          </div>
+          <div class="team-card-footer">
+            <span class="team-table-badge">
+              <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/></svg>
+              Table 2 · Main Floor
+            </span>
+            <div class="team-actions">
+              <button class="btn btn-sm btn-ghost" onclick="showToast('Managing Barca Boyz...')">Manage</button>
+              <button class="btn btn-sm btn-ghost" onclick="showToast('Inviting players...')">Invite</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Team 3: Quiz Masters — Live -->
+        <div class="team-card" data-status="live" data-name="quiz masters">
+          <div class="team-card-header">
+            <div class="team-avatar" style="background: var(--purple);">QM</div>
+            <div class="team-header-info">
+              <div class="team-name">Quiz Masters</div>
+              <div class="team-meta">
+                <span class="team-meta-item">
+                  <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  4 players
+                </span>
+                <span class="team-meta-item">
+                  <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  9 events
+                </span>
+              </div>
+            </div>
+            <span class="team-status-badge live">Live</span>
+          </div>
+          <div class="team-stats">
+            <div class="team-stat">
+              <div class="team-stat-value" style="color: var(--purple);">980</div>
+              <div class="team-stat-label">Score</div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-value" style="color: var(--lime);">71%</div>
+              <div class="team-stat-label">Accuracy</div>
+              <div class="accuracy-bar"><div class="accuracy-fill" style="width: 71%; background: var(--purple);"></div></div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-value" style="color: var(--teal);">3.8s</div>
+              <div class="team-stat-label">Avg Response</div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-value" style="color: var(--purple);">0</div>
+              <div class="team-stat-label">Win Streak</div>
+            </div>
+          </div>
+          <div class="team-card-footer">
+            <span class="team-table-badge">
+              <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/></svg>
+              Table 3 · Main Floor
+            </span>
+            <div class="team-actions">
+              <button class="btn btn-sm btn-ghost" onclick="showToast('Managing Quiz Masters...')">Manage</button>
+              <button class="btn btn-sm btn-ghost" onclick="showToast('Inviting players...')">Invite</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Team 4: Underdogs — Active (not live right now) -->
+        <div class="team-card" data-status="active" data-name="underdogs">
+          <div class="team-card-header">
+            <div class="team-avatar" style="background: var(--teal);">UD</div>
+            <div class="team-header-info">
+              <div class="team-name">Underdogs</div>
+              <div class="team-meta">
+                <span class="team-meta-item">
+                  <svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                  3 players
+                </span>
+                <span class="team-meta-item">
+                  <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                  7 events
+                </span>
+              </div>
+            </div>
+            <span class="team-status-badge active">Active</span>
+          </div>
+          <div class="team-stats">
+            <div class="team-stat">
+              <div class="team-stat-value" style="color: var(--purple);">860</div>
+              <div class="team-stat-label">Score</div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-value" style="color: var(--lime);">68%</div>
+              <div class="team-stat-label">Accuracy</div>
+              <div class="accuracy-bar"><div class="accuracy-fill" style="width: 68%; background: var(--purple);"></div></div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-value" style="color: var(--teal);">4.5s</div>
+              <div class="team-stat-label">Avg Response</div>
+            </div>
+            <div class="team-stat">
+              <div class="team-stat-value" style="color: var(--purple);">1</div>
+              <div class="team-stat-label">Win Streak</div>
+            </div>
+          </div>
+          <div class="team-card-footer">
+            <span class="team-table-badge">
+              <svg viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/></svg>
+              Table 4 · Reserved
+            </span>
+            <div class="team-actions">
+              <button class="btn btn-sm btn-ghost" onclick="showToast('Managing Underdogs...')">Manage</button>
+              <button class="btn btn-sm btn-ghost" onclick="showToast('Inviting players...')">Invite</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Create Team Modal -->
+  <div class="modal-overlay" id="createTeamModal">
+    <div class="modal">
+      <h3>Create New Team</h3>
+      <p>Set up a team name, colour, and assign them to a table.</p>
+      <div class="modal-field">
+        <label>Team Name</label>
+        <input type="text" placeholder="e.g. The Underdogs" id="newTeamName" />
+      </div>
+      <div class="modal-field">
+        <label>Team Colour</label>
+        <div class="modal-color-row">
+          <div class="color-swatch selected" style="background: var(--lime);" onclick="pickColor(this)"></div>
+          <div class="color-swatch" style="background: var(--coral);" onclick="pickColor(this)"></div>
+          <div class="color-swatch" style="background: var(--teal);" onclick="pickColor(this)"></div>
+          <div class="color-swatch" style="background: var(--purple);" onclick="pickColor(this)"></div>
+          <div class="color-swatch" style="background: var(--purple);" onclick="pickColor(this)"></div>
+          <div class="color-swatch" style="background: var(--gold);" onclick="pickColor(this)"></div>
+        </div>
+      </div>
+      <div class="modal-field">
+        <label>Assign to Table</label>
+        <select>
+          <option value="">No table assigned</option>
+          <option value="5">Table 5 — Empty</option>
+          <option value="7">Table 7 — Empty</option>
+          <option value="8">Bar High-Top — Empty</option>
+        </select>
+      </div>
+      <div class="modal-field">
+        <label>Max Players</label>
+        <input type="number" min="2" max="8" value="4" />
+      </div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="createTeam()">Create Team</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('active');
+      setTimeout(() => t.classList.remove('active'), 3000);
+    }
+
+    // Modal
+    function openModal() { document.getElementById('createTeamModal').classList.add('open'); }
+    function closeModal() { document.getElementById('createTeamModal').classList.remove('open'); }
+
+    // Colour picker
+    function pickColor(el) {
+      document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
+      el.classList.add('selected');
+    }
+
+    // Create team (demo)
+    function createTeam() {
+      const name = document.getElementById('newTeamName').value || 'New Team';
+      showToast(`Team "${name}" created! (4/4 limit reached on Starter plan)`);
+      closeModal();
+      document.getElementById('newTeamName').value = '';
+    }
+
+    // Filter
+    function filterTeams(status, btn) {
+      document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      document.querySelectorAll('.team-card').forEach(card => {
+        if (status === 'all') {
+          card.style.display = '';
+        } else {
+          card.style.display = card.dataset.status === status ? '' : 'none';
+        }
+      });
+    }
+
+    // Search
+    function searchTeams(query) {
+      const q = query.toLowerCase();
+      document.querySelectorAll('.team-card').forEach(card => {
+        card.style.display = card.dataset.name.includes(q) ? '' : 'none';
+      });
+    }
+  </script>
+  <script src="utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+  <script src="sidebar.js"></script>
+  <script>
+    SpontixSidebar.init({ type: 'venue', active: 'venue-teams.html' });
+
+    // Tier gate — Teams Management requires Venue Pro+
+    SpontixSidebar.gatePage({
+      feature: 'teamsManagement',
+      requiredTier: 'Venue Pro',
+      isVenue: true,
+      icon: '👥',
+      title: 'Teams Management requires Venue Pro',
+      description: 'Create and manage teams, assign players, and run team-based competitions. Upgrade to Venue Pro to unlock Teams.'
+    });
+  </script>
+</body>
+</html>

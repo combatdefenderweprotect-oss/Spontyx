@@ -1,0 +1,1220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Venue Onboarding - Spontyx</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --navy: #1A1A2E;
+            --navy-light: #22223A;
+            --navy-card: #2A2A44;
+            --purple: #7C5CFC;
+            --lime: #A8E10C;
+            --off-white: #E8E8F0;
+            --grey: #9898B0;
+            --coral: #FF6B6B;
+            --teal: #00D9FF;
+            --gold: #FFD700;
+            --dark-grey: #555;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+            color: var(--off-white);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        /* ═══════════════════════════════════════════════════════════ */
+        /* HEADER & NAVIGATION                                         */
+        /* ═══════════════════════════════════════════════════════════ */
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 24px 40px;
+            background: rgba(26, 26, 46, 0.8);
+            border-bottom: 1px solid rgba(124, 92, 252, 0.1);
+            position: relative;
+            z-index: 100;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 700;
+            font-size: 18px;
+            color: var(--off-white);
+        }
+
+        .logo-dot {
+            width: 8px;
+            height: 8px;
+            background: var(--purple);
+            border-radius: 50%;
+        }
+
+        .skip-link {
+            font-size: 14px;
+            color: var(--grey);
+            cursor: pointer;
+            text-decoration: none;
+            transition: color 0.2s;
+            border: none;
+            background: none;
+            padding: 4px 0;
+        }
+
+        .skip-link:hover {
+            color: var(--purple);
+        }
+
+        /* ═══════════════════════════════════════════════════════════ */
+        /* PROGRESS BAR                                                */
+        /* ═══════════════════════════════════════════════════════════ */
+
+        .progress-bar {
+            display: flex;
+            align-items: center;
+            padding: 0 40px;
+            height: 80px;
+            background: var(--navy);
+            border-bottom: 1px solid rgba(124, 92, 252, 0.1);
+        }
+
+        .progress-steps {
+            display: flex;
+            align-items: center;
+            gap: 0;
+            width: 100%;
+            max-width: 500px;
+        }
+
+        .progress-step {
+            display: flex;
+            align-items: center;
+            flex: 1;
+            position: relative;
+            gap: 12px;
+        }
+
+        .progress-step-num {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 2px solid var(--grey);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--grey);
+            flex-shrink: 0;
+            transition: all 0.3s ease;
+        }
+
+        .progress-step.active .progress-step-num {
+            border-color: var(--purple);
+            background: var(--purple);
+            color: var(--navy);
+        }
+
+        .progress-step.completed .progress-step-num {
+            border-color: var(--lime);
+            background: var(--lime);
+            color: var(--navy);
+        }
+
+        .progress-step-label {
+            font-size: 12px;
+            color: var(--grey);
+            white-space: nowrap;
+            transition: color 0.3s;
+        }
+
+        .progress-step.active .progress-step-label,
+        .progress-step.completed .progress-step-label {
+            color: var(--off-white);
+        }
+
+        .progress-step::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 15px;
+            width: calc(100% - 48px);
+            height: 2px;
+            background: var(--navy-card);
+            z-index: -1;
+        }
+
+        .progress-step:last-child::after {
+            display: none;
+        }
+
+        .progress-step.completed::after {
+            background: var(--lime);
+        }
+
+        /* ═══════════════════════════════════════════════════════════ */
+        /* MAIN CONTENT                                                */
+        /* ═══════════════════════════════════════════════════════════ */
+
+        .main {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px 20px;
+            overflow: hidden;
+        }
+
+        .content {
+            width: 100%;
+            max-width: 600px;
+            display: none;
+            animation: slideIn 0.4s ease;
+        }
+
+        .content.active {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ─────────────────────────────────────────────────────────── */
+        /* STEP 1: VENUE PROFILE                                       */
+        /* ─────────────────────────────────────────────────────────── */
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--off-white);
+            margin-bottom: 8px;
+        }
+
+        .form-input,
+        .form-textarea,
+        .time-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--navy-card);
+            border: 1px solid rgba(124, 92, 252, 0.2);
+            border-radius: 8px;
+            color: var(--off-white);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            transition: border-color 0.2s;
+        }
+
+        .form-input::placeholder,
+        .form-textarea::placeholder {
+            color: var(--grey);
+        }
+
+        .form-input:focus,
+        .form-textarea:focus,
+        .time-input:focus {
+            outline: none;
+            border-color: var(--purple);
+            box-shadow: 0 0 0 3px rgba(124, 92, 252, 0.1);
+        }
+
+        .form-textarea {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .hours-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .time-input {
+            padding: 12px;
+            text-align: center;
+        }
+
+        .hours-toggle {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 16px;
+            cursor: pointer;
+        }
+
+        .toggle-switch {
+            width: 40px;
+            height: 24px;
+            background: var(--navy-card);
+            border: 1px solid rgba(124, 92, 252, 0.2);
+            border-radius: 12px;
+            position: relative;
+            transition: all 0.2s;
+        }
+
+        .toggle-switch.active {
+            background: var(--purple);
+            border-color: var(--purple);
+        }
+
+        .toggle-switch::before {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            background: var(--off-white);
+            border-radius: 10px;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.2s;
+        }
+
+        .toggle-switch.active::before {
+            transform: translateX(16px);
+        }
+
+        .toggle-label {
+            font-size: 14px;
+            color: var(--off-white);
+            cursor: pointer;
+        }
+
+        .custom-hours {
+            display: none;
+        }
+
+        .custom-hours.open {
+            display: block;
+        }
+
+        .day-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .day-label {
+            font-size: 13px;
+            color: var(--grey);
+        }
+
+        .socials-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .social-input {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .social-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--navy-card);
+            border: 1px solid rgba(124, 92, 252, 0.2);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: var(--purple);
+            flex-shrink: 0;
+        }
+
+        .social-input .form-input {
+            width: auto;
+            flex: 1;
+            min-width: 100px;
+        }
+
+        .logo-upload {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .logo-preview {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: var(--navy-card);
+            border: 2px dashed var(--purple);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .logo-preview:hover {
+            border-color: var(--lime);
+            background: rgba(124, 92, 252, 0.1);
+        }
+
+        .logo-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .logo-preview-text {
+            font-size: 40px;
+            font-weight: 700;
+            color: var(--purple);
+        }
+
+        .logo-input {
+            display: none;
+        }
+
+        .logo-help {
+            font-size: 12px;
+            color: var(--grey);
+            text-align: center;
+        }
+
+        /* ─────────────────────────────────────────────────────────── */
+        /* STEP 2: FEATURE TOUR                                        */
+        /* ─────────────────────────────────────────────────────────── */
+
+        .feature-slide {
+            display: none;
+            text-align: center;
+            animation: slideIn 0.4s ease;
+        }
+
+        .feature-slide.active {
+            display: block;
+        }
+
+        .feature-icon {
+            width: 140px;
+            height: 140px;
+            margin: 0 auto 32px;
+            background: rgba(124, 92, 252, 0.1);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 60px;
+            color: var(--purple);
+        }
+
+        .feature-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--off-white);
+            margin-bottom: 12px;
+        }
+
+        .feature-desc {
+            font-size: 15px;
+            color: var(--grey);
+            line-height: 1.6;
+            margin-bottom: 40px;
+        }
+
+        .feature-dots {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .feature-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--navy-card);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .feature-dot.active {
+            background: var(--purple);
+            transform: scale(1.3);
+        }
+
+        /* ─────────────────────────────────────────────────────────── */
+        /* STEP 3: INVITE PLAYERS                                      */
+        /* ─────────────────────────────────────────────────────────── */
+
+        .invite-section {
+            margin-bottom: 32px;
+        }
+
+        .invite-header {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--off-white);
+            margin-bottom: 16px;
+        }
+
+        .link-box {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--navy-card);
+            border: 1px solid rgba(124, 92, 252, 0.2);
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .link-text {
+            flex: 1;
+            font-size: 14px;
+            color: var(--lime);
+            word-break: break-all;
+            font-family: 'Courier New', monospace;
+        }
+
+        .copy-btn {
+            padding: 8px 16px;
+            background: var(--purple);
+            border: none;
+            border-radius: 6px;
+            color: var(--navy);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .copy-btn:hover {
+            background: var(--lime);
+        }
+
+        .copy-toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--lime);
+            color: var(--navy);
+            padding: 12px 20px;
+            border-radius: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            animation: slideIn 0.3s ease;
+            z-index: 1000;
+        }
+
+        .qr-placeholder {
+            width: 180px;
+            height: 180px;
+            background: var(--navy-card);
+            border: 2px solid var(--purple);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            font-size: 64px;
+        }
+
+        .qr-label {
+            font-size: 12px;
+            color: var(--grey);
+            text-align: center;
+        }
+
+        .social-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .social-share-btn {
+            padding: 10px 12px;
+            background: var(--navy-card);
+            border: 1px solid rgba(124, 92, 252, 0.2);
+            border-radius: 6px;
+            color: var(--off-white);
+            font-size: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .social-share-btn:hover {
+            border-color: var(--purple);
+            color: var(--purple);
+        }
+
+        .social-share-btn.copy {
+            background: var(--purple);
+            border-color: var(--purple);
+            color: var(--navy);
+        }
+
+        .social-share-btn.copy:hover {
+            background: var(--lime);
+        }
+
+        .invite-footer {
+            background: var(--navy-card);
+            border: 1px solid rgba(124, 92, 252, 0.2);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 24px;
+            font-size: 13px;
+            color: var(--grey);
+            line-height: 1.6;
+        }
+
+        /* ═══════════════════════════════════════════════════════════ */
+        /* BUTTONS                                                     */
+        /* ═══════════════════════════════════════════════════════════ */
+
+        .button-group {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 40px;
+        }
+
+        .btn {
+            padding: 12px 28px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-primary {
+            background: var(--purple);
+            color: var(--navy);
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            background: var(--lime);
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(124, 92, 252, 0.3);
+        }
+
+        .btn-primary:active {
+            transform: translateY(0);
+        }
+
+        .btn-secondary {
+            background: var(--navy-card);
+            color: var(--off-white);
+            border: 1px solid rgba(124, 92, 252, 0.2);
+        }
+
+        .btn-secondary:hover {
+            border-color: var(--purple);
+            color: var(--purple);
+        }
+
+        /* ═════════════════════════════════════════════════════════════ */
+        /* RESPONSIVE                                                    */
+        /* ═════════════════════════════════════════════════════════════ */
+
+        @media (max-width: 768px) {
+            .header {
+                padding: 16px 20px;
+            }
+
+            .progress-bar {
+                padding: 0 20px;
+                height: 70px;
+            }
+
+            .progress-step-label {
+                font-size: 10px;
+            }
+
+            .main {
+                padding: 24px 20px;
+            }
+
+            .content {
+                max-width: 100%;
+            }
+
+            .hours-container {
+                grid-template-columns: 1fr;
+            }
+
+            .socials-row {
+                grid-template-columns: 1fr;
+            }
+
+            .social-input .form-input {
+                min-width: 0;
+            }
+
+            .feature-icon {
+                width: 100px;
+                height: 100px;
+                font-size: 45px;
+                margin-bottom: 24px;
+            }
+
+            .feature-title {
+                font-size: 24px;
+            }
+
+            .button-group {
+                flex-direction: column;
+                margin-top: 32px;
+            }
+
+            .btn {
+                width: 100%;
+                text-align: center;
+            }
+
+            .link-box {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .copy-btn {
+                width: 100%;
+            }
+
+            .social-buttons {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 480px) {
+            .progress-step-label {
+                display: none;
+            }
+
+            .feature-title {
+                font-size: 20px;
+            }
+
+            .feature-desc {
+                font-size: 14px;
+            }
+
+            .socials-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="logo-container">
+            Spontyx
+            <div class="logo-dot"></div>
+        </div>
+        <button class="skip-link" onclick="skipOnboarding()">Skip Setup</button>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="progress-bar">
+        <div class="progress-steps">
+            <div class="progress-step active" id="progress-1">
+                <div class="progress-step-num">1</div>
+                <div class="progress-step-label">Profile</div>
+            </div>
+            <div class="progress-step" id="progress-2">
+                <div class="progress-step-num">2</div>
+                <div class="progress-step-label">Features</div>
+            </div>
+            <div class="progress-step" id="progress-3">
+                <div class="progress-step-num">3</div>
+                <div class="progress-step-label">Invite</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main">
+        <!-- Step 1: Venue Profile Setup -->
+        <div class="content active" id="step-1">
+            <h2 class="feature-title" style="text-align: left; margin-bottom: 32px;">Venue Profile</h2>
+
+            <div class="form-group">
+                <label class="form-label">Venue Name</label>
+                <input type="text" id="venueName" class="form-input" placeholder="e.g., The Game Lounge">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Description</label>
+                <textarea id="venueDescription" class="form-textarea" placeholder="The best sports bar in town..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Opening Hours</label>
+                <div class="hours-toggle" onclick="toggleCustomHours()">
+                    <div class="toggle-switch" id="hoursToggle"></div>
+                    <span class="toggle-label">Set custom hours</span>
+                </div>
+                <div class="hours-container" id="simpleHours">
+                    <div>
+                        <label class="form-label" style="margin-bottom: 4px;">Open</label>
+                        <input type="time" id="openTime" class="time-input" value="11:00">
+                    </div>
+                    <div>
+                        <label class="form-label" style="margin-bottom: 4px;">Close</label>
+                        <input type="time" id="closeTime" class="time-input" value="23:00">
+                    </div>
+                </div>
+                <div class="custom-hours" id="customHours">
+                    <div class="day-row">
+                        <span class="day-label">Monday</span>
+                        <input type="time" class="time-input day-open" value="11:00">
+                        <input type="time" class="time-input day-close" value="23:00">
+                    </div>
+                    <div class="day-row">
+                        <span class="day-label">Tuesday</span>
+                        <input type="time" class="time-input day-open" value="11:00">
+                        <input type="time" class="time-input day-close" value="23:00">
+                    </div>
+                    <div class="day-row">
+                        <span class="day-label">Wednesday</span>
+                        <input type="time" class="time-input day-open" value="11:00">
+                        <input type="time" class="time-input day-close" value="23:00">
+                    </div>
+                    <div class="day-row">
+                        <span class="day-label">Thursday</span>
+                        <input type="time" class="time-input day-open" value="11:00">
+                        <input type="time" class="time-input day-close" value="23:00">
+                    </div>
+                    <div class="day-row">
+                        <span class="day-label">Friday</span>
+                        <input type="time" class="time-input day-open" value="11:00">
+                        <input type="time" class="time-input day-close" value="01:00">
+                    </div>
+                    <div class="day-row">
+                        <span class="day-label">Saturday</span>
+                        <input type="time" class="time-input day-open" value="11:00">
+                        <input type="time" class="time-input day-close" value="02:00">
+                    </div>
+                    <div class="day-row">
+                        <span class="day-label">Sunday</span>
+                        <input type="time" class="time-input day-open" value="11:00">
+                        <input type="time" class="time-input day-close" value="23:00">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Social Links</label>
+                <div class="socials-row">
+                    <div class="social-input">
+                        <div class="social-icon">📷</div>
+                        <input type="text" id="instagram" class="form-input" placeholder="@handle">
+                    </div>
+                    <div class="social-input">
+                        <div class="social-icon">𝕏</div>
+                        <input type="text" id="twitter" class="form-input" placeholder="@handle">
+                    </div>
+                    <div class="social-input">
+                        <div class="social-icon">🔗</div>
+                        <input type="text" id="website" class="form-input" placeholder="yoursite.com">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Venue Logo</label>
+                <div class="logo-upload">
+                    <div class="logo-preview" id="logoPreview" onclick="document.getElementById('logoInput').click();">
+                        <span class="logo-preview-text" id="logoText">G</span>
+                    </div>
+                    <input type="file" id="logoInput" class="logo-input" accept="image/*">
+                    <div class="logo-help">Click to upload a logo (JPG, PNG)</div>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-primary" onclick="goToStep(2)">Next</button>
+            </div>
+        </div>
+
+        <!-- Step 2: Feature Tour -->
+        <div class="content" id="step-2">
+            <div class="feature-slide active" id="feature-0">
+                <div class="feature-icon">🎯</div>
+                <h2 class="feature-title">Live Floor</h2>
+                <p class="feature-desc">Push real-time questions to your screens. Players answer on their phones.</p>
+            </div>
+
+            <div class="feature-slide" id="feature-1">
+                <div class="feature-icon">🗺️</div>
+                <h2 class="feature-title">Table Map</h2>
+                <p class="feature-desc">Manage seating, assign tables, and track active teams during events.</p>
+            </div>
+
+            <div class="feature-slide" id="feature-2">
+                <div class="feature-icon">📅</div>
+                <h2 class="feature-title">Event Scheduling</h2>
+                <p class="feature-desc">Create game nights, set capacity, and let players reserve spots online.</p>
+            </div>
+
+            <div class="feature-slide" id="feature-3">
+                <div class="feature-icon">📊</div>
+                <h2 class="feature-title">Analytics Dashboard</h2>
+                <p class="feature-desc">Track player counts, engagement rates, and revenue per event.</p>
+            </div>
+
+            <div class="feature-dots">
+                <div class="feature-dot active" onclick="goToFeature(0)"></div>
+                <div class="feature-dot" onclick="goToFeature(1)"></div>
+                <div class="feature-dot" onclick="goToFeature(2)"></div>
+                <div class="feature-dot" onclick="goToFeature(3)"></div>
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="goToStep(1)">Back</button>
+                <button class="btn btn-primary" onclick="goToStep(3)">Next</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Invite Players -->
+        <div class="content" id="step-3">
+            <h2 class="feature-title" style="text-align: left; margin-bottom: 32px;">Get players to your venue</h2>
+
+            <div class="invite-section">
+                <div class="invite-header">Shareable Link</div>
+                <div class="link-box">
+                    <span class="link-text" id="shareLink">spontix.app/venues/the-game-lounge</span>
+                    <button class="copy-btn" onclick="copyShareLink()">Copy</button>
+                </div>
+            </div>
+
+            <div class="invite-section">
+                <div class="invite-header">QR Code</div>
+                <div class="qr-placeholder">
+                    <canvas id="qrCanvas" style="display:none;"></canvas>
+                    📱
+                </div>
+                <div class="qr-label">Scan with phone to visit venue page</div>
+            </div>
+
+            <div class="invite-section">
+                <div class="invite-header">Share on Social</div>
+                <div class="social-buttons">
+                    <button class="social-share-btn copy" onclick="copyShareLink()">
+                        <span>📋</span> Copy Link
+                    </button>
+                    <button class="social-share-btn" onclick="shareOnWhatsApp()">
+                        <span>💬</span> WhatsApp
+                    </button>
+                    <button class="social-share-btn" onclick="shareOnTwitter()">
+                        <span>𝕏</span> Twitter
+                    </button>
+                    <button class="social-share-btn" onclick="shareOnInstagram()">
+                        <span>📷</span> Instagram
+                    </button>
+                </div>
+            </div>
+
+            <div class="invite-footer">
+                Your venue is now listed on Spontyx! Players in your area will discover you in the Venues & Bars page.
+            </div>
+
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="goToStep(2)">Back</button>
+                <button class="btn btn-primary" onclick="completeOnboarding()">Open My Dashboard</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+    <script>
+        // ════════════════════════════════════════════════════════════════════════════════
+        // STATE & GLOBALS
+        // ════════════════════════════════════════════════════════════════════════════════
+
+        let currentStep = 1;
+        let currentFeature = 0;
+        const features = [
+            { title: 'Live Floor', desc: 'Push real-time questions to your screens. Players answer on their phones.' },
+            { title: 'Table Map', desc: 'Manage seating, assign tables, and track active teams during events.' },
+            { title: 'Event Scheduling', desc: 'Create game nights, set capacity, and let players reserve spots online.' },
+            { title: 'Analytics Dashboard', desc: 'Track player counts, engagement rates, and revenue per event.' },
+        ];
+
+        // ════════════════════════════════════════════════════════════════════════════════
+        // INITIALIZATION
+        // ════════════════════════════════════════════════════════════════════════════════
+
+        function init() {
+            // Load venue profile if available
+            const profile = SpontixStore.getVenueProfile();
+            if (profile && profile.venueName) {
+                document.getElementById('venueName').value = profile.venueName;
+                document.getElementById('venueDescription').value = profile.description || '';
+                document.getElementById('instagram').value = profile.instagram || '';
+                document.getElementById('twitter').value = profile.twitter || '';
+                document.getElementById('website').value = profile.website || '';
+                updateLogoPreview(profile.venueName);
+                if (profile.logo) {
+                    document.getElementById('logoPreview').innerHTML = `<img src="${profile.logo}" alt="Logo">`;
+                }
+            }
+
+            // Set up logo upload
+            document.getElementById('logoInput').addEventListener('change', handleLogoUpload);
+
+            // Update venue name on input for logo preview
+            document.getElementById('venueName').addEventListener('change', () => {
+                updateLogoPreview(document.getElementById('venueName').value);
+                updateShareLink();
+            });
+        }
+
+        // ════════════════════════════════════════════════════════════════════════════════
+        // STEP NAVIGATION
+        // ════════════════════════════════════════════════════════════════════════════════
+
+        function goToStep(step) {
+            // Save current step data
+            if (currentStep === 1) {
+                saveVenueProfile();
+            }
+
+            currentStep = step;
+
+            // Update UI
+            document.querySelectorAll('.content').forEach(c => c.classList.remove('active'));
+            document.getElementById(`step-${step}`).classList.add('active');
+
+            // Update progress
+            updateProgress();
+
+            // Initialize step-specific content
+            if (step === 3) {
+                updateShareLink();
+            }
+
+            // Scroll to top
+            document.querySelector('.main').scrollTop = 0;
+        }
+
+        function updateProgress() {
+            for (let i = 1; i <= 3; i++) {
+                const step = document.getElementById(`progress-${i}`);
+                step.classList.remove('active', 'completed');
+                if (i < currentStep) {
+                    step.classList.add('completed');
+                } else if (i === currentStep) {
+                    step.classList.add('active');
+                }
+            }
+        }
+
+        // ════════════════════════════════════════════════════════════════════════════════
+        // STEP 1: VENUE PROFILE
+        // ════════════════════════════════════════════════════════════════════════════════
+
+        function toggleCustomHours() {
+            const toggle = document.getElementById('hoursToggle');
+            const simple = document.getElementById('simpleHours');
+            const custom = document.getElementById('customHours');
+
+            toggle.classList.toggle('active');
+            simple.style.display = toggle.classList.contains('active') ? 'none' : 'grid';
+            custom.classList.toggle('open');
+        }
+
+        function updateLogoPreview(venueName) {
+            const letter = (venueName && venueName.length > 0) ? venueName.charAt(0).toUpperCase() : 'G';
+            const preview = document.getElementById('logoPreview');
+            const logoText = document.getElementById('logoText');
+
+            // Only update if no image is set
+            if (!preview.querySelector('img')) {
+                logoText.textContent = letter;
+            }
+        }
+
+        function handleLogoUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const preview = document.getElementById('logoPreview');
+                    preview.innerHTML = `<img src="${e.target.result}" alt="Logo">`;
+                    // Store in window for save
+                    window.logoDataUrl = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function saveVenueProfile() {
+            const venueName = document.getElementById('venueName').value || 'My Venue';
+            const profile = {
+                venueName: venueName,
+                description: document.getElementById('venueDescription').value,
+                instagram: document.getElementById('instagram').value,
+                twitter: document.getElementById('twitter').value,
+                website: document.getElementById('website').value,
+                logo: window.logoDataUrl || null,
+                hours: {
+                    open: document.getElementById('openTime').value,
+                    close: document.getElementById('closeTime').value,
+                },
+            };
+
+            // Collect custom hours if set
+            if (document.getElementById('hoursToggle').classList.contains('active')) {
+                const customHours = {};
+                const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+                document.querySelectorAll('.day-row').forEach((row, idx) => {
+                    const opens = row.querySelector('.day-open').value;
+                    const closes = row.querySelector('.day-close').value;
+                    customHours[days[idx]] = { open: opens, close: closes };
+                });
+                profile.customHours = customHours;
+            }
+
+            SpontixStore.saveVenueProfile(profile);
+        }
+
+        // ════════════════════════════════════════════════════════════════════════════════
+        // STEP 2: FEATURE TOUR
+        // ════════════════════════════════════════════════════════════════════════════════
+
+        function goToFeature(index) {
+            currentFeature = index;
+            document.querySelectorAll('.feature-slide').forEach((s, i) => {
+                s.classList.toggle('active', i === index);
+            });
+            document.querySelectorAll('.feature-dot').forEach((d, i) => {
+                d.classList.toggle('active', i === index);
+            });
+        }
+
+        // ════════════════════════════════════════════════════════════════════════════════
+        // STEP 3: INVITE PLAYERS
+        // ════════════════════════════════════════════════════════════════════════════════
+
+        function updateShareLink() {
+            const venueName = document.getElementById('venueName').value || 'My Venue';
+            const slug = venueName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+            const link = `spontix.app/venues/${slug}`;
+            document.getElementById('shareLink').textContent = link;
+            window.shareLink = link;
+        }
+
+        function copyShareLink() {
+            const link = document.getElementById('shareLink').textContent;
+            navigator.clipboard.writeText(link).then(() => {
+                showToast('Link copied to clipboard!');
+            });
+        }
+
+        function shareOnWhatsApp() {
+            const link = document.getElementById('shareLink').textContent;
+            const text = `Join me at our venue on Spontyx! ${link}`;
+            const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        }
+
+        function shareOnTwitter() {
+            const link = document.getElementById('shareLink').textContent;
+            const text = `Join my venue on Spontyx for live sports predictions! ${link}`;
+            const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`;
+            window.open(url, '_blank');
+        }
+
+        function shareOnInstagram() {
+            const link = document.getElementById('shareLink').textContent;
+            alert(`Share this link on Instagram:\n\n${link}`);
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'copy-toast';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2500);
+        }
+
+        // ════════════════════════════════════════════════════════════════════════════════
+        // COMPLETION & NAVIGATION
+        // ════════════════════════════════════════════════════════════════════════════════
+
+        function completeOnboarding() {
+            // Save final venue profile
+            saveVenueProfile();
+
+            // Mark as complete
+            localStorage.setItem('spontix_venue_onboarding_complete', 'true');
+
+            // Redirect
+            window.location.href = 'venue-dashboard.html';
+        }
+
+        function skipOnboarding() {
+            localStorage.setItem('spontix_venue_onboarding_complete', 'true');
+            window.location.href = 'venue-dashboard.html';
+        }
+
+        // ════════════════════════════════════════════════════════════════════════════════
+        // STARTUP
+        // ════════════════════════════════════════════════════════════════════════════════
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

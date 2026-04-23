@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Venue Billing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+
+        
+    /* ── Main ── */    .topbar {
+      padding: 16px 32px; display: flex; align-items: center; gap: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .topbar-btn {
+      width: 40px; height: 40px; border-radius: 50%; border: none;
+      background: var(--navy-light); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; position: relative; transition: background 0.2s; text-decoration: none;
+    }
+    .topbar-btn:hover { background: var(--navy-hover); }
+    .topbar-btn svg { width: 18px; height: 18px; stroke: var(--grey); fill: none; stroke-width: 1.8; }
+    .topbar-btn .notif-dot { position: absolute; top: 8px; right: 8px; width: 8px; height: 8px; background: var(--coral); border-radius: 50%; border: 2px solid var(--navy); }
+    .content { padding: 32px; flex: 1; max-width: 1000px; }
+
+    /* ── Page Header ── */
+    .page-header { margin-bottom: 32px; }
+    .page-header h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .page-header h1 span { color: var(--purple); }
+    .page-header p { color: var(--grey); font-size: 0.85rem; }
+
+    /* ── Current Plan Card ── */
+    .plan-card {
+      display: flex; align-items: stretch; gap: 0; margin-bottom: 28px;
+      border-radius: var(--radius-lg); overflow: hidden; border: 1px solid rgba(255,255,255,0.06);
+    }
+    .plan-current {
+      flex: 1; padding: 28px 32px; background: var(--navy-card); position: relative; overflow: hidden;
+    }
+    .plan-current::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(ellipse at 0% 50%, rgba(124,92,252,0.06), transparent 60%);
+      pointer-events: none;
+    }
+    .plan-tag {
+      display: inline-flex; padding: 4px 12px; border-radius: var(--radius-pill);
+      font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 12px;
+    }
+    .plan-tag.starter { background: rgba(124,92,252,0.12); color: var(--purple); border: 1px solid rgba(124,92,252,0.2); }
+    .plan-name { font-size: 1.3rem; font-weight: 900; margin-bottom: 4px; letter-spacing: -0.3px; }
+    .plan-price { margin-bottom: 14px; }
+    .plan-price-amount { font-size: 2rem; font-weight: 900; color: var(--purple); }
+    .plan-price-period { font-size: 0.8rem; color: var(--grey); font-weight: 600; }
+    .plan-features { display: flex; flex-direction: column; gap: 8px; }
+    .plan-feature { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--off-white); }
+    .plan-feature svg { width: 16px; height: 16px; stroke: var(--lime); stroke-width: 2.5; fill: none; flex-shrink: 0; }
+    .plan-feature.dimmed { color: var(--grey-dark); }
+    .plan-feature.dimmed svg { stroke: var(--grey-dark); }
+    .plan-renewal { margin-top: 16px; font-size: 0.72rem; color: var(--grey); }
+    .plan-renewal strong { color: var(--off-white); }
+
+    .plan-upgrade {
+      width: 280px; padding: 28px 24px; flex-shrink: 0;
+      background: linear-gradient(135deg, rgba(124,92,252,0.08), rgba(124,92,252,0.04));
+      display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+      border-left: 1px solid rgba(255,255,255,0.04);
+    }
+    .plan-upgrade-badge {
+      display: inline-flex; padding: 4px 14px; border-radius: var(--radius-pill);
+      background: linear-gradient(135deg, var(--purple), #6B4FE0); color: #fff;
+      font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+      margin-bottom: 14px;
+    }
+    .plan-upgrade-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 6px; }
+    .plan-upgrade-price { font-size: 1.5rem; font-weight: 900; color: var(--purple); margin-bottom: 4px; }
+    .plan-upgrade-period { font-size: 0.72rem; color: var(--grey); margin-bottom: 14px; }
+    .plan-upgrade-perks { display: flex; flex-direction: column; gap: 6px; margin-bottom: 18px; text-align: left; width: 100%; }
+    .plan-upgrade-perk { display: flex; align-items: center; gap: 6px; font-size: 0.72rem; color: var(--off-white); }
+    .plan-upgrade-perk svg { width: 14px; height: 14px; stroke: var(--purple); stroke-width: 2.5; fill: none; flex-shrink: 0; }
+    .upgrade-btn {
+      width: 100%; padding: 12px; border-radius: var(--radius-pill); border: none;
+      background: var(--purple); color: #fff; font-size: 0.82rem; font-weight: 800;
+      font-family: inherit; cursor: pointer; transition: all 0.2s;
+    }
+    .upgrade-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+    /* ── Section ── */
+    .section { margin-bottom: 32px; }
+    .section-title {
+      font-size: 1.05rem; font-weight: 700; margin-bottom: 16px;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-title svg { width: 18px; height: 18px; stroke: var(--purple); stroke-width: 2; fill: none; }
+
+    /* ── Payment Method ── */
+    .payment-card {
+      display: flex; align-items: center; gap: 16px; padding: 20px 24px;
+      background: var(--navy-card); border-radius: var(--radius-lg);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .payment-icon {
+      width: 52px; height: 36px; border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, #1A1F71, #2A3F9D);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; font-weight: 900; color: #fff; letter-spacing: 1px; flex-shrink: 0;
+    }
+    .payment-info { flex: 1; }
+    .payment-name { font-size: 0.88rem; font-weight: 700; margin-bottom: 2px; }
+    .payment-detail { font-size: 0.75rem; color: var(--grey); }
+    .payment-actions { display: flex; gap: 8px; }
+    .payment-btn {
+      padding: 7px 16px; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.08);
+      background: transparent; color: var(--grey); font-size: 0.72rem; font-weight: 700;
+      font-family: inherit; cursor: pointer; transition: all 0.15s;
+    }
+    .payment-btn:hover { border-color: rgba(255,255,255,0.2); color: var(--off-white); }
+    .payment-btn.add { border-color: rgba(124,92,252,0.3); color: var(--purple); }
+    .payment-btn.add:hover { background: rgba(124,92,252,0.08); }
+
+    /* ── Cost Breakdown ── */
+    .cost-table { width: 100%; }
+    .cost-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .cost-row:last-child { border-bottom: none; }
+    .cost-row.total { background: rgba(255,255,255,0.025); border-radius: var(--radius-sm); margin-top: 8px; border-bottom: none; }
+    .cost-label { display: flex; align-items: center; gap: 10px; font-size: 0.82rem; }
+    .cost-icon {
+      width: 32px; height: 32px; border-radius: var(--radius-sm); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center; font-size: 0.85rem;
+    }
+    .cost-desc { font-size: 0.65rem; color: var(--grey); margin-top: 1px; }
+    .cost-amount { text-align: right; }
+    .cost-value { font-size: 0.9rem; font-weight: 800; }
+    .cost-sub { font-size: 0.62rem; color: var(--grey); margin-top: 1px; }
+
+    /* ── Invoice Table ── */
+    .invoice-table { width: 100%; border-collapse: collapse; }
+    .invoice-table th {
+      text-align: left; padding: 10px 16px; font-size: 0.62rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.5px; color: var(--grey-dark);
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .invoice-table td {
+      padding: 14px 16px; font-size: 0.82rem; border-bottom: 1px solid rgba(255,255,255,0.03);
+    }
+    .invoice-table tr:last-child td { border-bottom: none; }
+    .invoice-table tr:hover td { background: rgba(255,255,255,0.02); }
+    .invoice-status {
+      display: inline-flex; padding: 3px 10px; border-radius: var(--radius-pill);
+      font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .invoice-status.paid { background: rgba(168,225,12,0.12); color: var(--lime); }
+    .invoice-status.pending { background: rgba(124,92,252,0.12); color: var(--purple); }
+    .invoice-status.failed { background: rgba(255,107,107,0.12); color: var(--coral); }
+    .invoice-dl {
+      color: var(--grey); font-size: 0.72rem; font-weight: 600; text-decoration: none;
+      display: flex; align-items: center; gap: 4px; transition: color 0.15s; cursor: pointer;
+    }
+    .invoice-dl:hover { color: var(--purple); }
+    .invoice-dl svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+    /* ── Usage Meter ── */
+    .usage-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+    .usage-card {
+      background: var(--navy-card); border-radius: var(--radius-md); padding: 18px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .usage-label { font-size: 0.65rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .usage-value { font-size: 1.2rem; font-weight: 900; margin-bottom: 8px; }
+    .usage-bar { height: 6px; background: rgba(255,255,255,0.06); border-radius: 6px; overflow: hidden; margin-bottom: 6px; }
+    .usage-fill { height: 100%; border-radius: 6px; transition: width 0.6s ease; }
+    .usage-sub { font-size: 0.62rem; color: var(--grey); }
+
+    /* ── Card wrapper ── */
+    .card-wrap {
+      background: var(--navy-card); border-radius: var(--radius-lg); padding: 24px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+
+  </style>
+</head>
+<body>
+
+  <!-- ── SIDEBAR ── -->
+  <div id="sidebar-placeholder"></div>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+    <header class="topbar">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-right">
+        <a href="notifications.html" class="topbar-btn" title="Notifications" style="text-decoration:none;">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="notif-dot"></span>
+        </a>
+        <button class="topbar-btn" title="Messages">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- Header -->
+      <div class="page-header">
+        <h1>Billing &amp; <span>Subscription</span></h1>
+        <p>Manage your plan, payment methods, and invoices.</p>
+      </div>
+
+      <!-- Current Plan + Upgrade -->
+      <div class="plan-card">
+        <div class="plan-current">
+          <span class="plan-tag starter">Current Plan</span>
+          <div class="plan-name">Venue Starter</div>
+          <div class="plan-price">
+            <span class="plan-price-amount">FREE</span>
+            <span class="plan-price-period">/ forever</span>
+          </div>
+          <div class="plan-features">
+            <div class="plan-feature">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              1 league per week
+            </div>
+            <div class="plan-feature">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Up to 15 participants
+            </div>
+            <div class="plan-feature">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              4 teams max
+            </div>
+            <div class="plan-feature">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              50 AI-generated questions
+            </div>
+            <div class="plan-feature">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              QR code join &amp; basic questions
+            </div>
+            <div class="plan-feature dimmed">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              No TV mode
+            </div>
+            <div class="plan-feature dimmed">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              No custom branding
+            </div>
+            <div class="plan-feature dimmed">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              No analytics
+            </div>
+          </div>
+        </div>
+
+        <div class="plan-upgrade">
+          <span class="plan-upgrade-badge">Recommended</span>
+          <div class="plan-upgrade-title">Venue Pro</div>
+          <div class="plan-upgrade-price">$49.99</div>
+          <div class="plan-upgrade-period">per month · $37.50/mo billed annually</div>
+          <div class="plan-upgrade-perks">
+            <div class="plan-upgrade-perk">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Unlimited events · 100 participants · 12 teams
+            </div>
+            <div class="plan-upgrade-perk">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              1,000 AI questions · Create custom Qs live
+            </div>
+            <div class="plan-upgrade-perk">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Question Bank · TV Display · Table Map
+            </div>
+            <div class="plan-upgrade-perk">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Custom branding · QR + NFC join
+            </div>
+            <div class="plan-upgrade-perk">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Weekly analytics · Event scheduling · Ad-free
+            </div>
+          </div>
+          <button class="upgrade-btn" onclick="showToast('Upgrading to Venue Pro...')">Upgrade — $49.99/mo</button>
+          <div style="margin-top: 12px; font-size: 0.68rem; color: var(--grey);">
+            or <a href="#elite-plan" style="color: var(--purple); font-weight: 700; text-decoration: none;">see Venue Elite</a> from $149.99/mo
+          </div>
+        </div>
+      </div>
+
+      <!-- Venue Elite Teaser -->
+      <div id="elite-plan" class="card-wrap" style="margin-bottom: 28px; background: linear-gradient(135deg, rgba(124,92,252,0.08), rgba(124,92,252,0.04)); border-color: rgba(124,92,252,0.15);">
+        <div style="display: flex; align-items: center; gap: 16px; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 220px;">
+            <div style="display: inline-flex; padding: 3px 10px; border-radius: var(--radius-pill); background: rgba(124,92,252,0.15); color: var(--purple); font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Enterprise</div>
+            <div style="font-size: 1.1rem; font-weight: 800; margin-bottom: 4px;">Venue Elite — <span style="color: var(--purple);">$149.99</span><span style="font-size: 0.75rem; color: var(--grey); font-weight: 600;">/mo</span></div>
+            <div style="font-size: 0.72rem; color: var(--grey); margin-bottom: 10px;">$112.50/mo billed annually · Multi-venue, white-label, live stats, API</div>
+            <div style="display: flex; flex-wrap: wrap; gap: 6px;">
+              <span style="padding: 3px 10px; background: rgba(124,92,252,0.1); border-radius: var(--radius-pill); font-size: 0.6rem; font-weight: 700; color: var(--purple);">500 participants</span>
+              <span style="padding: 3px 10px; background: rgba(124,92,252,0.1); border-radius: var(--radius-pill); font-size: 0.6rem; font-weight: 700; color: var(--purple);">Unlimited teams &amp; Qs</span>
+              <span style="padding: 3px 10px; background: rgba(124,92,252,0.1); border-radius: var(--radius-pill); font-size: 0.6rem; font-weight: 700; color: var(--purple);">Live stats on TV</span>
+              <span style="padding: 3px 10px; background: rgba(124,92,252,0.1); border-radius: var(--radius-pill); font-size: 0.6rem; font-weight: 700; color: var(--purple);">Prize integration</span>
+              <span style="padding: 3px 10px; background: rgba(124,92,252,0.1); border-radius: var(--radius-pill); font-size: 0.6rem; font-weight: 700; color: var(--purple);">AI bulk generation</span>
+              <span style="padding: 3px 10px; background: rgba(124,92,252,0.1); border-radius: var(--radius-pill); font-size: 0.6rem; font-weight: 700; color: var(--purple);">Dedicated account manager</span>
+            </div>
+          </div>
+          <button style="padding: 10px 24px; border-radius: var(--radius-pill); border: 1px solid rgba(124,92,252,0.3); background: transparent; color: var(--purple); font-size: 0.78rem; font-weight: 800; font-family: inherit; cursor: pointer; transition: all 0.2s; white-space: nowrap;" onclick="showToast('Contacting sales for Venue Elite...')" onmouseover="this.style.background='rgba(124,92,252,0.1)'" onmouseout="this.style.background='transparent'">Contact Sales</button>
+        </div>
+      </div>
+
+      <!-- Usage This Month -->
+      <div class="section">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20V14"/></svg>
+          Usage This Month
+        </div>
+        <div class="usage-grid">
+          <div class="usage-card">
+            <div class="usage-label">Leagues This Week</div>
+            <div class="usage-value" style="color: var(--purple);">1 <span style="font-size: 0.7rem; color: var(--grey); font-weight: 600;">/ 1</span></div>
+            <div class="usage-bar"><div class="usage-fill" style="width: 100%; background: var(--coral);"></div></div>
+            <div class="usage-sub" style="color: var(--coral);">At limit — upgrade for unlimited</div>
+          </div>
+          <div class="usage-card">
+            <div class="usage-label">Teams per Event</div>
+            <div class="usage-value" style="color: var(--lime);">4 <span style="font-size: 0.7rem; color: var(--grey); font-weight: 600;">/ 4 max</span></div>
+            <div class="usage-bar"><div class="usage-fill" style="width: 100%; background: var(--coral);"></div></div>
+            <div class="usage-sub" style="color: var(--coral);">At limit — upgrade for 12</div>
+          </div>
+          <div class="usage-card">
+            <div class="usage-label">Promotions Used</div>
+            <div class="usage-value" style="color: var(--teal);">14</div>
+            <div class="usage-bar"><div class="usage-fill" style="width: 45%; background: var(--teal);"></div></div>
+            <div class="usage-sub">Pay-per-use · no limit</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Payment Method -->
+      <div class="section">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
+          Payment Method
+        </div>
+        <div class="payment-card">
+          <div class="payment-icon">VISA</div>
+          <div class="payment-info">
+            <div class="payment-name">Visa ending in 4242</div>
+            <div class="payment-detail">Expires 08/2028 · Added 15 Jan 2026</div>
+          </div>
+          <div class="payment-actions">
+            <button class="payment-btn" onclick="showToast('Opening card editor...')">Edit</button>
+            <button class="payment-btn add" onclick="showToast('Add new payment method...')">+ Add New</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- This Month's Costs -->
+      <div class="section">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          April 2026 Breakdown
+        </div>
+        <div class="card-wrap">
+          <div class="cost-table">
+            <div class="cost-row">
+              <div class="cost-label">
+                <div class="cost-icon" style="background: rgba(124,92,252,0.12);">📋</div>
+                <div>
+                  <div>Venue Starter Subscription</div>
+                  <div class="cost-desc">Free plan · No charge</div>
+                </div>
+              </div>
+              <div class="cost-amount">
+                <div class="cost-value" style="color: var(--lime);">$0.00</div>
+                <div class="cost-sub">free forever</div>
+              </div>
+            </div>
+            <div class="cost-row">
+              <div class="cost-label">
+                <div class="cost-icon" style="background: rgba(124,92,252,0.12);">📢</div>
+                <div>
+                  <div>Event Promotions</div>
+                  <div class="cost-desc">14 events promoted to local players</div>
+                </div>
+              </div>
+              <div class="cost-amount">
+                <div class="cost-value" style="color: var(--purple);">$82.00</div>
+                <div class="cost-sub">$5.86 avg / event</div>
+              </div>
+            </div>
+            <div class="cost-row">
+              <div class="cost-label">
+                <div class="cost-icon" style="background: rgba(78,205,196,0.12);">🔔</div>
+                <div>
+                  <div>Push Notifications</div>
+                  <div class="cost-desc">312 notifications sent this month</div>
+                </div>
+              </div>
+              <div class="cost-amount">
+                <div class="cost-value" style="color: var(--teal);">$0.00</div>
+                <div class="cost-sub">included in plan</div>
+              </div>
+            </div>
+            <div class="cost-row">
+              <div class="cost-label">
+                <div class="cost-icon" style="background: var(--lime-dim);">📺</div>
+                <div>
+                  <div>TV Mode</div>
+                  <div class="cost-desc">Single screen · 22 sessions</div>
+                </div>
+              </div>
+              <div class="cost-amount">
+                <div class="cost-value" style="color: var(--lime);">$0.00</div>
+                <div class="cost-sub">included in plan</div>
+              </div>
+            </div>
+            <div class="cost-row total">
+              <div class="cost-label" style="font-weight: 800; font-size: 0.9rem;">
+                Total This Month
+              </div>
+              <div class="cost-amount">
+                <div class="cost-value" style="color: var(--off-white); font-size: 1.1rem;">$82.00</div>
+                <div class="cost-sub">due 1 May 2026</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Invoice History -->
+      <div class="section">
+        <div class="section-title">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          Invoice History
+        </div>
+        <div class="card-wrap" style="padding: 0; overflow: hidden;">
+          <table class="invoice-table">
+            <thead>
+              <tr>
+                <th>Invoice</th>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="font-weight: 700;">INV-2026-004</td>
+                <td>1 Apr 2026</td>
+                <td style="font-weight: 700;">$82.00</td>
+                <td><span class="invoice-status pending">Pending</span></td>
+                <td>
+                  <span class="invoice-dl" onclick="showToast('Downloading invoice...')">
+                    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    PDF
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td style="font-weight: 700;">INV-2026-003</td>
+                <td>1 Mar 2026</td>
+                <td style="font-weight: 700;">$57.50</td>
+                <td><span class="invoice-status paid">Paid</span></td>
+                <td>
+                  <span class="invoice-dl" onclick="showToast('Downloading invoice...')">
+                    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    PDF
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td style="font-weight: 700;">INV-2026-002</td>
+                <td>1 Feb 2026</td>
+                <td style="font-weight: 700;">$43.00</td>
+                <td><span class="invoice-status paid">Paid</span></td>
+                <td>
+                  <span class="invoice-dl" onclick="showToast('Downloading invoice...')">
+                    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    PDF
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td style="font-weight: 700;">INV-2026-001</td>
+                <td>1 Jan 2026</td>
+                <td style="font-weight: 700;">$28.00</td>
+                <td><span class="invoice-status paid">Paid</span></td>
+                <td>
+                  <span class="invoice-dl" onclick="showToast('Downloading invoice...')">
+                    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    PDF
+                  </span>
+                </td>
+              </tr>
+              <tr>
+                <td style="font-weight: 700;">INV-2025-012</td>
+                <td>1 Dec 2025</td>
+                <td style="font-weight: 700;">$15.00</td>
+                <td><span class="invoice-status failed">Failed</span></td>
+                <td>
+                  <span class="invoice-dl" onclick="showToast('Retrying payment...')" style="color: var(--coral);">
+                    Retry
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <script>
+    function showToast(msg) {
+      const t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('active');
+      setTimeout(() => t.classList.remove('active'), 3000);
+    }
+  </script>
+  <script src="utils.js"></script>
+  <script src="sidebar.js"></script>
+  <script>SpontixSidebar.init({ type: 'venue', active: 'venue-billing.html' });</script>
+</body>
+</html>

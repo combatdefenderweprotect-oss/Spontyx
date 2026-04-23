@@ -1,0 +1,3064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Battle Royale</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+<style>
+    /* ── Main Area ── */
+    .main { margin-left: 260px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* ══ SHARED TOP BAR ══ */
+    .topbar {
+      display: flex; align-items: center; padding: 12px 24px;
+      background: var(--navy-light); border-bottom: 1px solid rgba(255,255,255,0.06);
+      position: sticky; top: 0; z-index: 50;
+    }
+
+    .topbar-back {
+      display: flex; align-items: center; gap: 6px; color: var(--grey); font-size: 0.8rem;
+      font-weight: 600; text-decoration: none; padding: 6px 12px 6px 8px;
+      border-radius: var(--radius-pill); transition: all 0.15s;
+    }
+    .topbar-back:hover { background: rgba(255,255,255,0.05); color: var(--off-white); }
+    .topbar-back svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .topbar-center { flex: 1; text-align: center; }
+    .topbar-match { font-size: 0.65rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+    .topbar-title { font-size: 1rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .topbar-title .br-badge {
+      background: linear-gradient(135deg, var(--coral), #E84545); color: #fff;
+      padding: 3px 10px; border-radius: var(--radius-pill); font-size: 0.6rem;
+      font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .topbar-right { display: flex; gap: 8px; }
+    .topbar-btn {
+      display: flex; align-items: center; gap: 6px; color: var(--grey); font-size: 0.75rem;
+      font-weight: 600; text-decoration: none; padding: 6px 14px;
+      border-radius: var(--radius-pill); transition: all 0.15s; cursor: pointer;
+      border: 1px solid rgba(255,255,255,0.08); background: none; font-family: inherit;
+    }
+    .topbar-btn:hover { background: rgba(255,255,255,0.05); color: var(--off-white); }
+    .topbar-btn.active { background: rgba(255,107,107,0.12); color: var(--coral); border-color: rgba(255,107,107,0.2); }
+    .topbar-btn svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+    /* ══ SCREENS ══ */
+    .screen { display: none; min-height: calc(100vh - 54px); }
+    .screen.active { display: flex; flex-direction: column; }
+
+    /* ═══════════════════════════════
+       GAMES PICKER SCREEN (Two-column)
+    ═══════════════════════════════ */
+    .games { padding: 32px 36px; }
+    .games-layout {
+      display: grid; grid-template-columns: 1fr 340px; gap: 28px; align-items: start;
+    }
+    .games-left { min-width: 0; }
+    .games-right { position: sticky; top: 80px; }
+
+    .games-header { margin-bottom: 20px; }
+    .games-header h2 { font-size: 1.3rem; font-weight: 900; margin-bottom: 4px; }
+    .games-header h2 svg { width: 22px; height: 22px; stroke: var(--coral); stroke-width: 2; fill: none; vertical-align: -3px; margin-right: 6px; }
+    .games-header p { font-size: 0.8rem; color: var(--grey); }
+
+    .games-date-strip {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 14px;
+    }
+    .games-date-label { font-size: 0.9rem; font-weight: 700; }
+    .games-date-label span { color: var(--coral); }
+    .games-live-count {
+      margin-left: auto; font-size: 0.68rem; font-weight: 700;
+      padding: 4px 12px; border-radius: var(--radius-pill);
+      background: rgba(255,107,107,0.1); color: var(--coral);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .games-live-count .live-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--coral); animation: pulse-live 2s infinite; }
+    @keyframes pulse-live { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+    .games-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+
+    .game-card {
+      background: var(--navy-card); border-radius: var(--radius-lg); padding: 16px 20px;
+      border: 2px solid rgba(255,255,255,0.06);
+      transition: all 0.2s; display: flex; align-items: center; gap: 16px;
+    }
+    .game-card:hover { border-color: rgba(255,107,107,0.15); }
+
+    .game-card-time { text-align: center; min-width: 52px; }
+    .game-card-time .time-val { font-size: 0.85rem; font-weight: 800; }
+    .game-card-time .time-label { font-size: 0.55rem; color: var(--grey); font-weight: 600; text-transform: uppercase; }
+    .game-card-time .time-live {
+      font-size: 0.55rem; font-weight: 800; color: var(--coral); text-transform: uppercase;
+      display: flex; align-items: center; gap: 4px; justify-content: center;
+    }
+    .game-card-time .time-live .dot { width: 5px; height: 5px; border-radius: 50%; background: var(--coral); animation: pulse-live 2s infinite; }
+
+    .game-card-teams { flex: 1; }
+    .game-card-matchup { display: flex; align-items: center; gap: 10px; margin-bottom: 4px; }
+    .game-card-crest {
+      height: 36px; border-radius: var(--radius-pill);
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 0.62rem; font-weight: 800; flex-shrink: 0;
+      padding: 0 12px; white-space: nowrap;
+      background: rgba(255,255,255,0.06); color: var(--off-white);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .game-card-vs { font-size: 0.7rem; font-weight: 800; color: var(--grey-dark); }
+    .game-card-league { font-size: 0.63rem; color: var(--grey); font-weight: 600; }
+
+    .game-card-queue { text-align: center; min-width: 60px; }
+    .game-card-queue-count { font-size: 1rem; font-weight: 800; color: var(--coral); }
+    .game-card-queue-label { font-size: 0.5rem; color: var(--grey); font-weight: 600; text-transform: uppercase; }
+
+    /* Mode buttons row inside card */
+    .game-card-modes {
+      display: flex; gap: 4px; flex: 1; min-width: 0;
+    }
+    .game-mode-btn {
+      flex: 1; padding: 7px 6px; border-radius: var(--radius-md); border: 1px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.02); color: var(--grey); font-family: inherit;
+      font-size: 0.6rem; font-weight: 700; cursor: pointer; transition: all 0.15s;
+      display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center;
+    }
+    .game-mode-btn:hover { border-color: rgba(255,107,107,0.2); color: var(--off-white); background: rgba(255,107,107,0.04); }
+    .game-mode-btn .mode-icon { font-size: 0.85rem; line-height: 1; }
+    .game-mode-btn .mode-name { font-size: 0.58rem; font-weight: 700; white-space: nowrap; }
+    .game-mode-btn .mode-info { font-size: 0.48rem; color: var(--grey-dark); font-weight: 600; }
+    .game-mode-btn.mode-locked {
+      opacity: 0.35; cursor: default; pointer-events: none;
+    }
+    .game-mode-btn.mode-locked .mode-name::after {
+      content: ' 🔒'; font-size: 0.5rem;
+    }
+    .game-mode-btn.mode-hot {
+      border-color: rgba(255,107,107,0.2); background: rgba(255,107,107,0.04);
+    }
+    .game-mode-btn.mode-hot .mode-name { color: var(--coral); }
+
+    .game-card-join {
+      padding: 9px 20px; border-radius: var(--radius-pill); border: none;
+      background: linear-gradient(135deg, var(--coral), #E84545); color: #fff;
+      font-family: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer;
+      transition: all 0.2s; white-space: nowrap;
+    }
+    .game-card-join:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(255,107,107,0.3); }
+
+    .games-tier-hint { font-size: 0.7rem; color: var(--grey-dark); }
+    .games-tier-hint strong { color: var(--purple); }
+
+    /* ── Right sidebar panel ── */
+    .side-panel {
+      background: var(--navy-card); border-radius: var(--radius-xl); padding: 20px;
+      border: 1px solid rgba(255,255,255,0.06); margin-bottom: 16px;
+    }
+    .side-panel-title {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--grey-dark); margin-bottom: 14px;
+    }
+
+    .side-rank-header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
+    .side-rank-emblem {
+      width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      border: 2px solid var(--gold-c); box-shadow: 0 0 12px rgba(255,215,0,0.1);
+    }
+    .side-rank-emblem svg { width: 24px; height: 24px; stroke: var(--gold-c); fill: none; stroke-width: 2; }
+    .side-rank-info { flex: 1; }
+    .side-rank-name { font-size: 0.9rem; font-weight: 800; margin-bottom: 2px; }
+    .side-rank-tier { font-size: 0.7rem; font-weight: 700; }
+    .side-rank-elo { font-size: 0.75rem; color: var(--grey); margin-top: 4px; }
+    .side-rank-elo strong { color: var(--gold-c); font-weight: 800; }
+    .side-rank-bar { height: 5px; background: rgba(255,255,255,0.06); border-radius: 5px; overflow: hidden; margin: 8px 0 4px; }
+    .side-rank-bar-fill { height: 100%; border-radius: 5px; }
+    .side-rank-bar-text { font-size: 0.58rem; color: var(--grey); display: flex; justify-content: space-between; }
+
+    .side-rank-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+    .side-stat {
+      background: var(--navy-light); border-radius: var(--radius-sm); padding: 10px 8px;
+      text-align: center;
+    }
+    .side-stat-val { font-size: 0.95rem; font-weight: 800; }
+    .side-stat-label { font-size: 0.5rem; color: var(--grey); font-weight: 600; text-transform: uppercase; margin-top: 2px; }
+
+    .side-tier-ladder { display: flex; flex-direction: column; gap: 4px; }
+    .side-tier-row {
+      display: flex; align-items: center; gap: 10px; padding: 7px 10px;
+      border-radius: var(--radius-sm);
+    }
+    .side-tier-row.current { background: rgba(255,215,0,0.06); border: 1px solid rgba(255,215,0,0.15); }
+    .side-tier-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .side-tier-name { font-size: 0.72rem; font-weight: 600; flex: 1; }
+    .side-tier-range { font-size: 0.6rem; color: var(--grey); }
+    .side-tier-you {
+      font-size: 0.45rem; font-weight: 900; background: var(--coral); color: #fff;
+      padding: 1px 5px; border-radius: var(--radius-pill); text-transform: uppercase;
+    }
+
+    .side-recent { display: flex; flex-direction: column; gap: 6px; }
+    .side-recent-row {
+      display: flex; align-items: center; gap: 10px; padding: 8px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .side-recent-row:last-child { border-bottom: none; }
+    .side-recent-place {
+      width: 30px; height: 30px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; font-weight: 900; flex-shrink: 0;
+    }
+    .side-recent-info { flex: 1; min-width: 0; }
+    .side-recent-match { font-size: 0.72rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .side-recent-meta { font-size: 0.55rem; color: var(--grey); margin-top: 1px; }
+    .side-recent-elo { font-size: 0.75rem; font-weight: 800; flex-shrink: 0; }
+    .side-recent-elo.up { color: var(--lime); }
+    .side-recent-elo.down { color: var(--coral); }
+
+    .side-view-all {
+      display: block; width: 100%; padding: 10px; border: none;
+      border-radius: var(--radius-md); background: rgba(255,107,107,0.08);
+      color: var(--coral); font-family: inherit; font-size: 0.75rem;
+      font-weight: 700; cursor: pointer; text-align: center;
+      transition: background 0.15s; margin-top: 12px;
+    }
+    .side-view-all:hover { background: rgba(255,107,107,0.15); }
+
+    /* ═══════════════════════════════
+       LOBBY / QUEUE SCREEN
+    ═══════════════════════════════ */
+    .lobby {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 40px 24px 80px; min-height: calc(100vh - 40px);
+    }
+
+    /* Match header — cinematic banner */
+    .lobby-match-banner {
+      width: 100%; max-width: 640px; text-align: center; margin-bottom: 36px;
+      position: relative;
+    }
+    .lobby-match-banner::before {
+      content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      width: 500px; height: 500px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(168,225,12,0.04) 0%, transparent 60%);
+      pointer-events: none;
+    }
+    .lobby-match-league {
+      font-size: 0.68rem; color: var(--grey); font-weight: 600; text-transform: uppercase;
+      letter-spacing: 1.5px; margin-bottom: 16px; position: relative;
+    }
+    .lobby-match-teams {
+      display: flex; align-items: center; justify-content: center; gap: 28px;
+      margin-bottom: 12px; position: relative;
+    }
+    .lobby-team { text-align: center; }
+    .lobby-team-crest {
+      height: 48px; border-radius: var(--radius-pill); margin: 0 auto 8px;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 0.78rem; font-weight: 800; padding: 0 18px; white-space: nowrap;
+      background: rgba(255,255,255,0.06); color: var(--off-white);
+      border: 1px solid rgba(255,255,255,0.08);
+    }
+    .lobby-team-name { font-size: 1rem; font-weight: 700; }
+    .lobby-vs {
+      font-size: 0.85rem; font-weight: 900; color: var(--grey-dark);
+      padding: 6px 14px; background: rgba(255,255,255,0.04); border-radius: var(--radius-pill);
+    }
+    .lobby-match-time {
+      font-size: 0.82rem; color: var(--lime); font-weight: 700;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .lobby-match-time .live-pulse {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--lime);
+      animation: pulse-live 2s infinite;
+    }
+    @keyframes pulse-live { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.4)} }
+
+    .lobby-mode-strip {
+      display: flex; flex-direction: column; align-items: center; gap: 4px; margin-top: 10px;
+    }
+    .lobby-mode-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 6px 16px; border-radius: var(--radius-pill);
+      border: 1px solid var(--coral); color: var(--coral);
+      font-size: 0.78rem; font-weight: 800;
+    }
+    .lobby-mode-info {
+      font-size: 0.65rem; color: var(--grey); font-weight: 600;
+    }
+
+    /* Divider line */
+    .lobby-divider {
+      width: 100%; max-width: 640px; height: 1px;
+      background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.08) 50%, transparent 100%);
+      margin-bottom: 32px;
+    }
+
+    /* Player roster — grid of cards */
+    .lobby-roster {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px;
+      width: 100%; max-width: 640px; margin-bottom: 28px;
+    }
+    .lobby-player-card {
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-md); padding: 16px 8px;
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      transition: all 0.4s ease; position: relative;
+    }
+    .lobby-player-card.joined {
+      border-color: rgba(168,225,12,0.15);
+      background: linear-gradient(180deg, rgba(168,225,12,0.04) 0%, var(--navy-card) 100%);
+    }
+    .lobby-player-card.you-card {
+      border-color: rgba(255,159,67,0.3);
+      background: linear-gradient(180deg, rgba(255,159,67,0.06) 0%, var(--navy-card) 100%);
+    }
+    .lobby-player-card.empty-card {
+      border-style: dashed; border-color: rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.01);
+    }
+    .lobby-card-avatar {
+      width: 44px; height: 44px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.72rem; font-weight: 800;
+      border: 2px solid rgba(168,225,12,0.3);
+      transition: all 0.3s;
+    }
+    .lobby-player-card.you-card .lobby-card-avatar {
+      border-color: var(--orange); box-shadow: 0 0 16px rgba(255,159,67,0.2);
+    }
+    .lobby-player-card.empty-card .lobby-card-avatar {
+      border: 2px dashed rgba(255,255,255,0.1); background: none !important;
+    }
+    .lobby-card-name {
+      font-size: 0.68rem; font-weight: 700; color: var(--grey);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;
+    }
+    .lobby-player-card.you-card .lobby-card-name { color: var(--orange); }
+    .lobby-player-card.empty-card .lobby-card-name { color: var(--grey-dark); }
+    .lobby-card-you-tag {
+      position: absolute; top: -8px; right: -4px;
+      background: var(--orange); color: var(--navy);
+      font-size: 0.45rem; font-weight: 900; padding: 2px 6px;
+      border-radius: var(--radius-pill); text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .lobby-card-number {
+      position: absolute; top: 6px; left: 8px;
+      font-size: 0.55rem; font-weight: 700; color: var(--grey-dark);
+    }
+
+    /* Status bar */
+    .lobby-status-bar {
+      width: 100%; max-width: 640px; text-align: center; margin-bottom: 24px;
+    }
+    .lobby-count-row {
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      margin-bottom: 10px;
+    }
+    .lobby-count-big {
+      font-size: 1.8rem; font-weight: 900; color: var(--lime);
+    }
+    .lobby-count-label {
+      font-size: 0.82rem; color: var(--grey); font-weight: 600;
+    }
+    .lobby-progress-track {
+      width: 100%; height: 4px; background: rgba(255,255,255,0.06);
+      border-radius: 2px; overflow: hidden;
+    }
+    .lobby-progress-fill {
+      height: 100%; border-radius: 2px; transition: width 0.8s ease;
+      background: linear-gradient(90deg, var(--lime), var(--teal));
+    }
+    .lobby-waiting-text {
+      margin-top: 10px; font-size: 0.75rem; color: var(--grey-dark);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .lobby-waiting-dots { display: flex; gap: 3px; }
+    .lobby-waiting-dots .dot {
+      width: 5px; height: 5px; border-radius: 50%; background: var(--lime);
+      animation: dot-bounce 1.4s infinite;
+    }
+    .lobby-waiting-dots .dot:nth-child(2) { animation-delay: 0.2s; }
+    .lobby-waiting-dots .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes dot-bounce { 0%,80%,100%{opacity:0.3;transform:scale(0.8)} 40%{opacity:1;transform:scale(1.2)} }
+
+    .lobby-actions { display: flex; gap: 12px; margin-bottom: 12px; }
+
+    /* Keep arena-ring for other screens (arena, spectator) */
+    .arena-ring {
+      width: 340px; height: 340px; position: relative; margin: 0 auto 28px;
+    }
+    .arena-ring-bg {
+      position: absolute; inset: 0; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.06);
+      background: radial-gradient(circle, rgba(168,225,12,0.04) 0%, transparent 70%);
+    }
+    .arena-center {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      text-align: center;
+    }
+    .arena-center-count { font-size: 2.5rem; font-weight: 900; color: var(--lime); }
+    .arena-center-label { font-size: 0.7rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
+    .arena-center-sub { font-size: 0.65rem; color: var(--grey-dark); margin-top: 4px; }
+
+    .player-slot {
+      position: absolute; width: 52px; height: 52px;
+      transform: translate(-50%, -50%);
+    }
+    .player-slot-avatar {
+      width: 48px; height: 48px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.7rem; font-weight: 800; border: 3px solid rgba(255,255,255,0.1);
+      transition: all 0.5s ease; position: relative;
+    }
+    .player-slot-avatar.alive { border-color: var(--lime); box-shadow: 0 0 12px rgba(168,225,12,0.2); }
+    .player-slot-avatar.you { border-color: var(--orange); box-shadow: 0 0 16px rgba(255,159,67,0.3); }
+    .player-slot-avatar.dead { border-color: var(--coral); opacity: 0.3; filter: grayscale(1); box-shadow: none; }
+    .player-slot-avatar.empty { border: 2px dashed var(--grey-dark); background: none !important; }
+    .player-slot-avatar.empty::after { content: '?'; font-size: 1rem; color: var(--grey-dark); }
+    .player-slot-name {
+      position: absolute; bottom: -18px; left: 50%; transform: translateX(-50%);
+      font-size: 0.58rem; font-weight: 700; white-space: nowrap; color: var(--grey);
+    }
+    .player-slot-avatar.you + .player-slot-name { color: var(--orange); }
+    .player-slot-avatar.dead + .player-slot-name { color: var(--grey-dark); text-decoration: line-through; }
+    .you-badge {
+      position: absolute; top: -6px; right: -6px; background: var(--orange); color: var(--navy);
+      font-size: 0.45rem; font-weight: 900; padding: 2px 5px; border-radius: var(--radius-pill);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .btn {
+      padding: 14px 32px; border-radius: var(--radius-pill); border: none;
+      font-family: inherit; font-weight: 700; font-size: 0.9rem; cursor: pointer;
+      transition: all 0.2s; display: flex; align-items: center; gap: 8px;
+    }
+    .btn svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .btn-coral { background: linear-gradient(135deg, var(--coral), #E84545); color: #fff; }
+    .btn-coral:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,107,107,0.3); }
+    .btn-ghost { background: var(--navy-card); color: var(--grey); border: 1px solid rgba(255,255,255,0.08); }
+    .btn-ghost:hover { color: var(--off-white); background: var(--navy-hover); }
+
+    .tier-hint { margin-top: 16px; font-size: 0.7rem; color: var(--grey-dark); text-align: center; }
+    .tier-hint strong { color: var(--purple); }
+
+    /* ═══════════════════════════════
+       ARENA SCREEN — Cinematic Immersive
+    ═══════════════════════════════ */
+    .arena {
+      padding: 0; position: relative; min-height: calc(100vh - 40px);
+      display: flex; flex-direction: column;
+    }
+
+    /* Ambient background glow */
+    .arena::before {
+      content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 600px; border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(168,225,12,0.06) 0%, transparent 60%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* Live match ticker — top banner */
+    .match-ticker {
+      display: flex; align-items: center; justify-content: center; gap: 16px;
+      padding: 12px 24px; position: relative; z-index: 1;
+      background: linear-gradient(180deg, rgba(168,225,12,0.06) 0%, transparent 100%);
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .match-ticker-score {
+      font-size: 1.3rem; font-weight: 900; letter-spacing: -0.5px;
+    }
+    .match-ticker-time {
+      padding: 4px 12px; border-radius: var(--radius-pill);
+      background: rgba(255,107,107,0.12); color: var(--coral);
+      font-size: 0.75rem; font-weight: 800;
+      animation: pulse-live 2s infinite;
+    }
+    .match-ticker-event {
+      font-size: 0.78rem; color: var(--grey);
+    }
+    .match-ticker-event strong { color: var(--lime); }
+
+    /* Round progress strip */
+    .round-strip {
+      display: flex; align-items: center; justify-content: center; gap: 4px;
+      padding: 14px 24px; position: relative; z-index: 1;
+    }
+    .round-pip {
+      width: 32px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08);
+      transition: all 0.4s; position: relative;
+    }
+    .round-pip.done { background: var(--lime); box-shadow: 0 0 8px rgba(168,225,12,0.3); }
+    .round-pip.active {
+      background: var(--lime); width: 52px;
+      animation: pip-glow 2s infinite;
+    }
+    @keyframes pip-glow { 0%,100%{box-shadow:0 0 6px rgba(168,225,12,0.3)} 50%{box-shadow:0 0 16px rgba(168,225,12,0.6)} }
+    .round-pip.survived { background: var(--lime); opacity: 0.6; }
+    .round-pip.failed { background: var(--coral); box-shadow: 0 0 8px rgba(255,107,107,0.3); }
+    .round-label {
+      margin-left: 12px; font-size: 0.68rem; font-weight: 700; color: var(--grey);
+    }
+    .round-label strong { color: var(--off-white); }
+
+    /* Main arena layout */
+    .arena-layout {
+      flex: 1; display: grid; grid-template-columns: 1fr 320px;
+      gap: 0; position: relative; z-index: 1;
+    }
+    .arena-left {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 32px 40px; min-width: 0;
+    }
+    .arena-right {
+      border-left: 1px solid rgba(255,255,255,0.04);
+      padding: 20px; display: flex; flex-direction: column; gap: 12px;
+      background: rgba(0,0,0,0.15); max-height: calc(100vh - 120px); overflow-y: auto;
+    }
+
+    /* Timer — large and cinematic */
+    .timer-ring-wrap { width: 140px; height: 140px; position: relative; margin-bottom: 28px; }
+    .timer-ring-svg { width: 140px; height: 140px; transform: rotate(-90deg); }
+    .timer-ring-bg { fill: none; stroke: rgba(255,255,255,0.06); stroke-width: 5; }
+    .timer-ring-fill {
+      fill: none; stroke: var(--lime); stroke-width: 5;
+      stroke-linecap: round; stroke-dasharray: 339.292; stroke-dashoffset: 0;
+      transition: stroke-dashoffset 1s linear, stroke 0.3s;
+    }
+    .timer-ring-fill.warning { stroke: var(--orange); }
+    .timer-ring-fill.critical { stroke: var(--coral); animation: pulse-ring 0.5s infinite; }
+    @keyframes pulse-ring { 0%,100%{opacity:1} 50%{opacity:0.5} }
+    .timer-ring-text {
+      position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      font-size: 2.4rem; font-weight: 900; font-variant-numeric: tabular-nums; color: var(--off-white);
+    }
+
+    /* Prediction card — cinematic */
+    .prediction-card {
+      width: 100%; max-width: 560px; position: relative;
+      background: linear-gradient(180deg, var(--navy-card) 0%, rgba(26,26,46,0.8) 100%);
+      border-radius: var(--radius-xl); padding: 32px 36px; margin-bottom: 24px;
+      border: 1px solid rgba(168,225,12,0.1); text-align: center;
+    }
+    .prediction-card::before {
+      content: ''; position: absolute; inset: -1px; border-radius: var(--radius-xl);
+      background: linear-gradient(135deg, rgba(168,225,12,0.15), transparent 50%, rgba(78,205,196,0.1));
+      z-index: -1; opacity: 0.5;
+    }
+    .prediction-round {
+      font-size: 0.62rem; font-weight: 800; color: var(--lime); text-transform: uppercase;
+      letter-spacing: 1.5px; margin-bottom: 10px;
+      display: inline-flex; align-items: center; gap: 6px;
+    }
+    .prediction-round::before {
+      content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--lime);
+      animation: pulse-live 2s infinite;
+    }
+    .prediction-context {
+      font-size: 0.75rem; color: var(--grey); margin-bottom: 16px;
+      padding: 6px 16px; background: rgba(255,255,255,0.04); border-radius: var(--radius-pill);
+      display: inline-block; border: 1px solid rgba(255,255,255,0.06);
+    }
+    .prediction-question {
+      font-size: 1.35rem; font-weight: 800; line-height: 1.4; margin-bottom: 28px;
+      background: linear-gradient(135deg, var(--off-white), rgba(232,232,240,0.8));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .prediction-options { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .prediction-option {
+      padding: 20px 16px; border-radius: var(--radius-lg); border: 2px solid rgba(255,255,255,0.06);
+      background: rgba(255,255,255,0.03); cursor: pointer; transition: all 0.25s;
+      font-family: inherit; font-size: 0.92rem; font-weight: 700; color: var(--off-white);
+      text-align: center; position: relative; overflow: hidden;
+    }
+    .prediction-option::before {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(180deg, rgba(168,225,12,0.05) 0%, transparent 100%);
+      opacity: 0; transition: opacity 0.25s;
+    }
+    .prediction-option:hover { border-color: rgba(168,225,12,0.3); transform: translateY(-3px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+    .prediction-option:hover::before { opacity: 1; }
+    .prediction-option.selected {
+      border-color: var(--lime); background: rgba(168,225,12,0.08); color: var(--lime);
+      box-shadow: 0 0 24px rgba(168,225,12,0.15);
+    }
+    .prediction-option.correct {
+      border-color: var(--lime); background: rgba(168,225,12,0.12); color: var(--lime);
+      box-shadow: 0 0 32px rgba(168,225,12,0.2);
+    }
+    .prediction-option.wrong {
+      border-color: var(--coral); background: rgba(255,107,107,0.12); color: var(--coral);
+      box-shadow: 0 0 32px rgba(255,107,107,0.15);
+    }
+    .prediction-option.disabled { pointer-events: none; opacity: 0.4; }
+    .prediction-option .opt-count { display: block; font-size: 0.6rem; color: var(--grey); font-weight: 600; margin-top: 6px; }
+
+    /* Alive counter badge in main area */
+    .arena-alive-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 18px; border-radius: var(--radius-pill);
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+      font-size: 0.78rem; font-weight: 700; color: var(--grey); margin-bottom: 20px;
+    }
+    .arena-alive-badge strong { color: var(--lime); font-size: 1rem; }
+
+    /* Right sidebar panels for live screens */
+    .live-side-panel {
+      background: var(--navy-card); border-radius: var(--radius-xl); padding: 20px;
+      border: 1px solid rgba(255,255,255,0.06); margin-bottom: 16px;
+    }
+    .live-side-title {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--grey-dark); margin-bottom: 14px;
+    }
+    .live-side-players { display: flex; flex-direction: column; gap: 8px; }
+    .live-side-player {
+      display: flex; align-items: center; gap: 10px; padding: 8px 10px;
+      border-radius: var(--radius-sm); border: 1px solid rgba(255,255,255,0.04);
+    }
+    .live-side-player.you-row { border-color: rgba(255,159,67,0.2); background: rgba(255,159,67,0.04); }
+    .live-side-player.elim-row { opacity: 0.4; }
+    .live-side-avatar {
+      width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; font-size: 0.55rem; font-weight: 800; flex-shrink: 0;
+    }
+    .live-side-name { font-size: 0.75rem; font-weight: 600; flex: 1; }
+    .live-side-status {
+      font-size: 0.55rem; font-weight: 800; padding: 3px 8px; border-radius: var(--radius-pill);
+    }
+    .live-side-status.alive { background: var(--lime-dim); color: var(--lime); }
+    .live-side-status.dead { background: rgba(255,107,107,0.12); color: var(--coral); }
+
+    /* Elimination/Survive overlays */
+    .elimination-overlay {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(255,107,107,0.15); align-items: center; justify-content: center;
+      animation: flashIn 0.6s ease;
+    }
+    .elimination-overlay.show { display: flex; }
+    @keyframes flashIn { 0%{opacity:0} 30%{opacity:1} 100%{opacity:0} }
+    .elim-card {
+      background: var(--navy-card); border: 2px solid var(--coral); border-radius: var(--radius-xl);
+      padding: 32px 48px; text-align: center; animation: popIn 0.4s ease;
+    }
+    @keyframes popIn { 0%{transform:scale(0.7);opacity:0} 100%{transform:scale(1);opacity:1} }
+    .elim-name { font-size: 1.1rem; font-weight: 800; color: var(--coral); margin-bottom: 4px; }
+    .elim-text { font-size: 0.8rem; color: var(--grey); }
+
+    .survive-overlay {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(168,225,12,0.1); align-items: center; justify-content: center;
+      animation: flashIn 0.6s ease;
+    }
+    .survive-overlay.show { display: flex; }
+    .survive-card {
+      background: var(--navy-card); border: 2px solid var(--lime); border-radius: var(--radius-xl);
+      padding: 32px 48px; text-align: center; animation: popIn 0.4s ease;
+    }
+    .survive-text { font-size: 1.1rem; font-weight: 800; color: var(--lime); }
+    .survive-sub { font-size: 0.8rem; color: var(--grey); margin-top: 4px; }
+
+    /* ═══════════════════════════════
+       SPECTATOR SCREEN — Cinematic
+    ═══════════════════════════════ */
+    .spectator {
+      padding: 0; position: relative; min-height: calc(100vh - 40px);
+      display: flex; flex-direction: column;
+    }
+    .spectator::before {
+      content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 500px; border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(255,107,107,0.04) 0%, transparent 60%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* Eliminated banner — top ticker style */
+    .spectator-banner {
+      display: flex; align-items: center; justify-content: center; gap: 14px;
+      padding: 14px 24px; position: relative; z-index: 1;
+      background: linear-gradient(180deg, rgba(255,107,107,0.08) 0%, transparent 100%);
+      border-bottom: 1px solid rgba(255,107,107,0.1); text-align: center;
+    }
+    .spectator-banner-icon {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(255,107,107,0.15); display: flex; align-items: center; justify-content: center;
+    }
+    .spectator-banner-icon svg { width: 14px; height: 14px; stroke: var(--coral); fill: none; stroke-width: 2.5; }
+    .spectator-banner-text { display: flex; flex-direction: column; text-align: left; }
+    .spectator-banner-title { font-size: 0.82rem; font-weight: 800; color: var(--coral); }
+    .spectator-banner-sub { font-size: 0.68rem; color: var(--grey); }
+
+    /* Round strip for spectator — shows where you died */
+    .spectator-round-strip {
+      display: flex; align-items: center; justify-content: center; gap: 4px;
+      padding: 14px 24px; position: relative; z-index: 1;
+    }
+    .spec-pip {
+      width: 32px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08);
+      transition: all 0.3s;
+    }
+    .spec-pip.survived { background: var(--lime); box-shadow: 0 0 6px rgba(168,225,12,0.3); }
+    .spec-pip.you-died { background: var(--coral); box-shadow: 0 0 8px rgba(255,107,107,0.4); width: 40px; }
+    .spec-pip.active { background: var(--lime); opacity: 0.5; width: 44px; animation: pip-glow 2s infinite; }
+
+    /* Spectator layout */
+    .spectator-layout {
+      flex: 1; display: grid; grid-template-columns: 1fr 320px;
+      gap: 0; position: relative; z-index: 1;
+    }
+    .spectator-left {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 32px 40px; min-width: 0;
+    }
+    .spectator-right {
+      border-left: 1px solid rgba(255,255,255,0.04);
+      padding: 20px; display: flex; flex-direction: column; gap: 12px;
+      background: rgba(0,0,0,0.15); max-height: calc(100vh - 120px); overflow-y: auto;
+    }
+
+    /* Spectating badge */
+    .spectator-mode-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 18px; border-radius: var(--radius-pill);
+      background: rgba(255,107,107,0.06); border: 1px solid rgba(255,107,107,0.12);
+      font-size: 0.75rem; font-weight: 700; color: var(--grey); margin-bottom: 20px;
+      align-self: flex-start;
+    }
+    .spectator-mode-badge svg { width: 14px; height: 14px; }
+    .spectator-mode-badge .spec-live-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--coral);
+      animation: pulse-live 2s infinite; margin-left: 4px;
+    }
+
+    /* Spectator prediction card — greyed out, watching feel */
+    .spectator .prediction-card {
+      border-color: rgba(255,255,255,0.06); max-width: 560px;
+      position: relative; overflow: hidden;
+    }
+    .spectator .prediction-card::after {
+      content: 'SPECTATING'; position: absolute; top: 14px; right: 16px;
+      font-size: 0.55rem; font-weight: 800; color: var(--coral);
+      letter-spacing: 1.5px; opacity: 0.6;
+    }
+    .spectator .prediction-round { color: var(--grey); }
+    .spectator .prediction-round::before { background: var(--coral); }
+
+    /* Event feed — timeline style */
+    .spectator-feed { margin-top: 24px; }
+    .spectator-feed-title {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--grey-dark); margin-bottom: 14px;
+    }
+    .spectator-feed-item {
+      display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+      background: rgba(255,255,255,0.02); border-radius: var(--radius-md); margin-bottom: 6px;
+      border: 1px solid rgba(255,255,255,0.04); transition: all 0.2s;
+      position: relative;
+    }
+    .spectator-feed-item.you-event {
+      border-color: rgba(255,107,107,0.15); background: rgba(255,107,107,0.04);
+    }
+    .spectator-feed-item.survive-event {
+      border-color: rgba(168,225,12,0.1);
+    }
+    .feed-avatar {
+      width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 0.6rem; font-weight: 800; flex-shrink: 0;
+    }
+    .feed-content { flex: 1; }
+    .feed-content-text { font-size: 0.8rem; font-weight: 600; }
+    .feed-content-time { font-size: 0.65rem; color: var(--grey-dark); margin-top: 2px; }
+    .feed-result {
+      padding: 4px 10px; border-radius: var(--radius-pill); font-size: 0.65rem; font-weight: 800; flex-shrink: 0;
+    }
+    .feed-result.survived { background: var(--lime-dim); color: var(--lime); }
+    .feed-result.eliminated { background: rgba(255,107,107,0.12); color: var(--coral); }
+
+    /* ═══════════════════════════════
+       SUDDEN DEATH — Cinematic
+    ═══════════════════════════════ */
+    .sudden-death {
+      padding: 0; position: relative; min-height: calc(100vh - 40px);
+      display: flex; flex-direction: column;
+    }
+    .sudden-death::before {
+      content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 800px; height: 600px; border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(255,107,107,0.06) 0%, transparent 55%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* SD ticker banner */
+    .sd-ticker {
+      display: flex; align-items: center; justify-content: center; gap: 16px;
+      padding: 14px 24px; position: relative; z-index: 1;
+      background: linear-gradient(180deg, rgba(255,107,107,0.08) 0%, transparent 100%);
+      border-bottom: 1px solid rgba(255,107,107,0.1);
+      animation: sd-pulse-bg 3s infinite;
+    }
+    @keyframes sd-pulse-bg {
+      0%,100% { background: linear-gradient(180deg, rgba(255,107,107,0.06) 0%, transparent 100%); }
+      50% { background: linear-gradient(180deg, rgba(255,107,107,0.12) 0%, transparent 100%); }
+    }
+    .sd-ticker-title {
+      font-size: 1rem; font-weight: 900; color: var(--coral);
+      text-transform: uppercase; letter-spacing: 3px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .sd-ticker-title svg { width: 20px; height: 20px; stroke: var(--coral); fill: none; stroke-width: 2.5; }
+    .sd-ticker-sub { font-size: 0.75rem; color: var(--grey); font-weight: 600; }
+
+    /* Duel header — VS display */
+    .sd-duel {
+      display: flex; align-items: center; justify-content: center; gap: 32px;
+      padding: 24px; position: relative; z-index: 1;
+    }
+    .sd-duelist {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+    }
+    .sd-duelist-avatar {
+      width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; font-weight: 900; border: 3px solid var(--lime);
+      box-shadow: 0 0 20px rgba(168,225,12,0.2); transition: all 0.3s;
+    }
+    .sd-duelist-avatar.you-avatar { border-color: var(--orange); box-shadow: 0 0 24px rgba(255,159,67,0.25); }
+    .sd-duelist-name { font-size: 0.82rem; font-weight: 700; }
+    .sd-duelist-tag {
+      font-size: 0.5rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+      padding: 2px 8px; border-radius: var(--radius-pill);
+    }
+    .sd-vs {
+      font-size: 1.4rem; font-weight: 900; color: var(--grey-dark);
+      padding: 12px 18px; background: rgba(255,107,107,0.06);
+      border: 1px solid rgba(255,107,107,0.12); border-radius: var(--radius-pill);
+      animation: sd-vs-pulse 2s infinite;
+    }
+    @keyframes sd-vs-pulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(255,107,107,0.15); }
+      50% { box-shadow: 0 0 20px 4px rgba(255,107,107,0.1); }
+    }
+
+    /* SD layout — single centered column */
+    .sd-layout {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 0 40px 24px; position: relative; z-index: 1;
+    }
+
+    /* SD stakes strip — inline below prediction */
+    .sd-stakes {
+      display: flex; align-items: center; gap: 24px; margin-top: 18px;
+      padding: 14px 28px; border-radius: var(--radius-lg);
+      background: rgba(255,107,107,0.04); border: 1px solid rgba(255,107,107,0.1);
+    }
+    .sd-stake-item {
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+    }
+    .sd-stake-value { font-size: 1.2rem; font-weight: 900; }
+    .sd-stake-label { font-size: 0.6rem; font-weight: 700; color: var(--grey); text-transform: uppercase; letter-spacing: 0.5px; }
+    .sd-stakes-divider { width: 1px; height: 32px; background: rgba(255,255,255,0.06); }
+
+    /* SD scoreboard inline */
+    .sd-score-strip {
+      display: flex; align-items: center; gap: 24px; margin-bottom: 16px;
+    }
+    .sd-score-player {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 16px; border-radius: var(--radius-lg);
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+    }
+    .sd-score-player.you-score { border-color: rgba(255,159,67,0.2); background: rgba(255,159,67,0.04); }
+    .sd-score-avatar {
+      width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; font-weight: 900;
+    }
+    .sd-score-name { font-size: 0.8rem; font-weight: 700; }
+    .sd-score-pts { font-size: 1rem; font-weight: 900; margin-left: 8px; }
+    .sd-score-dash { font-size: 0.9rem; font-weight: 800; color: var(--grey-dark); }
+
+    /* SD prediction card overrides */
+    .sudden-death .prediction-card {
+      border-color: rgba(255,107,107,0.15); max-width: 560px;
+    }
+    .sudden-death .prediction-card::before {
+      background: linear-gradient(135deg, rgba(255,107,107,0.1), transparent 50%, rgba(255,159,67,0.05));
+    }
+    .sudden-death .prediction-round { color: var(--coral); }
+    .sudden-death .prediction-round::before { background: var(--coral); }
+    .sudden-death .prediction-option:hover {
+      border-color: rgba(255,107,107,0.3);
+    }
+    .sudden-death .prediction-option:hover::before {
+      background: linear-gradient(180deg, rgba(255,107,107,0.05) 0%, transparent 100%);
+    }
+
+    /* SD round counter badge */
+    .sd-round-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 18px; border-radius: var(--radius-pill);
+      background: rgba(255,107,107,0.06); border: 1px solid rgba(255,107,107,0.12);
+      font-size: 0.75rem; font-weight: 700; color: var(--grey); margin-bottom: 16px;
+    }
+    .sd-round-badge strong { color: var(--coral); font-size: 1rem; }
+    .sd-round-badge .sd-flash {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--coral);
+      animation: pulse-live 1.5s infinite;
+    }
+
+    /* ═══════════════════════════════
+       VICTORY (Cinematic centered)
+    ═══════════════════════════════ */
+    .victory {
+      padding: 0; position: relative; min-height: calc(100vh - 40px);
+      display: flex; flex-direction: column;
+    }
+    .victory::before {
+      content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 900px; height: 700px; border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(255,215,0,0.07) 0%, rgba(255,159,67,0.03) 30%, transparent 55%);
+      pointer-events: none; z-index: 0;
+    }
+    .victory-ticker {
+      display: flex; align-items: center; justify-content: center; gap: 16px;
+      padding: 14px 24px; position: relative; z-index: 1;
+      background: linear-gradient(180deg, rgba(255,215,0,0.08) 0%, transparent 100%);
+      border-bottom: 1px solid rgba(255,215,0,0.1);
+    }
+    .victory-ticker-title {
+      font-size: 1rem; font-weight: 900; color: var(--gold);
+      text-transform: uppercase; letter-spacing: 3px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .victory-ticker-title svg { width: 20px; height: 20px; stroke: var(--gold); fill: none; stroke-width: 2.5; }
+    .victory-ticker-sub { font-size: 0.75rem; color: var(--grey); font-weight: 600; }
+    .victory-layout {
+      flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 32px 40px; position: relative; z-index: 1; text-align: center;
+    }
+    .victory-crown { animation: float 2s ease-in-out infinite; margin-bottom: 8px; }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+    .victory-title { font-size: 2.4rem; font-weight: 900; margin-bottom: 4px; }
+    .victory-title span { color: var(--lime); }
+    .victory-sub { font-size: 1rem; color: var(--grey); margin-bottom: 28px; }
+    .victory-avatar {
+      width: 110px; height: 110px; border-radius: 50%; margin: 0 auto 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 2rem; font-weight: 900; border: 4px solid var(--gold);
+      box-shadow: 0 0 50px rgba(255,215,0,0.3), 0 0 100px rgba(255,215,0,0.1);
+    }
+    .victory-winner-name { font-size: 1.4rem; font-weight: 800; margin-bottom: 24px; }
+    .victory-stats {
+      display: flex; gap: 0; margin-bottom: 28px;
+      background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg); overflow: hidden;
+    }
+    .victory-stat {
+      text-align: center; padding: 16px 28px;
+      border-right: 1px solid rgba(255,255,255,0.06);
+    }
+    .victory-stat:last-child { border-right: none; }
+    .victory-stat-value { font-size: 1.6rem; font-weight: 900; }
+    .victory-stat-label { font-size: 0.65rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+    .victory-badge {
+      display: inline-flex; align-items: center; gap: 8px; padding: 12px 24px;
+      background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,159,67,0.1));
+      border: 1px solid rgba(255,215,0,0.3); border-radius: var(--radius-pill);
+      margin-bottom: 20px;
+    }
+    .victory-badge svg { width: 20px; height: 20px; stroke: var(--gold); fill: none; stroke-width: 2; }
+    .victory-badge-text { font-size: 0.85rem; font-weight: 700; color: var(--gold); }
+
+    /* Victory ELO strip */
+    .victory-elo-strip {
+      display: flex; align-items: center; gap: 16px; margin-bottom: 24px;
+      padding: 12px 24px; border-radius: var(--radius-lg);
+      background: rgba(168,225,12,0.04); border: 1px solid rgba(168,225,12,0.1);
+    }
+    .victory-elo-change { font-size: 1.8rem; font-weight: 900; color: var(--lime); }
+    .victory-elo-detail { text-align: left; }
+    .victory-elo-from { font-size: 0.72rem; color: var(--grey); }
+    .victory-elo-tier { font-size: 0.7rem; color: var(--gold); font-weight: 700; }
+
+    /* Victory podium */
+    .victory-podium {
+      display: flex; align-items: flex-end; gap: 8px; margin-bottom: 24px;
+    }
+    .victory-podium-slot {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      padding: 10px 14px; border-radius: var(--radius-lg);
+      background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+      min-width: 72px;
+    }
+    .victory-podium-slot.podium-1st {
+      background: rgba(255,215,0,0.06); border-color: rgba(255,215,0,0.15);
+      padding: 14px 18px;
+    }
+    .victory-podium-slot.podium-2nd {
+      background: rgba(192,192,192,0.04); border-color: rgba(192,192,192,0.1);
+    }
+    .victory-podium-slot.podium-3rd {
+      background: rgba(205,127,50,0.04); border-color: rgba(205,127,50,0.1);
+    }
+    .victory-podium-avatar {
+      width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 0.6rem; font-weight: 900;
+    }
+    .victory-podium-slot.podium-1st .victory-podium-avatar { width: 44px; height: 44px; font-size: 0.7rem; }
+    .victory-podium-name { font-size: 0.68rem; font-weight: 700; }
+    .victory-podium-place { font-size: 0.6rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .victory-actions { display: flex; gap: 12px; }
+
+    /* ═══════════════════════════════
+       RANKINGS SCREEN
+    ═══════════════════════════════ */
+    .rankings {
+      padding: 0; position: relative; min-height: calc(100vh - 40px);
+      display: flex; flex-direction: column;
+    }
+    .rankings::before {
+      content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+      width: 900px; height: 600px; border-radius: 50%;
+      background: radial-gradient(ellipse, rgba(124,92,252,0.06) 0%, rgba(78,205,196,0.03) 30%, transparent 55%);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* Rankings hero banner */
+    .rankings-hero {
+      position: relative; z-index: 1; text-align: center;
+      padding: 28px 24px 0;
+      background: linear-gradient(180deg, rgba(124,92,252,0.06) 0%, transparent 100%);
+      border-bottom: 1px solid rgba(124,92,252,0.08);
+    }
+    .rankings-hero-emblem {
+      width: 90px; height: 90px; border-radius: 50%; margin: 0 auto 12px;
+      display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+    .rankings-hero-emblem .rank-emblem-ring {
+      position: absolute; inset: 0; border-radius: 50%;
+      border: 3px solid var(--gold-c);
+      box-shadow: 0 0 30px rgba(255,215,0,0.2);
+    }
+    .rankings-hero-emblem .rank-emblem-inner {
+      width: 66px; height: 66px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .rankings-hero-name { font-size: 1.3rem; font-weight: 900; margin-bottom: 2px; }
+    .rankings-hero-tier { font-size: 0.8rem; font-weight: 700; margin-bottom: 12px; }
+    .rankings-hero-elo {
+      display: inline-flex; align-items: center; gap: 16px;
+      padding: 12px 28px; border-radius: var(--radius-lg);
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+      margin-bottom: 16px;
+    }
+    .rankings-hero-elo-big { font-size: 2rem; font-weight: 900; }
+    .rankings-hero-elo-label { font-size: 0.65rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .rankings-hero-elo-change { font-size: 1rem; font-weight: 800; }
+    .rankings-hero-progress {
+      max-width: 360px; margin: 0 auto 8px;
+    }
+    .rank-progress { height: 6px; background: rgba(255,255,255,0.08); border-radius: 6px; overflow: hidden; margin-bottom: 4px; }
+    .rank-progress-fill { height: 100%; border-radius: 6px; transition: width 0.6s; }
+    .rank-progress-text { font-size: 0.6rem; color: var(--grey); display: flex; justify-content: space-between; }
+    .rankings-hero-stats {
+      display: flex; justify-content: center; gap: 32px; padding: 16px 0;
+    }
+    .rankings-hero-stat { text-align: center; }
+    .rankings-hero-stat-val { font-size: 1.2rem; font-weight: 900; }
+    .rankings-hero-stat-label { font-size: 0.6rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* Tier strip inline */
+    .rankings-tier-strip {
+      display: flex; gap: 6px; justify-content: center; padding: 14px 24px;
+      position: relative; z-index: 1;
+    }
+    .rankings-tier-chip {
+      padding: 6px 14px; border-radius: var(--radius-pill); font-size: 0.65rem; font-weight: 700;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+      color: var(--grey); position: relative;
+    }
+    .rankings-tier-chip.current { border-width: 2px; }
+    .rankings-tier-chip .chip-you {
+      position: absolute; top: -7px; left: 50%; transform: translateX(-50%);
+      background: var(--coral); color: #fff; font-size: 0.4rem; font-weight: 900;
+      padding: 1px 5px; border-radius: var(--radius-pill); text-transform: uppercase;
+    }
+
+    /* Rankings body */
+    .rankings-
+
+    /* Rankings tabs */
+    .rank-tabs {
+      display: flex; gap: 4px; background: rgba(255,255,255,0.03); border-radius: var(--radius-pill);
+      padding: 3px; margin-bottom: 20px; border: 1px solid rgba(255,255,255,0.06);
+    }
+    .rank-tab {
+      padding: 8px 18px; border-radius: var(--radius-pill); border: none;
+      background: none; color: var(--grey); font-family: inherit; font-size: 0.75rem;
+      font-weight: 600; cursor: pointer; transition: all 0.15s; flex: 1; text-align: center;
+    }
+    .rank-tab:hover { color: var(--off-white); }
+    .rank-tab.active { background: var(--coral); color: #fff; }
+
+    .rank-content { width: 100%; }
+    .rank-panel { display: none; }
+    .rank-panel.active { display: block; }
+
+    /* Global rankings table */
+    .rank-row {
+      display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+      background: rgba(255,255,255,0.02); border-radius: var(--radius-md); margin-bottom: 6px;
+      border: 1px solid rgba(255,255,255,0.04); transition: all 0.15s;
+    }
+    .rank-row:hover { background: rgba(255,255,255,0.04); }
+    .rank-row.you { border: 2px solid rgba(255,159,67,0.3); background: rgba(255,159,67,0.04); }
+    .rank-row.top3 { border: 1px solid rgba(255,215,0,0.15); }
+    .rank-pos { width: 28px; font-size: 0.8rem; font-weight: 800; text-align: center; }
+    .rank-pos.gold { color: var(--gold); }
+    .rank-pos.silver { color: var(--silver); }
+    .rank-pos.bronze { color: var(--bronze); }
+    .rank-avatar {
+      width: 34px; height: 34px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.6rem; font-weight: 800; flex-shrink: 0;
+    }
+    .rank-name { flex: 1; font-size: 0.82rem; font-weight: 600; }
+    .rank-name .you-tag {
+      background: var(--orange); color: var(--navy); font-size: 0.5rem; font-weight: 800;
+      padding: 1px 6px; border-radius: var(--radius-pill); margin-left: 6px; vertical-align: 2px;
+    }
+    .rank-tier-badge {
+      padding: 3px 8px; border-radius: var(--radius-pill); font-size: 0.55rem; font-weight: 700;
+    }
+    .rank-elo-val { font-size: 0.82rem; font-weight: 800; min-width: 48px; text-align: right; }
+    .rank-change { font-size: 0.65rem; font-weight: 700; min-width: 36px; text-align: right; }
+    .rank-change.up { color: var(--lime); }
+    .rank-change.down { color: var(--coral); }
+
+    /* Points table */
+    .points-grid {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 20px;
+    }
+    .points-cell {
+      background: rgba(255,255,255,0.02); border-radius: var(--radius-md); padding: 14px 10px;
+      text-align: center; border: 1px solid rgba(255,255,255,0.06);
+    }
+    .points-cell-pos { font-size: 0.65rem; color: var(--grey); font-weight: 600; }
+    .points-cell-val { font-size: 1.1rem; font-weight: 800; margin-top: 2px; }
+    .points-cell:first-child .points-cell-val { color: var(--gold); }
+
+    .elo-explain {
+      background: rgba(255,255,255,0.02); border-radius: var(--radius-lg); padding: 20px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .elo-explain-title { font-size: 0.75rem; font-weight: 700; margin-bottom: 10px; }
+    .elo-explain-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.78rem; }
+    .elo-explain-row .label { color: var(--grey); }
+    .elo-explain-row .value { font-weight: 700; }
+
+    /* Match history */
+    .history-row {
+      display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+      background: rgba(255,255,255,0.02); border-radius: var(--radius-md); margin-bottom: 6px;
+      border: 1px solid rgba(255,255,255,0.04); transition: all 0.15s;
+    }
+    .history-row:hover { background: rgba(255,255,255,0.04); }
+    .history-place {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.75rem; font-weight: 900;
+    }
+    .history-info { flex: 1; }
+    .history-match { font-size: 0.82rem; font-weight: 600; }
+    .history-meta { font-size: 0.62rem; color: var(--grey); margin-top: 2px; }
+    .history-elo-change { text-align: right; }
+    .history-elo-delta { font-size: 0.85rem; font-weight: 800; }
+    .history-elo-delta.up { color: var(--lime); }
+    .history-elo-delta.down { color: var(--coral); }
+    .history-elo-total { font-size: 0.6rem; color: var(--grey); }
+
+    /* ══ CONFETTI ══ */
+    .confetti-container {
+      position: fixed; inset: 0; pointer-events: none; z-index: 150; overflow: hidden; display: none;
+    }
+    .confetti-container.show { display: block; }
+    .confetti-piece {
+      position: absolute; width: 8px; height: 8px; top: -10px;
+      animation: confettiFall linear forwards;
+    }
+    @keyframes confettiFall { 0%{transform:translateY(0) rotate(0deg);opacity:1} 100%{transform:translateY(100vh) rotate(720deg);opacity:0} }
+
+    /* ══ TOAST ══ */
+
+    /* ══ DEMO NAV ══ */
+    .demo-nav {
+      position: fixed; bottom: 0; left: 0; right: 0; z-index: 300;
+      background: rgba(26,26,46,0.95); border-top: 1px solid rgba(255,255,255,0.08);
+      padding: 8px 12px; display: flex; gap: 6px; overflow-x: auto;
+      backdrop-filter: blur(10px);
+    }
+    .demo-nav button {
+      padding: 6px 12px; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.1);
+      background: var(--navy-card); color: var(--grey); font-family: inherit;
+      font-size: 0.62rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .demo-nav button:hover { background: var(--navy-hover); color: var(--off-white); }
+    .demo-nav button.active { background: var(--coral); color: #fff; border-color: var(--coral); }
+
+    /* ══ HOW TO PLAY BUTTON ══ */
+    .btn-how-to-play {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 8px 18px; border-radius: var(--radius-pill);
+      background: var(--navy-card); border: 1px solid rgba(168,225,12,0.2);
+      color: var(--lime); font-family: inherit; font-size: 0.78rem; font-weight: 700;
+      cursor: pointer; transition: all 0.2s;
+    }
+    .btn-how-to-play:hover { background: rgba(168,225,12,0.08); border-color: var(--lime); transform: translateY(-1px); }
+    .btn-how-to-play svg { width: 16px; height: 16px; stroke: var(--lime); fill: none; stroke-width: 2; }
+
+    /* ══ HOW-TO-PLAY MODAL ══ */
+    .htp-overlay {
+      position: fixed; inset: 0; z-index: 500;
+      background: rgba(10,10,20,0.85); backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.3s ease;
+    }
+    .htp-overlay.open { opacity: 1; pointer-events: auto; }
+    .htp-modal {
+      background: var(--navy-light); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-xl); width: 680px; max-width: 94vw; max-height: 88vh;
+      overflow: hidden; display: flex; flex-direction: column;
+      box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+      transform: translateY(20px) scale(0.97); transition: transform 0.3s ease;
+    }
+    .htp-overlay.open .htp-modal { transform: translateY(0) scale(1); }
+
+    .htp-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 20px 28px 16px; border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .htp-header-title { font-size: 1.1rem; font-weight: 800; display: flex; align-items: center; gap: 10px; }
+    .htp-header-title svg { width: 22px; height: 22px; stroke: var(--lime); fill: none; stroke-width: 2; }
+    .htp-close {
+      width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,0.06);
+      border: none; color: var(--grey); font-size: 1.1rem; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+    }
+    .htp-close:hover { background: rgba(255,107,107,0.15); color: var(--coral); }
+
+    /* Steps indicator */
+    .htp-steps-bar {
+      display: flex; align-items: center; gap: 6px; padding: 16px 28px 0;
+    }
+    .htp-step-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.1);
+      transition: all 0.3s;
+    }
+    .htp-step-dot.active { background: var(--lime); width: 28px; border-radius: 4px; }
+    .htp-step-dot.done { background: rgba(168,225,12,0.4); }
+    .htp-step-label {
+      margin-left: auto; font-size: 0.68rem; font-weight: 600; color: var(--grey-dark);
+    }
+
+    /* Step content */
+    .htp-body {
+      flex: 1; overflow-y: auto; min-height: 0;
+      padding: 20px 28px;
+    }
+    .htp-slide { display: none; animation: htpFadeIn 0.35s ease; }
+    .htp-slide.active { display: block; }
+    @keyframes htpFadeIn { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: translateX(0); } }
+
+    .htp-slide-graphic {
+      width: 100%; border-radius: var(--radius-lg); overflow: hidden;
+      margin-bottom: 20px; position: relative;
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.06);
+    }
+    .htp-slide-graphic svg { width: 100%; display: block; }
+
+    .htp-slide-number {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 28px; height: 28px; border-radius: 50%; background: var(--lime); color: var(--navy);
+      font-size: 0.78rem; font-weight: 900; margin-bottom: 10px;
+    }
+    .htp-slide-title { font-size: 1.2rem; font-weight: 800; margin-bottom: 8px; }
+    .htp-slide-desc { font-size: 0.88rem; color: var(--grey); line-height: 1.6; }
+    .htp-slide-desc strong { color: var(--off-white); }
+    .htp-slide-desc .hl-lime { color: var(--lime); font-weight: 700; }
+    .htp-slide-desc .hl-coral { color: var(--coral); font-weight: 700; }
+    .htp-slide-desc .hl-gold { color: var(--gold); font-weight: 700; }
+    .htp-slide-desc .hl-purple { color: var(--purple); font-weight: 700; }
+
+    .htp-tips {
+      margin-top: 16px; padding: 12px 16px; background: rgba(168,225,12,0.05);
+      border: 1px solid rgba(168,225,12,0.12); border-radius: var(--radius-md);
+    }
+    .htp-tips-title { font-size: 0.7rem; font-weight: 800; color: var(--lime); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .htp-tips-text { font-size: 0.78rem; color: var(--grey); line-height: 1.5; }
+
+    /* Footer nav */
+    .htp-footer {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 28px; border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .htp-btn {
+      padding: 10px 24px; border-radius: var(--radius-pill); border: none;
+      font-family: inherit; font-size: 0.82rem; font-weight: 700; cursor: pointer;
+      display: flex; align-items: center; gap: 6px; transition: all 0.15s;
+    }
+    .htp-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .htp-btn-back { background: var(--navy-card); color: var(--grey); }
+    .htp-btn-back:hover { color: var(--off-white); background: var(--navy-hover); }
+    .htp-btn-next { background: var(--lime); color: var(--navy); }
+    .htp-btn-next:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(168,225,12,0.25); }
+    .htp-btn-start { background: linear-gradient(135deg, var(--lime), var(--teal)); color: var(--navy); }
+    .htp-btn-start:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(168,225,12,0.35); }
+
+    /* ── Responsive ── */</style>
+</head>
+<body>
+
+  <!-- Sidebar -->
+  <div id="sidebar-placeholder"></div>
+
+  <!-- Main Content -->
+  <div class="main">
+
+    <!-- TOP BAR -->
+  <header class="topbar">
+    <button class="mobile-menu-btn" onclick="toggleSidebar()">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <a href="dashboard.html" class="topbar-back">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Back
+    </a>
+    <div class="topbar-center">
+      <div class="topbar-match" id="topbar-match-text">Battle Royale Mode</div>
+      <div class="topbar-title">
+        Battle Royale
+        <span class="br-badge">BR</span>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <button class="topbar-btn" id="topbar-rank-btn" onclick="showScreen('rankings')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+        Rankings
+      </button>
+    </div>
+  </header>
+
+  <!-- ═══ SCREEN: GAMES PICKER ═══ -->
+  <div class="screen active" id="screen-games">
+    <div class="games">
+      <div class="games-layout">
+
+        <!-- LEFT: Games List -->
+        <div class="games-left">
+          <div class="games-header">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;">
+              <h2>
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                Pick Your Battle
+              </h2>
+              <button class="btn-how-to-play" onclick="openHowToPlay()">
+                <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                How to Play
+              </button>
+            </div>
+            <p>Choose an upcoming match to enter the Battle Royale queue</p>
+          </div>
+
+          <div class="games-date-strip">
+            <div class="games-date-label">Today — <span>10 Apr 2026</span></div>
+            <div class="games-live-count">
+              <div class="live-dot"></div>
+              2 Live Now
+            </div>
+          </div>
+
+          <div class="games-list">
+            <!-- Barca vs Real Madrid — LIVE 32' (1st half: Full Match only) -->
+            <div class="game-card">
+              <div class="game-card-time"><div class="time-live"><span class="dot"></span> LIVE</div><div class="time-label" style="color:var(--coral)">32'</div></div>
+              <div class="game-card-teams"><div class="game-card-matchup"><div class="game-card-crest">Barcelona</div><div class="game-card-vs">vs</div><div class="game-card-crest">Real Madrid</div></div><div class="game-card-league">La Liga · Matchday 32</div></div>
+              <div class="game-card-modes">
+                <button class="game-mode-btn mode-hot" onclick="event.stopPropagation();joinGame(0,'full')"><span class="mode-icon">⚔️</span><span class="mode-name">Full Match</span><span class="mode-info">10 rounds</span></button>
+                <button class="game-mode-btn mode-locked"><span class="mode-icon">⚡</span><span class="mode-name">Sprint</span><span class="mode-info">Half-time</span></button>
+                <button class="game-mode-btn mode-locked"><span class="mode-icon">🔥</span><span class="mode-name">Final 15</span><span class="mode-info">75th min</span></button>
+              </div>
+            </div>
+            <!-- Liverpool vs Man City — LIVE 58' (2nd half: Full + Sprint unlocked) -->
+            <div class="game-card">
+              <div class="game-card-time"><div class="time-live"><span class="dot"></span> LIVE</div><div class="time-label" style="color:var(--coral)">58'</div></div>
+              <div class="game-card-teams"><div class="game-card-matchup"><div class="game-card-crest">Liverpool</div><div class="game-card-vs">vs</div><div class="game-card-crest">Man City</div></div><div class="game-card-league">Premier League · Matchday 33</div></div>
+              <div class="game-card-modes">
+                <button class="game-mode-btn" onclick="event.stopPropagation();joinGame(1,'full')"><span class="mode-icon">⚔️</span><span class="mode-name">Full Match</span><span class="mode-info">10 rounds</span></button>
+                <button class="game-mode-btn mode-hot" onclick="event.stopPropagation();joinGame(1,'sprint')"><span class="mode-icon">⚡</span><span class="mode-name">Sprint</span><span class="mode-info">7 rounds</span></button>
+                <button class="game-mode-btn mode-locked"><span class="mode-icon">🔥</span><span class="mode-name">Final 15</span><span class="mode-info">75th min</span></button>
+              </div>
+            </div>
+            <!-- Arsenal vs Chelsea — LIVE 78' (late game: all 3 unlocked) -->
+            <div class="game-card">
+              <div class="game-card-time"><div class="time-live"><span class="dot"></span> LIVE</div><div class="time-label" style="color:var(--coral)">78'</div></div>
+              <div class="game-card-teams"><div class="game-card-matchup"><div class="game-card-crest">Arsenal</div><div class="game-card-vs">vs</div><div class="game-card-crest">Chelsea</div></div><div class="game-card-league">Premier League · Matchday 33</div></div>
+              <div class="game-card-modes">
+                <button class="game-mode-btn" onclick="event.stopPropagation();joinGame(2,'full')"><span class="mode-icon">⚔️</span><span class="mode-name">Full Match</span><span class="mode-info">10 rounds</span></button>
+                <button class="game-mode-btn" onclick="event.stopPropagation();joinGame(2,'sprint')"><span class="mode-icon">⚡</span><span class="mode-name">Sprint</span><span class="mode-info">7 rounds</span></button>
+                <button class="game-mode-btn mode-hot" onclick="event.stopPropagation();joinGame(2,'final15')"><span class="mode-icon">🔥</span><span class="mode-name">Final 15</span><span class="mode-info">5 rounds</span></button>
+              </div>
+            </div>
+            <!-- Juventus vs Napoli — Pre-match (all 3 available to pre-join) -->
+            <div class="game-card">
+              <div class="game-card-time"><div class="time-val">18:45</div><div class="time-label">Today</div></div>
+              <div class="game-card-teams"><div class="game-card-matchup"><div class="game-card-crest">Juventus</div><div class="game-card-vs">vs</div><div class="game-card-crest">Napoli</div></div><div class="game-card-league">Serie A · Matchday 30</div></div>
+              <div class="game-card-modes">
+                <button class="game-mode-btn" onclick="event.stopPropagation();joinGame(3,'full')"><span class="mode-icon">⚔️</span><span class="mode-name">Full Match</span><span class="mode-info">10 rounds</span></button>
+                <button class="game-mode-btn" onclick="event.stopPropagation();joinGame(3,'sprint')"><span class="mode-icon">⚡</span><span class="mode-name">Sprint</span><span class="mode-info">7 rounds</span></button>
+                <button class="game-mode-btn" onclick="event.stopPropagation();joinGame(3,'final15')"><span class="mode-icon">🔥</span><span class="mode-name">Final 15</span><span class="mode-info">5 rounds</span></button>
+              </div>
+            </div>
+            <!-- Bayern vs Dortmund — Pre-match -->
+            <div class="game-card">
+              <div class="game-card-time"><div class="time-val">20:00</div><div class="time-label">Today</div></div>
+              <div class="game-card-teams"><div class="game-card-matchup"><div class="game-card-crest">Bayern</div><div class="game-card-vs">vs</div><div class="game-card-crest">Dortmund</div></div><div class="game-card-league">Bundesliga · Matchday 29</div></div>
+              <div class="game-card-modes">
+                <button class="game-mode-btn" onclick="event.stopPropagation();joinGame(4,'full')"><span class="mode-icon">⚔️</span><span class="mode-name">Full Match</span><span class="mode-info">10 rounds</span></button>
+                <button class="game-mode-btn" onclick="event.stopPropagation();joinGame(4,'sprint')"><span class="mode-icon">⚡</span><span class="mode-name">Sprint</span><span class="mode-info">7 rounds</span></button>
+                <button class="game-mode-btn" onclick="event.stopPropagation();joinGame(4,'final15')"><span class="mode-icon">🔥</span><span class="mode-name">Final 15</span><span class="mode-info">5 rounds</span></button>
+              </div>
+            </div>
+          </div>
+
+          <div class="games-tier-hint">
+            <strong>Starter:</strong> 1 BR per day &nbsp;·&nbsp; <strong>Pro:</strong> 5 per day &nbsp;·&nbsp; <strong>Elite:</strong> Unlimited
+          </div>
+        </div>
+
+        <!-- RIGHT: Rankings Sidebar -->
+        <div class="games-right">
+
+          <!-- Your Rank -->
+          <div class="side-panel">
+            <div class="side-panel-title">Your BR Rank</div>
+            <div class="side-rank-header">
+              <div class="side-rank-emblem" style="background:var(--gold-dim);">
+                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>
+              </div>
+              <div class="side-rank-info">
+                <div class="side-rank-name">BranWilson</div>
+                <div class="side-rank-tier" style="color:var(--gold-c);">Gold Tier</div>
+                <div class="side-rank-elo">ELO <strong>1,720</strong></div>
+              </div>
+            </div>
+            <div class="side-rank-bar"><div class="side-rank-bar-fill" style="width:44%;background:var(--gold-c);"></div></div>
+            <div class="side-rank-bar-text"><span>280 to Platinum</span><span>44%</span></div>
+            <div class="side-rank-stats">
+              <div class="side-stat"><div class="side-stat-val" style="color:var(--coral);">#34</div><div class="side-stat-label">Global</div></div>
+              <div class="side-stat"><div class="side-stat-val">47</div><div class="side-stat-label">Matches</div></div>
+              <div class="side-stat"><div class="side-stat-val" style="color:var(--lime);">8</div><div class="side-stat-label">Wins</div></div>
+            </div>
+          </div>
+
+          <!-- Tier Ladder -->
+          <div class="side-panel">
+            <div class="side-panel-title">Tier Ladder</div>
+            <div class="side-tier-ladder">
+              <div class="side-tier-row">
+                <div class="side-tier-dot" style="background:var(--champion);"></div>
+                <div class="side-tier-name" style="color:var(--champion);">Champion</div>
+                <div class="side-tier-range">3600+</div>
+              </div>
+              <div class="side-tier-row">
+                <div class="side-tier-dot" style="background:var(--diamond);"></div>
+                <div class="side-tier-name" style="color:var(--diamond);">Diamond</div>
+                <div class="side-tier-range">2800–3599</div>
+              </div>
+              <div class="side-tier-row">
+                <div class="side-tier-dot" style="background:var(--platinum);"></div>
+                <div class="side-tier-name" style="color:var(--platinum);">Platinum</div>
+                <div class="side-tier-range">2000–2799</div>
+              </div>
+              <div class="side-tier-row current">
+                <div class="side-tier-dot" style="background:var(--gold-c);"></div>
+                <div class="side-tier-name" style="color:var(--gold-c);">Gold</div>
+                <div class="side-tier-range">1500–1999</div>
+                <div class="side-tier-you">YOU</div>
+              </div>
+              <div class="side-tier-row">
+                <div class="side-tier-dot" style="background:var(--silver);"></div>
+                <div class="side-tier-name" style="color:var(--silver);">Silver</div>
+                <div class="side-tier-range">1200–1499</div>
+              </div>
+              <div class="side-tier-row">
+                <div class="side-tier-dot" style="background:var(--bronze);"></div>
+                <div class="side-tier-name" style="color:var(--bronze);">Bronze</div>
+                <div class="side-tier-range">0–1199</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Recent Matches -->
+          <div class="side-panel">
+            <div class="side-panel-title">Recent BR Matches</div>
+            <div class="side-recent">
+              <div class="side-recent-row">
+                <div class="side-recent-place" style="background:var(--gold-dim);color:var(--gold-c);">1st</div>
+                <div class="side-recent-info"><div class="side-recent-match">BAR vs RMA</div><div class="side-recent-meta">La Liga · 10 Apr</div></div>
+                <div class="side-recent-elo up">+42</div>
+              </div>
+              <div class="side-recent-row">
+                <div class="side-recent-place" style="background:rgba(255,107,107,0.12);color:var(--coral);">5th</div>
+                <div class="side-recent-info"><div class="side-recent-match">ARS vs CHE</div><div class="side-recent-meta">PL · 8 Apr</div></div>
+                <div class="side-recent-elo down">-8</div>
+              </div>
+              <div class="side-recent-row">
+                <div class="side-recent-place" style="background:var(--lime-dim);color:var(--lime);">2nd</div>
+                <div class="side-recent-info"><div class="side-recent-match">MUN vs LIV</div><div class="side-recent-meta">PL · 6 Apr</div></div>
+                <div class="side-recent-elo up">+28</div>
+              </div>
+              <div class="side-recent-row">
+                <div class="side-recent-place" style="background:var(--gold-dim);color:var(--gold-c);">1st</div>
+                <div class="side-recent-info"><div class="side-recent-match">LAK vs CEL</div><div class="side-recent-meta">NBA · 4 Apr</div></div>
+                <div class="side-recent-elo up">+38</div>
+              </div>
+              <div class="side-recent-row">
+                <div class="side-recent-place" style="background:rgba(255,107,107,0.12);color:var(--coral);">7th</div>
+                <div class="side-recent-info"><div class="side-recent-match">BAY vs BVB</div><div class="side-recent-meta">Bundesliga · 2 Apr</div></div>
+                <div class="side-recent-elo down">-15</div>
+              </div>
+            </div>
+            <button class="side-view-all" onclick="showScreen('rankings')">View Full Rankings</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SCREEN: LOBBY / QUEUE ═══ -->
+  <div class="screen" id="screen-lobby">
+    <div class="lobby">
+
+      <!-- Match banner -->
+      <div class="lobby-match-banner">
+        <div class="lobby-match-league" id="lobby-league">La Liga · Matchday 32</div>
+        <div class="lobby-match-teams">
+          <div class="lobby-team">
+            <div class="lobby-team-crest" id="lobby-home-crest">BAR</div>
+            <div class="lobby-team-name" id="lobby-home-name">Barcelona</div>
+          </div>
+          <div class="lobby-vs">VS</div>
+          <div class="lobby-team">
+            <div class="lobby-team-crest" id="lobby-away-crest">RMA</div>
+            <div class="lobby-team-name" id="lobby-away-name">Real Madrid</div>
+          </div>
+        </div>
+        <div class="lobby-match-time" id="lobby-time-label"><div class="live-pulse"></div> Live · 32'</div>
+        <div class="lobby-mode-strip">
+          <div class="lobby-mode-badge" id="lobby-mode-badge">⚔️ Full Match</div>
+          <div class="lobby-mode-info" id="lobby-mode-info">10 rounds · 15s per question</div>
+        </div>
+      </div>
+
+      <div class="lobby-divider"></div>
+
+      <!-- Player roster grid -->
+      <div class="lobby-roster" id="lobbyRoster">
+        <div class="lobby-player-card you-card">
+          <div class="lobby-card-number">1</div>
+          <div class="lobby-card-you-tag">YOU</div>
+          <div class="lobby-card-avatar av-self" style="background:rgba(255,159,67,0.12);color:var(--orange);">BR</div>
+          <div class="lobby-card-name">Bran</div>
+        </div>
+        <div class="lobby-player-card joined">
+          <div class="lobby-card-number">2</div>
+          <div class="lobby-card-avatar av-user" data-name="MR" style="background:var(--lime-dim);color:var(--lime);">MR</div>
+          <div class="lobby-card-name">Marco</div>
+        </div>
+        <div class="lobby-player-card joined">
+          <div class="lobby-card-number">3</div>
+          <div class="lobby-card-avatar av-user" data-name="JL" style="background:rgba(124,92,252,0.12);color:var(--purple);">JL</div>
+          <div class="lobby-card-name">Julia</div>
+        </div>
+        <div class="lobby-player-card joined">
+          <div class="lobby-card-number">4</div>
+          <div class="lobby-card-avatar av-user" data-name="AL" style="background:rgba(78,205,196,0.12);color:var(--teal);">AL</div>
+          <div class="lobby-card-name">Alex</div>
+        </div>
+        <div class="lobby-player-card joined">
+          <div class="lobby-card-number">5</div>
+          <div class="lobby-card-avatar av-user" data-name="SR" style="background:rgba(255,107,107,0.12);color:var(--coral);">SR</div>
+          <div class="lobby-card-name">Sara</div>
+        </div>
+        <div class="lobby-player-card joined">
+          <div class="lobby-card-number">6</div>
+          <div class="lobby-card-avatar av-user" data-name="TK" style="background:rgba(255,159,67,0.12);color:var(--orange);">TK</div>
+          <div class="lobby-card-name">TipKing99</div>
+        </div>
+        <div class="lobby-player-card joined">
+          <div class="lobby-card-number">7</div>
+          <div class="lobby-card-avatar av-user" data-name="PK" style="background:rgba(124,92,252,0.12);color:var(--purple);">PK</div>
+          <div class="lobby-card-name">PatKing</div>
+        </div>
+        <div class="lobby-player-card empty-card">
+          <div class="lobby-card-number">8</div>
+          <div class="lobby-card-avatar">?</div>
+          <div class="lobby-card-name">Waiting…</div>
+        </div>
+        <div class="lobby-player-card empty-card">
+          <div class="lobby-card-number">9</div>
+          <div class="lobby-card-avatar">?</div>
+          <div class="lobby-card-name">Waiting…</div>
+        </div>
+        <div class="lobby-player-card empty-card">
+          <div class="lobby-card-number">10</div>
+          <div class="lobby-card-avatar">?</div>
+          <div class="lobby-card-name">Waiting…</div>
+        </div>
+      </div>
+
+      <!-- Status bar -->
+      <div class="lobby-status-bar">
+        <div class="lobby-count-row">
+          <div class="lobby-count-big" id="lobbyCount">7</div>
+          <div class="lobby-count-label">of 10 players joined</div>
+        </div>
+        <div class="lobby-progress-track">
+          <div class="lobby-progress-fill" style="width:70%;"></div>
+        </div>
+        <div class="lobby-waiting-text">
+          <div class="lobby-waiting-dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+          <span>Waiting for players to fill the lobby</span>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="lobby-actions">
+        <button class="btn btn-ghost" onclick="showScreen('games')">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          Leave Queue
+        </button>
+        <button class="btn btn-coral" onclick="startGame()">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Ready Up
+        </button>
+      </div>
+
+      <div class="tier-hint">
+        <strong>Free:</strong> 1 BR per day &nbsp;·&nbsp; <strong>Pro:</strong> 3 per day &nbsp;·&nbsp; <strong>Elite:</strong> Unlimited
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SCREEN: ARENA ═══ -->
+  <div class="screen" id="screen-arena">
+    <div class="arena">
+
+      <!-- Live match ticker -->
+      <div class="match-ticker">
+        <span class="mode-badge-dynamic" style="font-size:0.65rem;font-weight:800;padding:3px 10px;border:1px solid var(--coral);border-radius:20px;color:var(--coral);">⚔️ Full Match BR</span>
+        <span class="match-ticker-score" id="arenaMatchScore">Barcelona 1 – 0 Real Madrid</span>
+        <span class="match-ticker-time" id="arenaMatchTime">23'</span>
+        <span class="match-ticker-event"><strong>Goal!</strong> Pedri 21'</span>
+      </div>
+
+      <!-- Round progress strip -->
+      <div class="round-strip" id="roundBar">
+        <!-- JS populates round pips -->
+      </div>
+
+      <!-- Two-column layout -->
+      <div class="arena-layout">
+
+        <!-- LEFT: Main gameplay -->
+        <div class="arena-left">
+          <div class="arena-alive-badge">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--lime)" stroke-width="2.5"><circle cx="12" cy="12" r="10"/></svg>
+            <strong id="aliveCount">8</strong> players alive
+          </div>
+
+          <div class="timer-ring-wrap">
+            <svg class="timer-ring-svg" viewBox="0 0 120 120">
+              <circle class="timer-ring-bg" cx="60" cy="60" r="54" />
+              <circle class="timer-ring-fill" id="timerRing" cx="60" cy="60" r="54" />
+            </svg>
+            <div class="timer-ring-text" id="timerText">15</div>
+          </div>
+
+          <div class="prediction-card" id="predictionCard">
+            <div class="prediction-round" id="predRound">Round 3 of 10</div>
+            <div class="prediction-context" id="predContext">Pedri just scored — 1-0 Barcelona (23')</div>
+            <div class="prediction-question" id="predQuestion">Will Real Madrid equalise before halftime?</div>
+            <div class="prediction-options" id="predOptions">
+              <button class="prediction-option" onclick="selectOption(this, 0)">Yes, they'll equalise</button>
+              <button class="prediction-option" onclick="selectOption(this, 1)">No, Barcelona holds</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Players sidebar -->
+        <div class="arena-right">
+          <!-- Player List -->
+          <div class="live-side-panel">
+            <div class="live-side-title">Players</div>
+            <div class="live-side-players" id="arena-player-list">
+              <div class="live-side-player you-row"><div class="live-side-avatar" style="background:rgba(255,159,67,0.12);color:var(--orange);">BR</div><div class="live-side-name" style="color:var(--orange);">Bran</div><div class="live-side-status alive">ALIVE</div></div>
+              <div class="live-side-player"><div class="live-side-avatar" style="background:var(--lime-dim);color:var(--lime);">MR</div><div class="live-side-name">Marco</div><div class="live-side-status alive">ALIVE</div></div>
+              <div class="live-side-player"><div class="live-side-avatar" style="background:rgba(124,92,252,0.12);color:var(--purple);">JL</div><div class="live-side-name">Julia</div><div class="live-side-status alive">ALIVE</div></div>
+              <div class="live-side-player"><div class="live-side-avatar" style="background:rgba(78,205,196,0.12);color:var(--teal);">AL</div><div class="live-side-name">Alex</div><div class="live-side-status alive">ALIVE</div></div>
+              <div class="live-side-player"><div class="live-side-avatar" style="background:rgba(255,107,107,0.12);color:var(--coral);">SR</div><div class="live-side-name">Sara</div><div class="live-side-status alive">ALIVE</div></div>
+              <div class="live-side-player"><div class="live-side-avatar" style="background:rgba(255,159,67,0.12);color:var(--orange);">TK</div><div class="live-side-name">TipKing99</div><div class="live-side-status alive">ALIVE</div></div>
+              <div class="live-side-player"><div class="live-side-avatar" style="background:rgba(124,92,252,0.12);color:var(--purple);">PK</div><div class="live-side-name">PatKing</div><div class="live-side-status alive">ALIVE</div></div>
+              <div class="live-side-player"><div class="live-side-avatar" style="background:rgba(78,205,196,0.12);color:var(--teal);">NK</div><div class="live-side-name">NikoFan</div><div class="live-side-status alive">ALIVE</div></div>
+            </div>
+          </div>
+          <!-- Live Events Feed -->
+          <div class="live-side-panel">
+            <div class="live-side-title">Live Events</div>
+            <div class="live-side-players" id="arena-events-feed">
+              <div class="live-side-player" style="border-color:rgba(168,225,12,0.15);">
+                <div class="live-side-avatar" style="background:rgba(168,225,12,0.12);color:var(--lime);">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>
+                </div>
+                <div class="live-side-name" style="font-size:0.7rem;">Round 2 — 6 correct</div>
+                <div class="live-side-status alive">OK</div>
+              </div>
+              <div class="live-side-player" style="border-color:rgba(255,107,107,0.15);">
+                <div class="live-side-avatar" style="background:rgba(255,107,107,0.12);color:var(--coral);">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+                </div>
+                <div class="live-side-name" style="font-size:0.7rem;">NikoFan eliminated R2</div>
+                <div class="live-side-status" style="background:rgba(255,107,107,0.12);color:var(--coral);">OUT</div>
+              </div>
+              <div class="live-side-player" style="border-color:rgba(168,225,12,0.15);">
+                <div class="live-side-avatar" style="background:rgba(168,225,12,0.12);color:var(--lime);">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>
+                </div>
+                <div class="live-side-name" style="font-size:0.7rem;">Round 1 — All survived</div>
+                <div class="live-side-status alive">OK</div>
+              </div>
+            </div>
+          </div>
+          <!-- Your Rank -->
+          <div class="live-side-panel">
+            <div class="live-side-title">Your BR Rank</div>
+            <div class="side-rank-header">
+              <div class="side-rank-emblem" style="background:var(--gold-dim);">
+                <svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>
+              </div>
+              <div class="side-rank-info">
+                <div class="side-rank-tier" style="color:var(--gold-c);">Gold Tier</div>
+                <div class="side-rank-elo">ELO <strong>1,720</strong></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SCREEN: SPECTATOR ═══ -->
+  <div class="screen" id="screen-spectator">
+    <div class="spectator">
+
+      <!-- Eliminated banner ticker -->
+      <div class="spectator-banner">
+        <span class="mode-badge-dynamic" style="font-size:0.6rem;font-weight:800;padding:3px 10px;border:1px solid var(--coral);border-radius:20px;color:var(--coral);">⚔️ Full Match BR</span>
+        <div class="spectator-banner-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>
+        </div>
+        <div class="spectator-banner-text">
+          <div class="spectator-banner-title">You've been eliminated!</div>
+          <div class="spectator-banner-sub">Wrong prediction on Round 5 — Watch the remaining players battle it out</div>
+        </div>
+      </div>
+
+      <!-- Round strip — showing your journey -->
+      <div class="spectator-round-strip">
+        <div class="spec-pip survived"></div>
+        <div class="spec-pip survived"></div>
+        <div class="spec-pip survived"></div>
+        <div class="spec-pip survived"></div>
+        <div class="spec-pip you-died"></div>
+        <div class="spec-pip"></div>
+        <div class="spec-pip active"></div>
+        <div class="spec-pip"></div>
+        <div class="spec-pip"></div>
+        <div class="spec-pip"></div>
+        <span class="round-label">Round <strong>7</strong> of 10</span>
+      </div>
+
+      <!-- Two-column layout -->
+      <div class="spectator-layout">
+
+        <!-- LEFT: Spectating the action -->
+        <div class="spectator-left">
+          <div class="spectator-mode-badge">
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--coral)" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            Spectating live
+            <div class="spec-live-dot"></div>
+          </div>
+
+          <div class="prediction-card">
+            <div class="prediction-round">Round 7 of 10 · Spectating</div>
+            <div class="prediction-context">VAR check — possible penalty (68')</div>
+            <div class="prediction-question">Will the referee award a penalty?</div>
+            <div class="prediction-options" style="pointer-events:none;opacity:0.45;">
+              <button class="prediction-option">Yes — Penalty</button>
+              <button class="prediction-option">No — Play on</button>
+            </div>
+          </div>
+
+          <div class="spectator-feed">
+            <div class="spectator-feed-title">Live Battle Feed</div>
+            <div class="spectator-feed-item">
+              <div class="feed-avatar" style="background:rgba(255,107,107,0.12);color:var(--coral);">PK</div>
+              <div class="feed-content"><div class="feed-content-text">PatKing99 eliminated — Round 6</div><div class="feed-content-time">Wrong: predicted "Over 2.5 corners"</div></div>
+              <div class="feed-result eliminated">OUT</div>
+            </div>
+            <div class="spectator-feed-item survive-event">
+              <div class="feed-avatar" style="background:var(--lime-dim);color:var(--lime);">MR</div>
+              <div class="feed-content"><div class="feed-content-text">Marco survived Round 6</div><div class="feed-content-time">Correct: "Under 2.5 corners"</div></div>
+              <div class="feed-result survived">ALIVE</div>
+            </div>
+            <div class="spectator-feed-item you-event">
+              <div class="feed-avatar" style="background:rgba(255,107,107,0.12);color:var(--coral);">BR</div>
+              <div class="feed-content"><div class="feed-content-text" style="color:var(--coral);">You eliminated — Round 5</div><div class="feed-content-time">Wrong: predicted "Next card Barcelona"</div></div>
+              <div class="feed-result eliminated">YOU</div>
+            </div>
+            <div class="spectator-feed-item survive-event">
+              <div class="feed-avatar" style="background:var(--lime-dim);color:var(--lime);">JL</div>
+              <div class="feed-content"><div class="feed-content-text">Julia survived Round 5</div><div class="feed-content-time">Correct: "Next card Real Madrid"</div></div>
+              <div class="feed-result survived">ALIVE</div>
+            </div>
+            <div class="spectator-feed-item">
+              <div class="feed-avatar" style="background:rgba(255,107,107,0.12);color:var(--coral);">SR</div>
+              <div class="feed-content"><div class="feed-content-text">Sara eliminated — Round 4</div><div class="feed-content-time">Wrong: predicted "No more goals this half"</div></div>
+              <div class="feed-result eliminated">OUT</div>
+            </div>
+            <div class="spectator-feed-item survive-event">
+              <div class="feed-avatar" style="background:rgba(78,205,196,0.12);color:var(--teal);">AL</div>
+              <div class="feed-content"><div class="feed-content-text">Alex survived Round 4</div><div class="feed-content-time">Correct: "At least 1 more goal"</div></div>
+              <div class="feed-result survived">ALIVE</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT: Sidebar -->
+        <div class="spectator-right">
+          <!-- Still playing -->
+          <div class="live-side-panel">
+            <div class="live-side-title">Still Playing · <span style="color:var(--lime);">4</span> Alive</div>
+            <div class="live-side-players">
+              <div class="live-side-player"><div class="live-side-avatar" style="background:var(--lime-dim);color:var(--lime);">MR</div><div class="live-side-name">Marco</div><div class="live-side-status alive">ALIVE</div></div>
+              <div class="live-side-player"><div class="live-side-avatar" style="background:rgba(124,92,252,0.12);color:var(--purple);">JL</div><div class="live-side-name">Julia</div><div class="live-side-status alive">ALIVE</div></div>
+              <div class="live-side-player"><div class="live-side-avatar" style="background:rgba(78,205,196,0.12);color:var(--teal);">AL</div><div class="live-side-name">Alex</div><div class="live-side-status alive">ALIVE</div></div>
+              <div class="live-side-player"><div class="live-side-avatar" style="background:rgba(255,159,67,0.12);color:var(--orange);">TK</div><div class="live-side-name">TipKing99</div><div class="live-side-status alive">ALIVE</div></div>
+            </div>
+          </div>
+          <!-- Eliminated -->
+          <div class="live-side-panel">
+            <div class="live-side-title">Eliminated</div>
+            <div class="live-side-players">
+              <div class="live-side-player" style="opacity:0.5;"><div class="live-side-avatar" style="background:rgba(255,107,107,0.12);color:var(--coral);">PK</div><div class="live-side-name" style="text-decoration:line-through;color:var(--grey-dark);">PatKing99</div><div class="live-side-status" style="background:rgba(255,107,107,0.12);color:var(--coral);">R6</div></div>
+              <div class="live-side-player you-row" style="opacity:0.6;"><div class="live-side-avatar" style="background:rgba(255,159,67,0.12);color:var(--orange);">BR</div><div class="live-side-name" style="color:var(--coral);">Bran (You)</div><div class="live-side-status" style="background:rgba(255,107,107,0.12);color:var(--coral);">R5</div></div>
+              <div class="live-side-player" style="opacity:0.5;"><div class="live-side-avatar" style="background:rgba(255,107,107,0.12);color:var(--coral);">SR</div><div class="live-side-name" style="text-decoration:line-through;color:var(--grey-dark);">Sara</div><div class="live-side-status" style="background:rgba(255,107,107,0.12);color:var(--coral);">R4</div></div>
+              <div class="live-side-player" style="opacity:0.5;"><div class="live-side-avatar" style="background:rgba(255,107,107,0.12);color:var(--coral);">NK</div><div class="live-side-name" style="text-decoration:line-through;color:var(--grey-dark);">NikoFan</div><div class="live-side-status" style="background:rgba(255,107,107,0.12);color:var(--coral);">R2</div></div>
+            </div>
+          </div>
+          <!-- Your Result -->
+          <div class="live-side-panel">
+            <div class="live-side-title">Your Result</div>
+            <div style="text-align:center;padding:12px 0;">
+              <div style="font-size:2.2rem;font-weight:900;color:var(--coral);">5th</div>
+              <div style="font-size:0.75rem;color:var(--grey);margin-top:6px;">Eliminated Round 5 of 10</div>
+              <div style="display:flex;align-items:center;justify-content:center;gap:6px;margin-top:8px;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--coral)" stroke-width="2.5"><polyline points="6 9 12 15 18 9"/></svg>
+                <span style="font-size:0.82rem;font-weight:800;color:var(--coral);">-15 ELO</span>
+              </div>
+              <div style="font-size:0.65rem;color:var(--grey-dark);margin-top:4px;">1,720 → 1,705</div>
+            </div>
+          </div>
+          <!-- Match -->
+          <div class="live-side-panel">
+            <div class="live-side-title">Match</div>
+            <div style="text-align:center;padding:8px 0;">
+              <div style="font-size:1rem;font-weight:800;">Barcelona 2 – 1 Real Madrid</div>
+              <div style="font-size:0.72rem;color:var(--coral);font-weight:700;margin-top:4px;">68' · 2nd Half</div>
+              <div style="font-size:0.68rem;color:var(--grey);margin-top:2px;">La Liga · Matchday 32</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SCREEN: SUDDEN DEATH ═══ -->
+  <div class="screen" id="screen-suddendeath">
+    <div class="sudden-death">
+
+      <!-- Ticker banner -->
+      <div class="sd-ticker">
+        <span class="mode-badge-dynamic" style="font-size:0.6rem;font-weight:800;padding:3px 10px;border:1px solid var(--coral);border-radius:20px;color:var(--coral);">⚔️ Full Match BR</span>
+        <div class="sd-ticker-title">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Sudden Death
+        </div>
+        <div class="sd-ticker-sub">2 players survived all rounds — first wrong answer loses!</div>
+      </div>
+
+      <!-- Duel display -->
+      <div class="sd-duel">
+        <div class="sd-duelist">
+          <div class="sd-duelist-avatar you-avatar" style="background:rgba(255,159,67,0.12);color:var(--orange);">BR</div>
+          <div class="sd-duelist-name" style="color:var(--orange);">Bran</div>
+          <div class="sd-duelist-tag" style="background:rgba(255,159,67,0.12);color:var(--orange);">YOU</div>
+        </div>
+        <div class="sd-vs">VS</div>
+        <div class="sd-duelist">
+          <div class="sd-duelist-avatar" style="background:var(--lime-dim);color:var(--lime);">MR</div>
+          <div class="sd-duelist-name">Marco</div>
+          <div class="sd-duelist-tag" style="background:var(--lime-dim);color:var(--lime);">ELO 1,840</div>
+        </div>
+      </div>
+
+      <!-- Centered gameplay -->
+      <div class="sd-layout">
+
+        <!-- Inline scoreboard -->
+        <div class="sd-score-strip">
+          <div class="sd-score-player you-score">
+            <div class="sd-score-avatar" style="background:rgba(255,159,67,0.12);color:var(--orange);">BR</div>
+            <div class="sd-score-name" style="color:var(--orange);">Bran</div>
+            <div class="sd-score-pts" style="color:var(--orange);">0</div>
+          </div>
+          <div class="sd-score-dash">—</div>
+          <div class="sd-score-player">
+            <div class="sd-score-avatar" style="background:var(--lime-dim);color:var(--lime);">MR</div>
+            <div class="sd-score-name">Marco</div>
+            <div class="sd-score-pts" style="color:var(--lime);">0</div>
+          </div>
+        </div>
+
+        <div class="sd-round-badge">
+          <div class="sd-flash"></div>
+          Sudden Death Round <strong>1</strong>
+        </div>
+
+        <div class="timer-ring-wrap">
+          <svg class="timer-ring-svg" viewBox="0 0 120 120">
+            <circle class="timer-ring-bg" cx="60" cy="60" r="54" />
+            <circle class="timer-ring-fill warning" cx="60" cy="60" r="54" style="stroke-dashoffset:113;" />
+          </svg>
+          <div class="timer-ring-text" style="color:var(--orange);">10</div>
+        </div>
+
+        <div class="prediction-card">
+          <div class="prediction-round" style="color:var(--coral);">Sudden Death · Round 1</div>
+          <div class="prediction-context">Match ended 2-1 — rapid-fire micro predictions</div>
+          <div class="prediction-question">Will the next throw-in go to Barcelona?</div>
+          <div class="prediction-options">
+            <button class="prediction-option" onclick="selectOption(this,0)">Yes — Barcelona</button>
+            <button class="prediction-option" onclick="selectOption(this,1)">No — Real Madrid</button>
+          </div>
+        </div>
+
+        <!-- Stakes strip -->
+        <div class="sd-stakes">
+          <div class="sd-stake-item">
+            <div class="sd-stake-value" style="color:var(--lime);">+100</div>
+            <div class="sd-stake-label">Winner ELO</div>
+          </div>
+          <div class="sd-stakes-divider"></div>
+          <div class="sd-stake-item">
+            <div class="sd-stake-value" style="color:var(--coral);">+60</div>
+            <div class="sd-stake-label">Loser ELO</div>
+          </div>
+        </div>
+
+        <button class="btn btn-coral" onclick="showVictory()" style="margin-top:12px;">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          Demo: Skip to Victory
+        </button>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SCREEN: VICTORY ═══ -->
+  <div class="screen" id="screen-victory">
+    <div class="victory">
+      <div class="confetti-container show" id="confetti"></div>
+
+      <!-- Ticker banner -->
+      <div class="victory-ticker">
+        <span class="mode-badge-dynamic" style="font-size:0.6rem;font-weight:800;padding:3px 10px;border:1px solid var(--gold);border-radius:20px;color:var(--gold);">⚔️ Full Match BR</span>
+        <div class="victory-ticker-title">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          Champion
+        </div>
+        <div class="victory-ticker-sub">Barcelona 2 – 1 Real Madrid · El Clásico · La Liga</div>
+      </div>
+
+      <!-- Centered layout -->
+      <div class="victory-layout">
+        <svg class="victory-crown" viewBox="0 0 64 64" width="90" height="90">
+          <path d="M8 48h48l6-28-14 12-16-20-16 20-14-12z" fill="none" stroke="#FFD700" stroke-width="3" stroke-linejoin="round"/>
+          <rect x="8" y="48" width="48" height="6" rx="2" fill="none" stroke="#FFD700" stroke-width="3"/>
+          <circle cx="32" cy="24" r="2" fill="#FFD700"/>
+        </svg>
+        <div class="victory-title"><span>Battle Royale</span> Champion!</div>
+        <div class="victory-sub">You outlasted 9 other players in El Clásico</div>
+        <div class="victory-avatar" style="background:rgba(255,215,0,0.1);color:var(--gold);">BR</div>
+        <div class="victory-winner-name">Bran</div>
+
+        <!-- Stats bar -->
+        <div class="victory-stats">
+          <div class="victory-stat"><div class="victory-stat-value" style="color:var(--lime);">10/10</div><div class="victory-stat-label">Rounds Survived</div></div>
+          <div class="victory-stat"><div class="victory-stat-value" style="color:var(--orange);">+1</div><div class="victory-stat-label">Sudden Death</div></div>
+          <div class="victory-stat"><div class="victory-stat-value" style="color:var(--coral);">1st</div><div class="victory-stat-label">of 10 Players</div></div>
+          <div class="victory-stat"><div class="victory-stat-value" style="color:var(--teal);">+100</div><div class="victory-stat-label">ELO Gained</div></div>
+        </div>
+
+        <!-- ELO strip -->
+        <div class="victory-elo-strip">
+          <div class="victory-elo-change">+100</div>
+          <div class="victory-elo-detail">
+            <div class="victory-elo-from">1,720 → 1,820 ELO</div>
+            <div class="victory-elo-tier">Gold Tier</div>
+          </div>
+        </div>
+
+        <!-- Podium -->
+        <div class="victory-podium">
+          <div class="victory-podium-slot podium-2nd">
+            <div class="victory-podium-avatar" style="background:var(--lime-dim);color:var(--lime);">MR</div>
+            <div class="victory-podium-name">Marco</div>
+            <div class="victory-podium-place" style="color:#C0C0C0;">2nd</div>
+          </div>
+          <div class="victory-podium-slot podium-1st">
+            <div class="victory-podium-avatar" style="background:rgba(255,215,0,0.12);color:var(--gold);">BR</div>
+            <div class="victory-podium-name" style="color:var(--gold);">Bran</div>
+            <div class="victory-podium-place" style="color:var(--gold);">1st</div>
+          </div>
+          <div class="victory-podium-slot podium-3rd">
+            <div class="victory-podium-avatar" style="background:rgba(124,92,252,0.12);color:var(--purple);">JL</div>
+            <div class="victory-podium-name">Julia</div>
+            <div class="victory-podium-place" style="color:#CD7F32;">3rd</div>
+          </div>
+        </div>
+
+        <div class="victory-badge">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          <span class="victory-badge-text">El Clásico BR Champion Badge Earned!</span>
+        </div>
+
+        <div class="victory-actions">
+          <button class="btn btn-ghost" onclick="showScreen('games')">Pick Another Match</button>
+          <button class="btn btn-coral" onclick="showScreen('rankings')">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+            View Rankings
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SCREEN: RANKINGS ═══ -->
+  <div class="screen" id="screen-rankings">
+    <div class="rankings">
+
+      <!-- Hero profile section -->
+      <div class="rankings-hero">
+        <div class="rankings-hero-emblem">
+          <div class="rank-emblem-ring"></div>
+          <div class="rank-emblem-inner" style="background:var(--gold-dim);color:var(--gold-c);">
+            <svg viewBox="0 0 24 24" width="30" height="30" fill="none" stroke="var(--gold-c)" stroke-width="2"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg>
+          </div>
+        </div>
+        <div class="rankings-hero-name">BranWilson</div>
+        <div class="rankings-hero-tier" style="color:var(--gold-c);">Gold Tier</div>
+
+        <div class="rankings-hero-elo">
+          <div>
+            <div class="rankings-hero-elo-big" style="color:var(--gold-c);">1,720</div>
+            <div class="rankings-hero-elo-label">ELO Rating</div>
+          </div>
+          <div style="width:1px;height:36px;background:rgba(255,255,255,0.06);"></div>
+          <div>
+            <div class="rankings-hero-elo-change" style="color:var(--lime);">+100</div>
+            <div class="rankings-hero-elo-label">Last Match</div>
+          </div>
+          <div style="width:1px;height:36px;background:rgba(255,255,255,0.06);"></div>
+          <div>
+            <div class="rankings-hero-elo-change">#34</div>
+            <div class="rankings-hero-elo-label">Global Rank</div>
+          </div>
+        </div>
+
+        <div class="rankings-hero-progress">
+          <div class="rank-progress"><div class="rank-progress-fill" style="width:44%;background:var(--gold-c);"></div></div>
+          <div class="rank-progress-text"><span>280 to Platinum</span><span>44%</span></div>
+        </div>
+
+        <div class="rankings-hero-stats">
+          <div class="rankings-hero-stat"><div class="rankings-hero-stat-val" style="color:var(--lime);">47</div><div class="rankings-hero-stat-label">Matches</div></div>
+          <div class="rankings-hero-stat"><div class="rankings-hero-stat-val" style="color:var(--gold);">8</div><div class="rankings-hero-stat-label">Wins</div></div>
+          <div class="rankings-hero-stat"><div class="rankings-hero-stat-val" style="color:var(--teal);">17%</div><div class="rankings-hero-stat-label">Win Rate</div></div>
+          <div class="rankings-hero-stat"><div class="rankings-hero-stat-val" style="color:var(--orange);">3</div><div class="rankings-hero-stat-label">Win Streak</div></div>
+        </div>
+      </div>
+
+      <!-- Tier strip -->
+      <div class="rankings-tier-strip">
+        <div class="rankings-tier-chip" style="border-color:rgba(255,0,60,0.15);color:var(--champion);">Champion</div>
+        <div class="rankings-tier-chip" style="border-color:rgba(185,242,255,0.12);color:var(--diamond);">Diamond</div>
+        <div class="rankings-tier-chip" style="border-color:rgba(229,228,226,0.12);color:var(--platinum);">Platinum</div>
+        <div class="rankings-tier-chip current" style="border-color:rgba(255,215,0,0.25);color:var(--gold-c);"><div class="chip-you">YOU</div>Gold</div>
+        <div class="rankings-tier-chip" style="border-color:rgba(192,192,192,0.12);color:var(--silver);">Silver</div>
+        <div class="rankings-tier-chip" style="border-color:rgba(205,127,50,0.12);color:var(--bronze);">Bronze</div>
+      </div>
+
+      <!-- Body: tabbed content -->
+      <div class="rankings-body">
+        <div class="rank-tabs">
+          <button class="rank-tab active" onclick="showRankTab('global')">Global Rankings</button>
+          <button class="rank-tab" onclick="showRankTab('points')">Points & ELO</button>
+          <button class="rank-tab" onclick="showRankTab('history')">Match History</button>
+        </div>
+
+        <div class="rank-content">
+          <!-- TAB: Global Rankings -->
+          <div class="rank-panel active" id="panel-global">
+            <div class="rank-row top3">
+              <div class="rank-pos gold">1</div>
+              <div class="rank-avatar" style="background:var(--champion-dim);color:var(--champion);">XG</div>
+              <div class="rank-name">xGoalMaster</div>
+              <div class="rank-tier-badge" style="background:var(--champion-dim);color:var(--champion);">Champion</div>
+              <div class="rank-elo-val" style="color:var(--champion);">4,210</div>
+              <div class="rank-change up">+45</div>
+            </div>
+            <div class="rank-row top3">
+              <div class="rank-pos silver">2</div>
+              <div class="rank-avatar" style="background:var(--diamond-dim);color:var(--diamond);">PF</div>
+              <div class="rank-name">PitchFury</div>
+              <div class="rank-tier-badge" style="background:var(--diamond-dim);color:var(--diamond);">Diamond</div>
+              <div class="rank-elo-val" style="color:var(--diamond);">3,440</div>
+              <div class="rank-change up">+22</div>
+            </div>
+            <div class="rank-row top3">
+              <div class="rank-pos bronze">3</div>
+              <div class="rank-avatar" style="background:var(--diamond-dim);color:var(--diamond);">VK</div>
+              <div class="rank-name">VarKing</div>
+              <div class="rank-tier-badge" style="background:var(--diamond-dim);color:var(--diamond);">Diamond</div>
+              <div class="rank-elo-val" style="color:var(--diamond);">3,120</div>
+              <div class="rank-change down">-12</div>
+            </div>
+            <div class="rank-row">
+              <div class="rank-pos">4</div>
+              <div class="rank-avatar" style="background:var(--platinum-dim);color:var(--platinum);">SC</div>
+              <div class="rank-name">StatsCrunch</div>
+              <div class="rank-tier-badge" style="background:var(--platinum-dim);color:var(--platinum);">Platinum</div>
+              <div class="rank-elo-val">2,680</div>
+              <div class="rank-change up">+18</div>
+            </div>
+            <div class="rank-row">
+              <div class="rank-pos">5</div>
+              <div class="rank-avatar" style="background:var(--platinum-dim);color:var(--platinum);">GL</div>
+              <div class="rank-name">GoalLine</div>
+              <div class="rank-tier-badge" style="background:var(--platinum-dim);color:var(--platinum);">Platinum</div>
+              <div class="rank-elo-val">2,410</div>
+              <div class="rank-change up">+8</div>
+            </div>
+            <div style="text-align:center;padding:10px;font-size:0.7rem;color:var(--grey-dark);">· · ·</div>
+            <div class="rank-row you">
+              <div class="rank-pos">34</div>
+              <div class="rank-avatar" style="background:var(--gold-dim);color:var(--gold-c);">BW</div>
+              <div class="rank-name">BranWilson <span class="you-tag">You</span></div>
+              <div class="rank-tier-badge" style="background:var(--gold-dim);color:var(--gold-c);">Gold</div>
+              <div class="rank-elo-val" style="color:var(--gold-c);">1,720</div>
+              <div class="rank-change up">+100</div>
+            </div>
+          </div>
+
+          <!-- TAB: Points & ELO -->
+          <div class="rank-panel" id="panel-points">
+            <div class="points-grid">
+              <div class="points-cell"><div class="points-cell-pos">1st</div><div class="points-cell-val">+100</div></div>
+              <div class="points-cell"><div class="points-cell-pos">2nd</div><div class="points-cell-val">+60</div></div>
+              <div class="points-cell"><div class="points-cell-pos">3rd</div><div class="points-cell-val">+40</div></div>
+              <div class="points-cell"><div class="points-cell-pos">4th</div><div class="points-cell-val">+30</div></div>
+              <div class="points-cell"><div class="points-cell-pos">5th</div><div class="points-cell-val">+20</div></div>
+              <div class="points-cell"><div class="points-cell-pos">6th</div><div class="points-cell-val">+15</div></div>
+              <div class="points-cell"><div class="points-cell-pos">7th</div><div class="points-cell-val">+10</div></div>
+              <div class="points-cell"><div class="points-cell-pos">8th</div><div class="points-cell-val">+5</div></div>
+              <div class="points-cell"><div class="points-cell-pos">9th</div><div class="points-cell-val">+3</div></div>
+              <div class="points-cell"><div class="points-cell-pos">10th</div><div class="points-cell-val">+1</div></div>
+            </div>
+            <div class="elo-explain">
+              <div class="elo-explain-title">ELO Adjustment (Lobby Strength Multiplier)</div>
+              <div class="elo-explain-row"><span class="label">Beat higher-ranked opponents</span><span class="value" style="color:var(--lime);">+120% ELO</span></div>
+              <div class="elo-explain-row"><span class="label">Beat even-ranked opponents</span><span class="value">100% ELO</span></div>
+              <div class="elo-explain-row"><span class="label">Beat lower-ranked opponents</span><span class="value" style="color:var(--orange);">80% ELO</span></div>
+            </div>
+          </div>
+
+          <!-- TAB: Match History -->
+          <div class="rank-panel" id="panel-history">
+            <div class="history-row">
+              <div class="history-place" style="background:var(--gold-dim);color:var(--gold-c);">1st</div>
+              <div class="history-info"><div class="history-match">Barcelona vs Real Madrid</div><div class="history-meta">La Liga · 10 Apr · 10 rounds + SD</div></div>
+              <div class="history-elo-change"><div class="history-elo-delta up">+100</div><div class="history-elo-total">→ 1,720</div></div>
+            </div>
+            <div class="history-row">
+              <div class="history-place" style="background:rgba(255,107,107,0.12);color:var(--coral);">5th</div>
+              <div class="history-info"><div class="history-match">Arsenal vs Chelsea</div><div class="history-meta">Premier League · 8 Apr · 5 rounds</div></div>
+              <div class="history-elo-change"><div class="history-elo-delta down">-8</div><div class="history-elo-total">→ 1,620</div></div>
+            </div>
+            <div class="history-row">
+              <div class="history-place" style="background:var(--lime-dim);color:var(--lime);">2nd</div>
+              <div class="history-info"><div class="history-match">Man Utd vs Liverpool</div><div class="history-meta">Premier League · 6 Apr · 10 rounds</div></div>
+              <div class="history-elo-change"><div class="history-elo-delta up">+28</div><div class="history-elo-total">→ 1,628</div></div>
+            </div>
+            <div class="history-row">
+              <div class="history-place" style="background:var(--gold-dim);color:var(--gold-c);">1st</div>
+              <div class="history-info"><div class="history-match">Lakers vs Celtics</div><div class="history-meta">NBA · 4 Apr · 10 rounds + SD</div></div>
+              <div class="history-elo-change"><div class="history-elo-delta up">+38</div><div class="history-elo-total">→ 1,600</div></div>
+            </div>
+            <div class="history-row">
+              <div class="history-place" style="background:rgba(255,107,107,0.12);color:var(--coral);">7th</div>
+              <div class="history-info"><div class="history-match">Bayern vs Dortmund</div><div class="history-meta">Bundesliga · 2 Apr · 3 rounds</div></div>
+              <div class="history-elo-change"><div class="history-elo-delta down">-15</div><div class="history-elo-total">→ 1,562</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Overlays -->
+  <div class="elimination-overlay" id="elimOverlay">
+    <div class="elim-card">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--coral)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 8px;display:block;"><circle cx="12" cy="10" r="8"/><path d="M12 18v4"/><path d="M8 22h8"/><circle cx="9" cy="9" r="1.5" fill="var(--coral)"/><circle cx="15" cy="9" r="1.5" fill="var(--coral)"/><path d="M10 14h4"/></svg>
+      <div class="elim-name" id="elimName">TipKing99</div>
+      <div class="elim-text">Eliminated — wrong prediction!</div>
+    </div>
+  </div>
+  <div class="survive-overlay" id="surviveOverlay">
+    <div class="survive-card">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--lime)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:8px;"><polyline points="20 6 9 17 4 12"/></svg>
+      <div class="survive-text">You Survived!</div>
+      <div class="survive-sub" id="surviveSub">Correct prediction — you live to fight another round</div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- ═══ HOW TO PLAY MODAL ═══ -->
+  <div class="htp-overlay" id="htpOverlay" onclick="if(event.target===this)closeHowToPlay()">
+    <div class="htp-modal">
+      <div class="htp-header">
+        <div class="htp-header-title">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          How to Play Battle Royale
+        </div>
+        <button class="htp-close" onclick="closeHowToPlay()">&times;</button>
+      </div>
+      <div class="htp-steps-bar" id="htpStepsBar">
+        <div class="htp-step-dot active"></div>
+        <div class="htp-step-dot"></div>
+        <div class="htp-step-dot"></div>
+        <div class="htp-step-dot"></div>
+        <div class="htp-step-dot"></div>
+        <span class="htp-step-label" id="htpStepLabel">Step 1 of 5</span>
+      </div>
+      <div class="htp-body">
+
+        <!-- STEP 1: Pick a Match -->
+        <div class="htp-slide active" id="htpSlide0">
+          <div class="htp-slide-graphic">
+            <svg viewBox="0 0 620 200" xmlns="http://www.w3.org/2000/svg">
+              <rect width="620" height="200" fill="#2A2A44"/>
+              <!-- Game card mockup -->
+              <rect x="30" y="30" width="560" height="60" rx="12" fill="#1A1A2E" stroke="rgba(168,225,12,0.3)" stroke-width="1.5"/>
+              <circle cx="62" cy="60" r="6" fill="#A8E10C"/>
+              <text x="76" y="56" fill="#FF6B6B" font-family="Inter,sans-serif" font-size="11" font-weight="700">LIVE</text>
+              <text x="76" y="70" fill="#9898B0" font-size="9">32'</text>
+              <rect x="140" y="44" width="80" height="24" rx="12" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+              <text x="155" y="60" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="10" font-weight="700">Barcelona</text>
+              <text x="232" y="60" fill="#5A5A78" font-family="Inter,sans-serif" font-size="10">vs</text>
+              <rect x="252" y="44" width="85" height="24" rx="12" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+              <text x="262" y="60" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="10" font-weight="700">Real Madrid</text>
+              <text x="370" y="60" fill="#5A5A78" font-family="Inter,sans-serif" font-size="9">La Liga</text>
+              <text x="450" y="56" fill="#A8E10C" font-family="Inter,sans-serif" font-size="12" font-weight="800">7/10</text>
+              <text x="450" y="70" fill="#5A5A78" font-family="Inter,sans-serif" font-size="8">In Queue</text>
+              <rect x="510" y="44" width="58" height="28" rx="8" fill="#A8E10C"/>
+              <text x="525" y="63" fill="#1A1A2E" font-family="Inter,sans-serif" font-size="11" font-weight="800">Join</text>
+              <!-- Second card -->
+              <rect x="30" y="105" width="560" height="60" rx="12" fill="#1A1A2E" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <text x="62" y="132" fill="#9898B0" font-family="Inter,sans-serif" font-size="11" font-weight="600">18:45</text>
+              <text x="62" y="146" fill="#5A5A78" font-size="9">Today</text>
+              <rect x="140" y="120" width="70" height="24" rx="12" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+              <text x="150" y="136" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="10" font-weight="700">Juventus</text>
+              <text x="222" y="136" fill="#5A5A78" font-family="Inter,sans-serif" font-size="10">vs</text>
+              <rect x="242" y="120" width="60" height="24" rx="12" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+              <text x="252" y="136" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="10" font-weight="700">Napoli</text>
+              <text x="330" y="136" fill="#5A5A78" font-family="Inter,sans-serif" font-size="9">Serie A</text>
+              <text x="450" y="132" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="12" font-weight="800">3/10</text>
+              <text x="450" y="146" fill="#5A5A78" font-family="Inter,sans-serif" font-size="8">In Queue</text>
+              <rect x="510" y="120" width="58" height="28" rx="8" fill="#A8E10C"/>
+              <text x="525" y="139" fill="#1A1A2E" font-family="Inter,sans-serif" font-size="11" font-weight="800">Join</text>
+              <!-- Arrow pointer -->
+              <polygon points="525,98 535,105 515,105" fill="#A8E10C" opacity="0.7"/>
+            </svg>
+          </div>
+          <div class="htp-slide-number">1</div>
+          <div class="htp-slide-title">Pick a Match & Game Mode</div>
+          <div class="htp-slide-desc">
+            Browse <strong>live and upcoming matches</strong> from top leagues. Each card shows three game modes: <strong>⚔️ Full Match</strong> (10 rounds, 90 min), <strong>⚡ 2nd Half Sprint</strong> (7 rounds, starts at half-time), and <strong>🔥 Final 15</strong> (5 rounds, starts at 75th min). Modes unlock as the match progresses!
+          </div>
+          <div class="htp-tips">
+            <div class="htp-tips-title">Tip</div>
+            <div class="htp-tips-text">Short on time? Jump into a Final 15 — it's under 15 minutes of pure last-minute chaos. Want the full experience? Go Full Match for maximum rounds and glory.</div>
+          </div>
+        </div>
+
+        <!-- STEP 2: Wait in the Lobby -->
+        <div class="htp-slide" id="htpSlide1">
+          <div class="htp-slide-graphic">
+            <svg viewBox="0 0 620 200" xmlns="http://www.w3.org/2000/svg">
+              <rect width="620" height="200" fill="#2A2A44"/>
+              <!-- Lobby grid of players -->
+              <text x="30" y="30" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="13" font-weight="800">Lobby · Waiting for players…</text>
+              <text x="30" y="48" fill="#5A5A78" font-family="Inter,sans-serif" font-size="10">Barcelona vs Real Madrid · La Liga</text>
+              <!-- Player slots row 1 -->
+              <g transform="translate(40,70)">
+                <rect width="100" height="44" rx="10" fill="#1A1A2E" stroke="rgba(255,159,67,0.3)" stroke-width="1.5"/>
+                <circle cx="22" cy="22" r="14" fill="rgba(255,159,67,0.12)"/>
+                <text x="22" y="26" fill="#FF9F43" font-family="Inter,sans-serif" font-size="8" font-weight="800" text-anchor="middle">BR</text>
+                <text x="46" y="20" fill="#FF9F43" font-family="Inter,sans-serif" font-size="9" font-weight="700">Bran</text>
+                <text x="46" y="32" fill="#5A5A78" font-size="7">Ready</text>
+              </g>
+              <g transform="translate(155,70)">
+                <rect width="100" height="44" rx="10" fill="#1A1A2E" stroke="rgba(168,225,12,0.15)" stroke-width="1"/>
+                <circle cx="22" cy="22" r="14" fill="rgba(168,225,12,0.12)"/>
+                <text x="22" y="26" fill="#A8E10C" font-family="Inter,sans-serif" font-size="8" font-weight="800" text-anchor="middle">MR</text>
+                <text x="46" y="20" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="9" font-weight="700">Marco</text>
+                <text x="46" y="32" fill="#5A5A78" font-size="7">Ready</text>
+              </g>
+              <g transform="translate(270,70)">
+                <rect width="100" height="44" rx="10" fill="#1A1A2E" stroke="rgba(124,92,252,0.15)" stroke-width="1"/>
+                <circle cx="22" cy="22" r="14" fill="rgba(124,92,252,0.12)"/>
+                <text x="22" y="26" fill="#7C5CFC" font-family="Inter,sans-serif" font-size="8" font-weight="800" text-anchor="middle">JL</text>
+                <text x="46" y="20" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="9" font-weight="700">Julia</text>
+                <text x="46" y="32" fill="#5A5A78" font-size="7">Ready</text>
+              </g>
+              <g transform="translate(385,70)">
+                <rect width="100" height="44" rx="10" fill="#1A1A2E" stroke="rgba(78,205,196,0.15)" stroke-width="1"/>
+                <circle cx="22" cy="22" r="14" fill="rgba(78,205,196,0.12)"/>
+                <text x="22" y="26" fill="#4ECDC4" font-family="Inter,sans-serif" font-size="8" font-weight="800" text-anchor="middle">AL</text>
+                <text x="46" y="20" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="9" font-weight="700">Alex</text>
+                <text x="46" y="32" fill="#5A5A78" font-size="7">Ready</text>
+              </g>
+              <g transform="translate(500,70)">
+                <rect width="100" height="44" rx="10" fill="#1A1A2E" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="4 3"/>
+                <text x="50" y="26" fill="#5A5A78" font-family="Inter,sans-serif" font-size="10" text-anchor="middle">?</text>
+              </g>
+              <!-- Row 2 -->
+              <g transform="translate(40,130)">
+                <rect width="100" height="44" rx="10" fill="#1A1A2E" stroke="rgba(255,107,107,0.15)" stroke-width="1"/>
+                <circle cx="22" cy="22" r="14" fill="rgba(255,107,107,0.12)"/>
+                <text x="22" y="26" fill="#FF6B6B" font-family="Inter,sans-serif" font-size="8" font-weight="800" text-anchor="middle">SR</text>
+                <text x="46" y="20" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="9" font-weight="700">Sara</text>
+                <text x="46" y="32" fill="#5A5A78" font-size="7">Ready</text>
+              </g>
+              <g transform="translate(155,130)">
+                <rect width="100" height="44" rx="10" fill="#1A1A2E" stroke="rgba(255,159,67,0.15)" stroke-width="1"/>
+                <circle cx="22" cy="22" r="14" fill="rgba(255,159,67,0.12)"/>
+                <text x="22" y="26" fill="#FF9F43" font-family="Inter,sans-serif" font-size="8" font-weight="800" text-anchor="middle">TK</text>
+                <text x="46" y="20" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="9" font-weight="700">TipKing</text>
+                <text x="46" y="32" fill="#5A5A78" font-size="7">Ready</text>
+              </g>
+              <g transform="translate(270,130)">
+                <rect width="100" height="44" rx="10" fill="#1A1A2E" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="4 3"/>
+                <text x="50" y="26" fill="#5A5A78" font-family="Inter,sans-serif" font-size="10" text-anchor="middle">?</text>
+              </g>
+              <g transform="translate(385,130)">
+                <rect width="100" height="44" rx="10" fill="#1A1A2E" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="4 3"/>
+                <text x="50" y="26" fill="#5A5A78" font-family="Inter,sans-serif" font-size="10" text-anchor="middle">?</text>
+              </g>
+              <g transform="translate(500,130)">
+                <rect width="100" height="44" rx="10" fill="#1A1A2E" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="4 3"/>
+                <text x="50" y="26" fill="#5A5A78" font-family="Inter,sans-serif" font-size="10" text-anchor="middle">?</text>
+              </g>
+              <!-- Player count -->
+              <text x="535" y="30" fill="#A8E10C" font-family="Inter,sans-serif" font-size="18" font-weight="900" text-anchor="middle">7/10</text>
+              <text x="535" y="46" fill="#5A5A78" font-family="Inter,sans-serif" font-size="9" text-anchor="middle">Players</text>
+            </svg>
+          </div>
+          <div class="htp-slide-number">2</div>
+          <div class="htp-slide-title">Wait in the Lobby</div>
+          <div class="htp-slide-desc">
+            Once you join, you'll land in the <strong>lobby</strong>. You can see who else is queued up — friends and strangers alike. The game starts automatically once <strong>enough players join</strong> or when the match kicks off. Get ready!
+          </div>
+          <div class="htp-tips">
+            <div class="htp-tips-title">Tip</div>
+            <div class="htp-tips-text">Share the match link with friends so you can battle each other in the same lobby!</div>
+          </div>
+        </div>
+
+        <!-- STEP 3: Predict to Survive -->
+        <div class="htp-slide" id="htpSlide2">
+          <div class="htp-slide-graphic">
+            <svg viewBox="0 0 620 240" xmlns="http://www.w3.org/2000/svg">
+              <rect width="620" height="240" fill="#2A2A44"/>
+              <!-- Match context bar -->
+              <rect x="30" y="16" width="560" height="32" rx="8" fill="rgba(168,225,12,0.06)" stroke="rgba(168,225,12,0.15)" stroke-width="1"/>
+              <text x="310" y="28" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="11" font-weight="700" text-anchor="middle">Barcelona 1 – 0 Real Madrid</text>
+              <text x="540" y="28" fill="#FF6B6B" font-family="Inter,sans-serif" font-size="10" font-weight="700">23'</text>
+              <text x="80" y="37" fill="#A8E10C" font-family="Inter,sans-serif" font-size="8">Goal! Pedri 21'</text>
+              <!-- Round dots -->
+              <g transform="translate(170,62)">
+                <circle cx="0" cy="0" r="8" fill="#A8E10C"/><text x="0" y="4" fill="#1A1A2E" font-size="8" font-weight="800" text-anchor="middle">1</text>
+                <circle cx="30" cy="0" r="8" fill="#A8E10C"/><text x="30" y="4" fill="#1A1A2E" font-size="8" font-weight="800" text-anchor="middle">2</text>
+                <circle cx="60" cy="0" r="8" fill="#A8E10C" stroke="#fff" stroke-width="2"/><text x="60" y="4" fill="#1A1A2E" font-size="8" font-weight="800" text-anchor="middle">3</text>
+                <circle cx="90" cy="0" r="8" fill="rgba(255,255,255,0.1)"/><text x="90" y="4" fill="#5A5A78" font-size="8" text-anchor="middle">4</text>
+                <circle cx="120" cy="0" r="8" fill="rgba(255,255,255,0.1)"/><text x="120" y="4" fill="#5A5A78" font-size="8" text-anchor="middle">5</text>
+                <circle cx="150" cy="0" r="8" fill="rgba(255,255,255,0.1)"/><text x="150" y="4" fill="#5A5A78" font-size="8" text-anchor="middle">6</text>
+                <circle cx="180" cy="0" r="8" fill="rgba(255,255,255,0.1)"/><text x="180" y="4" fill="#5A5A78" font-size="8" text-anchor="middle">7</text>
+                <circle cx="210" cy="0" r="8" fill="rgba(255,255,255,0.1)"/><text x="210" y="4" fill="#5A5A78" font-size="8" text-anchor="middle">8</text>
+                <circle cx="240" cy="0" r="8" fill="rgba(255,255,255,0.1)"/><text x="240" y="4" fill="#5A5A78" font-size="8" text-anchor="middle">9</text>
+                <circle cx="270" cy="0" r="8" fill="rgba(255,255,255,0.1)"/><text x="270" y="3" fill="#5A5A78" font-size="7" text-anchor="middle">10</text>
+              </g>
+              <!-- Timer ring -->
+              <circle cx="100" cy="150" r="44" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6"/>
+              <circle cx="100" cy="150" r="44" fill="none" stroke="#A8E10C" stroke-width="6" stroke-dasharray="276" stroke-dashoffset="69" stroke-linecap="round" transform="rotate(-90 100 150)"/>
+              <text x="100" y="157" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="28" font-weight="900" text-anchor="middle">15</text>
+              <text x="100" y="172" fill="#5A5A78" font-family="Inter,sans-serif" font-size="8" text-anchor="middle">seconds</text>
+              <!-- Prediction card -->
+              <rect x="180" y="90" width="410" height="130" rx="14" fill="#1A1A2E" stroke="rgba(168,225,12,0.2)" stroke-width="1.5"/>
+              <text x="200" y="115" fill="#A8E10C" font-family="Inter,sans-serif" font-size="9" font-weight="700">ROUND 3 OF 10</text>
+              <text x="200" y="130" fill="#9898B0" font-family="Inter,sans-serif" font-size="9">Pedri just scored — 1-0 Barcelona (23')</text>
+              <text x="200" y="150" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="13" font-weight="700">Will Real Madrid equalise before halftime?</text>
+              <!-- Option buttons -->
+              <rect x="200" y="166" width="180" height="36" rx="10" fill="rgba(168,225,12,0.08)" stroke="rgba(168,225,12,0.25)" stroke-width="1"/>
+              <text x="290" y="189" fill="#A8E10C" font-family="Inter,sans-serif" font-size="11" font-weight="700" text-anchor="middle">Yes, they'll equalise</text>
+              <rect x="392" y="166" width="180" height="36" rx="10" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+              <text x="482" y="189" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="11" font-weight="700" text-anchor="middle">No, Barcelona holds</text>
+            </svg>
+          </div>
+          <div class="htp-slide-number">3</div>
+          <div class="htp-slide-title">Predict to Survive Each Round</div>
+          <div class="htp-slide-desc">
+            The game runs <strong>10 rounds</strong> of real-time predictions tied to what's happening in the match. Each round gives you a question like <em>"Will Real Madrid equalise before halftime?"</em> — pick your answer before the <span class="hl-lime">15-second timer</span> runs out. <span class="hl-lime">Correct?</span> You survive. <span class="hl-coral">Wrong?</span> You're eliminated.
+          </div>
+          <div class="htp-tips">
+            <div class="htp-tips-title">Tip</div>
+            <div class="htp-tips-text">Questions are dynamic — they adapt to what's actually happening in the match (goals, cards, corners), so watch the game and use your instinct!</div>
+          </div>
+        </div>
+
+        <!-- STEP 4: Sudden Death -->
+        <div class="htp-slide" id="htpSlide3">
+          <div class="htp-slide-graphic">
+            <svg viewBox="0 0 620 200" xmlns="http://www.w3.org/2000/svg">
+              <rect width="620" height="200" fill="#2A2A44"/>
+              <!-- Sudden Death banner -->
+              <rect x="140" y="12" width="340" height="36" rx="10" fill="rgba(255,107,107,0.1)" stroke="rgba(255,107,107,0.3)" stroke-width="1.5">
+                <animate attributeName="stroke-opacity" values="0.3;0.7;0.3" dur="2s" repeatCount="indefinite"/>
+              </rect>
+              <text x="310" y="28" fill="#FF6B6B" font-family="Inter,sans-serif" font-size="14" font-weight="900" text-anchor="middle" letter-spacing="2">SUDDEN DEATH</text>
+              <text x="310" y="42" fill="#9898B0" font-family="Inter,sans-serif" font-size="9" text-anchor="middle">First wrong answer loses!</text>
+              <!-- VS duel -->
+              <circle cx="210" cy="110" r="36" fill="rgba(255,159,67,0.12)" stroke="#FF9F43" stroke-width="3"/>
+              <text x="210" y="116" fill="#FF9F43" font-family="Inter,sans-serif" font-size="16" font-weight="900" text-anchor="middle">BR</text>
+              <text x="210" y="160" fill="#FF9F43" font-family="Inter,sans-serif" font-size="11" font-weight="700" text-anchor="middle">You (Bran)</text>
+              <text x="310" y="118" fill="#5A5A78" font-family="Inter,sans-serif" font-size="22" font-weight="900" text-anchor="middle">VS</text>
+              <circle cx="410" cy="110" r="36" fill="rgba(168,225,12,0.12)" stroke="#A8E10C" stroke-width="3"/>
+              <text x="410" y="116" fill="#A8E10C" font-family="Inter,sans-serif" font-size="16" font-weight="900" text-anchor="middle">MR</text>
+              <text x="410" y="160" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="11" font-weight="700" text-anchor="middle">Marco</text>
+              <!-- Lightning bolts -->
+              <polygon points="290,85 295,100 285,100" fill="#FF6B6B" opacity="0.5"/>
+              <polygon points="330,85 335,100 325,100" fill="#FF6B6B" opacity="0.5"/>
+              <!-- Timer -->
+              <circle cx="310" cy="188" r="0" fill="#FF9F43" opacity="0.3">
+                <animate attributeName="r" values="0;40;0" dur="3s" repeatCount="indefinite"/>
+              </circle>
+            </svg>
+          </div>
+          <div class="htp-slide-number">4</div>
+          <div class="htp-slide-title">Sudden Death — Last Players Standing</div>
+          <div class="htp-slide-desc">
+            If <strong>2 or more players</strong> survive all 10 rounds, the game enters <span class="hl-coral">Sudden Death</span>. Rapid-fire questions with a shorter timer — the <strong>first wrong answer eliminates you</strong>. It's a head-to-head duel until only one champion remains.
+          </div>
+          <div class="htp-tips">
+            <div class="htp-tips-title">Tip</div>
+            <div class="htp-tips-text">Sudden Death questions are faster and trickier. Stay calm, trust your gut, and don't overthink!</div>
+          </div>
+        </div>
+
+        <!-- STEP 5: Victory & Rewards -->
+        <div class="htp-slide" id="htpSlide4">
+          <div class="htp-slide-graphic">
+            <svg viewBox="0 0 620 200" xmlns="http://www.w3.org/2000/svg">
+              <rect width="620" height="200" fill="#2A2A44"/>
+              <!-- Crown -->
+              <path d="M275 48h70l8-32-18 16-17-24-17 24-18-16z" fill="none" stroke="#FFD700" stroke-width="2.5" stroke-linejoin="round"/>
+              <rect x="275" y="48" width="70" height="6" rx="2" fill="none" stroke="#FFD700" stroke-width="2"/>
+              <!-- Champion text -->
+              <text x="310" y="78" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="16" font-weight="900" text-anchor="middle"><tspan fill="#A8E10C">Battle Royale</tspan> Champion!</text>
+              <!-- Avatar -->
+              <circle cx="310" cy="112" r="22" fill="rgba(255,215,0,0.1)" stroke="#FFD700" stroke-width="3"/>
+              <text x="310" y="118" fill="#FFD700" font-family="Inter,sans-serif" font-size="12" font-weight="900" text-anchor="middle">BR</text>
+              <!-- Stats row -->
+              <g transform="translate(115,148)">
+                <text x="0" y="14" fill="#A8E10C" font-family="Inter,sans-serif" font-size="18" font-weight="900" text-anchor="middle">10/10</text>
+                <text x="0" y="28" fill="#5A5A78" font-family="Inter,sans-serif" font-size="7" font-weight="600" text-anchor="middle">ROUNDS</text>
+              </g>
+              <g transform="translate(235,148)">
+                <text x="0" y="14" fill="#FF9F43" font-family="Inter,sans-serif" font-size="18" font-weight="900" text-anchor="middle">+1</text>
+                <text x="0" y="28" fill="#5A5A78" font-family="Inter,sans-serif" font-size="7" font-weight="600" text-anchor="middle">SUDDEN DEATH</text>
+              </g>
+              <g transform="translate(350,148)">
+                <text x="0" y="14" fill="#FF6B6B" font-family="Inter,sans-serif" font-size="18" font-weight="900" text-anchor="middle">1st</text>
+                <text x="0" y="28" fill="#5A5A78" font-family="Inter,sans-serif" font-size="7" font-weight="600" text-anchor="middle">OF 10</text>
+              </g>
+              <g transform="translate(470,148)">
+                <text x="0" y="14" fill="#4ECDC4" font-family="Inter,sans-serif" font-size="18" font-weight="900" text-anchor="middle">+100</text>
+                <text x="0" y="28" fill="#5A5A78" font-family="Inter,sans-serif" font-size="7" font-weight="600" text-anchor="middle">ELO GAINED</text>
+              </g>
+              <!-- Badge -->
+              <rect x="180" y="185" width="260" height="0" rx="12" fill="rgba(255,215,0,0.08)" stroke="rgba(255,215,0,0.2)" stroke-width="1"/>
+              <!-- Confetti particles -->
+              <rect x="50" y="20" width="6" height="6" rx="1" fill="#A8E10C" opacity="0.7" transform="rotate(30 53 23)"/>
+              <rect x="550" y="30" width="6" height="6" rx="1" fill="#FF6B6B" opacity="0.6" transform="rotate(-20 553 33)"/>
+              <rect x="80" y="90" width="5" height="5" rx="1" fill="#7C5CFC" opacity="0.5" transform="rotate(45 82 92)"/>
+              <rect x="530" y="100" width="5" height="5" rx="1" fill="#FFD700" opacity="0.6" transform="rotate(15 532 102)"/>
+              <rect x="120" y="50" width="4" height="4" rx="1" fill="#4ECDC4" opacity="0.5" transform="rotate(-30 122 52)"/>
+              <rect x="490" y="60" width="4" height="4" rx="1" fill="#FF9F43" opacity="0.5" transform="rotate(60 492 62)"/>
+            </svg>
+          </div>
+          <div class="htp-slide-number">5</div>
+          <div class="htp-slide-title">Win & Climb the Rankings</div>
+          <div class="htp-slide-desc">
+            The last player standing is crowned <span class="hl-gold">Battle Royale Champion</span>! You'll earn <span class="hl-lime">ELO points</span> based on your finishing position, which tracks your rank from <span class="hl-purple">Bronze</span> all the way to <span class="hl-gold">Gold, Diamond, and Champion</span> tiers. Collect match-specific badges and compete on the global leaderboard.
+          </div>
+          <div class="htp-tips">
+            <div class="htp-tips-title">Tier limits</div>
+            <div class="htp-tips-text"><strong>Free:</strong> 1 Battle Royale per day &nbsp;·&nbsp; <strong>Pro:</strong> 3 per day &nbsp;·&nbsp; <strong>Elite:</strong> Unlimited</div>
+          </div>
+        </div>
+
+      </div>
+      <div class="htp-footer">
+        <button class="htp-btn htp-btn-back" id="htpBack" onclick="htpNav(-1)" style="visibility:hidden;">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          Back
+        </button>
+        <button class="htp-btn htp-btn-next" id="htpNext" onclick="htpNav(1)">
+          Next
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Demo Nav -->
+  <div class="demo-nav">
+    <button class="active" onclick="showScreen('games')">Games</button>
+    <button onclick="showScreen('lobby')">Queue</button>
+    <button onclick="showScreen('arena')">Arena</button>
+    <button onclick="showScreen('spectator')">Spectator</button>
+    <button onclick="showScreen('suddendeath')">Sudden Death</button>
+    <button onclick="showScreen('victory')">Victory</button>
+    <button onclick="showScreen('rankings')">Rankings</button>
+  </div>
+
+  <script>
+    // ═══ HOW TO PLAY MODAL ═══
+    let htpStep = 0;
+    const htpTotal = 5;
+
+    function openHowToPlay() {
+      htpStep = 0;
+      updateHtpSlides();
+      document.getElementById('htpOverlay').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeHowToPlay() {
+      document.getElementById('htpOverlay').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
+    function htpNav(dir) {
+      htpStep += dir;
+      if (htpStep < 0) htpStep = 0;
+      if (htpStep >= htpTotal) { closeHowToPlay(); return; }
+      updateHtpSlides();
+    }
+
+    function updateHtpSlides() {
+      // Update slides
+      document.querySelectorAll('.htp-slide').forEach((s, i) => {
+        s.classList.toggle('active', i === htpStep);
+      });
+      // Update dots
+      document.querySelectorAll('.htp-step-dot').forEach((d, i) => {
+        d.classList.remove('active', 'done');
+        if (i === htpStep) d.classList.add('active');
+        else if (i < htpStep) d.classList.add('done');
+      });
+      // Update label
+      document.getElementById('htpStepLabel').textContent = `Step ${htpStep + 1} of ${htpTotal}`;
+      // Update buttons
+      document.getElementById('htpBack').style.visibility = htpStep === 0 ? 'hidden' : 'visible';
+      const nextBtn = document.getElementById('htpNext');
+      if (htpStep === htpTotal - 1) {
+        nextBtn.className = 'htp-btn htp-btn-start';
+        nextBtn.innerHTML = 'Got it — Let\'s Play! <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>';
+      } else {
+        nextBtn.className = 'htp-btn htp-btn-next';
+        nextBtn.innerHTML = 'Next <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+      }
+    }
+
+    // Close modal on Escape key
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeHowToPlay(); });
+
+    // ═══ PLAYER DATA ═══
+    const players = [
+      { initials: 'BR', name: 'Bran', color: 'rgba(255,159,67,0.12)', textColor: 'var(--orange)', you: true, alive: true },
+      { initials: 'MR', name: 'Marco', color: 'var(--lime-dim)', textColor: 'var(--lime)', alive: true },
+      { initials: 'JL', name: 'Julia', color: 'rgba(124,92,252,0.12)', textColor: 'var(--purple)', alive: true },
+      { initials: 'AL', name: 'Alex', color: 'rgba(78,205,196,0.12)', textColor: 'var(--teal)', alive: true },
+      { initials: 'SR', name: 'Sara', color: 'rgba(255,107,107,0.12)', textColor: 'var(--coral)', alive: true },
+      { initials: 'TK', name: 'TipKing99', color: 'rgba(255,159,67,0.12)', textColor: 'var(--orange)', alive: true },
+      { initials: 'PK', name: 'PatKing', color: 'rgba(124,92,252,0.12)', textColor: 'var(--purple)', alive: true },
+      { initials: '', name: '', empty: true, alive: false },
+      { initials: '', name: '', empty: true, alive: false },
+      { initials: '', name: '', empty: true, alive: false },
+    ];
+
+    // ═══ GAMES DATA ═══
+    const crestStyle = 'background:rgba(255,255,255,0.06);color:var(--off-white);border:1px solid rgba(255,255,255,0.08)';
+    const gamesData = [
+      { league: 'La Liga · Matchday 32', homeAbbr: 'Barcelona', home: 'Barcelona', homeStyle: crestStyle, awayAbbr: 'Real Madrid', away: 'Real Madrid', awayStyle: crestStyle, timeLabel: "Live · 32'", live: true, minute: 32 },
+      { league: 'Premier League · Matchday 33', homeAbbr: 'Liverpool', home: 'Liverpool', homeStyle: crestStyle, awayAbbr: 'Man City', away: 'Man City', awayStyle: crestStyle, timeLabel: "Live · 58'", live: true, minute: 58 },
+      { league: 'Premier League · Matchday 33', homeAbbr: 'Arsenal', home: 'Arsenal', homeStyle: crestStyle, awayAbbr: 'Chelsea', away: 'Chelsea', awayStyle: crestStyle, timeLabel: "Live · 78'", live: true, minute: 78 },
+      { league: 'Serie A · Matchday 30', homeAbbr: 'Juventus', home: 'Juventus', homeStyle: crestStyle, awayAbbr: 'Napoli', away: 'Napoli', awayStyle: crestStyle, timeLabel: 'Kickoff at 18:45', live: false, minute: 0 },
+      { league: 'Bundesliga · Matchday 29', homeAbbr: 'Bayern', home: 'Bayern', homeStyle: crestStyle, awayAbbr: 'Dortmund', away: 'Dortmund', awayStyle: crestStyle, timeLabel: 'Kickoff at 20:00', live: false, minute: 0 },
+    ];
+
+    // ═══ RENDER RING ═══
+    function renderRing(containerId, size, avatarSize) {
+      const ring = document.getElementById(containerId);
+      if (!ring) return;
+      ring.querySelectorAll('.player-slot').forEach(s => s.remove());
+      const cx = size / 2, cy = size / 2, r = size / 2 - (avatarSize || 30);
+      players.forEach((p, i) => {
+        const angle = (i / 10) * Math.PI * 2 - Math.PI / 2;
+        const x = cx + r * Math.cos(angle);
+        const y = cy + r * Math.sin(angle);
+        const slot = document.createElement('div');
+        slot.className = 'player-slot';
+        slot.style.left = x + 'px';
+        slot.style.top = y + 'px';
+        let cls = 'player-slot-avatar';
+        if (p.empty) cls += ' empty';
+        else if (!p.alive) cls += ' dead';
+        else if (p.you) cls += ' you';
+        else cls += ' alive';
+        slot.innerHTML = `
+          <div class="${cls}" style="background:${p.color||'none'};color:${p.textColor||'var(--grey)'};width:${avatarSize||48}px;height:${avatarSize||48}px;">
+            ${p.empty ? '' : p.initials}
+            ${p.you && p.alive ? '<span class="you-badge">You</span>' : ''}
+          </div>
+          <span class="player-slot-name">${p.name || ''}</span>
+        `;
+        ring.appendChild(slot);
+      });
+    }
+
+    // ═══ SCREEN MANAGEMENT ═══
+    function showScreen(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById('screen-' + id).classList.add('active');
+      document.querySelectorAll('.demo-nav button').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.demo-nav button').forEach(b => {
+        const map = { games:'Games', lobby:'Queue', arena:'Arena', spectator:'Spectator', suddendeath:'Sudden Death', victory:'Victory', rankings:'Rankings' };
+        if (b.textContent.trim() === map[id]) b.classList.add('active');
+      });
+      // highlight topbar rankings btn
+      const rkBtn = document.getElementById('topbar-rank-btn');
+      if (id === 'rankings') rkBtn.classList.add('active');
+      else rkBtn.classList.remove('active');
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      if (id === 'arena') { renderRoundBar(); startTimer(modeConfig[activeMode].timer); }
+      if (id === 'victory') spawnConfetti();
+      // lobby no longer uses ring
+    }
+
+    // ═══ GAME SELECTION ═══
+    function joinGame(idx, mode) {
+      // Tier gate: enforce daily BR limit
+      if (typeof SpontixStore !== 'undefined') {
+        const player = SpontixStore.getPlayer();
+        const limits = SpontixStore.getTierLimits(player.tier);
+        const dailyLimit = limits.battleRoyalePerDay;
+        if (dailyLimit !== Infinity) {
+          const today = new Date().toDateString();
+          const brKey = 'spontix_br_plays_' + today;
+          const played = parseInt(localStorage.getItem(brKey) || '0');
+          if (played >= dailyLimit) {
+            SpontixSidebar.showUpgradeModal({
+              feature: 'More Battle Royale',
+              requiredTier: dailyLimit <= 1 ? 'Pro' : 'Elite',
+              isVenue: false,
+              icon: '⚔️',
+              description: 'You\'ve used all <strong>' + dailyLimit + ' Battle Royale match' + (dailyLimit === 1 ? '' : 'es') + '</strong> for today. Upgrade for more!',
+              benefits: dailyLimit <= 1
+                ? ['5 BR matches per day', 'All question types', 'Risky answers & streaks', 'Ad-free gameplay']
+                : ['Unlimited BR matches', 'Live stats overlay', 'All game modes', 'Priority matchmaking']
+            });
+            return;
+          }
+          // Increment counter
+          localStorage.setItem(brKey, (played + 1).toString());
+        }
+        // Track BR games for badge progress
+        const brTotal = parseInt(localStorage.getItem('spontix_br_total') || '0') + 1;
+        localStorage.setItem('spontix_br_total', brTotal.toString());
+        SpontixStore.checkAndAwardPlayerBadge('br_veteran', brTotal);
+      }
+
+      const g = gamesData[idx];
+      if (!g) return;
+      activeMode = mode || 'full';
+      const mc = modeConfig[activeMode];
+      totalRounds = mc.rounds;
+      currentGameTitle = g.home + ' vs ' + g.away;
+
+      // Update lobby with selected game info
+      document.getElementById('lobby-league').textContent = g.league;
+      document.getElementById('lobby-home-crest').textContent = g.homeAbbr;
+      document.getElementById('lobby-home-name').textContent = g.home;
+      document.getElementById('lobby-away-crest').textContent = g.awayAbbr;
+      document.getElementById('lobby-away-name').textContent = g.away;
+      const timeLabel = document.getElementById('lobby-time-label');
+      timeLabel.innerHTML = (g.live ? '<div class="live-pulse"></div> ' : '') + g.timeLabel;
+      document.getElementById('topbar-match-text').textContent = g.league;
+
+      // Update lobby mode badge
+      const lobbyModeBadge = document.getElementById('lobby-mode-badge');
+      if (lobbyModeBadge) {
+        lobbyModeBadge.innerHTML = mc.icon + ' ' + mc.name;
+        lobbyModeBadge.style.borderColor = mc.color;
+        lobbyModeBadge.style.color = mc.color;
+      }
+      const lobbyModeInfo = document.getElementById('lobby-mode-info');
+      if (lobbyModeInfo) lobbyModeInfo.textContent = mc.rounds + ' rounds · ' + mc.timer + 's per question';
+
+      // Update mode badges across all screens
+      document.querySelectorAll('.mode-badge-dynamic').forEach(el => {
+        el.innerHTML = mc.icon + ' ' + mc.label;
+        el.style.color = mc.color;
+        el.style.borderColor = mc.color.replace('var(','').replace(')','').includes('--') ? mc.color : mc.color;
+      });
+
+      showScreen('lobby');
+      simulateQueue();
+    }
+
+    // ═══ QUEUE SIMULATION ═══
+    let queueInterval;
+    const newPlayerData = [
+      { i:'NK', n:'NikoFan', c:'rgba(78,205,196,0.12)', t:'var(--teal)' },
+      { i:'RM', n:'RonMad', c:'rgba(255,107,107,0.12)', t:'var(--coral)' },
+      { i:'LS', n:'LeoStar', c:'var(--lime-dim)', t:'var(--lime)' },
+    ];
+    function simulateQueue() {
+      let count = 7;
+      clearInterval(queueInterval);
+      document.getElementById('lobbyCount').textContent = count;
+      queueInterval = setInterval(() => {
+        if (count < 10) {
+          count++;
+          document.getElementById('lobbyCount').textContent = count;
+          const fill = document.querySelector('.lobby-progress-fill');
+          if (fill) fill.style.width = (count * 10) + '%';
+
+          // Fill empty roster cards
+          const emptyCards = document.querySelectorAll('.lobby-player-card.empty-card');
+          if (emptyCards.length > 0) {
+            const card = emptyCards[0];
+            const d = newPlayerData[10 - count] || newPlayerData[0];
+            card.classList.remove('empty-card');
+            card.classList.add('joined');
+            const avatarEl = card.querySelector('.lobby-card-avatar');
+            avatarEl.classList.add('av-user');
+            avatarEl.setAttribute('data-name', d.i);
+            avatarEl.style.cssText = `background:${d.c};color:${d.t};`;
+            avatarEl.textContent = d.i;
+            if (typeof SpontixStore !== 'undefined') SpontixStore.applyAvatarsToPage();
+            card.querySelector('.lobby-card-name').textContent = d.n;
+
+            // Also update players data for arena ring
+            const emptyIdx = players.findIndex(p => p.empty);
+            if (emptyIdx >= 0) {
+              players[emptyIdx] = { initials: d.i, name: d.n, color: d.c, textColor: d.t, alive: true };
+            }
+          }
+        }
+        if (count >= 10) {
+          clearInterval(queueInterval);
+          document.querySelector('.lobby-waiting-text span').textContent = 'Lobby full — ready to start!';
+          document.querySelectorAll('.lobby-waiting-dots .dot').forEach(d => d.style.background = 'var(--lime)');
+        }
+      }, 1500);
+    }
+
+    // ═══ MODE CONFIG ═══
+    const modeConfig = {
+      full:    { name: 'Full Match', icon: '⚔️', rounds: 10, timer: 15, color: 'var(--coral)', label: 'Full Match BR' },
+      sprint:  { name: '2nd Half Sprint', icon: '⚡', rounds: 7,  timer: 12, color: 'var(--orange)', label: '2nd Half Sprint' },
+      final15: { name: 'Final 15', icon: '🔥', rounds: 5,  timer: 8,  color: 'var(--coral)', label: 'Final 15' },
+    };
+    let activeMode = 'full';
+
+    // ═══ GAME FLOW ═══
+    let currentRound = 0;
+    let totalRounds = 10;
+
+    // ── Per-game stat tracking ──
+    let gameCorrect   = 0;
+    let gameWrong     = 0;
+    let gameStreak    = 0;
+    let gameBestStreak = 0;
+    let gamePoints    = 0;
+    let currentGameTitle = '';
+
+    function resetGameStats() {
+      gameCorrect = gameWrong = gameStreak = gameBestStreak = gamePoints = 0;
+    }
+
+    function startGame() {
+      clearInterval(queueInterval);
+      resetGameStats();
+      const mc = modeConfig[activeMode];
+      totalRounds = mc.rounds;
+      currentRound = Math.max(1, Math.floor(mc.rounds * 0.3)); // start partway for demo
+      showScreen('arena');
+      renderRoundBar();
+      startTimer(mc.timer);
+    }
+
+    function renderRoundBar() {
+      const bar = document.getElementById('roundBar');
+      bar.innerHTML = '';
+      for (let i = 1; i <= totalRounds; i++) {
+        const pip = document.createElement('div');
+        pip.className = 'round-pip';
+        if (i < currentRound) pip.classList.add('done');
+        else if (i === currentRound) pip.classList.add('active');
+        bar.appendChild(pip);
+      }
+      const label = document.createElement('span');
+      label.className = 'round-label';
+      label.innerHTML = `Round <strong>${currentRound}</strong> of ${totalRounds}`;
+      bar.appendChild(label);
+    }
+
+    // Timer
+    let timerInterval;
+    function startTimer(seconds) {
+      let remaining = seconds;
+      const circumference = 2 * Math.PI * 54;
+      const ring = document.getElementById('timerRing');
+      const text = document.getElementById('timerText');
+      ring.style.strokeDasharray = circumference;
+      ring.style.strokeDashoffset = 0;
+      ring.classList.remove('warning', 'critical');
+      clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        remaining--;
+        if (remaining <= 0) { clearInterval(timerInterval); remaining = 0; }
+        text.textContent = remaining;
+        const offset = circumference * (1 - remaining / seconds);
+        ring.style.strokeDashoffset = offset;
+        if (remaining <= 5) ring.classList.add('critical');
+        else if (remaining <= 8) ring.classList.add('warning');
+      }, 1000);
+    }
+
+    function selectOption(el, idx) {
+      el.parentElement.querySelectorAll('.prediction-option').forEach(o => o.classList.add('disabled'));
+      el.classList.add('selected');
+      clearInterval(timerInterval);
+      setTimeout(() => {
+        const options = el.parentElement.querySelectorAll('.prediction-option');
+        options[0].classList.add('correct');
+        if (idx !== 0) { el.classList.add('wrong'); el.classList.remove('selected'); }
+        options[0].innerHTML += '<span class="opt-count">7 players chose this</span>';
+        options[1].innerHTML += '<span class="opt-count">3 players chose this</span>';
+        setTimeout(() => {
+          if (idx === 0) {
+            // Correct — track stats
+            gameCorrect++;
+            gameStreak++;
+            if (gameStreak > gameBestStreak) gameBestStreak = gameStreak;
+            gamePoints += 30 + (gameStreak > 1 ? gameStreak * 5 : 0);
+            showSurviveFlash();
+            eliminatePlayer('TipKing99');
+          } else {
+            // Wrong — player eliminated
+            gameWrong++;
+            gameStreak = 0;
+            const aliveNow = players.filter(p => p.alive && !p.empty).length;
+            const totalReal = players.filter(p => !p.empty).length;
+            const myRank = aliveNow + 1;
+            recordBRResult(myRank, totalReal);
+            showElimFlash('You');
+            setTimeout(() => showScreen('spectator'), 1800);
+          }
+        }, 1000);
+      }, 2000);
+    }
+
+    function eliminatePlayer(name) {
+      const p = players.find(pl => pl.name === name);
+      if (p) p.alive = false;
+      showElimFlash(name);
+      updateAliveCount();
+      // Update player list in sidebar
+      const rows = document.querySelectorAll('#arena-player-list .live-side-player');
+      rows.forEach(row => {
+        const nameEl = row.querySelector('.live-side-name');
+        if (nameEl && nameEl.textContent.trim() === name) {
+          const status = row.querySelector('.live-side-status');
+          if (status) { status.textContent = 'OUT'; status.className = 'live-side-status'; status.style.cssText = 'background:rgba(255,107,107,0.12);color:var(--coral);'; }
+          row.style.opacity = '0.4';
+        }
+      });
+    }
+
+    function updateAliveCount() {
+      const alive = players.filter(p => p.alive).length;
+      const el = document.getElementById('aliveCount');
+      if (el) el.textContent = alive;
+    }
+
+    function showElimFlash(name) {
+      document.getElementById('elimName').textContent = name;
+      const overlay = document.getElementById('elimOverlay');
+      overlay.classList.add('show');
+      setTimeout(() => overlay.classList.remove('show'), 1200);
+    }
+
+    function showSurviveFlash() {
+      const overlay = document.getElementById('surviveOverlay');
+      overlay.classList.add('show');
+      setTimeout(() => overlay.classList.remove('show'), 1200);
+    }
+
+    function showVictory() {
+      showScreen('victory');
+      // Correct answer on the winning round
+      gameCorrect++;
+      gameStreak++;
+      if (gameStreak > gameBestStreak) gameBestStreak = gameStreak;
+      gamePoints += 100; // winner bonus
+
+      const totalReal = players.filter(p => !p.empty).length;
+      recordBRResult(1, totalReal);
+    }
+
+    async function recordBRResult(rank, totalPlayers) {
+      // Build match title from current game if available
+      const g = typeof currentGameTitle === 'string' && currentGameTitle ? currentGameTitle : 'Battle Royale';
+
+      // Record game result — this updates users stats + recalculates ELO
+      if (typeof SpontixStoreAsync !== 'undefined') {
+        const gameResult = await SpontixStoreAsync.recordGameResult({
+          gameType:     'battle_royale',
+          matchTitle:   g,
+          matchScore:   rank === 1 ? '1st Place' : rank + 'th Place',
+          points:       gamePoints,
+          correct:      gameCorrect,
+          wrong:        gameWrong,
+          bestStreak:   gameBestStreak,
+          endStreak:    gameStreak,
+          rank:         rank,
+          totalPlayers: totalPlayers,
+        });
+
+        // Update victory screen ELO strip with real numbers from recordGameResult
+        if (rank === 1 && gameResult.newElo != null) {
+          const eloChangeEl = document.querySelector('.victory-elo-change');
+          const eloFromEl   = document.querySelector('.victory-elo-from');
+          const eloTierEl   = document.querySelector('.victory-elo-tier');
+          const eloStatEl   = document.querySelector('.victory-stat-value[style*="teal"]');
+          const delta       = gameResult.eloChange;
+          const tier        = SpontixStore.getEloTier(gameResult.newElo);
+          if (eloChangeEl) eloChangeEl.textContent = (delta >= 0 ? '+' : '') + delta;
+          if (eloFromEl)   eloFromEl.textContent   = gameResult.prevElo.toLocaleString() + ' → ' + gameResult.newElo.toLocaleString() + ' ELO';
+          if (eloTierEl)   eloTierEl.textContent   = tier.label + ' Tier';
+          if (eloStatEl)   eloStatEl.textContent   = (delta >= 0 ? '+' : '') + delta;
+        }
+
+        // Award trophies async
+        const ctx = { mode: activeMode || 'full', event: 'Battle Royale Victory' };
+        if (rank === 1) {
+          SpontixStoreAsync.awardTrophy('br_champion', ctx);
+          if (gameWrong === 0) SpontixStoreAsync.awardTrophy('br_flawless', ctx);
+          if (activeMode === 'sprint') SpontixStoreAsync.awardTrophy('br_sprint_king', ctx);
+        }
+      }
+    }
+
+    // ═══ RANKINGS TABS ═══
+    function showRankTab(tab) {
+      document.querySelectorAll('.rank-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.rank-panel').forEach(p => p.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('panel-' + tab).classList.add('active');
+    }
+
+    // ═══ CONFETTI ═══
+    function spawnConfetti() {
+      const container = document.getElementById('confetti');
+      container.innerHTML = '';
+      container.classList.add('show');
+      const colors = ['#A8E10C','#FF6B6B','#7C5CFC','#4ECDC4','#FF9F43','#FFD700'];
+      for (let i = 0; i < 80; i++) {
+        const piece = document.createElement('div');
+        piece.className = 'confetti-piece';
+        piece.style.left = Math.random() * 100 + '%';
+        piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+        piece.style.width = (4 + Math.random() * 8) + 'px';
+        piece.style.height = (4 + Math.random() * 8) + 'px';
+        piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+        piece.style.animationDuration = (2 + Math.random() * 3) + 's';
+        piece.style.animationDelay = Math.random() * 2 + 's';
+        container.appendChild(piece);
+      }
+      setTimeout(() => { container.innerHTML = ''; container.classList.remove('show'); }, 6000);
+    }
+
+  </script>
+  </div>
+<script src="utils.js"></script>
+<script src="br-elo.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+<script src="sidebar.js"></script>
+<script>SpontixSidebar.init({ type: 'player', active: 'battle-royale.html' });</script>
+</body>
+</html>

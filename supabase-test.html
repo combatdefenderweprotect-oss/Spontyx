@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Supabase Connection Test</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy: #1A1A2E;
+      --navy-light: #22223A;
+      --navy-card: #2A2A44;
+      --lime: #A8E10C;
+      --coral: #FF6B6B;
+      --teal: #4ECDC4;
+      --off-white: #E8E8F0;
+      --grey: #9898B0;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--navy); color: var(--off-white);
+      min-height: 100vh; padding: 40px 24px;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 1.8rem; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 6px; }
+    h1 .dot { color: var(--lime); }
+    .sub { color: var(--grey); font-size: 0.9rem; margin-bottom: 28px; }
+    .panel {
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px; padding: 20px 22px; margin-bottom: 16px;
+    }
+    .panel h3 { font-size: 0.82rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--grey); margin-bottom: 12px; }
+    .status {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 14px; border-radius: 999px; font-size: 0.78rem; font-weight: 700;
+    }
+    .status.loading { background: rgba(152,152,176,0.15); color: var(--grey); }
+    .status.ok      { background: rgba(168,225,12,0.15);  color: var(--lime); }
+    .status.fail    { background: rgba(255,107,107,0.15); color: var(--coral); }
+    .status .pulse { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+    .venue-list { display: grid; gap: 10px; margin-top: 14px; }
+    .venue-row {
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--navy-light); padding: 12px 16px; border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+    .venue-row .name { font-weight: 700; }
+    .venue-row .city { font-size: 0.78rem; color: var(--grey); }
+    .error-box {
+      margin-top: 14px; padding: 14px 16px;
+      background: rgba(255,107,107,0.08); border: 1px solid rgba(255,107,107,0.2);
+      border-radius: 10px; color: var(--coral); font-size: 0.85rem;
+      font-family: 'SF Mono', Consolas, monospace; white-space: pre-wrap; word-break: break-all;
+    }
+    code {
+      background: var(--navy-light); padding: 2px 8px; border-radius: 6px;
+      font-family: 'SF Mono', Consolas, monospace; font-size: 0.82rem; color: var(--lime);
+    }
+    .next { margin-top: 28px; padding: 20px; background: rgba(168,225,12,0.06); border: 1px solid rgba(168,225,12,0.2); border-radius: 14px; }
+    .next h3 { color: var(--lime); margin-bottom: 10px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; }
+    .next p { font-size: 0.88rem; line-height: 1.55; color: var(--off-white); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Supabase Connection Test<span class="dot">.</span></h1>
+    <p class="sub">Fetching the 6 seed venues directly from your Postgres database via the Supabase publishable key.</p>
+
+    <div class="panel">
+      <h3>Connection</h3>
+      <div id="status" class="status loading"><span class="pulse"></span> Connecting…</div>
+      <div id="venueList" class="venue-list"></div>
+      <div id="errorBox"></div>
+    </div>
+
+    <div class="panel">
+      <h3>What this proves</h3>
+      <p style="font-size: 0.86rem; color: var(--grey); line-height: 1.55;">
+        If the six venues below load, your frontend is successfully authenticated to Supabase using the
+        publishable key, Row Level Security on <code>public.venues</code> is letting you read (because
+        seeding data has <code>owner_id = NULL</code> and the policy is <code>select using (true)</code>),
+        and we're ready to move on to step 4 (auth). If it fails, the error below tells us exactly why.
+      </p>
+    </div>
+
+    <div class="next">
+      <h3>Next</h3>
+      <p>
+        Once you see 6 venues above, tell me "works" and I'll move to step 4: signup + login pages
+        that replace the prototype <code>bootstrapPrototype()</code> auto-login with real Supabase Auth.
+      </p>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-client.js"></script>
+  <script>
+    (async function runTest() {
+      const statusEl = document.getElementById('status');
+      const listEl   = document.getElementById('venueList');
+      const errorEl  = document.getElementById('errorBox');
+
+      if (!window.sb) {
+        statusEl.className = 'status fail';
+        statusEl.innerHTML = '<span class="pulse"></span> Client not initialised';
+        errorEl.innerHTML = '<div class="error-box">window.sb is undefined — check the browser console for setup errors.</div>';
+        return;
+      }
+
+      const { data, error } = await window.sb
+        .from('venues')
+        .select('id, venue_name, city, country, type')
+        .order('venue_name');
+
+      if (error) {
+        statusEl.className = 'status fail';
+        statusEl.innerHTML = '<span class="pulse"></span> Failed';
+        errorEl.innerHTML = '<div class="error-box">' + (error.message || JSON.stringify(error, null, 2)) + '</div>';
+        return;
+      }
+
+      statusEl.className = 'status ok';
+      statusEl.innerHTML = '<span class="pulse"></span> Connected · ' + data.length + ' venues';
+
+      listEl.innerHTML = data.map(v =>
+        '<div class="venue-row">' +
+          '<div class="name">' + v.venue_name + '</div>' +
+          '<div class="city">' + (v.city || '') + (v.country ? ', ' + v.country : '') + ' · ' + (v.type || '') + '</div>' +
+        '</div>'
+      ).join('');
+    })();
+  </script>
+</body>
+</html>

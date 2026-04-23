@@ -1,0 +1,91 @@
+# my-leagues.html - SpontixStore Integration
+
+## Changes Made:
+
+### 1. Added SpontixStore Script Reference
+- Location: Line 1031 (before main script block)
+- Added: <script src="spontix-store.js"></script>
+- Purpose: Load the shared persistence layer before page-specific code runs
+
+### 2. Created hydrateMyLeagues() Function
+- Fetches all leagues from SpontixStore.getMyLeagues()
+- Separates leagues into three categories:
+  * Created leagues (where isOwner=true)
+  * Joined leagues (where isMember=true and isOwner=false)
+  * History leagues (where status='completed')
+- Updates stat cards with live counts
+- Updates tab counts badges
+- Clears and repopulates league lists from store data
+
+### 3. Created League Row Rendering Functions
+- createLeagueRowElement(league, isOwner)
+  * Generates dynamic league cards for active leagues
+  * Handles both owner and member views
+  * Auto-generates initials and color classes
+  * Includes action buttons with event handlers
+  * Shows team info for team leagues
+  * Displays creation date
+  
+- createHistoryLeagueRowElement(league)
+  * Generates completed league cards with historical data
+  * Shows final rank, total points, and accuracy
+  * Displays ended status and result badge
+  * Matches hardcoded HTML structure
+
+### 4. Action Handlers
+- leaveLeague(leagueId)
+  * Shows confirmation dialog
+  * Updates SpontixStore to mark isMember=false
+  * Decrements user's leaguesJoined count
+  * Re-hydrates page after action
+  * Shows toast notification
+  
+- deleteLeague(leagueId)
+  * Shows confirmation dialog
+  * Removes league from store completely
+  * Updates player stats
+  * Re-hydrates page after action
+  * Shows toast notification
+
+### 5. Enhanced Store Data
+- Added completed leagues to seedLeagues() in spontix-store.js
+- Includes 4 historical leagues with full data:
+  * Premier League 23/24 (Owner, 1st place)
+  * World Cup 2022 Preds (Member, 3rd place)
+  * Summer Olympics 2024 (Member, 6th place)
+  * Euro 2024 Showdown (Owner, 2nd place)
+
+### 6. DOM Ready Handler
+- Calls hydrateMyLeagues() on DOMContentLoaded
+- Ensures page loads with live data on first render
+- Re-hydrates whenever store is modified
+
+## Data Flow:
+User navigates to my-leagues.html
+  ↓
+spontix-store.js loads
+  ↓
+Page renders with hardcoded HTML
+  ↓
+DOMContentLoaded fires
+  ↓
+hydrateMyLeagues() called
+  ↓
+Live data from localStorage replaces hardcoded content
+  ↓
+User can interact with league cards
+  ↓
+Actions update store and re-hydrate
+
+## CSS/Layout:
+- No changes to CSS
+- All existing classes maintained
+- Color scheme auto-selected from hardcoded palette
+- Responsive design preserved
+
+## Browser Compatibility:
+- Uses localStorage (IE8+)
+- ES6 template literals (ES2015)
+- Array methods: filter, find, forEach (ES2015)
+- DOM manipulation with standard APIs (all browsers)
+

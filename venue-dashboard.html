@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Venue Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+
+    /* ── Venue Sidebar ── */
+    
+    /* ── Main Area ── */    /* Top Bar */
+    .topbar {
+      padding: 16px 32px; display: flex; align-items: center; gap: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-search { flex: 1; max-width: 400px; position: relative; }
+    .topbar-search input {
+      width: 100%; padding: 10px 14px 10px 40px; background: var(--navy-light);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-pill);
+      color: var(--off-white); font-size: 0.85rem; font-family: inherit; outline: none;
+      transition: border-color 0.2s;
+    }
+    .topbar-search input::placeholder { color: var(--grey-dark); }
+    .topbar-search input:focus { border-color: rgba(168,225,12,0.3); }
+    .topbar-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--grey-dark); }
+    .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .topbar-btn {
+      width: 40px; height: 40px; border-radius: 50%; border: none;
+      background: var(--navy-light); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; position: relative; transition: background 0.2s;
+      text-decoration: none;
+    }
+    .topbar-btn:hover { background: var(--navy-hover); }
+    .topbar-btn svg { width: 18px; height: 18px; stroke: var(--grey); fill: none; stroke-width: 1.8; }
+    .topbar-btn .notif-dot {
+      position: absolute; top: 8px; right: 8px; width: 8px; height: 8px;
+      background: var(--coral); border-radius: 50%; border: 2px solid var(--navy);
+    }
+    .venue-status {
+      display: flex; align-items: center; gap: 8px; margin-left: 12px;
+      padding: 6px 14px; border-radius: var(--radius-pill);
+      font-size: 0.75rem; font-weight: 700;
+    }
+    .venue-status.open { background: rgba(168,225,12,0.12); color: var(--lime); }
+    .venue-status.closed { background: rgba(255,107,107,0.12); color: var(--coral); }
+    .venue-status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      animation: pulse-live 2s infinite;
+    }
+    .venue-status.open .venue-status-dot { background: var(--lime); }
+    .venue-status.closed .venue-status-dot { background: var(--coral); }
+    @keyframes pulse-live { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    /* Content */
+    .content { padding: 32px; flex: 1; max-width: 1200px; }
+
+    /* Page Header */
+    .page-header { margin-bottom: 32px; }
+    .page-header h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+    .page-header h1 span { color: var(--purple); }
+    .page-header p { color: var(--grey); font-size: 0.9rem; }
+
+    /* ── Venue Profile Preview ── */
+    .profile-preview {
+      display: flex; align-items: center; gap: 20px; margin-bottom: 32px;
+      padding: 20px 24px; background: var(--navy-card); border-radius: var(--radius-lg);
+      border: 1px solid rgba(255,255,255,0.06); position: relative; overflow: hidden;
+    }
+    .profile-preview::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(ellipse at 0% 50%, rgba(124,92,252,0.06), transparent 60%);
+      pointer-events: none;
+    }
+    .profile-preview-avatar {
+      width: 56px; height: 56px; border-radius: var(--radius-md); flex-shrink: 0;
+      background: linear-gradient(135deg, var(--purple), #6B4FE0);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; font-weight: 900; color: #fff;
+    }
+    .profile-preview-info { flex: 1; min-width: 0; }
+    .profile-preview-name { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.3px; margin-bottom: 2px; }
+    .profile-preview-handle { font-size: 0.75rem; color: var(--grey); margin-bottom: 8px; }
+    .profile-preview-stats { display: flex; gap: 20px; flex-wrap: wrap; }
+    .pp-stat { display: flex; flex-direction: column; align-items: center; }
+    .pp-stat-value { font-size: 1.1rem; font-weight: 900; line-height: 1; }
+    .pp-stat-value.lime { color: var(--lime); }
+    .pp-stat-value.teal { color: var(--teal); }
+    .pp-stat-value.purple { color: var(--purple); }
+    .pp-stat-value.coral { color: var(--coral); }
+    .pp-stat-value.orange { color: var(--purple); }
+    .pp-stat-label { font-size: 0.6rem; color: var(--grey-dark); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
+    .pp-divider { width: 1px; background: rgba(255,255,255,0.06); align-self: stretch; }
+    .profile-preview-tier {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 12px; border-radius: var(--radius-pill);
+      background: rgba(124,92,252,0.1); border: 1px solid rgba(124,92,252,0.2);
+      font-size: 0.65rem; font-weight: 700; color: var(--purple); text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .profile-preview-link {
+      flex-shrink: 0; padding: 9px 18px; border-radius: var(--radius-pill);
+      border: 1px solid rgba(255,255,255,0.1); background: none; color: var(--grey);
+      font-size: 0.75rem; font-weight: 600; font-family: inherit; cursor: pointer;
+      transition: all 0.15s; text-decoration: none; display: flex; align-items: center; gap: 6px;
+    }
+    .profile-preview-link:hover { border-color: rgba(124,92,252,0.3); color: var(--off-white); }
+    .profile-preview-link svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+    /* ── Pending Alert ── */
+    .unanswered-alert {
+      display: flex; align-items: center; gap: 16px; padding: 16px 20px; margin-bottom: 20px;
+      background: rgba(255,107,107,0.08); border: 1px solid rgba(255,107,107,0.3);
+      border-radius: var(--radius-lg); text-decoration: none; color: var(--off-white);
+      transition: all 0.2s; position: relative; overflow: hidden;
+    }
+    .unanswered-alert::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+      background: var(--coral);
+    }
+    .unanswered-alert:hover { border-color: rgba(255,107,107,0.5); background: rgba(255,107,107,0.12); transform: translateY(-1px); }
+    .unanswered-alert-pulse {
+      width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+      background: rgba(255,107,107,0.15); display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+    .unanswered-alert-pulse::after {
+      content: ''; position: absolute; inset: -4px; border-radius: 50%;
+      border: 2px solid var(--coral); opacity: 0; animation: alert-ping 2s cubic-bezier(0,0,0.2,1) infinite;
+    }
+    @keyframes alert-ping { 0% { opacity: 0.6; transform: scale(0.8); } 100% { opacity: 0; transform: scale(1.4); } }
+    .unanswered-alert-count {
+      font-size: 1.1rem; font-weight: 900; color: var(--coral);
+    }
+    .unanswered-alert-body { flex: 1; min-width: 0; }
+    .unanswered-alert-title { font-size: 0.9rem; font-weight: 700; color: var(--off-white); }
+    .unanswered-alert-title strong { color: var(--coral); }
+    .unanswered-alert-matches { font-size: 0.75rem; color: var(--grey); margin-top: 3px; }
+    .unanswered-alert-btn {
+      flex-shrink: 0; padding: 9px 20px; border-radius: var(--radius-pill);
+      background: var(--coral); color: #fff; font-size: 0.78rem; font-weight: 700;
+      border: none; font-family: inherit; cursor: pointer; transition: opacity 0.2s;
+    }
+    .unanswered-alert-btn:hover { opacity: 0.85; }
+
+    /* ── Action Cards Grid ── */
+    .action-cards-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 28px;
+    }
+    .action-card {
+      background: var(--navy-card); border-radius: var(--radius-lg); padding: 18px 20px; border: 2px solid rgba(255,255,255,0.06);
+      display: flex; align-items: center; gap: 14px; cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.16,1,0.3,1); text-decoration: none; color: var(--off-white);
+      position: relative; overflow: hidden;
+    }
+    .action-card:hover { transform: translateY(-2px); }
+
+    .action-card.orange-accent {
+      background: var(--purple); border-color: var(--purple); color: #fff;
+    }
+    .action-card.orange-accent .action-card-title { color: #fff; }
+    .action-card.orange-accent .action-card-desc { color: rgba(255,255,255,0.65); }
+    .action-card.orange-accent:hover { background: #8b7bff; border-color: #8b7bff; }
+
+    .action-card.lime-accent {
+      background: var(--lime); border-color: var(--lime); color: var(--navy);
+    }
+    .action-card.lime-accent .action-card-title { color: var(--navy); }
+    .action-card.lime-accent .action-card-desc { color: rgba(26,26,46,0.65); }
+    .action-card.lime-accent:hover { background: #b8f01c; border-color: #b8f01c; }
+
+    .action-card-icon {
+      width: 40px; height: 40px; border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;
+    }
+    .action-card.orange-accent .action-card-icon { background: rgba(255,255,255,0.2); color: #fff; }
+    .action-card.lime-accent .action-card-icon { background: rgba(26,26,46,0.15); color: var(--navy); }
+
+    .action-card-body { flex: 1; min-width: 0; }
+    .action-card-title { font-size: 0.95rem; font-weight: 700; }
+    .action-card-desc { font-size: 0.75rem; line-height: 1.4; margin-top: 2px; }
+
+    /* ── Quick Nav Links ── */
+    .nav-links-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-bottom: 36px;
+    }
+    .nav-link-card {
+      display: flex; align-items: center; gap: 14px; padding: 18px 20px;
+      background: var(--navy-card); border-radius: var(--radius-lg);
+      border: 1px solid rgba(255,255,255,0.06); transition: all 0.2s;
+      cursor: pointer; text-decoration: none; color: var(--off-white);
+    }
+    .nav-link-card:hover { transform: translateY(-2px); }
+    .nav-link-icon {
+      width: 44px; height: 44px; border-radius: var(--radius-md); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .nav-link-icon svg { width: 20px; height: 20px; stroke-width: 2; fill: none; }
+    .nav-link-body { flex: 1; min-width: 0; }
+    .nav-link-title { font-size: 0.9rem; font-weight: 700; }
+    .nav-link-sub { font-size: 0.7rem; color: var(--grey); margin-top: 2px; }
+    .nav-link-arrow { color: var(--grey-dark); flex-shrink: 0; transition: color 0.2s; }
+    .nav-link-arrow svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .nav-link-card:hover .nav-link-arrow { color: var(--off-white); }
+
+    .nav-link-card.coral-link { border-color: rgba(255,107,107,0.2); }
+    .nav-link-card.coral-link:hover { border-color: rgba(255,107,107,0.4); }
+    .nav-link-card.coral-link .nav-link-icon { background: rgba(255,107,107,0.12); }
+    .nav-link-card.coral-link .nav-link-icon svg { stroke: var(--coral); }
+
+    .nav-link-card.orange-link { border-color: rgba(124,92,252,0.2); }
+    .nav-link-card.orange-link:hover { border-color: rgba(124,92,252,0.4); }
+    .nav-link-card.orange-link .nav-link-icon { background: rgba(124,92,252,0.12); }
+    .nav-link-card.orange-link .nav-link-icon svg { stroke: var(--purple); }
+
+    .nav-link-card.teal-link { border-color: rgba(78,205,196,0.2); }
+    .nav-link-card.teal-link:hover { border-color: rgba(78,205,196,0.4); }
+    .nav-link-card.teal-link .nav-link-icon { background: rgba(78,205,196,0.12); }
+    .nav-link-card.teal-link .nav-link-icon svg { stroke: var(--teal); }
+
+    .nav-link-card.lime-link { border-color: rgba(168,225,12,0.2); }
+    .nav-link-card.lime-link:hover { border-color: rgba(168,225,12,0.4); }
+    .nav-link-card.lime-link .nav-link-icon { background: var(--lime-dim); }
+    .nav-link-card.lime-link .nav-link-icon svg { stroke: var(--lime); }
+
+    .nav-link-card.purple-link { border-color: rgba(124,92,252,0.2); }
+    .nav-link-card.purple-link:hover { border-color: rgba(124,92,252,0.4); }
+    .nav-link-card.purple-link .nav-link-icon { background: rgba(124,92,252,0.12); }
+    .nav-link-card.purple-link .nav-link-icon svg { stroke: var(--purple); }
+
+    .nav-link-badge {
+      margin-left: 6px; padding: 2px 7px; border-radius: var(--radius-pill);
+      font-size: 0.6rem; font-weight: 800; vertical-align: middle;
+    }
+    .nav-link-badge.coral { background: var(--coral); color: #fff; }
+    .nav-link-badge.orange { background: var(--purple); color: #fff; }
+    .nav-link-badge.lime { background: var(--lime); color: var(--navy); }
+
+
+    /* ── Responsive ── */
+    @media (max-width: 700px) {
+      .profile-preview { flex-wrap: wrap; }
+      .profile-preview-stats { gap: 14px; }
+      .profile-preview-link { width: 100%; justify-content: center; }
+    }
+    /* Badge cards */
+    .badge-card {
+      background: rgba(255,255,255,0.03); border-radius: 12px; padding: 18px 14px;
+      border: 1px solid rgba(255,255,255,0.06); text-align: center;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .badge-card:hover { transform: translateY(-2px); border-color: rgba(124,92,252,0.15); }
+    .badge-card.locked { opacity: 0.4; }
+    .badge-card.locked:hover { transform: none; border-color: rgba(255,255,255,0.06); }
+    .badge-icon {
+      width: 44px; height: 44px; border-radius: 50%; margin: 0 auto 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .badge-icon svg { width: 20px; height: 20px; stroke-width: 2; fill: none; }
+    .badge-name { font-size: 0.72rem; font-weight: 700; margin-bottom: 3px; }
+    .badge-desc { font-size: 0.6rem; color: rgba(255,255,255,0.4); line-height: 1.4; }
+    .badge-progress { margin-top: 6px; }
+    .badge-progress-track { height: 3px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+    .badge-progress-fill { height: 100%; border-radius: 3px; }
+    .badge-progress-label { font-size: 0.55rem; color: rgba(255,255,255,0.3); margin-top: 3px; }
+    .badge-earned-date { font-size: 0.55rem; color: #7C5CFC; font-weight: 600; margin-top: 5px; }
+
+    /* ── Venue Trophy Management ── */
+
+  </style>
+</head>
+<body>
+
+  <div id="sidebar-placeholder"></div>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+    <header class="topbar">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Search events, teams, players..." />
+      </div>
+      <div class="venue-status open">
+        <span class="venue-status-dot"></span>
+        Event Live
+      </div>
+      <div class="topbar-right">
+        <a href="notifications.html" class="topbar-btn" title="Notifications" style="text-decoration:none;">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="notif-dot"></span>
+        </a>
+        <button class="topbar-btn" title="Messages">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- Page Header -->
+      <div class="page-header">
+        <h1>Welcome back, <span>Crown Pub</span></h1>
+        <p>Your venue command centre — manage events, teams, and the floor.</p>
+      </div>
+
+      <!-- Venue Profile Preview -->
+      <div class="profile-preview">
+        <div class="profile-preview-avatar">TC</div>
+        <div class="profile-preview-info">
+          <div class="profile-preview-name">The Crown Pub</div>
+          <div class="profile-preview-handle">Friday Night — 11 Apr 2026</div>
+          <span class="profile-preview-tier">Venue Starter</span>
+        </div>
+        <div class="pp-divider"></div>
+        <div class="profile-preview-stats">
+          <div class="pp-stat">
+            <span class="pp-stat-value lime">47</span>
+            <span class="pp-stat-label">Players</span>
+          </div>
+          <div class="pp-stat">
+            <span class="pp-stat-value orange">6</span>
+            <span class="pp-stat-label">Teams</span>
+          </div>
+          <div class="pp-stat">
+            <span class="pp-stat-value teal">14</span>
+            <span class="pp-stat-label">Questions</span>
+          </div>
+          <div class="pp-stat">
+            <span class="pp-stat-value coral">186</span>
+            <span class="pp-stat-label">Answers</span>
+          </div>
+        </div>
+        <div class="pp-divider"></div>
+        <a href="#" class="profile-preview-link">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          Settings
+        </a>
+      </div>
+
+      <!-- Pending Questions Alert -->
+      <a href="venue-live-floor.html" class="unanswered-alert">
+        <div class="unanswered-alert-pulse">
+          <span class="unanswered-alert-count">3</span>
+        </div>
+        <div class="unanswered-alert-body">
+          <div class="unanswered-alert-title"><strong>3 teams</strong> have unanswered questions</div>
+          <div class="unanswered-alert-matches">Barça Boys (1 pending) · Madridistas (2 pending) · Pub Exiles (1 pending)</div>
+        </div>
+        <div class="unanswered-alert-btn">View Floor</div>
+      </a>
+
+      <!-- Quick Action Cards -->
+      <div class="action-cards-grid">
+        <a href="venue-create-event.html" class="action-card orange-accent" style="text-decoration:none;color:inherit;">
+          <div class="action-card-icon">+</div>
+          <div class="action-card-body">
+            <div class="action-card-title">Create Event</div>
+            <div class="action-card-desc">Set up a new match night or tournament</div>
+          </div>
+        </a>
+
+        <a href="venue-teams.html" class="action-card lime-accent" style="text-decoration:none;color:inherit;">
+          <div class="action-card-icon">👥</div>
+          <div class="action-card-body">
+            <div class="action-card-title">Set Up Teams</div>
+            <div class="action-card-desc">Register tables and assign team names</div>
+          </div>
+        </a>
+      </div>
+
+      <!-- Profile Quick Link -->
+      <a href="venue-profile.html" style="display:block;margin-bottom:20px;padding:16px 20px;background:var(--navy-card);border:1px solid rgba(255,255,255,0.06);border-radius:12px;text-decoration:none;color:inherit;transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(124,92,252,0.3)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.06)'">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:0.85rem;font-weight:700;color:var(--off-white);margin-bottom:2px;">Venue Profile</div>
+            <div style="font-size:0.72rem;color:var(--grey);">Trophies, badges, appearance & settings</div>
+          </div>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--grey)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+        </div>
+      </a>
+
+      <!-- Quick Nav Links -->
+      <div class="nav-links-grid">
+
+        <a href="venue-live-floor.html" class="nav-link-card coral-link">
+          <div class="nav-link-icon">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          </div>
+          <div class="nav-link-body">
+            <div class="nav-link-title">Live Floor <span class="nav-link-badge coral">2 live</span></div>
+            <div class="nav-link-sub">Manage active games and push questions</div>
+          </div>
+          <div class="nav-link-arrow"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </a>
+
+        <a href="venue-tonights-events.html" class="nav-link-card orange-link">
+          <div class="nav-link-icon">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div class="nav-link-body">
+            <div class="nav-link-title">Tonight's Events <span class="nav-link-badge orange">2</span></div>
+            <div class="nav-link-sub">View and manage tonight's scheduled events</div>
+          </div>
+          <div class="nav-link-arrow"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </a>
+
+        <a href="venue-schedule.html" class="nav-link-card teal-link">
+          <div class="nav-link-icon">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          </div>
+          <div class="nav-link-body">
+            <div class="nav-link-title">Schedule</div>
+            <div class="nav-link-sub">Upcoming matches and events this week</div>
+          </div>
+          <div class="nav-link-arrow"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </a>
+
+        <a href="#" class="nav-link-card lime-link">
+          <div class="nav-link-icon">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          </div>
+          <div class="nav-link-body">
+            <div class="nav-link-title">Teams <span class="nav-link-badge lime">6</span></div>
+            <div class="nav-link-sub">Manage registered teams and table assignments</div>
+          </div>
+          <div class="nav-link-arrow"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </a>
+
+        <a href="venue-analytics.html" class="nav-link-card purple-link">
+          <div class="nav-link-icon">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 20V10M12 20V4M6 20V14"/></svg>
+          </div>
+          <div class="nav-link-body">
+            <div class="nav-link-title">Analytics</div>
+            <div class="nav-link-sub">Player engagement, retention, and venue stats</div>
+          </div>
+          <div class="nav-link-arrow"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </a>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+
+  <script src="utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+  <script src="sidebar.js"></script>
+  <script>SpontixSidebar.init({ type: 'venue', active: 'venue-dashboard.html' });</script>
+  <script>    // ══════════════════════════════════════════
+    // Hydrate Dashboard with SpontixStore
+    // ══════════════════════════════════════════
+    function hydrateVenueDashboard() {
+      const profile = SpontixStore.getVenueProfile();
+      const stats = SpontixStore.getVenueStats();
+      const events = SpontixStore.getVenueEvents();
+
+      // Update venue name in header
+      if (profile && profile.venueName) {
+        document.querySelector('.profile-preview-name').textContent = profile.venueName;
+        const avatar = document.querySelector('.profile-preview-avatar');
+        avatar.textContent = (profile.venueName || '').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+      }
+
+      // Update stats
+      if (stats) {
+        const statElements = document.querySelectorAll('.pp-stat');
+        if (statElements.length >= 4) {
+          statElements[0].querySelector('.pp-stat-value').textContent = stats.totalPlayers;
+          statElements[1].querySelector('.pp-stat-value').textContent = stats.totalTeams;
+          statElements[2].querySelector('.pp-stat-value').textContent = stats.totalQuestions;
+          statElements[3].querySelector('.pp-stat-value').textContent = stats.totalAnswers;
+        }
+      }
+
+      // Update the badges on nav links from events
+      const liveEvents = events.filter(e => e.status === 'live').length;
+      const todayEvents = events.filter(e => {
+        const eventDate = new Date(e.date).toDateString();
+        return eventDate === new Date().toDateString();
+      }).length;
+
+      const liveBadge = document.querySelector('.nav-link-card.coral-link .nav-link-badge');
+      if (liveBadge) liveBadge.textContent = liveEvents + ' live';
+
+      const todayBadge = document.querySelector('.nav-link-card.orange-link .nav-link-badge');
+      if (todayBadge) todayBadge.textContent = todayEvents;
+
+      const teamsBadge = document.querySelector('.nav-link-card.lime-link .nav-link-badge');
+      if (teamsBadge) teamsBadge.textContent = stats ? stats.totalTeams : '6';
+    }
+
+
+
+    // Call on page load
+    document.addEventListener('DOMContentLoaded', function() {
+      hydrateVenueDashboard();
+
+      // Re-render when events cache is refreshed from Supabase
+      window.addEventListener('spontix-events-refreshed', function() {
+        hydrateVenueDashboard();
+      });
+    });
+  </script>
+</body>
+</html>

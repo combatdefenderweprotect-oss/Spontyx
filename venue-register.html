@@ -1,0 +1,1353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Venue Registration - Spontyx</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --navy: #1A1A2E;
+            --navy-light: #22223A;
+            --navy-card: #2A2A44;
+            --purple: #7C5CFC;
+            --lime: #A8E10C;
+            --off-white: #E8E8F0;
+            --grey: #9898B0;
+            --coral: #FF6B6B;
+            --teal: #00D9FF;
+            --gold: #FFD700;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--navy) 0%, var(--navy-light) 100%);
+            color: var(--off-white);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 40px;
+            text-align: center;
+        }
+
+        .logo-header {
+            flex: 1;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--purple), var(--lime));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            color: var(--grey);
+        }
+
+        /* Progress Bar */
+        .progress-container {
+            margin-bottom: 40px;
+        }
+
+        .progress-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .step {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex: 1;
+            position: relative;
+        }
+
+        .step:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            width: 100%;
+            height: 2px;
+            background: var(--navy-card);
+            z-index: 0;
+        }
+
+        .step.completed:not(:last-child)::after {
+            background: var(--lime);
+        }
+
+        .step.active:not(:last-child)::after {
+            background: var(--purple);
+        }
+
+        .step-circle {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: var(--navy-card);
+            border: 2px solid var(--navy-card);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--grey);
+            position: relative;
+            z-index: 1;
+            transition: all 0.3s ease;
+            margin-bottom: 8px;
+        }
+
+        .step.active .step-circle {
+            background: var(--purple);
+            border-color: var(--purple);
+            color: white;
+            box-shadow: 0 0 20px rgba(124, 92, 252, 0.4);
+        }
+
+        .step.completed .step-circle {
+            background: var(--lime);
+            border-color: var(--lime);
+            color: var(--navy);
+        }
+
+        .step-label {
+            font-size: 12px;
+            color: var(--grey);
+            text-align: center;
+            transition: color 0.3s ease;
+        }
+
+        .step.active .step-label {
+            color: var(--purple);
+            font-weight: 600;
+        }
+
+        .step.completed .step-label {
+            color: var(--lime);
+        }
+
+        /* Form Sections */
+        .form-section {
+            background: var(--navy-card);
+            border-radius: 12px;
+            padding: 40px;
+            margin-bottom: 30px;
+            animation: slideIn 0.4s ease;
+            display: none;
+        }
+
+        .form-section.active {
+            display: block;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .form-section h2 {
+            font-size: 24px;
+            margin-bottom: 24px;
+            color: white;
+        }
+
+        .form-group {
+            margin-bottom: 24px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: var(--off-white);
+        }
+
+        input[type="text"],
+        input[type="tel"],
+        input[type="number"],
+        input[type="time"],
+        textarea,
+        select {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--navy-light);
+            border-radius: 8px;
+            background: var(--navy-light);
+            color: var(--off-white);
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        input[type="text"]:focus,
+        input[type="tel"]:focus,
+        input[type="number"]:focus,
+        input[type="time"]:focus,
+        textarea:focus,
+        select:focus {
+            outline: none;
+            border-color: var(--purple);
+            box-shadow: 0 0 0 3px rgba(124, 92, 252, 0.1);
+            background: var(--navy-light);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+            font-family: 'Inter', sans-serif;
+        }
+
+        /* Two Column Layout */
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        @media (max-width: 600px) {
+            .two-column {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Color Swatches */
+        .color-swatches {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        @media (max-width: 600px) {
+            .color-swatches {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .color-swatch {
+            width: 100%;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            border: 2px solid transparent;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.05);
+        }
+
+        .color-swatch.selected {
+            border-color: white;
+            box-shadow: 0 0 0 2px var(--navy-card), 0 0 10px rgba(255, 255, 255, 0.3);
+        }
+
+        .color-purple { background: var(--purple); }
+        .color-lime { background: var(--lime); }
+        .color-teal { background: var(--teal); }
+        .color-coral { background: var(--coral); }
+        .color-gold { background: var(--gold); }
+        .color-grey { background: var(--grey); }
+
+        /* File Upload */
+        .file-upload {
+            border: 2px dashed var(--navy-light);
+            border-radius: 8px;
+            padding: 32px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: rgba(124, 92, 252, 0.05);
+        }
+
+        .file-upload:hover {
+            border-color: var(--purple);
+            background: rgba(124, 92, 252, 0.1);
+        }
+
+        .file-upload.filled {
+            border-color: var(--lime);
+            background: rgba(168, 225, 12, 0.05);
+        }
+
+        .file-upload-icon {
+            font-size: 36px;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .file-upload-text {
+            font-size: 14px;
+            color: var(--grey);
+        }
+
+        .file-upload-text strong {
+            color: var(--purple);
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        .file-name {
+            font-size: 13px;
+            color: var(--lime);
+            margin-top: 12px;
+        }
+
+        /* Sports Checkboxes */
+        .sports-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        @media (max-width: 600px) {
+            .sports-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .sport-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 16px;
+            background: var(--navy-light);
+            border: 1px solid var(--navy-light);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .sport-item:hover {
+            border-color: var(--purple);
+        }
+
+        .sport-item input[type="checkbox"] {
+            width: auto;
+            margin-right: 12px;
+            cursor: pointer;
+            accent-color: var(--purple);
+        }
+
+        .sport-item.selected {
+            background: rgba(124, 92, 252, 0.15);
+            border-color: var(--purple);
+        }
+
+        .sport-icon {
+            margin-right: 8px;
+            font-size: 16px;
+        }
+
+        /* Review Card */
+        .review-card {
+            background: var(--navy-light);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid var(--purple);
+        }
+
+        .review-card h3 {
+            font-size: 12px;
+            color: var(--grey);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .review-card p {
+            font-size: 16px;
+            color: var(--off-white);
+            margin: 0;
+        }
+
+        .review-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 600px) {
+            .review-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Venue Preview */
+        .venue-preview {
+            background: var(--navy-light);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            border: 1px solid var(--navy-card);
+        }
+
+        .preview-header {
+            height: 120px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--purple), var(--navy-card));
+            margin-bottom: 16px;
+            display: flex;
+            align-items: flex-end;
+            justify-content: flex-start;
+            padding: 16px;
+        }
+
+        .preview-logo {
+            width: 60px;
+            height: 60px;
+            background: var(--navy-card);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--purple);
+            font-size: 28px;
+        }
+
+        .preview-name {
+            font-size: 18px;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 8px;
+        }
+
+        .preview-type {
+            font-size: 12px;
+            color: var(--grey);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .preview-sports {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 16px;
+        }
+
+        .sport-badge {
+            font-size: 12px;
+            padding: 4px 12px;
+            background: rgba(124, 92, 252, 0.2);
+            border: 1px solid var(--purple);
+            border-radius: 16px;
+            color: var(--off-white);
+        }
+
+        /* Controls */
+        .controls {
+            display: flex;
+            gap: 12px;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .controls button {
+            flex: 1;
+            padding: 14px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-back {
+            background: var(--navy-light);
+            color: var(--off-white);
+            border: 1px solid var(--navy-card);
+        }
+
+        .btn-back:hover {
+            background: var(--navy-card);
+        }
+
+        .btn-next {
+            background: var(--purple);
+            color: white;
+        }
+
+        .btn-next:hover {
+            background: #6B4FE8;
+            box-shadow: 0 0 20px rgba(124, 92, 252, 0.4);
+        }
+
+        /* Venue Plan Cards */
+        .venue-plan-card {
+            padding: 16px 18px; border-radius: 12px;
+            border: 2px solid rgba(255,255,255,0.06); background: var(--navy-light);
+            cursor: pointer; transition: all 0.2s;
+        }
+        .venue-plan-card:hover { border-color: rgba(124,92,252,0.3); background: rgba(124,92,252,0.04); }
+        .venue-plan-card.selected { border-color: var(--purple); background: rgba(124,92,252,0.08); }
+        .plan-radio {
+            width: 22px; height: 22px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.15);
+            flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        .venue-plan-card.selected .plan-radio { border-color: var(--purple); }
+        .venue-plan-card.selected .plan-radio::after {
+            content: ''; width: 12px; height: 12px; border-radius: 50%; background: var(--purple);
+        }
+
+        /* ── Tier Compare Link ── */
+        .tier-compare-link {
+            font-size: 0.65rem; color: var(--grey); cursor: pointer; text-decoration: underline;
+            text-decoration-style: dotted; transition: color 0.2s; margin-top: 4px; display: inline-block;
+        }
+        .tier-compare-link:hover { color: var(--purple); }
+
+        /* ── Tier Detail Popup ── */
+        .tier-popup-overlay {
+            position: fixed; inset: 0; z-index: 300; background: rgba(10,10,20,0.85);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity 0.25s ease;
+        }
+        .tier-popup-overlay.open { opacity: 1; pointer-events: auto; }
+        .tier-popup {
+            background: var(--navy-card); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 16px; width: 94%; max-width: 620px;
+            max-height: 85vh; overflow-y: auto; padding: 28px 24px;
+            transform: translateY(20px) scale(0.97); transition: transform 0.25s ease;
+            box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+        }
+        .tier-popup-overlay.open .tier-popup { transform: translateY(0) scale(1); }
+        .tier-popup-header {
+            display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px;
+        }
+        .tier-popup-header h3 { font-size: 1.1rem; font-weight: 800; color: var(--off-white); }
+        .tier-popup-close {
+            width: 32px; height: 32px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.1);
+            background: transparent; color: var(--grey); font-size: 1.1rem;
+            cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        .tier-popup-close:hover { border-color: rgba(255,255,255,0.3); color: var(--off-white); }
+        .tier-col-header {
+            display: grid; grid-template-columns: 1fr repeat(3, 80px); gap: 6px;
+            margin-bottom: 16px; padding: 0 4px;
+        }
+        .tier-col-label {
+            text-align: center; font-size: 0.7rem; font-weight: 800; color: var(--grey);
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        .tier-col-label.highlighted {
+            color: var(--purple); background: rgba(124,92,252,0.08); border-radius: 6px; padding: 4px 2px;
+        }
+        .tier-features { display: flex; flex-direction: column; gap: 2px; }
+        .tier-feature-row {
+            display: grid; grid-template-columns: 1fr repeat(3, 80px); gap: 6px;
+            padding: 8px 4px; border-radius: 6px;
+            font-size: 0.78rem; color: var(--off-white); align-items: center;
+        }
+        .tier-feature-row:nth-child(odd) { background: rgba(255,255,255,0.02); }
+        .tier-feature-row .feat-name { font-weight: 600; font-size: 0.76rem; }
+        .tier-feature-row .feat-val { text-align: center; font-size: 0.72rem; font-weight: 600; }
+        .feat-val .check { color: var(--lime); font-size: 0.9rem; }
+        .feat-val .cross { color: #FF6B6B; font-size: 0.85rem; opacity: 0.5; }
+        .feat-val .limit { color: var(--grey); }
+        .feat-val .unlimited { color: #4ECDC4; }
+        .tier-category {
+            font-size: 0.65rem; font-weight: 800; color: var(--grey); text-transform: uppercase;
+            letter-spacing: 1px; padding: 12px 4px 4px; border-bottom: 1px solid rgba(255,255,255,0.05);
+            margin-bottom: 2px;
+        }
+
+        .btn-launch {
+            background: linear-gradient(135deg, var(--lime), #8FD000);
+            color: var(--navy);
+            font-size: 16px;
+            padding: 16px 32px;
+            width: 100%;
+            margin-top: 12px;
+            box-shadow: 0 0 30px rgba(168, 225, 12, 0.3);
+            animation: glow 2s ease-in-out infinite;
+        }
+
+        .btn-launch:hover {
+            box-shadow: 0 0 40px rgba(168, 225, 12, 0.5);
+            transform: translateY(-2px);
+        }
+
+        @keyframes glow {
+            0%, 100% {
+                box-shadow: 0 0 30px rgba(168, 225, 12, 0.3);
+            }
+            50% {
+                box-shadow: 0 0 40px rgba(168, 225, 12, 0.5);
+            }
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+        }
+
+        .skip-link {
+            color: var(--grey);
+            text-decoration: none;
+            font-size: 13px;
+            transition: color 0.3s ease;
+        }
+
+        .skip-link:hover {
+            color: var(--purple);
+        }
+
+        /* Success Toast */
+        .success-toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(150px);
+            background: linear-gradient(135deg, var(--lime), #8FD000);
+            color: var(--navy);
+            padding: 16px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            box-shadow: 0 10px 30px rgba(168, 225, 12, 0.3);
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .success-toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* Confetti */
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: var(--lime);
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        @keyframes confetti-fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        .confetti {
+            animation: confetti-fall 3s ease-in forwards;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .container {
+                padding: 0;
+            }
+
+            header {
+                margin-bottom: 30px;
+            }
+
+            .form-section {
+                padding: 24px;
+            }
+
+            .progress-bar {
+                margin-bottom: 20px;
+            }
+
+            .step-circle {
+                width: 32px;
+                height: 32px;
+                font-size: 12px;
+            }
+
+            .step-label {
+                font-size: 11px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-header">
+                <a href="index.html" class="logo" style="text-decoration:none;color:inherit;">Spontyx</a>
+                <div class="subtitle">Venue Setup</div>
+            </div>
+        </header>
+
+        <!-- Progress Bar -->
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="step active" data-step="1">
+                    <div class="step-circle">1</div>
+                    <div class="step-label">Details</div>
+                </div>
+                <div class="step" data-step="2">
+                    <div class="step-circle">2</div>
+                    <div class="step-label">Branding</div>
+                </div>
+                <div class="step" data-step="3">
+                    <div class="step-circle">3</div>
+                    <div class="step-label">Plan</div>
+                </div>
+                <div class="step" data-step="4">
+                    <div class="step-circle">4</div>
+                    <div class="step-label">Launch</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 1: Venue Details -->
+        <div class="form-section active" data-section="1">
+            <h2>Venue Details</h2>
+
+            <div class="form-group">
+                <label>Venue Name</label>
+                <input type="text" id="venueName" placeholder="e.g., The Sports Bar">
+            </div>
+
+            <div class="form-group">
+                <label>Venue Type</label>
+                <select id="venueType">
+                    <option value="">Select a venue type</option>
+                    <option value="Pub">Pub</option>
+                    <option value="Bar">Bar</option>
+                    <option value="Restaurant">Restaurant</option>
+                    <option value="Sports Bar">Sports Bar</option>
+                    <option value="Club">Club</option>
+                    <option value="Hotel">Hotel</option>
+                    <option value="Cafe">Cafe</option>
+                    <option value="Other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Address</label>
+                <input type="text" id="address" placeholder="Street address">
+            </div>
+
+            <div class="two-column">
+                <div class="form-group">
+                    <label>City</label>
+                    <input type="text" id="city" placeholder="City">
+                </div>
+                <div class="form-group">
+                    <label>Country</label>
+                    <input type="text" id="country" placeholder="Country">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Phone Number</label>
+                <input type="tel" id="phone" placeholder="+1 (555) 000-0000">
+            </div>
+
+            <div class="form-group">
+                <label>Venue Capacity</label>
+                <input type="number" id="capacity" placeholder="Number of guests" min="1">
+            </div>
+
+            <div class="controls">
+                <button class="btn-back" onclick="skipSetup()">Skip for now</button>
+                <button class="btn-next" onclick="nextStep()">Next</button>
+            </div>
+        </div>
+
+        <!-- Step 2: Branding & Setup -->
+        <div class="form-section" data-section="2">
+            <h2>Branding & Setup</h2>
+
+            <div class="form-group">
+                <label>Venue Logo</label>
+                <div class="file-upload" id="fileUpload" onclick="document.getElementById('logoInput').click()">
+                    <span class="file-upload-icon">📤</span>
+                    <div class="file-upload-text">
+                        <strong>Click to upload</strong>
+                        or drag and drop
+                    </div>
+                    <div style="font-size: 12px; color: var(--grey); margin-top: 4px;">PNG or JPG up to 5MB</div>
+                    <div class="file-name" id="fileName"></div>
+                </div>
+                <input type="file" id="logoInput" style="display: none;" accept="image/*">
+            </div>
+
+            <div class="form-group">
+                <label>Primary Color</label>
+                <div class="color-swatches">
+                    <div class="color-swatch color-purple selected" data-color="purple" onclick="selectColor('purple', this)"></div>
+                    <div class="color-swatch color-lime" data-color="lime" onclick="selectColor('lime', this)"></div>
+                    <div class="color-swatch color-teal" data-color="teal" onclick="selectColor('teal', this)"></div>
+                    <div class="color-swatch color-coral" data-color="coral" onclick="selectColor('coral', this)"></div>
+                    <div class="color-swatch color-gold" data-color="gold" onclick="selectColor('gold', this)"></div>
+                    <div class="color-swatch color-grey" data-color="grey" onclick="selectColor('grey', this)"></div>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Venue Description</label>
+                <textarea id="description" placeholder="Tell us about your venue..."></textarea>
+            </div>
+
+            <div class="two-column">
+                <div class="form-group">
+                    <label>Opening Time</label>
+                    <input type="time" id="openingTime" value="12:00">
+                </div>
+                <div class="form-group">
+                    <label>Closing Time</label>
+                    <input type="time" id="closingTime" value="23:00">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Sports You Host</label>
+                <div class="sports-grid">
+                    <div class="sport-item" onclick="toggleSport(this, 'football')">
+                        <input type="checkbox" id="sport-football" value="football">
+                        <span class="sport-icon">⚽</span>
+                        <label for="sport-football" style="margin: 0; cursor: pointer; flex: 1;">Football</label>
+                    </div>
+                    <div class="sport-item" onclick="toggleSport(this, 'basketball')">
+                        <input type="checkbox" id="sport-basketball" value="basketball">
+                        <span class="sport-icon">🏀</span>
+                        <label for="sport-basketball" style="margin: 0; cursor: pointer; flex: 1;">Basketball</label>
+                    </div>
+                    <div class="sport-item" onclick="toggleSport(this, 'tennis')">
+                        <input type="checkbox" id="sport-tennis" value="tennis">
+                        <span class="sport-icon">🎾</span>
+                        <label for="sport-tennis" style="margin: 0; cursor: pointer; flex: 1;">Tennis</label>
+                    </div>
+                    <div class="sport-item" onclick="toggleSport(this, 'mma')">
+                        <input type="checkbox" id="sport-mma" value="mma">
+                        <span class="sport-icon">🥊</span>
+                        <label for="sport-mma" style="margin: 0; cursor: pointer; flex: 1;">MMA/Boxing</label>
+                    </div>
+                    <div class="sport-item" onclick="toggleSport(this, 'golf')">
+                        <input type="checkbox" id="sport-golf" value="golf">
+                        <span class="sport-icon">⛳</span>
+                        <label for="sport-golf" style="margin: 0; cursor: pointer; flex: 1;">Golf</label>
+                    </div>
+                    <div class="sport-item" onclick="toggleSport(this, 'esports')">
+                        <input type="checkbox" id="sport-esports" value="esports">
+                        <span class="sport-icon">🎮</span>
+                        <label for="sport-esports" style="margin: 0; cursor: pointer; flex: 1;">Esports</label>
+                    </div>
+                    <div class="sport-item" onclick="toggleSport(this, 'rugby')">
+                        <input type="checkbox" id="sport-rugby" value="rugby">
+                        <span class="sport-icon">🏉</span>
+                        <label for="sport-rugby" style="margin: 0; cursor: pointer; flex: 1;">Rugby</label>
+                    </div>
+                    <div class="sport-item" onclick="toggleSport(this, 'cricket')">
+                        <input type="checkbox" id="sport-cricket" value="cricket">
+                        <span class="sport-icon">🏏</span>
+                        <label for="sport-cricket" style="margin: 0; cursor: pointer; flex: 1;">Cricket</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="controls">
+                <button class="btn-back" onclick="prevStep()">Back</button>
+                <button class="btn-next" onclick="nextStep()">Next</button>
+            </div>
+        </div>
+
+        <!-- Step 3: Choose Plan -->
+        <div class="form-section" data-section="3">
+            <h2>Choose Your Plan</h2>
+            <p style="color: var(--grey); font-size: 0.85rem; margin-bottom: 20px;">Select the plan that fits your venue. All paid plans start with a 7-day free trial.</p>
+
+            <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;">
+              <!-- Venue Starter -->
+              <div class="venue-plan-card selected" data-plan="venue-starter" onclick="selectVenuePlan(this, 'venue-starter')">
+                <div style="display:flex;align-items:center;gap:14px;">
+                  <div class="plan-radio"></div>
+                  <div style="flex:1;">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+                      <span style="font-size:0.95rem;font-weight:800;color:var(--off-white);">Venue Starter</span>
+                      <span style="padding:2px 8px;border-radius:6px;font-size:0.6rem;font-weight:800;background:rgba(168,225,12,0.12);color:var(--lime);text-transform:uppercase;">Free</span>
+                    </div>
+                    <div style="font-size:1.1rem;font-weight:900;color:var(--purple);margin-bottom:4px;">$0 <span style="font-size:0.7rem;font-weight:600;color:var(--grey);">/ forever</span></div>
+                    <div style="font-size:0.72rem;color:var(--grey);line-height:1.4;">1 league/week, 15 participants, QR join, basic questions, Spontyx branding</div>
+                    <span class="tier-compare-link" onclick="event.stopPropagation(); showTierDetails()">Compare all plans →</span>
+                  </div>
+                </div>
+              </div>
+              <!-- Venue Pro -->
+              <div class="venue-plan-card" data-plan="venue-pro" onclick="selectVenuePlan(this, 'venue-pro')">
+                <div style="display:flex;align-items:center;gap:14px;">
+                  <div class="plan-radio"></div>
+                  <div style="flex:1;">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+                      <span style="font-size:0.95rem;font-weight:800;color:var(--off-white);">Venue Pro</span>
+                      <span style="padding:2px 8px;border-radius:6px;font-size:0.6rem;font-weight:800;background:rgba(255,159,67,0.15);color:#FF9F43;text-transform:uppercase;">Most Popular</span>
+                    </div>
+                    <div style="font-size:1.1rem;font-weight:900;color:var(--purple);margin-bottom:4px;">$49.99 <span style="font-size:0.7rem;font-weight:600;color:var(--grey);">/ month</span></div>
+                    <div style="font-size:0.72rem;color:var(--grey);line-height:1.4;">Unlimited events, 100 players, TV Mode, Question Bank, custom Qs live, analytics, ad-free</div>
+                    <span class="tier-compare-link" onclick="event.stopPropagation(); showTierDetails()">Compare all plans →</span>
+                  </div>
+                </div>
+              </div>
+              <!-- Venue Elite -->
+              <div class="venue-plan-card" data-plan="venue-elite" onclick="selectVenuePlan(this, 'venue-elite')">
+                <div style="display:flex;align-items:center;gap:14px;">
+                  <div class="plan-radio"></div>
+                  <div style="flex:1;">
+                    <div style="display:flex;align-items:center;gap:8px;margin-bottom:2px;">
+                      <span style="font-size:0.95rem;font-weight:800;color:var(--off-white);">Venue Elite</span>
+                      <span style="padding:2px 8px;border-radius:6px;font-size:0.6rem;font-weight:800;background:rgba(78,205,196,0.12);color:#4ECDC4;text-transform:uppercase;">Best Value</span>
+                    </div>
+                    <div style="font-size:1.1rem;font-weight:900;color:var(--purple);margin-bottom:4px;">$149.99 <span style="font-size:0.7rem;font-weight:600;color:var(--grey);">/ month</span></div>
+                    <div style="font-size:0.72rem;color:var(--grey);line-height:1.4;">500 players, multi-venue, white-label, prizes, AI bulk generation, API, dedicated manager</div>
+                    <span class="tier-compare-link" onclick="event.stopPropagation(); showTierDetails()">Compare all plans →</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="text-align:center;font-size:0.7rem;color:var(--grey);margin-bottom:14px;">The venue pays — all your customers play for free.</div>
+
+            <div class="controls">
+                <button class="btn-back" onclick="prevStep()">Back</button>
+                <button class="btn-next" onclick="nextStep()">Review</button>
+            </div>
+        </div>
+
+        <!-- Step 4: Review & Launch -->
+        <div class="form-section" data-section="4">
+            <h2>Review & Launch</h2>
+
+            <div class="venue-preview">
+                <div class="preview-header" id="previewHeader" style="background: linear-gradient(135deg, var(--purple), var(--navy-card));">
+                    <div class="preview-logo">📍</div>
+                </div>
+                <div class="preview-name" id="previewName">Venue Name</div>
+                <div class="preview-type" id="previewType">Venue Type</div>
+                <div class="preview-sports" id="previewSports"></div>
+            </div>
+
+            <div class="review-grid">
+                <div class="review-card">
+                    <h3>Location</h3>
+                    <p id="reviewLocation">City, Country</p>
+                </div>
+                <div class="review-card">
+                    <h3>Capacity</h3>
+                    <p id="reviewCapacity">—</p>
+                </div>
+                <div class="review-card">
+                    <h3>Hours</h3>
+                    <p id="reviewHours">12:00 - 23:00</p>
+                </div>
+                <div class="review-card">
+                    <h3>Subscription</h3>
+                    <p id="reviewPlan" style="color:var(--purple);font-weight:700;">Venue Starter (Free)</p>
+                </div>
+            </div>
+
+            <div class="review-card" style="border-left: none;">
+                <p id="reviewDescription" style="font-size: 14px; color: var(--grey); margin: 0;"></p>
+            </div>
+
+            <button class="btn-launch" onclick="launchVenue()">Launch Your Venue</button>
+
+            <div class="controls">
+                <button class="btn-back" onclick="prevStep()">Back</button>
+            </div>
+        </div>
+
+        <div class="footer">
+            <a href="venue-dashboard.html" class="skip-link">Skip for now</a>
+        </div>
+    </div>
+
+    <!-- ── Tier Comparison Popup ── -->
+    <div class="tier-popup-overlay" id="tierPopup">
+      <div class="tier-popup">
+        <div class="tier-popup-header">
+          <h3>Compare Venue Plans</h3>
+          <button class="tier-popup-close" onclick="closeTierPopup()">✕</button>
+        </div>
+        <div id="tierPopupContent"></div>
+      </div>
+    </div>
+
+    <div class="success-toast" id="successToast">
+        ✨ Venue launched successfully!
+    </div>
+
+    <script>
+        let currentStep = 1;
+        let selectedColor = 'purple';
+        let selectedPlan = 'venue-starter';
+
+        const planLabels = {
+            'venue-starter': 'Venue Starter (Free)',
+            'venue-pro': 'Venue Pro ($49.99/mo)',
+            'venue-elite': 'Venue Elite ($149.99/mo)'
+        };
+
+        function selectVenuePlan(el, plan) {
+            selectedPlan = plan;
+            document.querySelectorAll('.venue-plan-card').forEach(c => c.classList.remove('selected'));
+            el.classList.add('selected');
+            // Also save to localStorage
+            localStorage.setItem('spontix_user_tier', plan);
+        }
+
+        // ── Tier Comparison Popup ──
+        const venueTierData = {
+            tiers: ['Starter', 'Pro', 'Elite'],
+            prices: ['Free', '$49.99/mo', '$149.99/mo'],
+            categories: [
+                { name: 'Events & Capacity', features: [
+                    { name: 'Events per week', vals: ['1', '∞ Unlimited', '∞ Unlimited'] },
+                    { name: 'Max participants', vals: ['15', '100', '500'] },
+                    { name: 'Concurrent events', vals: ['1', '5', '∞ Unlimited'] },
+                    { name: 'Event scheduling', vals: ['cross', 'check', 'check'] },
+                    { name: 'Multi-venue support', vals: ['cross', 'cross', 'check'] },
+                ]},
+                { name: 'Fan Engagement', features: [
+                    { name: 'QR code join', vals: ['check', 'check', 'check'] },
+                    { name: 'Player invite tools', vals: ['cross', 'check', 'check'] },
+                    { name: 'NFC tap to join', vals: ['cross', 'check', 'check'] },
+                    { name: 'TV Display mode', vals: ['cross', 'check', 'check'] },
+                    { name: 'Live leaderboard display', vals: ['cross', 'check', 'check'] },
+                    { name: 'Prize management', vals: ['cross', 'cross', 'check'] },
+                ]},
+                { name: 'Questions & Content', features: [
+                    { name: 'AI-generated questions', vals: ['30/mo', '300/mo', '∞ Unlimited'] },
+                    { name: 'Question Bank', vals: ['cross', 'check', 'check'] },
+                    { name: 'Create custom Qs live', vals: ['cross', 'check', 'check'] },
+                    { name: 'AI bulk generation', vals: ['cross', 'cross', 'check'] },
+                    { name: 'Sponsored questions', vals: ['cross', 'cross', 'check'] },
+                ]},
+                { name: 'Venue Tools', features: [
+                    { name: 'Live Floor controls', vals: ['Basic', 'Full', 'Full'] },
+                    { name: 'Table Map', vals: ['cross', 'check', 'check'] },
+                    { name: 'Teams management', vals: ['cross', 'check', 'check'] },
+                ]},
+                { name: 'Branding & Analytics', features: [
+                    { name: 'Spontyx branding removed', vals: ['cross', 'check', 'check'] },
+                    { name: 'Custom venue branding', vals: ['cross', 'check', 'check'] },
+                    { name: 'White-label experience', vals: ['cross', 'cross', 'check'] },
+                    { name: 'Basic analytics', vals: ['check', 'check', 'check'] },
+                    { name: 'Advanced analytics & reports', vals: ['cross', 'check', 'check'] },
+                    { name: 'API access', vals: ['cross', 'cross', 'check'] },
+                ]},
+                { name: 'Support', features: [
+                    { name: 'Email support', vals: ['check', 'check', 'check'] },
+                    { name: 'Priority support', vals: ['cross', 'check', 'check'] },
+                    { name: 'Dedicated account manager', vals: ['cross', 'cross', 'check'] },
+                ]},
+            ]
+        };
+
+        function renderVal(v) {
+            if (v === 'check') return '<span class="check">✓</span>';
+            if (v === 'cross') return '<span class="cross">✕</span>';
+            if (v.startsWith('∞')) return '<span class="unlimited">' + v + '</span>';
+            return '<span class="limit">' + v + '</span>';
+        }
+
+        function showTierDetails() {
+            const data = venueTierData;
+            let html = '';
+            html += '<div class="tier-col-header">';
+            html += '<div></div>';
+            data.tiers.forEach((t, i) => {
+                const hl = i === 1 ? ' highlighted' : '';
+                html += '<div class="tier-col-label' + hl + '">' + t + '<br><span style="font-size:0.6rem;font-weight:600;opacity:0.7;">' + data.prices[i] + '</span></div>';
+            });
+            html += '</div>';
+            html += '<div class="tier-features">';
+            data.categories.forEach(cat => {
+                html += '<div class="tier-category">' + cat.name + '</div>';
+                cat.features.forEach(f => {
+                    html += '<div class="tier-feature-row">';
+                    html += '<div class="feat-name">' + f.name + '</div>';
+                    f.vals.forEach(v => {
+                        html += '<div class="feat-val">' + renderVal(v) + '</div>';
+                    });
+                    html += '</div>';
+                });
+            });
+            html += '</div>';
+            document.getElementById('tierPopupContent').innerHTML = html;
+            document.getElementById('tierPopup').classList.add('open');
+        }
+
+        function closeTierPopup() {
+            document.getElementById('tierPopup').classList.remove('open');
+        }
+        document.getElementById('tierPopup').addEventListener('click', function(e) {
+            if (e.target === this) closeTierPopup();
+        });
+
+        const colorNames = {
+            purple: 'Purple',
+            lime: 'Lime',
+            teal: 'Teal',
+            coral: 'Coral',
+            gold: 'Gold',
+            grey: 'Grey'
+        };
+
+        // Initialize with localStorage data if available
+        function initializeForm() {
+            const signupData = localStorage.getItem('spontix_signup');
+            if (signupData) {
+                const data = JSON.parse(signupData);
+                if (data.venueName) document.getElementById('venueName').value = data.venueName;
+                if (data.email) document.getElementById('email').value = data.email;
+            }
+        }
+
+        function showStep(step) {
+            // Hide all sections
+            document.querySelectorAll('.form-section').forEach(section => {
+                section.classList.remove('active');
+            });
+
+            // Show active section
+            document.querySelector(`[data-section="${step}"]`).classList.add('active');
+
+            // Update progress bar
+            updateProgressBar(step);
+
+            // Update preview on step 4 (review)
+            if (step === 4) {
+                updateReview();
+            }
+
+            currentStep = step;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function updateProgressBar(currentStep) {
+            document.querySelectorAll('.step').forEach((step, index) => {
+                const stepNum = index + 1;
+                step.classList.remove('active', 'completed');
+
+                if (stepNum < currentStep) {
+                    step.classList.add('completed');
+                } else if (stepNum === currentStep) {
+                    step.classList.add('active');
+                }
+            });
+        }
+
+        function nextStep() {
+            if (currentStep < 4) {
+                showStep(currentStep + 1);
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                showStep(currentStep - 1);
+            }
+        }
+
+        function selectColor(color, element) {
+            document.querySelectorAll('.color-swatch').forEach(swatch => {
+                swatch.classList.remove('selected');
+            });
+            element.classList.add('selected');
+            selectedColor = color;
+        }
+
+        function toggleSport(element, sport) {
+            const checkbox = element.querySelector('input[type="checkbox"]');
+            checkbox.checked = !checkbox.checked;
+            element.classList.toggle('selected');
+        }
+
+        function updateReview() {
+            const venueName = document.getElementById('venueName').value || 'Venue Name';
+            const venueType = document.getElementById('venueType').value || 'Venue Type';
+            const city = document.getElementById('city').value || 'City';
+            const country = document.getElementById('country').value || 'Country';
+            const capacity = document.getElementById('capacity').value || '—';
+            const openingTime = document.getElementById('openingTime').value || '12:00';
+            const closingTime = document.getElementById('closingTime').value || '23:00';
+            const description = document.getElementById('description').value || 'No description provided';
+
+            const selectedSports = Array.from(document.querySelectorAll('.sport-item.selected label'))
+                .map(label => label.textContent.trim());
+
+            // Update preview
+            document.getElementById('previewName').textContent = venueName;
+            document.getElementById('previewType').textContent = venueType;
+
+            const sportsHtml = selectedSports.map(sport => `<div class="sport-badge">${sport}</div>`).join('');
+            document.getElementById('previewSports').innerHTML = sportsHtml || '<div style="color: var(--grey); font-size: 13px;">No sports selected</div>';
+
+            // Update color preview header
+            const colorMap = {
+                purple: 'linear-gradient(135deg, var(--purple), var(--navy-card))',
+                lime: 'linear-gradient(135deg, var(--lime), #8FD000)',
+                teal: 'linear-gradient(135deg, var(--teal), var(--navy-card))',
+                coral: 'linear-gradient(135deg, var(--coral), var(--navy-card))',
+                gold: 'linear-gradient(135deg, var(--gold), var(--navy-card))',
+                grey: 'linear-gradient(135deg, var(--grey), var(--navy-card))'
+            };
+            document.getElementById('previewHeader').style.background = colorMap[selectedColor];
+
+            // Update review cards
+            document.getElementById('reviewLocation').textContent = `${city}, ${country}`;
+            document.getElementById('reviewCapacity').textContent = capacity === '—' ? '—' : `${capacity} guests`;
+            document.getElementById('reviewHours').textContent = `${openingTime} - ${closingTime}`;
+            document.getElementById('reviewPlan').textContent = planLabels[selectedPlan];
+            document.getElementById('reviewDescription').textContent = description;
+        }
+
+        function launchVenue() {
+            const venueName = document.getElementById('venueName').value;
+            const venueType = document.getElementById('venueType').value;
+            const city = document.getElementById('city').value;
+            const country = document.getElementById('country').value;
+
+            if (!venueName || !venueType || !city || !country) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            const selectedSports = Array.from(document.querySelectorAll('.sport-item.selected input[type="checkbox"]'))
+                .map(checkbox => checkbox.value);
+
+            const venueProfile = {
+                venueName,
+                venueType,
+                address: document.getElementById('address').value,
+                city,
+                country,
+                phone: document.getElementById('phone').value,
+                capacity: document.getElementById('capacity').value,
+                description: document.getElementById('description').value,
+                color: selectedColor,
+                sports: selectedSports,
+                openingTime: document.getElementById('openingTime').value,
+                closingTime: document.getElementById('closingTime').value,
+                plan: selectedPlan,
+                createdAt: new Date().toISOString()
+            };
+
+            localStorage.setItem('spontix_venue_profile', JSON.stringify(venueProfile));
+            localStorage.setItem('spontix_user_tier', selectedPlan);
+
+            // Show success toast
+            const toast = document.getElementById('successToast');
+            toast.classList.add('show');
+
+            // Confetti animation
+            createConfetti();
+
+            // Redirect to venue onboarding
+            setTimeout(() => {
+                window.location.href = 'venue-onboarding.html';
+            }, 1500);
+        }
+
+        function skipSetup() {
+            window.location.href = 'venue-onboarding.html';
+        }
+
+        function createConfetti() {
+            for (let i = 0; i < 30; i++) {
+                const confetti = document.createElement('div');
+                confetti.className = 'confetti';
+                confetti.style.left = Math.random() * 100 + '%';
+                confetti.style.top = '-10px';
+                confetti.style.backgroundColor = [
+                    'var(--lime)',
+                    'var(--purple)',
+                    'var(--teal)',
+                    'var(--coral)',
+                    'var(--gold)'
+                ][Math.floor(Math.random() * 5)];
+                confetti.style.animation = `confetti-fall ${2 + Math.random() * 1}s ease-in forwards`;
+                document.body.appendChild(confetti);
+
+                setTimeout(() => confetti.remove(), 3000);
+            }
+        }
+
+        // File upload handler
+        document.getElementById('logoInput')?.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                const fileName = e.target.files[0].name;
+                document.getElementById('fileName').textContent = fileName;
+                document.getElementById('fileUpload').classList.add('filled');
+            }
+        });
+
+        // Drag and drop
+        const fileUpload = document.getElementById('fileUpload');
+        if (fileUpload) {
+            fileUpload.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                fileUpload.style.borderColor = 'var(--purple)';
+                fileUpload.style.background = 'rgba(124, 92, 252, 0.15)';
+            });
+
+            fileUpload.addEventListener('dragleave', () => {
+                fileUpload.style.borderColor = 'var(--navy-light)';
+                fileUpload.style.background = 'rgba(124, 92, 252, 0.05)';
+            });
+
+            fileUpload.addEventListener('drop', (e) => {
+                e.preventDefault();
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    document.getElementById('logoInput').files = files;
+                    const event = new Event('change', { bubbles: true });
+                    document.getElementById('logoInput').dispatchEvent(event);
+                }
+            });
+        }
+
+        // Initialize
+        initializeForm();
+    </script>
+</body>
+</html>

@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Notifications</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+<style>
+    /* ── Main ── */
+    .main { margin-left: 260px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
+    .topbar {
+      padding: 16px 32px; display: flex; align-items: center; gap: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-search { flex: 1; max-width: 400px; position: relative; }
+    .topbar-search input {
+      width: 100%; padding: 10px 14px 10px 40px; background: var(--navy-light);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-pill);
+      color: var(--off-white); font-size: 0.85rem; font-family: inherit; outline: none;
+    }
+    .topbar-search input::placeholder { color: var(--grey-dark); }
+    .topbar-search input:focus { border-color: rgba(168,225,12,0.3); }
+    .topbar-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--grey-dark); }
+    .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .topbar-btn {
+      width: 40px; height: 40px; border-radius: 50%; border: none;
+      background: var(--navy-light); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; position: relative; transition: background 0.2s;
+    }
+    .topbar-btn:hover { background: var(--navy-hover); }
+    .topbar-btn svg { width: 18px; height: 18px; stroke: var(--grey); fill: none; stroke-width: 1.8; }
+    .topbar-btn .notif-dot {
+      position: absolute; top: 8px; right: 8px; width: 8px; height: 8px;
+      background: var(--coral); border-radius: 50%; border: 2px solid var(--navy);
+    }
+    .topbar-btn.active-page { background: var(--lime-dim); }
+    .topbar-btn.active-page svg { stroke: var(--lime); }
+
+    .content { padding: 32px; flex: 1; max-width: 800px; }
+
+    /* ── Page Header ── */
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
+    }
+    .page-header-left h1 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .page-header-left h1 span { color: var(--lime); }
+    .page-header-left p { color: var(--grey); font-size: 0.85rem; }
+    .header-actions { display: flex; gap: 8px; }
+    .header-btn {
+      padding: 8px 16px; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.1);
+      background: transparent; color: var(--grey); font-size: 0.78rem; font-weight: 600;
+      font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 6px;
+      transition: all 0.2s;
+    }
+    .header-btn:hover { border-color: var(--lime); color: var(--lime); }
+    .header-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+    /* ── Filter Tabs ── */
+    .filter-tabs {
+      display: flex; gap: 6px; margin-bottom: 24px; overflow-x: auto; padding-bottom: 4px;
+    }
+    .filter-tab {
+      padding: 7px 16px; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.08);
+      background: transparent; color: var(--grey); font-size: 0.78rem; font-weight: 600;
+      font-family: inherit; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .filter-tab:hover { border-color: rgba(255,255,255,0.2); color: var(--off-white); }
+    .filter-tab.active { background: var(--lime); color: var(--navy); border-color: var(--lime); }
+    .filter-tab .ftab-count {
+      font-size: 0.62rem; font-weight: 800; padding: 1px 6px; border-radius: var(--radius-pill);
+      background: rgba(0,0,0,0.15);
+    }
+    .filter-tab.active .ftab-count { background: rgba(0,0,0,0.2); color: var(--navy); }
+
+    /* ── Notification List ── */
+    .notif-list { display: flex; flex-direction: column; gap: 2px; }
+
+    .notif-day-label {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
+      color: var(--grey-dark); padding: 16px 0 6px;
+    }
+    .notif-day-label:first-child { padding-top: 0; }
+
+    .notif-item {
+      display: flex; align-items: flex-start; gap: 14px; padding: 14px 16px;
+      border-radius: var(--radius-md); transition: background 0.15s; cursor: pointer;
+      position: relative;
+    }
+    .notif-item:hover { background: rgba(255,255,255,0.03); }
+    .notif-item.unread { background: rgba(168,225,12,0.03); }
+    .notif-item.unread::before {
+      content: ''; position: absolute; left: 4px; top: 50%; transform: translateY(-50%);
+      width: 6px; height: 6px; border-radius: 50%; background: var(--lime);
+    }
+
+    .notif-icon {
+      width: 40px; height: 40px; border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .notif-icon svg { width: 18px; height: 18px; fill: none; stroke-width: 2; }
+    .notif-icon.live { background: rgba(255,107,107,0.12); }
+    .notif-icon.live svg { stroke: var(--coral); }
+    .notif-icon.question { background: rgba(255,159,67,0.12); }
+    .notif-icon.question svg { stroke: var(--orange); }
+    .notif-icon.league { background: rgba(124,92,252,0.12); }
+    .notif-icon.league svg { stroke: var(--purple); }
+    .notif-icon.social { background: rgba(78,205,196,0.12); }
+    .notif-icon.social svg { stroke: var(--teal); }
+    .notif-icon.system { background: var(--lime-dim); }
+    .notif-icon.system svg { stroke: var(--lime); }
+    .notif-icon.badge-icon { background: rgba(255,215,0,0.12); }
+    .notif-icon.badge-icon svg { stroke: #FFD700; }
+    .notif-icon.team { background: rgba(124,92,252,0.12); }
+    .notif-icon.team svg { stroke: var(--purple); }
+
+    .notif-
+    .notif-text { font-size: 0.85rem; line-height: 1.45; margin-bottom: 3px; }
+    .notif-text strong { font-weight: 700; color: var(--off-white); }
+    .notif-text .hl-lime { color: var(--lime); font-weight: 700; }
+    .notif-text .hl-coral { color: var(--coral); font-weight: 700; }
+    .notif-text .hl-purple { color: var(--purple); font-weight: 700; }
+    .notif-text .hl-teal { color: var(--teal); font-weight: 700; }
+    .notif-meta { font-size: 0.72rem; color: var(--grey-dark); display: flex; align-items: center; gap: 8px; }
+    .notif-meta-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--grey-dark); }
+
+    .notif-action {
+      padding: 6px 14px; border-radius: var(--radius-sm); border: none;
+      font-size: 0.72rem; font-weight: 700; font-family: inherit; cursor: pointer;
+      transition: opacity 0.2s; flex-shrink: 0; align-self: center;
+    }
+    .notif-action.primary { background: var(--lime); color: var(--navy); }
+    .notif-action.primary:hover { opacity: 0.85; }
+    .notif-action.secondary { background: rgba(255,255,255,0.06); color: var(--grey); }
+    .notif-action.secondary:hover { background: rgba(255,255,255,0.1); color: var(--off-white); }
+    .notif-action.coral { background: rgba(255,107,107,0.12); color: var(--coral); }
+    .notif-action.coral:hover { opacity: 0.85; }
+
+    .notif-dismiss {
+      width: 28px; height: 28px; border-radius: 50%; border: none; background: transparent;
+      cursor: pointer; display: flex; align-items: center; justify-content: center;
+      opacity: 0; transition: opacity 0.2s; flex-shrink: 0; align-self: center;
+    }
+    .notif-dismiss svg { width: 14px; height: 14px; stroke: var(--grey-dark); fill: none; stroke-width: 2; }
+    .notif-dismiss:hover svg { stroke: var(--coral); }
+    .notif-item:hover .notif-dismiss { opacity: 1; }
+
+    /* ── Empty ── */
+    .empty-state { text-align: center; padding: 80px 24px; }
+    .empty-state-icon {
+      width: 64px; height: 64px; margin: 0 auto 16px; border-radius: 50%;
+      background: var(--lime-dim); display: flex; align-items: center; justify-content: center;
+    }
+    .empty-state-icon svg { width: 28px; height: 28px; stroke: var(--lime); fill: none; stroke-width: 1.8; }
+    .empty-state h3 { font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+    .empty-state p { font-size: 0.85rem; color: var(--grey); }
+
+
+    }</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar-placeholder"></div>
+
+<!-- Main -->
+<div class="main">
+  <header class="topbar">
+    <button class="mobile-menu-btn" onclick="toggleSidebar()">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="topbar-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Search notifications..." id="searchInput" oninput="filterNotifs()" />
+    </div>
+    <div class="topbar-right">
+      <a href="notifications.html" class="topbar-btn active-page" title="Notifications" style="text-decoration:none;">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        <span class="notif-dot"></span>
+      </a>
+      <button class="topbar-btn" title="Messages">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="page-header-left">
+        <h1><span>Notifications</span></h1>
+        <p>Stay on top of everything happening across your leagues.</p>
+      </div>
+      <div class="header-actions">
+        <button class="header-btn" onclick="markAllRead()">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Mark all read
+        </button>
+        <button class="header-btn" onclick="clearAll()">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+          Clear all
+        </button>
+      </div>
+    </div>
+
+    <!-- Filter Tabs -->
+    <div class="filter-tabs">
+      <button class="filter-tab active" onclick="setFilter(this,'all')">All <span class="ftab-count">0</span></button>
+      <button class="filter-tab" onclick="setFilter(this,'live')">Live <span class="ftab-count">0</span></button>
+      <button class="filter-tab" onclick="setFilter(this,'question')">Questions <span class="ftab-count">0</span></button>
+      <button class="filter-tab" onclick="setFilter(this,'league')">Leagues <span class="ftab-count">0</span></button>
+      <button class="filter-tab" onclick="setFilter(this,'social')">Social <span class="ftab-count">0</span></button>
+      <button class="filter-tab" onclick="setFilter(this,'system')">System <span class="ftab-count">0</span></button>
+    </div>
+
+    <!-- Notification List -->
+    <div class="notif-list" id="notifList">
+      <div class="notif-day-label" id="loadingLabel">Loading…</div>
+    </div>
+
+    <!-- Empty State (hidden by default) -->
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <div class="empty-state-icon">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+      </div>
+      <h3>All caught up!</h3>
+      <p>No notifications to show. Go play some matches!</p>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+  var currentFilter = 'all';
+
+  // ── SVG icon strings ──────────────────────────────────────────────
+  var SVG = {
+    question: '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>',
+    social:   '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>',
+    trophy:   '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 9a6 6 0 006 6 6 6 0 006-6"/><line x1="12" y1="15" x2="12" y2="19"/><path d="M8 19h8"/><line x1="6" y1="2" x2="6" y2="5"/><path d="M6 5H3a2 2 0 00-2 2v1a4 4 0 004 4h1"/><path d="M18 5h3a2 2 0 012 2v1a4 4 0 01-4 4h-1"/></svg>',
+    badge:    '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5" fill="none"/><path d="M12 13l-3 7h6l-3-7z"/></svg>',
+    dismiss:  '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>',
+  };
+
+  // ── Time formatter ────────────────────────────────────────────────
+  function timeAgo(iso) {
+    var diff = (Date.now() - new Date(iso)) / 1000;
+    if (diff < 60)   return 'Just now';
+    if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+    var d = new Date(iso);
+    var days = Math.floor(diff / 86400);
+    if (days === 1) return 'Yesterday';
+    if (days < 7)  return days + 'd ago';
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  }
+
+  function dayLabel(iso) {
+    var diff = (Date.now() - new Date(iso)) / 86400000;
+    if (diff < 1)  return 'Today';
+    if (diff < 2)  return 'Yesterday';
+    if (diff < 7)  return 'This Week';
+    return 'Earlier';
+  }
+
+  // ── XSS safety ───────────────────────────────────────────────────
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  // ── Render a single notification card ────────────────────────────
+  function renderCard(n) {
+    var ctx = n.context || {};
+    var cat = n.category;
+    var iconClass = cat;
+    var iconSvg, textHtml, actionHtml = '', linkUrl = '';
+
+    switch (n.type) {
+      case 'league.member_joined':
+        iconSvg  = SVG.social;
+        textHtml = '<strong>' + esc(ctx.actor_name) + '</strong> joined your league <span class="hl-lime">' + esc(ctx.league_name) + '</span>.';
+        linkUrl  = n.related_id ? 'league.html?id=' + n.related_id : 'my-leagues.html';
+        actionHtml = '<button class="notif-action secondary" onclick="event.stopPropagation();goTo(\'' + n.id + '\',\'' + linkUrl + '\')">View League</button>';
+        break;
+
+      case 'question.new':
+        iconSvg  = SVG.question;
+        var qt   = ctx.question_text || 'New question';
+        qt = qt.length > 65 ? qt.slice(0, 65) + '…' : qt;
+        linkUrl  = ctx.league_id ? 'league.html?id=' + ctx.league_id : 'my-leagues.html';
+        textHtml = 'New question in <span class="hl-purple">' + esc(ctx.league_name) + '</span>: &ldquo;<strong>' + esc(qt) + '</strong>&rdquo;';
+        actionHtml = '<button class="notif-action primary" onclick="event.stopPropagation();goTo(\'' + n.id + '\',\'' + linkUrl + '\')">Answer</button>';
+        break;
+
+      case 'question.result':
+        iconSvg = SVG.question;
+        var qt2 = ctx.question_text || 'A question';
+        qt2 = qt2.length > 55 ? qt2.slice(0, 55) + '…' : qt2;
+        linkUrl = ctx.league_id ? 'league.html?id=' + ctx.league_id : 'my-leagues.html';
+        if (ctx.is_correct) {
+          textHtml = '&ldquo;<strong>' + esc(qt2) + '</strong>&rdquo; — your answer was <span class="hl-lime">correct</span>! You earned <span class="hl-lime">+' + (ctx.points_earned || 0) + ' pts</span>.';
+        } else {
+          textHtml = '&ldquo;<strong>' + esc(qt2) + '</strong>&rdquo; — your answer was <span class="hl-coral">wrong</span>. Better luck next time!';
+        }
+        break;
+
+      case 'award.trophy':
+        iconSvg    = SVG.trophy;
+        iconClass  = 'system';
+        linkUrl    = 'profile.html';
+        textHtml   = 'You\'ve been awarded the <strong>' + esc(ctx.trophy_name || 'Trophy') + '</strong>!';
+        actionHtml = '<button class="notif-action secondary" onclick="event.stopPropagation();goTo(\'' + n.id + '\',\'profile.html\')">View</button>';
+        break;
+
+      case 'award.badge':
+        iconSvg    = SVG.badge;
+        iconClass  = 'badge-icon';
+        linkUrl    = 'profile.html';
+        textHtml   = 'You earned the <strong>&ldquo;' + esc(ctx.badge_label || ctx.badge_id) + '&rdquo;</strong> badge!';
+        actionHtml = '<button class="notif-action secondary" onclick="event.stopPropagation();goTo(\'' + n.id + '\',\'profile.html\')">View</button>';
+        break;
+
+      default:
+        iconSvg  = SVG.question;
+        textHtml = esc(n.title);
+    }
+
+    var metaContext = esc(ctx.league_name || ctx.badge_label || '');
+    var metaDot = metaContext ? '<span class="notif-meta-dot"></span> ' + metaContext : '';
+    var unreadClass = n.read ? '' : ' unread';
+    var clickAttr = linkUrl
+      ? 'onclick="goTo(\'' + n.id + '\',\'' + linkUrl + '\')"'
+      : 'onclick="markRead(\'' + n.id + '\')"';
+
+    return '<div class="notif-item' + unreadClass + '" data-cat="' + cat + '" data-id="' + n.id + '" ' + clickAttr + '>' +
+      '<div class="notif-icon ' + iconClass + '">' + iconSvg + '</div>' +
+      '<div class="notif-body">' +
+        '<div class="notif-text">' + textHtml + '</div>' +
+        '<div class="notif-meta">' + timeAgo(n.created_at) + ' ' + metaDot + '</div>' +
+      '</div>' +
+      actionHtml +
+      '<button class="notif-dismiss" onclick="event.stopPropagation();dismissNotif(this)">' + SVG.dismiss + '</button>' +
+    '</div>';
+  }
+
+  // ── Load & render all notifications ──────────────────────────────
+  async function loadNotifications() {
+    var notifs;
+    try {
+      notifs = await SpontixStoreAsync.getNotifications();
+    } catch(e) {
+      notifs = [];
+    }
+
+    var list = document.getElementById('notifList');
+    list.innerHTML = '';
+
+    if (!notifs.length) {
+      document.getElementById('emptyState').style.display = '';
+      updateCounts();
+      return;
+    }
+
+    document.getElementById('emptyState').style.display = 'none';
+
+    // Group by day label, insert day dividers
+    var lastLabel = null;
+    notifs.forEach(function(n) {
+      var label = dayLabel(n.created_at);
+      if (label !== lastLabel) {
+        var div = document.createElement('div');
+        div.className = 'notif-day-label';
+        div.textContent = label;
+        list.appendChild(div);
+        lastLabel = label;
+      }
+      var wrapper = document.createElement('div');
+      wrapper.innerHTML = renderCard(n);
+      list.appendChild(wrapper.firstElementChild);
+    });
+
+    updateCounts();
+    applyFilters();
+  }
+
+  // ── Navigation + mark read ────────────────────────────────────────
+  function goTo(notifId, url) {
+    markRead(notifId);
+    window.location.href = url;
+  }
+
+  function markRead(notifId) {
+    var el = document.querySelector('[data-id="' + notifId + '"]');
+    if (el) el.classList.remove('unread');
+    SpontixStoreAsync.markNotificationRead(notifId).catch(function(){});
+  }
+
+  // ── Filters ──────────────────────────────────────────────────────
+  function setFilter(tab, cat) {
+    currentFilter = cat;
+    document.querySelectorAll('.filter-tab').forEach(function(t) { t.classList.remove('active'); });
+    tab.classList.add('active');
+    applyFilters();
+  }
+
+  function filterNotifs() { applyFilters(); }
+
+  function applyFilters() {
+    var search = (document.getElementById('searchInput').value || '').toLowerCase();
+    var items = document.querySelectorAll('.notif-item');
+    var visible = 0;
+
+    items.forEach(function(item) {
+      var matchCat    = currentFilter === 'all' || item.dataset.cat === currentFilter;
+      var matchSearch = !search || item.textContent.toLowerCase().includes(search);
+      if (matchCat && matchSearch) { item.style.display = ''; visible++; }
+      else                         { item.style.display = 'none'; }
+    });
+
+    // Show/hide day labels depending on whether any items follow them
+    document.querySelectorAll('.notif-day-label').forEach(function(label) {
+      var next = label.nextElementSibling;
+      var hasVisible = false;
+      while (next && !next.classList.contains('notif-day-label')) {
+        if (next.classList.contains('notif-item') && next.style.display !== 'none') { hasVisible = true; break; }
+        next = next.nextElementSibling;
+      }
+      label.style.display = hasVisible ? '' : 'none';
+    });
+
+    document.getElementById('emptyState').style.display = visible === 0 ? '' : 'none';
+  }
+
+  // ── Mark all read ─────────────────────────────────────────────────
+  async function markAllRead() {
+    document.querySelectorAll('.notif-item.unread').forEach(function(el) { el.classList.remove('unread'); });
+    try { await SpontixStoreAsync.markAllNotificationsRead(); } catch(e) {}
+    showToast('All notifications marked as read');
+  }
+
+  // ── Clear all ─────────────────────────────────────────────────────
+  async function clearAll() {
+    var items = document.querySelectorAll('.notif-item');
+    items.forEach(function(item) {
+      item.style.transition = 'opacity 0.3s, transform 0.3s';
+      item.style.opacity = '0';
+      item.style.transform = 'translateX(40px)';
+    });
+    setTimeout(function() {
+      items.forEach(function(item) { item.remove(); });
+      document.querySelectorAll('.notif-day-label').forEach(function(l) { l.remove(); });
+      document.getElementById('emptyState').style.display = '';
+      updateCounts();
+    }, 350);
+    try { await SpontixStoreAsync.dismissAllNotifications(); } catch(e) {}
+    showToast('All notifications cleared');
+  }
+
+  // ── Dismiss single ────────────────────────────────────────────────
+  function dismissNotif(btn) {
+    var item = btn.closest('.notif-item');
+    var notifId = item.dataset.id;
+    item.style.transition = 'opacity 0.3s, transform 0.3s, max-height 0.3s';
+    item.style.opacity = '0';
+    item.style.transform = 'translateX(40px)';
+    item.style.maxHeight = item.offsetHeight + 'px';
+    setTimeout(function() { item.style.maxHeight = '0'; item.style.padding = '0 16px'; item.style.margin = '0'; }, 100);
+    setTimeout(function() { item.remove(); applyFilters(); updateCounts(); }, 400);
+    if (notifId) SpontixStoreAsync.dismissNotification(notifId).catch(function(){});
+  }
+
+  // ── Update tab counts ─────────────────────────────────────────────
+  function updateCounts() {
+    var cats = { all: 0, live: 0, question: 0, league: 0, social: 0, system: 0 };
+    document.querySelectorAll('.notif-item').forEach(function(item) {
+      cats.all++;
+      var c = item.dataset.cat;
+      if (cats[c] !== undefined) cats[c]++;
+    });
+    var tabs = document.querySelectorAll('.filter-tab');
+    ['all','live','question','league','social','system'].forEach(function(key, i) {
+      tabs[i].querySelector('.ftab-count').textContent = cats[key];
+    });
+  }
+
+  // ── Boot ──────────────────────────────────────────────────────────
+  document.addEventListener('DOMContentLoaded', function() {
+    loadNotifications();
+  });
+</script>
+
+<script src="utils.js"></script>
+<script src="sidebar.js"></script>
+<script>SpontixSidebar.init({ type: 'player', active: 'notifications.html' });</script>
+</body>
+</html>

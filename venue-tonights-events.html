@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Tonight's Events</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+
+    /* ── Venue Sidebar ── */
+    
+    /* ── Main Area ── */    /* Top Bar */
+    .topbar {
+      padding: 16px 32px; display: flex; align-items: center; gap: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-search { flex: 1; max-width: 400px; position: relative; }
+    .topbar-search input {
+      width: 100%; padding: 10px 14px 10px 40px; background: var(--navy-light);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-pill);
+      color: var(--off-white); font-size: 0.85rem; font-family: inherit; outline: none;
+      transition: border-color 0.2s;
+    }
+    .topbar-search input::placeholder { color: var(--grey-dark); }
+    .topbar-search input:focus { border-color: rgba(168,225,12,0.3); }
+    .topbar-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--grey-dark); }
+    .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .topbar-btn {
+      width: 40px; height: 40px; border-radius: 50%; border: none;
+      background: var(--navy-light); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; position: relative; transition: background 0.2s;
+      text-decoration: none;
+    }
+    .topbar-btn:hover { background: var(--navy-hover); }
+    .topbar-btn svg { width: 18px; height: 18px; stroke: var(--grey); fill: none; stroke-width: 1.8; }
+    .topbar-btn .notif-dot {
+      position: absolute; top: 8px; right: 8px; width: 8px; height: 8px;
+      background: var(--coral); border-radius: 50%; border: 2px solid var(--navy);
+    }
+    .venue-status {
+      display: flex; align-items: center; gap: 8px; margin-left: 12px;
+      padding: 6px 14px; border-radius: var(--radius-pill);
+      font-size: 0.75rem; font-weight: 700;
+    }
+    .venue-status.open { background: rgba(168,225,12,0.12); color: var(--lime); }
+    .venue-status-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--lime);
+      animation: pulse-live 2s infinite;
+    }
+    @keyframes pulse-live { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    /* Content */
+    .content { padding: 32px; flex: 1; max-width: 1200px; }
+
+    /* Page Header */
+    .page-header { margin-bottom: 28px; display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+    .page-header-left h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .page-header-left h1 span { color: var(--purple); }
+    .page-header-left p { color: var(--grey); font-size: 0.85rem; }
+    .page-header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+    .header-btn {
+      display: flex; align-items: center; gap: 8px; padding: 10px 18px;
+      border-radius: var(--radius-pill); border: none; cursor: pointer;
+      font-family: inherit; font-size: 0.8rem; font-weight: 700;
+      transition: all 0.2s; text-decoration: none;
+    }
+    .header-btn svg { width: 16px; height: 16px; stroke-width: 2; fill: none; }
+    .header-btn.primary { background: var(--purple); color: #fff; }
+    .header-btn.primary svg { stroke: var(--navy); }
+    .header-btn.primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .header-btn.secondary { background: var(--navy-card); color: var(--off-white); border: 1px solid rgba(255,255,255,0.08); }
+    .header-btn.secondary svg { stroke: var(--off-white); }
+    .header-btn.secondary:hover { border-color: rgba(255,255,255,0.15); background: var(--navy-hover); }
+
+    /* ── Summary Strip ── */
+    .summary-strip {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px;
+    }
+    .summary-card {
+      background: var(--navy-card); border-radius: var(--radius-md); padding: 16px 18px;
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+    .summary-card-label { font-size: 0.65rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+    .summary-card-value { font-size: 1.4rem; font-weight: 900; letter-spacing: -0.5px; }
+    .summary-card-value.orange { color: var(--purple); }
+    .summary-card-value.lime { color: var(--lime); }
+    .summary-card-value.coral { color: var(--coral); }
+    .summary-card-value.teal { color: var(--teal); }
+    .summary-card-sub { font-size: 0.68rem; color: var(--grey); margin-top: 3px; }
+
+    /* ── Filter Tabs ── */
+    .filter-tabs {
+      display: flex; gap: 6px; margin-bottom: 24px; flex-wrap: wrap;
+    }
+    .filter-tab {
+      padding: 7px 16px; border-radius: var(--radius-pill);
+      font-size: 0.78rem; font-weight: 700; font-family: inherit;
+      border: 1px solid rgba(255,255,255,0.08); background: transparent;
+      color: var(--grey); cursor: pointer; transition: all 0.15s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .filter-tab:hover { border-color: rgba(255,255,255,0.15); color: var(--off-white); }
+    .filter-tab.active { background: var(--purple); border-color: var(--purple); color: #fff; }
+    .filter-tab .count {
+      font-size: 0.6rem; font-weight: 800; padding: 1px 6px; border-radius: var(--radius-pill);
+      background: rgba(255,255,255,0.15);
+    }
+    .filter-tab.active .count { background: rgba(26,26,46,0.2); }
+
+    /* ── Event Cards ── */
+    .events-list { display: flex; flex-direction: column; gap: 16px; }
+
+    .event-card {
+      background: var(--navy-card); border-radius: var(--radius-lg); padding: 24px;
+      border: 1px solid rgba(255,255,255,0.06); position: relative;
+      transition: border-color 0.2s;
+    }
+    .event-card:hover { border-color: rgba(124,92,252,0.2); }
+    .event-card.live { border-color: rgba(255,107,107,0.25); }
+    .event-card.live:hover { border-color: rgba(255,107,107,0.4); }
+
+    .event-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+    .event-card-info { flex: 1; min-width: 0; }
+
+    .event-status {
+      display: inline-flex; align-items: center; gap: 5px; padding: 3px 10px;
+      border-radius: var(--radius-pill); font-size: 0.6rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;
+    }
+    .event-status.live { background: rgba(255,107,107,0.15); color: var(--coral); }
+    .event-status.live .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--coral); animation: pulse-live 2s infinite; }
+    .event-status.scheduled { background: rgba(124,92,252,0.12); color: var(--purple); }
+    .event-status.registering { background: rgba(168,225,12,0.12); color: var(--lime); }
+    .event-status.completed { background: rgba(152,152,176,0.12); color: var(--grey); }
+
+    .event-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.3px; }
+    .event-meta { font-size: 0.78rem; color: var(--grey); }
+
+    .event-card-score {
+      text-align: right; flex-shrink: 0;
+    }
+    .event-card-score-value { font-size: 1.5rem; font-weight: 900; color: var(--off-white); letter-spacing: -0.5px; }
+    .event-card-score-label { font-size: 0.6rem; color: var(--grey-dark); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* Stats row inside event */
+    .event-stats {
+      display: flex; gap: 24px; margin-bottom: 16px; flex-wrap: wrap;
+    }
+    .event-stat {
+      display: flex; align-items: center; gap: 8px; font-size: 0.8rem;
+    }
+    .event-stat-icon {
+      width: 32px; height: 32px; border-radius: var(--radius-sm); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .event-stat-icon svg { width: 15px; height: 15px; stroke-width: 2; fill: none; }
+    .event-stat-icon.orange { background: rgba(124,92,252,0.12); }
+    .event-stat-icon.orange svg { stroke: var(--purple); }
+    .event-stat-icon.lime { background: var(--lime-dim); }
+    .event-stat-icon.lime svg { stroke: var(--lime); }
+    .event-stat-icon.coral { background: rgba(255,107,107,0.12); }
+    .event-stat-icon.coral svg { stroke: var(--coral); }
+    .event-stat-icon.teal { background: rgba(78,205,196,0.12); }
+    .event-stat-icon.teal svg { stroke: var(--teal); }
+    .event-stat-icon.purple { background: rgba(124,92,252,0.12); }
+    .event-stat-icon.purple svg { stroke: var(--purple); }
+    .event-stat-text { line-height: 1.3; }
+    .event-stat-value { font-weight: 700; font-size: 0.82rem; }
+    .event-stat-label { font-size: 0.65rem; color: var(--grey); }
+
+    /* Progress bar */
+    .event-progress { margin-bottom: 16px; }
+    .event-progress-header { display: flex; justify-content: space-between; margin-bottom: 6px; }
+    .event-progress-label { font-size: 0.7rem; color: var(--grey); font-weight: 600; }
+    .event-progress-bar { height: 5px; background: rgba(255,255,255,0.06); border-radius: 5px; overflow: hidden; }
+    .event-progress-fill { height: 100%; border-radius: 5px; transition: width 0.6s ease; }
+    .event-progress-fill.coral { background: var(--coral); }
+    .event-progress-fill.orange { background: var(--purple); }
+    .event-progress-fill.lime { background: var(--lime); }
+
+    /* Teams strip */
+    .event-teams { margin-bottom: 16px; }
+    .event-teams-label { font-size: 0.68rem; color: var(--grey-dark); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .event-teams-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+    .team-chip {
+      display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px;
+      background: rgba(255,255,255,0.04); border-radius: var(--radius-pill);
+      font-size: 0.72rem; border: 1px solid rgba(255,255,255,0.06);
+    }
+    .team-chip-avatar {
+      width: 24px; height: 24px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.5rem; font-weight: 800;
+    }
+    .team-chip-name { font-weight: 600; }
+    .team-chip-score { color: var(--grey); font-size: 0.65rem; margin-left: 2px; }
+    .team-chip.leading { border-color: rgba(124,92,252,0.3); }
+    .team-chip.pending { border-color: rgba(255,107,107,0.25); }
+    .team-chip-status { width: 6px; height: 6px; border-radius: 50%; margin-left: 2px; flex-shrink: 0; }
+    .team-chip-status.ok { background: var(--lime); }
+    .team-chip-status.waiting { background: var(--coral); animation: pulse-live 2s infinite; }
+
+    /* Action buttons */
+    .event-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .event-btn {
+      padding: 8px 16px; border-radius: var(--radius-pill); border: none;
+      font-family: inherit; font-size: 0.75rem; font-weight: 700;
+      cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 6px;
+      text-decoration: none;
+    }
+    .event-btn svg { width: 14px; height: 14px; stroke-width: 2; fill: none; }
+    .event-btn.primary { background: var(--lime); color: var(--navy); }
+    .event-btn.primary svg { stroke: var(--navy); }
+    .event-btn.primary:hover { opacity: 0.85; }
+    .event-btn.coral { background: var(--coral); color: #fff; }
+    .event-btn.coral svg { stroke: #fff; }
+    .event-btn.coral:hover { opacity: 0.85; }
+    .event-btn.orange { background: var(--purple); color: #fff; }
+    .event-btn.orange svg { stroke: #fff; }
+    .event-btn.orange:hover { opacity: 0.85; }
+    .event-btn.secondary { background: rgba(255,255,255,0.06); color: var(--off-white); }
+    .event-btn.secondary svg { stroke: var(--off-white); }
+    .event-btn.secondary:hover { background: rgba(255,255,255,0.1); }
+    .event-btn.ghost { background: none; color: var(--grey); border: 1px solid rgba(255,255,255,0.08); }
+    .event-btn.ghost svg { stroke: var(--grey); }
+    .event-btn.ghost:hover { border-color: rgba(255,255,255,0.15); color: var(--off-white); }
+
+
+    /* ── Responsive ── */
+    @media (max-width: 600px) {
+      .summary-strip { grid-template-columns: 1fr; }
+      .event-stats { flex-direction: column; gap: 10px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="sidebar-placeholder"></div>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+    <header class="topbar">
+      <button class="mobile-menu-btn" onclick="toggleSidebar()">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+      </button>
+      <div class="topbar-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Search events, teams, players..." />
+      </div>
+      <div class="venue-status open">
+        <span class="venue-status-dot"></span>
+        Event Live
+      </div>
+      <div class="topbar-right">
+        <a href="notifications.html" class="topbar-btn" title="Notifications" style="text-decoration:none;">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="notif-dot"></span>
+        </a>
+        <button class="topbar-btn" title="Messages">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- Page Header -->
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Tonight's <span>Events</span></h1>
+          <p id="pageSubtitle">Loading...</p>
+        </div>
+        <div class="page-header-actions">
+          <a href="venue-create-event.html" class="header-btn primary" style="text-decoration:none;">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Create Event
+          </a>
+          <button class="header-btn secondary" onclick="showToast('Sharing tonight\'s lineup to screens...')">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+            Share Lineup
+          </button>
+        </div>
+      </div>
+
+      <!-- Summary Strip (dynamically populated) -->
+      <div class="summary-strip" id="summaryStrip">
+        <div class="summary-card">
+          <div class="summary-card-label">Total Events</div>
+          <div class="summary-card-value orange" id="sumTotal">0</div>
+          <div class="summary-card-sub" id="sumTotalSub">—</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-label">Registered</div>
+          <div class="summary-card-value lime" id="sumPlayers">0</div>
+          <div class="summary-card-sub">total players registered</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-label">Max Capacity</div>
+          <div class="summary-card-value teal" id="sumCapacity">0</div>
+          <div class="summary-card-sub">across all events</div>
+        </div>
+        <div class="summary-card">
+          <div class="summary-card-label">Sports</div>
+          <div class="summary-card-value coral" id="sumSports">0</div>
+          <div class="summary-card-sub" id="sumSportsSub">—</div>
+        </div>
+      </div>
+
+      <!-- Filter Tabs (counts updated dynamically) -->
+      <div class="filter-tabs" id="filterTabs">
+        <button class="filter-tab active" onclick="filterEvents('all', this)">All <span class="count" id="countAll">0</span></button>
+        <button class="filter-tab" onclick="filterEvents('live', this)">Live <span class="count" id="countLive">0</span></button>
+        <button class="filter-tab" onclick="filterEvents('scheduled', this)">Scheduled <span class="count" id="countScheduled">0</span></button>
+      </div>
+
+      <!-- Events List (dynamically rendered) -->
+      <div class="events-list" id="eventsList">
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <script src="utils.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-client.js"></script>
+  <script src="spontix-store.js"></script>
+  <script src="sidebar.js"></script>
+  <script>SpontixSidebar.init({ type: 'venue', active: 'venue-tonights-events.html' });</script>
+  <script>
+    var currentFilter = 'all';
+
+    function showToast(msg) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.classList.add('active');
+      setTimeout(function() { t.classList.remove('active'); }, 3000);
+    }
+
+    function filterEvents(status, btn) {
+      currentFilter = status;
+      document.querySelectorAll('.filter-tab').forEach(function(t) { t.classList.remove('active'); });
+      btn.classList.add('active');
+      document.querySelectorAll('.event-card').forEach(function(card) {
+        card.style.display = (status === 'all' || card.dataset.status === status) ? '' : 'none';
+      });
+    }
+
+    function formatTime12h(time24) {
+      if (!time24 || time24.indexOf(':') === -1) return time24 || '';
+      var parts = time24.split(':');
+      var h = parseInt(parts[0]);
+      var m = parts[1];
+      var ampm = h >= 12 ? 'PM' : 'AM';
+      h = h > 12 ? h - 12 : (h === 0 ? 12 : h);
+      return h + ':' + m + ' ' + ampm;
+    }
+
+    function renderEventCard(ev) {
+      var isLive = ev.status === 'live';
+      var isScheduled = ev.status === 'scheduled';
+      var liveClass = isLive ? ' live' : '';
+      var statusHtml = '';
+      if (isLive) {
+        statusHtml = '<div class="event-status live"><span class="status-dot"></span> Live</div>';
+      } else if (isScheduled) {
+        statusHtml = '<div class="event-status scheduled">Scheduled · ' + formatTime12h(ev.time) + '</div>';
+      } else {
+        statusHtml = '<div class="event-status">' + (ev.status || 'Event') + '</div>';
+      }
+
+      var metaParts = [ev.sport || 'Football', ev.name || ''];
+      if (ev.time) metaParts.push(formatTime12h(ev.time));
+      var metaHtml = metaParts.filter(Boolean).join(' · ');
+
+      var registrationPct = ev.maxPlayers > 0 ? Math.round((ev.registered || 0) / ev.maxPlayers * 100) : 0;
+      var progressColor = isLive ? 'coral' : 'orange';
+
+      var actionsHtml = '';
+      if (isLive) {
+        actionsHtml = '<a href="venue-live-floor.html" class="event-btn primary" style="text-decoration:none;">Manage Live</a>' +
+          '<button class="event-btn coral" onclick="showToast(\'Push question coming soon\')">Push Question</button>';
+      } else {
+        actionsHtml = '<button class="event-btn orange" onclick="showToast(\'Starting event...\')">Start Now</button>' +
+          '<a href="venue-create-event.html" class="event-btn secondary" style="text-decoration:none;">Edit Event</a>';
+      }
+
+      return '<div class="event-card' + liveClass + '" data-status="' + (ev.status || 'scheduled') + '">' +
+        '<div class="event-card-top">' +
+          '<div class="event-card-info">' +
+            statusHtml +
+            '<div class="event-title">' + (ev.matchTitle || ev.name || 'Untitled Event') + '</div>' +
+            '<div class="event-meta">' + metaHtml + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="event-stats">' +
+          '<div class="event-stat">' +
+            '<div class="event-stat-icon orange"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg></div>' +
+            '<div class="event-stat-text"><div class="event-stat-value">' + (ev.registered || 0) + ' / ' + (ev.maxPlayers || 50) + ' players</div><div class="event-stat-label">registered</div></div>' +
+          '</div>' +
+          '<div class="event-stat">' +
+            '<div class="event-stat-icon teal"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>' +
+            '<div class="event-stat-text"><div class="event-stat-value">' + (ev.sport || 'Football') + '</div><div class="event-stat-label">' + (ev.date || '') + '</div></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="event-progress">' +
+          '<div class="event-progress-header"><span class="event-progress-label">Registration</span><span class="event-progress-label">' + (ev.registered || 0) + ' of ' + (ev.maxPlayers || 50) + '</span></div>' +
+          '<div class="event-progress-bar"><div class="event-progress-fill ' + progressColor + '" style="width:' + registrationPct + '%;"></div></div>' +
+        '</div>' +
+        '<div class="event-actions">' + actionsHtml + '</div>' +
+      '</div>';
+    }
+
+    function hydrateTonightsEvents() {
+      var events = SpontixStore.getVenueEvents();
+      var today = new Date().toISOString().split('T')[0];
+
+      // Filter to today's events (or show all if none today)
+      var tonightEvents = events.filter(function(e) { return e.date === today; });
+      if (tonightEvents.length === 0) tonightEvents = events;
+
+      // Update page subtitle
+      var profile = SpontixStore.getVenueProfile();
+      var dayNames = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      var monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+      var now = new Date();
+      var subtitle = dayNames[now.getDay()] + ' ' + now.getDate() + ' ' + monthNames[now.getMonth()] + ' ' + now.getFullYear();
+      if (profile && profile.venueName) subtitle += ' — ' + profile.venueName;
+      var subEl = document.getElementById('pageSubtitle');
+      if (subEl) subEl.textContent = subtitle;
+
+      // Update summary strip
+      var liveCount = tonightEvents.filter(function(e) { return e.status === 'live'; }).length;
+      var scheduledCount = tonightEvents.filter(function(e) { return e.status === 'scheduled'; }).length;
+      var totalRegistered = tonightEvents.reduce(function(sum, e) { return sum + (e.registered || 0); }, 0);
+      var totalCapacity = tonightEvents.reduce(function(sum, e) { return sum + (e.maxPlayers || 0); }, 0);
+      var sports = [];
+      tonightEvents.forEach(function(e) { if (e.sport && sports.indexOf(e.sport) === -1) sports.push(e.sport); });
+
+      document.getElementById('sumTotal').textContent = tonightEvents.length;
+      document.getElementById('sumTotalSub').textContent = liveCount + ' live · ' + scheduledCount + ' scheduled';
+      document.getElementById('sumPlayers').textContent = totalRegistered;
+      document.getElementById('sumCapacity').textContent = totalCapacity;
+      document.getElementById('sumSports').textContent = sports.length;
+      document.getElementById('sumSportsSub').textContent = sports.join(', ') || '—';
+
+      // Update filter tab counts
+      document.getElementById('countAll').textContent = tonightEvents.length;
+      document.getElementById('countLive').textContent = liveCount;
+      document.getElementById('countScheduled').textContent = scheduledCount;
+
+      // Update venue status indicator
+      var statusEl = document.querySelector('.venue-status');
+      if (statusEl) {
+        if (liveCount > 0) {
+          statusEl.className = 'venue-status open';
+          statusEl.innerHTML = '<span class="venue-status-dot"></span> Event Live';
+        } else if (tonightEvents.length > 0) {
+          statusEl.className = 'venue-status';
+          statusEl.innerHTML = '<span class="venue-status-dot"></span> ' + tonightEvents.length + ' Events Tonight';
+        } else {
+          statusEl.className = 'venue-status';
+          statusEl.innerHTML = '<span class="venue-status-dot"></span> No Events';
+        }
+      }
+
+      // Render event cards
+      var container = document.getElementById('eventsList');
+      if (tonightEvents.length === 0) {
+        container.innerHTML = '<div style="text-align:center;color:#8E8EA0;padding:48px 0;">' +
+          '<div style="font-size:2rem;margin-bottom:12px;">📅</div>' +
+          '<div style="font-size:1rem;font-weight:700;margin-bottom:6px;">No events tonight</div>' +
+          '<div style="font-size:0.85rem;">Create an event to get started.</div>' +
+          '<a href="venue-create-event.html" style="display:inline-block;margin-top:16px;padding:10px 24px;background:var(--lime);color:var(--navy);border-radius:10px;font-weight:700;text-decoration:none;">Create Event</a>' +
+          '</div>';
+        return;
+      }
+
+      container.innerHTML = tonightEvents.map(renderEventCard).join('');
+
+      // Re-apply current filter
+      if (currentFilter !== 'all') {
+        document.querySelectorAll('.event-card').forEach(function(card) {
+          card.style.display = card.dataset.status === currentFilter ? '' : 'none';
+        });
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      hydrateTonightsEvents();
+
+      window.addEventListener('spontix-events-refreshed', function() {
+        hydrateTonightsEvents();
+      });
+    });
+  </script>
+</body>
+</html>

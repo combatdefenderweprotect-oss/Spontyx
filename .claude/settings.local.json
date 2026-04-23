@@ -1,0 +1,39 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python3 -m http.server 8000)",
+      "Bash(grep -E \"\\\\.\\(js|html\\)$\")",
+      "Bash(python3 -c ':*)",
+      "Bash(cp \"/Users/richutis/Downloads/spontyx_clash_pack/spontyx_primary_navy.svg\" \"/Users/richutis/Library/Mobile Documents/com~apple~CloudDocs/COMBAT DEFENDER PRIVATE/Spontix/spontyx-logo.svg\")",
+      "Bash(cp \"/Users/richutis/Downloads/Untitled design.svg\" \"/Users/richutis/Library/Mobile Documents/com~apple~CloudDocs/COMBAT DEFENDER PRIVATE/Spontix/spontyx-icon.svg\")",
+      "Bash(perl -i -pe 's/Spontix\\(?![A-Z]\\)/Spontyx/g' *.html sidebar.js utils.js styles.css)",
+      "Bash(grep -c \"Spontix[^A-Z]\" *.html sidebar.js)",
+      "Bash(grep -c \"Spontyx\" *.html sidebar.js)",
+      "Bash(supabase functions *)",
+      "Bash(python3 -m json.tool)",
+      "Bash(python3 -c ' *)",
+      "Bash(python3 -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\(d, indent=2\\)\\)\")",
+      "Bash(python3 -c 'import json,sys; d=json.load\\(sys.stdin\\) *)",
+      "Bash(curl -s 'https://hdulhffpmuqepoqstsor.supabase.co/rest/v1/generation_run_leagues?order=created_at.desc&limit=3' -H 'apikey: sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5' -H 'Authorization: Bearer sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5')",
+      "Bash(python3 -c \"import json,sys; d=json.loads\\(sys.stdin.read\\(\\)\\); [print\\(json.dumps\\(r, indent=2\\)[:600]\\) for r in d]\")",
+      "Bash(curl -v 'https://hdulhffpmuqepoqstsor.supabase.co/rest/v1/generation_run_leagues?limit=5' -H 'apikey: sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5' -H 'Authorization: Bearer sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5')",
+      "Bash(python3 -c \"import json,sys; d=json.loads\\(sys.stdin.read\\(\\)\\); [print\\(json.dumps\\(r, indent=2\\)\\) for r in d]\")",
+      "Bash(curl -s 'https://hdulhffpmuqepoqstsor.supabase.co/rest/v1/questions?order=id.desc&limit=5&select=question_text,event_type,base_value,difficulty_multiplier,reuse_scope,ai_prompt_version' -H 'apikey: sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5' -H 'Authorization: Bearer sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5')",
+      "Bash(curl -s 'https://hdulhffpmuqepoqstsor.supabase.co/rest/v1/match_pool_questions?order=created_at.desc&limit=5&select=question_text,reuse_scope,fingerprint' -H 'apikey: sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5' -H 'Authorization: Bearer sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5')",
+      "Bash(curl -s 'https://hdulhffpmuqepoqstsor.supabase.co/rest/v1/match_question_pool?status=eq.ready&select=id,status,questions_count,match_id,mode' -H 'apikey: sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5' -H 'Authorization: Bearer sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5')",
+      "Bash(curl -s 'https://hdulhffpmuqepoqstsor.supabase.co/rest/v1/questions?select=count' -H 'apikey: sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5' -H 'Authorization: Bearer sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5' -H 'Prefer: count=exact')",
+      "Bash(curl -s 'https://hdulhffpmuqepoqstsor.supabase.co/rest/v1/generation_runs?order=created_at.desc&limit=3&select=id,status,questions_generated,questions_rejected,prompt_version' -H 'apikey: sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5' -H 'Authorization: Bearer sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5')",
+      "Bash(curl -s -X POST https://hdulhffpmuqepoqstsor.supabase.co/functions/v1/generate-questions -H 'Authorization: Bearer spontix-cron-x7k2m9')",
+      "Bash(curl -s 'https://hdulhffpmuqepoqstsor.supabase.co/rest/v1/questions?ai_prompt_version=eq.v1.5&select=question_text,question_category,base_value,difficulty_multiplier,event_type,visible_from,answer_closes_at,resolves_after,generation_trigger,match_minute_at_generation&order=id.desc&limit=10' -H 'apikey: sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5' -H 'Authorization: Bearer sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5')",
+      "Bash(python3 -c \"import json,sys; [print\\(r.get\\('question_text'\\), '| base:', r.get\\('base_value'\\), '| diff:', r.get\\('difficulty_multiplier'\\), '| event:', r.get\\('event_type'\\)\\) for r in json.loads\\(sys.stdin.read\\(\\)\\)]\")",
+      "Bash(curl -s -X GET \"https://hdulhffpmuqepoqstsor.supabase.co/functions/v1/generate-questions\" -H \"Authorization: Bearer spontix-cron-x7k2m9\")",
+      "Bash(curl -s 'https://hdulhffpmuqepoqstsor.supabase.co/rest/v1/questions?select=question_text,question_category,base_value,difficulty_multiplier,generation_trigger,visible_from,answer_closes_at,resolves_after,match_minute_at_generation,ai_prompt_version&source=eq.ai_generated&order=created_at.desc&limit=15' -H 'apikey: sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5' -H 'Authorization: Bearer sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5')",
+      "Bash(curl -s 'https://hdulhffpmuqepoqstsor.supabase.co/rest/v1/questions?select=question_text,base_value,difficulty_multiplier,generation_trigger,visible_from,answer_closes_at,resolves_after,match_minute_at_generation,ai_prompt_version,event_type&source=eq.ai_generated&order=created_at.desc&limit=15' -H 'apikey: sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5' -H 'Authorization: Bearer sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5')",
+      "Bash(curl -s 'https://hdulhffpmuqepoqstsor.supabase.co/rest/v1/questions?select=*&source=eq.ai_generated&order=created_at.desc&limit=3' -H 'apikey: sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5' -H 'Authorization: Bearer sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5')",
+      "Bash(curl -s 'https://hdulhffpmuqepoqstsor.supabase.co/rest/v1/questions?select=*&order=created_at.desc&limit=5' -H 'apikey: sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5' -H 'Authorization: Bearer sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5')",
+      "Bash(curl -s 'https://hdulhffpmuqepoqstsor.supabase.co/rest/v1/generation_run_leagues?select=league_id,questions_generated,questions_rejected,rejection_log,generation_mode,duration_ms&order=created_at.desc&limit=6' -H 'apikey: sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5' -H 'Authorization: Bearer sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5')",
+      "Bash(curl -s 'https://hdulhffpmuqepoqstsor.supabase.co/rest/v1/generation_run_leagues?select=league_id,questions_generated,questions_rejected,rejection_log,generation_mode,duration_ms&limit=6' -H 'apikey: sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5' -H 'Authorization: Bearer sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5')",
+      "Bash(awk '{print $5, $9}')"
+    ]
+  }
+}

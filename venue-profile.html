@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Venue Profile</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    /* ══ MAIN ══ */
+    .main { margin-left: 260px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* Top Bar */
+    .topbar {
+      padding: 16px 32px; display: flex; align-items: center; gap: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-back {
+      display: flex; align-items: center; gap: 8px; padding: 8px 16px;
+      border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.1);
+      background: none; color: var(--grey); font-size: 0.78rem; font-weight: 600;
+      font-family: inherit; cursor: pointer; transition: all 0.15s; text-decoration: none;
+    }
+    .topbar-back:hover { border-color: rgba(124,92,252,0.3); color: var(--off-white); }
+    .topbar-back svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .topbar-title { font-size: 1rem; font-weight: 700; flex: 1; }
+    .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .topbar-btn {
+      width: 40px; height: 40px; border-radius: 50%; border: none;
+      background: var(--navy-light); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; position: relative; transition: background 0.2s;
+      text-decoration: none;
+    }
+    .topbar-btn:hover { background: var(--navy-hover); }
+    .topbar-btn svg { width: 18px; height: 18px; stroke: var(--grey); fill: none; stroke-width: 1.8; }
+    .topbar-btn .notif-dot {
+      position: absolute; top: 8px; right: 8px; width: 8px; height: 8px;
+      background: var(--coral); border-radius: 50%; border: 2px solid var(--navy);
+    }
+
+    /* Content */
+    .content { padding: 32px; flex: 1; max-width: 900px; }
+
+    /* ══ PROFILE HEADER ══ */
+    .vp-header {
+      display: flex; align-items: center; gap: 24px; margin-bottom: 36px;
+      padding: 28px; background: var(--navy-card); border-radius: var(--radius-xl);
+      border: 1px solid rgba(255,255,255,0.06); position: relative; overflow: hidden;
+    }
+    .vp-header::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(ellipse at 0% 50%, rgba(124,92,252,0.06), transparent 60%);
+      pointer-events: none;
+    }
+    .vp-avatar {
+      width: 80px; height: 80px; border-radius: var(--radius-lg); flex-shrink: 0;
+      background: linear-gradient(135deg, var(--purple), #6B4FE0);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem; font-weight: 900; color: #fff; position: relative; z-index: 1;
+    }
+    .vp-info { flex: 1; min-width: 0; position: relative; z-index: 1; }
+    .vp-name { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .vp-city { font-size: 0.85rem; color: var(--grey); margin-bottom: 10px; }
+    .vp-meta { display: flex; gap: 16px; flex-wrap: wrap; }
+    .vp-meta-item { font-size: 0.75rem; color: var(--grey); display: flex; align-items: center; gap: 5px; }
+    .vp-meta-item svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .vp-meta-item strong { color: var(--off-white); font-weight: 700; }
+    .vp-tier {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 12px; border-radius: var(--radius-pill);
+      background: rgba(124,92,252,0.1); border: 1px solid rgba(124,92,252,0.2);
+      font-size: 0.65rem; font-weight: 700; color: var(--purple); text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 10px;
+    }
+
+    /* ══ TABS ══ */
+    .profile-tabs {
+      display: flex; gap: 4px; margin-bottom: 28px; background: var(--navy-light);
+      border-radius: var(--radius-sm); padding: 4px; overflow-x: auto;
+    }
+    .profile-tab {
+      padding: 10px 18px; border-radius: 6px; border: none; background: none;
+      color: var(--grey); font-size: 0.8rem; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: all 0.15s; white-space: nowrap;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .profile-tab:hover { color: var(--off-white); }
+    .profile-tab.active { background: var(--navy-card); color: var(--purple); }
+    .profile-tab svg { width: 15px; height: 15px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .tab-panel { display: none; animation: fadeIn 0.3s ease; }
+    .tab-panel.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* ══ VENUE TROPHY MANAGEMENT ══ */
+    .venue-trophy-card {
+      background: var(--navy-light); border: 1px solid rgba(255,255,255,0.06); border-radius: 12px;
+      padding: 14px; text-align: center; transition: transform 0.2s, border-color 0.2s;
+    }
+    .venue-trophy-card:hover { transform: translateY(-2px); }
+    .venue-trophy-card[data-rarity="legendary"] { border-color: rgba(255,215,0,0.25); }
+    .venue-trophy-card[data-rarity="epic"] { border-color: rgba(124,92,252,0.2); }
+    .venue-trophy-card[data-rarity="rare"] { border-color: rgba(78,205,196,0.2); }
+    .venue-trophy-icon {
+      width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center;
+      justify-content: center; margin: 0 auto 8px; border: 2px solid transparent;
+    }
+    .venue-trophy-icon svg { width: 20px; height: 20px; stroke-width: 1.8; fill: none; }
+    .venue-trophy-name { font-size: 0.72rem; font-weight: 700; margin-bottom: 3px; }
+    .venue-trophy-rarity { font-size: 0.55rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .venue-trophy-awarded { font-size: 0.55rem; color: rgba(255,255,255,0.35); margin-top: 4px; }
+    .venue-trophy-create-btn {
+      background: linear-gradient(135deg, var(--purple), #5B3FD4); color: #fff;
+      border: none; border-radius: 12px; padding: 14px 20px; font-family: inherit;
+      font-size: 0.82rem; font-weight: 700; cursor: pointer; width: 100%;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      transition: transform 0.2s, box-shadow 0.2s; margin-top: 12px;
+    }
+    .venue-trophy-create-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(124,92,252,0.3); }
+    .venue-trophy-create-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+    /* Trophy Creation Modal */
+    .trophy-create-modal {
+      display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(0,0,0,0.7);
+      align-items: center; justify-content: center; padding: 20px;
+    }
+    .trophy-create-modal.show { display: flex; }
+    .trophy-create-modal-box {
+      background: var(--dark, #1A1A2E); border: 1px solid rgba(124,92,252,0.25); border-radius: 20px;
+      padding: 28px; max-width: 420px; width: 100%;
+    }
+    .trophy-create-modal h3 { font-size: 1rem; font-weight: 800; margin-bottom: 16px; }
+    .trophy-create-modal label { display: block; font-size: 0.72rem; font-weight: 600; color: rgba(255,255,255,0.5); margin-bottom: 6px; margin-top: 14px; }
+    .trophy-create-modal input, .trophy-create-modal select, .trophy-create-modal textarea {
+      width: 100%; padding: 10px 14px; background: var(--navy-light); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px; color: var(--off-white); font-size: 0.82rem; font-family: inherit; outline: none;
+    }
+    .trophy-create-modal textarea { height: 60px; resize: none; }
+    .trophy-create-modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+    .trophy-create-modal-actions button {
+      flex: 1; padding: 12px; border-radius: 10px; font-family: inherit; font-size: 0.82rem;
+      font-weight: 700; border: none; cursor: pointer; transition: transform 0.2s;
+    }
+    .trophy-create-modal-actions button:hover { transform: translateY(-1px); }
+    .trophy-modal-cancel { background: var(--navy-light); color: var(--off-white); }
+    .trophy-modal-create { background: linear-gradient(135deg, var(--purple), #5B3FD4); color: #fff; }
+    .trophy-modal-ai { background: linear-gradient(135deg, #FFD700, #FF9F43); color: var(--navy); }
+
+    /* ══ BADGES GRID ══ */
+    .badge-card {
+      background: rgba(255,255,255,0.03); border-radius: 12px; padding: 18px 14px;
+      border: 1px solid rgba(255,255,255,0.06); text-align: center;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+    .badge-card:hover { transform: translateY(-2px); border-color: rgba(124,92,252,0.15); }
+    .badge-card.locked { opacity: 0.4; }
+    .badge-card.locked:hover { transform: none; border-color: rgba(255,255,255,0.06); }
+    .badge-icon {
+      width: 44px; height: 44px; border-radius: 50%; margin: 0 auto 10px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .badge-icon svg { width: 20px; height: 20px; stroke-width: 2; fill: none; }
+    .badge-name { font-size: 0.72rem; font-weight: 700; margin-bottom: 3px; }
+    .badge-desc { font-size: 0.6rem; color: rgba(255,255,255,0.4); line-height: 1.4; }
+    .badge-progress { margin-top: 6px; }
+    .badge-progress-track { height: 3px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden; }
+    .badge-progress-fill { height: 100%; border-radius: 3px; }
+    .badge-progress-label { font-size: 0.55rem; color: rgba(255,255,255,0.3); margin-top: 3px; }
+    .badge-earned-date { font-size: 0.55rem; color: #7C5CFC; font-weight: 600; margin-top: 5px; }
+
+    /* ══ VENUE APPEARANCE ══ */
+    .venue-preview-card {
+      width: 280px; margin: 0 auto 20px; border-radius: 14px; overflow: hidden;
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    }
+    .venue-preview-header {
+      height: 90px; display: flex; align-items: flex-end; padding: 12px 14px;
+      position: relative; overflow: hidden; background: linear-gradient(135deg, #7C5CFC, #5A3FD4);
+      background-size: cover; background-position: center;
+    }
+    .venue-preview-header::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(transparent 30%, rgba(26,26,46,0.9));
+    }
+    .venue-preview-header.has-photo::after {
+      background: linear-gradient(transparent 10%, rgba(0,0,0,0.35) 55%, rgba(26,26,46,0.95));
+    }
+    .venue-preview-name {
+      font-size: 1rem; font-weight: 800; color: #fff; z-index: 1; position: relative;
+    }
+    .venue-preview-body {
+      padding: 10px 14px; text-align: center; font-size: 0.68rem; color: rgba(255,255,255,0.35);
+    }
+
+    .appearance-mode-toggle {
+      display: flex; gap: 4px; margin-bottom: 18px; background: var(--navy-light);
+      padding: 4px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06);
+    }
+    .appearance-mode-btn {
+      flex: 1; padding: 10px 8px; border-radius: 8px; border: none; background: transparent;
+      color: rgba(255,255,255,0.5); font-family: inherit; font-size: 0.75rem; font-weight: 700;
+      cursor: pointer; transition: all 0.2s; text-align: center;
+    }
+    .appearance-mode-btn:hover { color: var(--off-white); }
+    .appearance-mode-btn.active {
+      background: var(--navy-card); color: var(--purple);
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+
+    .color-picker-row {
+      display: flex; gap: 12px; justify-content: center; padding: 16px 0;
+    }
+    .color-swatch {
+      width: 40px; height: 40px; border-radius: 50%; cursor: pointer;
+      border: 3px solid transparent; transition: all 0.2s; position: relative;
+    }
+    .color-swatch:hover { transform: scale(1.15); }
+    .color-swatch.active { border-color: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,0.15); }
+    .color-swatch-check {
+      position: absolute; inset: 0; display: none; align-items: center; justify-content: center;
+    }
+    .color-swatch.active .color-swatch-check { display: flex; }
+    .color-swatch-check svg { width: 18px; height: 18px; stroke: #fff; stroke-width: 3; fill: none; }
+
+    .appearance-panel { display: none; }
+    .appearance-panel.active { display: block; }
+
+    .photo-gallery-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;
+    }
+    .photo-tile {
+      position: relative; aspect-ratio: 4/3; border-radius: 10px; overflow: hidden;
+      cursor: pointer; border: 2px solid transparent; transition: all 0.2s;
+      background: var(--navy-light);
+    }
+    .photo-tile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .photo-tile:hover { transform: translateY(-2px); }
+    .photo-tile.is-title { border-color: #FFD700; box-shadow: 0 0 0 3px rgba(255,215,0,0.15); }
+    .photo-tile-title-badge {
+      position: absolute; top: 6px; left: 6px; display: none;
+      padding: 3px 8px; background: #FFD700; color: var(--navy);
+      border-radius: 999px; font-size: 0.55rem; font-weight: 800; letter-spacing: 0.3px;
+      text-transform: uppercase;
+    }
+    .photo-tile.is-title .photo-tile-title-badge { display: flex; align-items: center; gap: 3px; }
+    .photo-tile-title-badge svg { width: 10px; height: 10px; stroke: var(--navy); stroke-width: 3; fill: none; }
+    .photo-tile-actions {
+      position: absolute; inset: auto 0 0 0; display: flex; gap: 4px;
+      padding: 8px; background: linear-gradient(transparent, rgba(0,0,0,0.75));
+    }
+    .photo-action-btn {
+      flex: 1; padding: 5px 8px; border: none; border-radius: 6px;
+      font-family: inherit; font-size: 0.65rem; font-weight: 700;
+      cursor: pointer; transition: transform 0.15s;
+    }
+    .photo-action-btn:hover { transform: scale(1.05); }
+    .photo-action-set { background: #FFD700; color: var(--navy); }
+    .photo-action-del { background: rgba(255,107,107,0.85); color: #fff; }
+    .photo-tile-label {
+      position: absolute; inset: auto 0 0 0; padding: 6px 8px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.7));
+      font-size: 0.62rem; font-weight: 700; color: #fff;
+    }
+    .photo-empty {
+      grid-column: 1/-1; text-align: center; padding: 24px;
+      color: rgba(255,255,255,0.3); font-size: 0.82rem;
+    }
+
+    .photo-upload-zone {
+      border: 2px dashed rgba(124,92,252,0.3); border-radius: 12px; padding: 24px 16px;
+      text-align: center; cursor: pointer; transition: all 0.2s; background: rgba(124,92,252,0.03);
+      margin-bottom: 14px;
+    }
+    .photo-upload-zone:hover { border-color: var(--purple); background: rgba(124,92,252,0.08); }
+    .photo-upload-zone.dragging { border-color: var(--purple); background: rgba(124,92,252,0.12); transform: scale(1.01); }
+    .photo-upload-zone svg { width: 32px; height: 32px; stroke: var(--purple); stroke-width: 1.6; fill: none; margin-bottom: 8px; }
+    .photo-upload-title { font-size: 0.88rem; font-weight: 700; color: var(--off-white); margin-bottom: 3px; }
+    .photo-upload-sub { font-size: 0.7rem; color: rgba(255,255,255,0.4); }
+
+    /* ══ SETTINGS FORM ══ */
+    .settings-card {
+      background: var(--navy-card); border-radius: var(--radius-xl); padding: 28px;
+      border: 1px solid rgba(255,255,255,0.06); margin-bottom: 20px;
+    }
+    .settings-card-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+    .settings-card-title svg { width: 18px; height: 18px; stroke: var(--purple); stroke-width: 2; fill: none; }
+    .form-group { margin-bottom: 18px; }
+    .form-label { display: block; font-size: 0.72rem; font-weight: 700; color: var(--grey); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .form-input {
+      width: 100%; padding: 12px 14px; background: var(--navy-light);
+      border: 2px solid rgba(255,255,255,0.08); border-radius: var(--radius-md);
+      color: var(--off-white); font-size: 0.88rem; font-family: inherit; outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-input:focus { border-color: var(--purple); }
+    .form-input::placeholder { color: var(--grey-dark); }
+    .form-row { display: flex; gap: 14px; }
+    .form-row .form-group { flex: 1; }
+    .form-hint { font-size: 0.65rem; color: var(--grey-dark); margin-top: 4px; }
+    .btn-save {
+      padding: 12px 28px; background: linear-gradient(135deg, var(--purple), #5B3FD4); color: #fff; border: none;
+      border-radius: var(--radius-pill); font-size: 0.82rem; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: all 0.2s;
+    }
+    .btn-save:hover { transform: translateY(-1px); box-shadow: 0 4px 16px rgba(124,92,252,0.3); }
+
+    /* Toast */
+
+    /* ══ RESPONSIVE ══ */
+    @media (max-width: 768px) {
+      .vp-header { flex-direction: column; text-align: center; }
+      .vp-meta { justify-content: center; }
+    }
+    @media (max-width: 640px) {
+      .content { padding: 20px 16px; }
+      .form-row { flex-direction: column; gap: 0; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="sidebar-placeholder"></div>
+
+<!-- Main Content -->
+<div class="main">
+  <!-- Top Bar -->
+  <header class="topbar">
+    <a href="venue-dashboard.html" class="topbar-back">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Dashboard
+    </a>
+    <div class="topbar-title">Venue Profile</div>
+    <div class="topbar-right">
+      <a href="notifications.html" class="topbar-btn" title="Notifications" style="text-decoration:none;">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        <span class="notif-dot"></span>
+      </a>
+      <button class="topbar-btn" title="Messages">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- Profile Header -->
+    <div class="vp-header">
+      <div class="vp-avatar" id="vpAvatar">TC</div>
+      <div class="vp-info">
+        <div class="vp-name" id="vpName">Your Venue</div>
+        <span class="vp-tier" id="vpTier">Venue Starter</span>
+        <div class="vp-city" id="vpCity">City not set</div>
+        <div class="vp-meta" id="vpMeta">
+          <div class="vp-meta-item">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+            <strong id="vpPlayers">0</strong> players
+          </div>
+          <div class="vp-meta-item">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            <strong id="vpEvents">0</strong> events
+          </div>
+          <div class="vp-meta-item">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5H6M18 9h1.5a2.5 2.5 0 000-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22M18 2H6v7a6 6 0 0012 0V2z"/></svg>
+            <strong id="vpTrophies">0</strong> trophies
+          </div>
+          <div class="vp-meta-item">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5" fill="none"/><path d="M12 13l-3 7h6l-3-7z"/></svg>
+            <strong id="vpBadges">0</strong> badges
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="profile-tabs">
+      <button class="profile-tab active" onclick="switchTab('trophies')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5H6M18 9h1.5a2.5 2.5 0 000-5H18M4 22h16M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20 7 22M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20 17 22M18 2H6v7a6 6 0 0012 0V2z"/></svg>
+        Trophies
+      </button>
+      <button class="profile-tab" onclick="switchTab('badges')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5" fill="none"/><path d="M12 13l-3 7h6l-3-7z"/></svg>
+        Badges
+      </button>
+      <button class="profile-tab" onclick="switchTab('appearance')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+        Appearance
+      </button>
+      <button class="profile-tab" onclick="switchTab('settings')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+        Settings
+      </button>
+    </div>
+
+    <!-- ═══ TAB: TROPHIES ═══ -->
+    <div class="tab-panel active" id="tab-trophies">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+        <h3 style="font-size:1rem; font-weight:700;">Player Rewards <span id="venueTrophyTierTag" style="font-size:0.55rem;font-weight:800;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:middle;"></span></h3>
+        <span id="venueTrophyCount" style="font-size:0.72rem; font-weight:700; color:#FFD700; background:rgba(255,215,0,0.1); padding:4px 12px; border-radius:999px;">0 active</span>
+      </div>
+      <p style="font-size:0.75rem; color:rgba(255,255,255,0.4); margin-bottom:14px; line-height:1.5;" id="venueTrophyBlurb">Reward your best players. Trophies appear in players' Trophy Rooms and on your venue profile.</p>
+      <div id="venueTrophiesGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px;">
+        <!-- Dynamically populated -->
+      </div>
+      <button class="venue-trophy-create-btn" id="venueTrophyCreateBtn" onclick="handleTrophyCreateClick()">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span id="venueTrophyCreateBtnLabel">Create Custom Trophy</span>
+      </button>
+    </div>
+
+    <!-- ═══ TAB: BADGES ═══ -->
+    <div class="tab-panel" id="tab-badges">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+        <h3 style="font-size:1rem; font-weight:700;">Venue Achievements</h3>
+        <span id="venueBadgeCount" style="font-size:0.72rem; font-weight:700; color:var(--purple); background:rgba(124,92,252,0.12); padding:4px 12px; border-radius:999px;">0 / 0</span>
+      </div>
+      <div id="venueBadgesGrid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px;">
+        <!-- Dynamically populated -->
+      </div>
+    </div>
+
+    <!-- ═══ TAB: APPEARANCE ═══ -->
+    <div class="tab-panel" id="tab-appearance">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+        <h3 style="font-size:1rem; font-weight:700;">Venue Appearance</h3>
+        <span id="venuePhotoCount" style="font-size:0.72rem; font-weight:700; color:var(--purple); background:rgba(124,92,252,0.12); padding:4px 12px; border-radius:999px;">0 photos</span>
+      </div>
+      <p style="font-size:0.75rem; color:rgba(255,255,255,0.4); margin-bottom:14px; line-height:1.5;">Customize how your venue looks in the discovery grid.</p>
+
+      <!-- Live Preview Card -->
+      <div class="venue-preview-card">
+        <div class="venue-preview-header" id="venuePreviewHeader">
+          <div class="venue-preview-name" id="venuePreviewName">Your Venue</div>
+        </div>
+        <div class="venue-preview-body">This is how your venue card looks</div>
+      </div>
+
+      <!-- 3-way mode toggle -->
+      <div class="appearance-mode-toggle">
+        <button type="button" class="appearance-mode-btn active" data-mode="color" onclick="setAppearanceMode('color')">Brand Colour</button>
+        <button type="button" class="appearance-mode-btn" data-mode="preset" onclick="setAppearanceMode('preset')">Preset Photo</button>
+        <button type="button" class="appearance-mode-btn" data-mode="custom" onclick="setAppearanceMode('custom')">Custom Photo</button>
+      </div>
+
+      <!-- Panel: Brand Colour Picker -->
+      <div class="appearance-panel active" id="panelColor">
+        <div class="color-picker-row" id="colorPickerRow"></div>
+      </div>
+
+      <!-- Panel: Preset Photos -->
+      <div class="appearance-panel" id="panelPreset">
+        <div class="photo-gallery-grid" id="presetGalleryGrid"></div>
+      </div>
+
+      <!-- Panel: Custom Photos -->
+      <div class="appearance-panel" id="panelCustom">
+        <div class="photo-upload-zone" id="photoUploadZone" onclick="handleUploadClick()"
+             ondragover="event.preventDefault(); this.classList.add('dragging')"
+             ondragleave="this.classList.remove('dragging')"
+             ondrop="handlePhotoDrop(event)">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+          <div class="photo-upload-title" id="photoUploadTitle">Click or drop photos here</div>
+          <div class="photo-upload-sub" id="photoUploadSub">JPG, PNG or WebP - up to 4MB each</div>
+          <input type="file" id="photoFileInput" accept="image/*" multiple style="display:none;" onchange="handlePhotoFileInput(event)" />
+        </div>
+        <div class="photo-gallery-grid" id="customGalleryGrid"></div>
+      </div>
+    </div>
+
+    <!-- ═══ TAB: SETTINGS ═══ -->
+    <div class="tab-panel" id="tab-settings">
+      <div class="settings-card">
+        <div class="settings-card-title">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V7l8-4 8 4v14M9 21v-4h6v4"/></svg>
+          Venue Details
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Venue Name</label>
+            <input type="text" class="form-input" id="settingsVenueName" placeholder="e.g. The Crown Pub" />
+          </div>
+          <div class="form-group">
+            <label class="form-label">City</label>
+            <input type="text" class="form-input" id="settingsCity" placeholder="e.g. London" />
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label">Venue Type</label>
+            <select class="form-input" id="settingsType">
+              <option value="Sports Bar">Sports Bar</option>
+              <option value="Pub">Pub</option>
+              <option value="Restaurant">Restaurant</option>
+              <option value="Lounge">Lounge</option>
+              <option value="Cafe">Cafe</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Opening Hours</label>
+            <input type="text" class="form-input" id="settingsHours" placeholder="e.g. Mon-Sun 11am-1am" />
+          </div>
+        </div>
+        <div class="form-hint" style="margin-bottom:18px;">These details appear on your venue card in the discovery grid.</div>
+        <button class="btn-save" onclick="saveVenueSettings()">Save Changes</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Trophy Creation Modal -->
+<div class="trophy-create-modal" id="trophyModal">
+  <div class="trophy-create-modal-box">
+    <h3>Create Custom Trophy</h3>
+    <label>Trophy Name</label>
+    <input type="text" id="trophyName" placeholder="e.g. El Clasico King" maxlength="40" />
+    <label>Description</label>
+    <textarea id="trophyDesc" placeholder="Describe the achievement..."></textarea>
+    <label>Rarity</label>
+    <select id="trophyRarity">
+      <option value="common">Common</option>
+      <option value="rare" selected>Rare</option>
+      <option value="epic">Epic</option>
+      <option value="legendary">Legendary</option>
+    </select>
+    <div class="trophy-create-modal-actions">
+      <button class="trophy-modal-cancel" onclick="closeTrophyCreator()">Cancel</button>
+      <button class="trophy-modal-create" onclick="createTrophy()">Create Trophy</button>
+      <button class="trophy-modal-ai" onclick="createAITrophy()">AI Generate</button>
+    </div>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="utils.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+<script src="sidebar.js"></script>
+<script>SpontixSidebar.init({ type: 'venue', active: 'venue-profile.html' });</script>
+
+<!-- Tab switching loads first so UI is interactive immediately -->
+<script>
+function switchTab(tab) {
+  document.querySelectorAll('.profile-tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelectorAll('.profile-tab').forEach(function(t) {
+    var lbl = t.textContent.trim().toLowerCase();
+    if (lbl === tab.toLowerCase()) t.classList.add('active');
+  });
+  var panel = document.getElementById('tab-' + tab);
+  if (panel) panel.classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+// Handle hash-based tab navigation (e.g. venue-profile.html#badges)
+(function() {
+  var hash = window.location.hash.replace('#', '');
+  if (hash && document.getElementById('tab-' + hash)) switchTab(hash);
+})();
+</script>
+
+<script>
+// ══════════════════════════════════════════
+// Venue Profile — Hydration & Logic
+// ══════════════════════════════════════════
+
+// ── Helpers ──
+function getCurrentVenueId() {
+  var p = SpontixStore.getVenueProfile();
+  return p ? (p.id || SpontixStore.getVenueIdByName(p.venueName)) : SpontixStore.VENUE_IDS.ARENA;
+}
+
+function getCurrentVenueName() {
+  var p = SpontixStore.getVenueProfile();
+  return p ? p.venueName : SpontixStore.DEFAULT_VENUE_NAME;
+}
+
+function getVenueTier() {
+  return localStorage.getItem('spontix_user_tier') || 'venue-starter';
+}
+
+function getVenueTierLimits() {
+  var tier = localStorage.getItem('spontix_user_tier') || 'venue-starter';
+  return { tier: tier, limits: SpontixStore.TIER_LIMITS[tier] || SpontixStore.TIER_LIMITS['venue-starter'] };
+}
+
+// ══════════════════════════════════════════
+// 1. Profile Header Hydration
+// ══════════════════════════════════════════
+function hydrateVenueProfile() {
+  var profile = SpontixStore.getVenueProfile();
+  var stats = SpontixStore.getVenueStats();
+  var tier = getVenueTier();
+
+  // Avatar
+  var venueName = profile ? profile.venueName : 'Your Venue';
+  var initials = venueName.split(' ').map(function(w) { return w[0]; }).join('').toUpperCase().slice(0, 2);
+  document.getElementById('vpAvatar').textContent = initials;
+
+  // Name & city
+  document.getElementById('vpName').textContent = venueName;
+  document.getElementById('vpCity').textContent = (profile && profile.city) ? profile.city : 'City not set';
+
+  // Tier badge
+  var tierEl = document.getElementById('vpTier');
+  var tierLabel = (typeof SpontixStore.getTierLabel === 'function') ? SpontixStore.getTierLabel(tier) : tier;
+  tierEl.textContent = tierLabel;
+  if (tier === 'venue-elite') {
+    tierEl.style.background = 'linear-gradient(90deg, rgba(255,215,0,0.15), rgba(255,159,67,0.15))';
+    tierEl.style.borderColor = 'rgba(255,215,0,0.3)';
+    tierEl.style.color = '#FFD700';
+  } else if (tier === 'venue-pro') {
+    tierEl.style.background = 'rgba(124,92,252,0.1)';
+    tierEl.style.borderColor = 'rgba(124,92,252,0.2)';
+    tierEl.style.color = '#7C5CFC';
+  }
+
+  // Meta stats
+  if (stats) {
+    document.getElementById('vpPlayers').textContent = stats.totalPlayers || 0;
+  }
+  var events = SpontixStore.getVenueEvents();
+  document.getElementById('vpEvents').textContent = events ? events.length : 0;
+
+  var customTrophies = SpontixStore.getVenueCustomTrophies();
+  var myTrophies = customTrophies.filter(function(t) { return t.venueName === venueName; });
+  document.getElementById('vpTrophies').textContent = myTrophies.length;
+
+  var badges = SpontixStore.getVenueBadgeList();
+  var earnedBadges = badges.filter(function(b) { return b.earned; });
+  document.getElementById('vpBadges').textContent = earnedBadges.length;
+}
+
+// ══════════════════════════════════════════
+// 2. Badges
+// ══════════════════════════════════════════
+function hydrateVenueBadges() {
+  var badges = SpontixStore.getVenueBadgeList();
+  var earned = badges.filter(function(b) { return b.earned; });
+  document.getElementById('venueBadgeCount').textContent = earned.length + ' / ' + badges.length;
+  var grid = document.getElementById('venueBadgesGrid');
+  grid.innerHTML = badges.map(function(b) { return SpontixStore.renderBadgeCard(b); }).join('');
+}
+
+// ══════════════════════════════════════════
+// 3. Trophies
+// ══════════════════════════════════════════
+function hydrateVenueTrophies() {
+  var profile = SpontixStore.getVenueProfile();
+  var venueName = profile ? profile.venueName : SpontixStore.DEFAULT_VENUE_NAME;
+  var tier = getVenueTier();
+  var limits = SpontixStore.TIER_LIMITS[tier] || SpontixStore.TIER_LIMITS['venue-starter'];
+  var canAward = !!limits.canAwardTrophies;
+  var canCreateAI = !!limits.customTrophyCreation;
+  var presets = limits.trophyPresets || [];
+
+  // Tier tag display
+  var tierTag = document.getElementById('venueTrophyTierTag');
+  if (tier === 'venue-elite') {
+    tierTag.textContent = 'ELITE';
+    tierTag.style.cssText = 'font-size:0.55rem;font-weight:800;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:middle;background:linear-gradient(90deg,#FFD700,#FF9F43);color:#1A1A2E;';
+  } else if (tier === 'venue-pro') {
+    tierTag.textContent = 'PRO';
+    tierTag.style.cssText = 'font-size:0.55rem;font-weight:800;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:middle;background:rgba(124,92,252,0.2);color:#7C5CFC;';
+  } else {
+    tierTag.textContent = 'STARTER';
+    tierTag.style.cssText = 'font-size:0.55rem;font-weight:800;padding:2px 8px;border-radius:999px;margin-left:6px;vertical-align:middle;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);';
+  }
+
+  // Button & blurb by tier
+  var btn = document.getElementById('venueTrophyCreateBtn');
+  var btnLabel = document.getElementById('venueTrophyCreateBtnLabel');
+  var blurb = document.getElementById('venueTrophyBlurb');
+
+  if (!canAward) {
+    blurb.innerHTML = 'Player rewards are <strong style="color:#7C5CFC;">Venue Pro</strong>. Upgrade to pick from a catalogue of trophies and reward your best players.';
+    btnLabel.textContent = 'Upgrade to Pro — Reward Players';
+    btn.style.background = 'linear-gradient(135deg,#7C5CFC,#5B3FD4)';
+  } else if (canCreateAI) {
+    blurb.textContent = 'Design unique AI trophies or pick from the premium catalogue. Trophies land in winners\' Trophy Rooms and show on your venue profile.';
+    btnLabel.textContent = 'Create AI Custom Trophy';
+    btn.style.background = 'linear-gradient(135deg,#FFD700,#FF9F43)';
+    btn.style.color = '#1A1A2E';
+  } else {
+    blurb.textContent = 'Pick a trophy from the preset catalogue to award your winners. Upgrade to Elite to design your own AI trophies.';
+    btnLabel.textContent = 'Pick a Trophy Preset';
+    btn.style.background = 'linear-gradient(135deg,#7C5CFC,#5B3FD4)';
+    btn.style.color = '#fff';
+  }
+
+  // Display existing custom trophies for this venue
+  var allCustom = SpontixStore.getVenueCustomTrophies();
+  var myTrophies = allCustom.filter(function(t) { return t.venueName === venueName; });
+  document.getElementById('venueTrophyCount').textContent = myTrophies.length + ' active';
+
+  var grid = document.getElementById('venueTrophiesGrid');
+
+  // Starter: show lock preview
+  if (!canAward) {
+    grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:24px;background:rgba(124,92,252,0.06);border:1px dashed rgba(124,92,252,0.2);border-radius:12px;"><div style="font-size:1.6rem;margin-bottom:6px;">&#x1F512;</div><div style="font-size:0.8rem;color:rgba(255,255,255,0.5);">Upgrade to Pro to unlock trophy rewards</div></div>';
+    return;
+  }
+
+  // Pro/Elite: render preset trophies + custom trophies
+  var presetCards = presets.map(function(presetType) {
+    var def = SpontixStore.TROPHY_TYPES[presetType];
+    if (!def) return '';
+    var rarity = SpontixStore.TROPHY_RARITY[def.rarity] || SpontixStore.TROPHY_RARITY.common;
+    var iconSvg = SpontixStore.TROPHY_ICONS[def.icon] || SpontixStore.TROPHY_ICONS['trophy-gold'];
+    return '<div class="venue-trophy-card" data-rarity="' + def.rarity + '" title="' + def.desc + '">' +
+      '<div class="venue-trophy-icon" style="background:' + rarity.glow + ';border-color:' + rarity.color + ';">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="' + rarity.color + '" stroke-linecap="round" stroke-linejoin="round">' + iconSvg + '</svg>' +
+      '</div>' +
+      '<div class="venue-trophy-name">' + def.name + '</div>' +
+      '<div class="venue-trophy-rarity" style="color:' + rarity.color + ';">' + rarity.label + '</div>' +
+      '<div class="venue-trophy-awarded" style="color:rgba(255,255,255,0.3);">Preset</div>' +
+    '</div>';
+  }).join('');
+
+  var customCards = myTrophies.map(function(t) {
+    var rarity = SpontixStore.TROPHY_RARITY[t.rarity] || SpontixStore.TROPHY_RARITY.common;
+    var iconSvg = SpontixStore.TROPHY_ICONS[t.icon] || SpontixStore.TROPHY_ICONS['trophy-gold'];
+    return '<div class="venue-trophy-card" data-rarity="' + t.rarity + '" style="border-color:rgba(255,215,0,0.3);">' +
+      '<div class="venue-trophy-icon" style="background:' + rarity.glow + ';border-color:' + rarity.color + ';">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="' + rarity.color + '" stroke-linecap="round" stroke-linejoin="round">' + iconSvg + '</svg>' +
+      '</div>' +
+      '<div class="venue-trophy-name">' + t.name + '</div>' +
+      '<div class="venue-trophy-rarity" style="color:' + rarity.color + ';">' + rarity.label + ' &middot; AI</div>' +
+      '<div class="venue-trophy-awarded">Awarded ' + (t.timesAwarded || 0) + 'x</div>' +
+    '</div>';
+  }).join('');
+
+  grid.innerHTML = presetCards + customCards || '<div style="grid-column:1/-1;text-align:center;padding:20px;color:rgba(255,255,255,0.3);font-size:0.8rem;">No trophies yet.</div>';
+}
+
+function handleTrophyCreateClick() {
+  var tier = getVenueTier();
+  var limits = SpontixStore.TIER_LIMITS[tier] || SpontixStore.TIER_LIMITS['venue-starter'];
+
+  // Starter: upgrade modal
+  if (!limits.canAwardTrophies) {
+    if (typeof SpontixSidebar !== 'undefined' && SpontixSidebar.showUpgradeModal) {
+      SpontixSidebar.showUpgradeModal({
+        feature: 'Player Trophy Rewards',
+        requiredTier: 'Pro',
+        isVenue: true,
+        icon: '&#x1F3C6;',
+        description: 'Reward your best players with collectable trophies. Players receive them in their Trophy Room and show off your venue.',
+        benefits: ['Full preset trophy catalogue', 'Venue appears on winners\' trophy cards', 'Drive repeat visits', 'Premium event branding']
+      });
+    } else {
+      showToast('Upgrade to Venue Pro to unlock trophy rewards');
+    }
+    return;
+  }
+
+  // Pro: upsell to Elite
+  if (!limits.customTrophyCreation) {
+    if (typeof SpontixSidebar !== 'undefined' && SpontixSidebar.showUpgradeModal) {
+      SpontixSidebar.showUpgradeModal({
+        feature: 'AI Custom Trophies',
+        requiredTier: 'Elite',
+        isVenue: true,
+        icon: '&#x2728;',
+        description: 'You can already award preset trophies (shown above) to your winners! Upgrade to Elite to design unique, AI-crafted trophies completely unique to your venue.',
+        benefits: ['AI-generated custom trophies', 'Pick icon, rarity & design', 'Unlimited trophy designs', 'Full premium catalogue included']
+      });
+    } else {
+      showToast('Preset trophies available now. Upgrade to Elite to design AI trophies.');
+    }
+    return;
+  }
+
+  // Elite: open AI creator
+  document.getElementById('trophyModal').classList.add('show');
+}
+
+function closeTrophyCreator() {
+  document.getElementById('trophyModal').classList.remove('show');
+  document.getElementById('trophyName').value = '';
+  document.getElementById('trophyDesc').value = '';
+}
+
+async function createTrophy() {
+  var tier = getVenueTier();
+  var limits = SpontixStore.TIER_LIMITS[tier] || SpontixStore.TIER_LIMITS['venue-starter'];
+  if (!limits.customTrophyCreation) { showToast('AI trophy creation is Elite only'); return; }
+  var name = document.getElementById('trophyName').value.trim();
+  if (!name) { showToast('Please enter a trophy name'); return; }
+  var profile = SpontixStore.getVenueProfile();
+  var data = {
+    name: name,
+    desc: document.getElementById('trophyDesc').value.trim(),
+    rarity: document.getElementById('trophyRarity').value,
+    venueName: profile ? profile.venueName : SpontixStore.DEFAULT_VENUE_NAME,
+  };
+  try {
+    var result = await SpontixStoreAsync.createVenueCustomTrophy(data);
+    if (result && !result.ok) SpontixStore.createVenueCustomTrophy(data);
+  } catch (err) {
+    SpontixStore.createVenueCustomTrophy(data);
+  }
+  closeTrophyCreator();
+  hydrateVenueTrophies();
+  showToast('Trophy "' + name + '" created!');
+}
+
+async function createAITrophy() {
+  var tier = getVenueTier();
+  var limits = SpontixStore.TIER_LIMITS[tier] || SpontixStore.TIER_LIMITS['venue-starter'];
+  if (!limits.customTrophyCreation) { showToast('AI trophy creation is Elite only'); return; }
+  var prompt = document.getElementById('trophyName').value.trim();
+  var profile = SpontixStore.getVenueProfile();
+  var venueName = profile ? profile.venueName : SpontixStore.DEFAULT_VENUE_NAME;
+  var generated = SpontixStore.generateAITrophy(prompt, venueName);
+  var data = {
+    name: generated.name,
+    desc: generated.desc,
+    icon: generated.icon,
+    rarity: generated.rarity,
+    venueName: venueName,
+  };
+  try {
+    var result = await SpontixStoreAsync.createVenueCustomTrophy(data);
+    if (result && !result.ok) SpontixStore.createVenueCustomTrophy(data);
+  } catch (err) {
+    SpontixStore.createVenueCustomTrophy(data);
+  }
+  closeTrophyCreator();
+  hydrateVenueTrophies();
+  showToast('AI Trophy "' + generated.name + '" created!');
+}
+
+// ══════════════════════════════════════════
+// 4. Appearance / Photos
+// ══════════════════════════════════════════
+var currentAppearanceMode = 'color';
+var _photoConfig = null;
+var _currentColor = 'purple';
+
+var colorGradients = {
+  purple: 'linear-gradient(135deg, #7C5CFC, #5A3FD4)',
+  lime:   'linear-gradient(135deg, #6D9E00, #4A6B00)',
+  teal:   'linear-gradient(135deg, #3BA89E, #2A7A72)',
+  coral:  'linear-gradient(135deg, #E84545, #B83232)',
+  gold:   'linear-gradient(135deg, #C9A800, #8A7300)',
+  grey:   'linear-gradient(135deg, #5A5A78, #3A3A4A)',
+};
+
+function updatePreviewCard() {
+  var profile = SpontixStore.getVenueProfile();
+  var venueName = profile ? profile.venueName : 'Your Venue';
+
+  // Use cached _photoConfig from async fetch
+  var titlePhotoUrl = null;
+  if (_photoConfig && _photoConfig.useTitlePhoto && _photoConfig.titlePhotoId) {
+    var photo = _photoConfig.photos.find(function(p) { return p.id === _photoConfig.titlePhotoId; });
+    if (photo) titlePhotoUrl = photo.dataUrl;
+  }
+
+  var header = document.getElementById('venuePreviewHeader');
+  if (!header) return;
+  if (titlePhotoUrl) {
+    // For SVG data URLs, convert to base64 for CSS url() compatibility
+    if (titlePhotoUrl.indexOf('data:image/svg') === 0) {
+      var safeSrc = titlePhotoUrl;
+      try {
+        var svgContent = decodeURIComponent(titlePhotoUrl.split(',')[1] || '');
+        safeSrc = 'data:image/svg+xml;base64,' + btoa(svgContent);
+      } catch(e) { /* use original */ }
+      header.style.cssText = 'background-image:url("' + safeSrc + '");background-size:cover;background-position:center;height:90px;display:flex;align-items:flex-end;padding:12px 14px;position:relative;overflow:hidden;';
+    } else {
+      header.style.cssText = 'background-image:url(' + titlePhotoUrl + ');background-size:cover;background-position:center;height:90px;display:flex;align-items:flex-end;padding:12px 14px;position:relative;overflow:hidden;';
+    }
+    header.classList.add('has-photo');
+  } else {
+    header.style.cssText = 'background:' + (colorGradients[_currentColor] || colorGradients.purple) + ';height:90px;display:flex;align-items:flex-end;padding:12px 14px;position:relative;overflow:hidden;';
+    header.classList.remove('has-photo');
+  }
+  document.getElementById('venuePreviewName').textContent = venueName;
+}
+
+function renderColorPicker(activeColor) {
+  var row = document.getElementById('colorPickerRow');
+  if (!row) return;
+  var colors = ['purple', 'lime', 'teal', 'coral', 'gold', 'grey'];
+  row.innerHTML = colors.map(function(c) {
+    var isActive = c === activeColor;
+    return '<div class="color-swatch' + (isActive ? ' active' : '') + '" style="background:' + colorGradients[c] + ';" onclick="setVenueColor(\'' + c + '\')">' +
+      '<div class="color-swatch-check"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>' +
+    '</div>';
+  }).join('');
+}
+
+async function setVenueColor(colorName) {
+  var venueId = getCurrentVenueId();
+  _currentColor = colorName;
+  if (_photoConfig) { _photoConfig.useTitlePhoto = false; _photoConfig.titlePhotoId = null; }
+  renderColorPicker(colorName);
+  updatePreviewCard();
+  showToast('Brand colour updated');
+  try {
+    await SpontixStoreAsync.setVenueUseTitlePhoto(venueId, false);
+    await SpontixStoreAsync.updateVenue(venueId, { color: colorName });
+  } catch (err) { /* silent */ }
+}
+
+function setAppearanceMode(mode) {
+  currentAppearanceMode = mode;
+  document.querySelectorAll('.appearance-mode-btn').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.mode === mode);
+  });
+  document.getElementById('panelColor').classList.toggle('active', mode === 'color');
+  document.getElementById('panelPreset').classList.toggle('active', mode === 'preset');
+  document.getElementById('panelCustom').classList.toggle('active', mode === 'custom');
+}
+
+function _renderAppearanceUI() {
+  var customPhotos = _photoConfig.photos.filter(function(p) { return !p.isPreset; });
+  var presetPhotosUsed = _photoConfig.photos.filter(function(p) { return p.isPreset; });
+
+  document.getElementById('venuePhotoCount').textContent = _photoConfig.photos.length + ' photos';
+
+  // Determine current mode from DB state
+  if (_photoConfig.useTitlePhoto && _photoConfig.titlePhotoId) {
+    var titlePhoto = _photoConfig.photos.find(function(p) { return p.id === _photoConfig.titlePhotoId; });
+    if (titlePhoto && titlePhoto.isPreset) setAppearanceMode('preset');
+    else if (titlePhoto) setAppearanceMode('custom');
+    else setAppearanceMode('color');
+  } else {
+    setAppearanceMode('color');
+  }
+
+  // Render color picker
+  var profile = SpontixStore.getVenueProfile();
+  _currentColor = profile ? (profile.color || 'purple') : 'purple';
+  renderColorPicker(_currentColor);
+
+  // Render preset gallery
+  var presetGrid = document.getElementById('presetGalleryGrid');
+  var allPresets = SpontixStore.getPremadePhotos();
+  presetGrid.innerHTML = allPresets.map(function(preset) {
+    var usedEntry = presetPhotosUsed.find(function(p) { return p.presetId === preset.id; });
+    var isTitle = usedEntry && usedEntry.id === _photoConfig.titlePhotoId && _photoConfig.useTitlePhoto;
+    var actionOnclick = usedEntry
+      ? "event.stopPropagation(); setAsTitlePhoto('" + usedEntry.id + "')"
+      : "event.stopPropagation(); pickPresetPhoto('" + preset.id + "')";
+    return '<div class="photo-tile' + (isTitle ? ' is-title' : '') + '">' +
+      '<img src="' + preset.dataUrl + '" alt="' + preset.label + '" />' +
+      '<div class="photo-tile-title-badge"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Title</div>' +
+      '<div class="photo-tile-label">' + preset.label + '</div>' +
+      '<div class="photo-tile-actions">' +
+        (isTitle ? '' : '<button class="photo-action-btn photo-action-set" onclick="' + actionOnclick + '">Set as Title</button>') +
+      '</div>' +
+    '</div>';
+  }).join('');
+
+  // Render custom photos gallery
+  var customGrid = document.getElementById('customGalleryGrid');
+  if (customPhotos.length === 0) {
+    customGrid.innerHTML = '<div class="photo-empty">No custom photos yet. Upload your first shot above.</div>';
+  } else {
+    customGrid.innerHTML = customPhotos.map(function(p) {
+      var isTitle = p.id === _photoConfig.titlePhotoId && _photoConfig.useTitlePhoto;
+      return '<div class="photo-tile' + (isTitle ? ' is-title' : '') + '">' +
+        '<img src="' + p.dataUrl + '" alt="venue photo" />' +
+        '<div class="photo-tile-title-badge"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg> Title</div>' +
+        '<div class="photo-tile-actions">' +
+          (isTitle ? '' : '<button class="photo-action-btn photo-action-set" onclick="event.stopPropagation(); setAsTitlePhoto(\'' + p.id + '\')">Set as Title</button>') +
+          '<button class="photo-action-btn photo-action-del" onclick="event.stopPropagation(); deletePhoto(\'' + p.id + '\')">Remove</button>' +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  updatePreviewCard();
+}
+
+function hydrateVenuePhotos() {
+  var venueId = getCurrentVenueId();
+  // Phase 1: Render from sync cache (fast, may be stale)
+  _photoConfig = SpontixStore.getVenuePhotoConfig(venueId);
+  _renderAppearanceUI();
+  // Phase 2: Refresh from Supabase, re-render when done
+  SpontixStoreAsync.getVenuePhotoConfig(venueId).then(function(config) {
+    _photoConfig = config;
+    _renderAppearanceUI();
+  }).catch(function() { /* silent - sync data already shown */ });
+}
+
+async function pickPresetPhoto(presetId) {
+  var venueId = getCurrentVenueId();
+  showToast('Setting title photo...');
+  try {
+    var result = await SpontixStoreAsync.selectPresetPhoto(venueId, presetId);
+    if (result && result.id) {
+      _photoConfig.titlePhotoId = result.id;
+      _photoConfig.useTitlePhoto = true;
+      if (!_photoConfig.photos.find(function(p) { return p.id === result.id; })) {
+        _photoConfig.photos.push(result);
+      }
+    }
+  } catch (err) {
+    SpontixStore.selectPresetPhoto(venueId, presetId);
+  }
+  await hydrateVenuePhotos();
+  showToast('Title photo updated');
+}
+
+async function setAsTitlePhoto(photoId) {
+  var venueId = getCurrentVenueId();
+  if (_photoConfig) {
+    _photoConfig.titlePhotoId = photoId;
+    _photoConfig.useTitlePhoto = true;
+  }
+  updatePreviewCard();
+  showToast('Title photo updated');
+  try {
+    await SpontixStoreAsync.setVenueTitlePhoto(venueId, photoId);
+    await SpontixStoreAsync.setVenueUseTitlePhoto(venueId, true);
+  } catch (err) { /* silent */ }
+  await hydrateVenuePhotos();
+}
+
+async function deletePhoto(photoId) {
+  var venueId = getCurrentVenueId();
+  try {
+    await SpontixStoreAsync.removeVenuePhoto(venueId, photoId);
+  } catch (err) {
+    SpontixStore.removeVenuePhoto(venueId, photoId);
+  }
+  await hydrateVenuePhotos();
+  showToast('Photo removed');
+}
+
+function handleUploadClick() {
+  var limits = getVenueTierLimits().limits;
+  if (!limits.photoCustomUpload) {
+    SpontixSidebar.showUpgradeModal({
+      feature: 'Custom Photos', requiredTier: 'Pro', isVenue: true, icon: '&#x1F4F8;',
+      description: 'Upload your own venue photos to stand out in search results.',
+      benefits: ['Upload custom photos', 'Pick your own title photo', 'Stand out in the venue grid']
+    });
+    return;
+  }
+  document.getElementById('photoFileInput').click();
+}
+
+function handlePhotoDrop(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('dragging');
+  var files = Array.from(e.dataTransfer.files).filter(function(f) { return f.type.startsWith('image/'); });
+  ingestPhotoFiles(files);
+}
+
+function handlePhotoFileInput(e) {
+  var files = Array.from(e.target.files);
+  ingestPhotoFiles(files);
+  e.target.value = '';
+}
+
+function ingestPhotoFiles(files) {
+  if (!files.length) return;
+  var tl = getVenueTierLimits();
+  var tier = tl.tier;
+  var limits = tl.limits;
+  if (!limits.photoCustomUpload) { handleUploadClick(); return; }
+
+  var MAX = 4 * 1024 * 1024;
+  files.forEach(function(file) {
+    if (file.size > MAX) {
+      showToast(file.name + ' is over 4MB');
+      return;
+    }
+    resizeImage(file, 1200, 0.82, async function(dataUrl) {
+      var venueId = getCurrentVenueId();
+      var result;
+      try {
+        result = await SpontixStoreAsync.addVenuePhoto(venueId, dataUrl, { tier: tier });
+      } catch (err) {
+        console.warn('[ingestPhotoFiles] async upload failed:', err);
+        showToast('Upload failed: ' + (err.message || err));
+        return;
+      }
+      if (result && result.error === 'tier') { handleUploadClick(); return; }
+      if (result && result.error === 'limit') {
+        showToast('Photo limit reached (' + result.max + '). Upgrade to Elite for unlimited.');
+        return;
+      }
+      if (result && result.error === 'storage') {
+        showToast('Upload failed: ' + (result.message || 'storage error'));
+        return;
+      }
+      if (!result || result.error) {
+        showToast('Upload failed: ' + (result ? result.error : 'unknown error'));
+        return;
+      }
+      hydrateVenuePhotos();
+      showToast('Photo uploaded!');
+    });
+  });
+}
+
+function resizeImage(file, maxWidth, quality, callback) {
+  var reader = new FileReader();
+  reader.onload = function(e) {
+    var img = new Image();
+    img.onload = function() {
+      var w = img.width, h = img.height;
+      if (w > maxWidth) { h = Math.round(h * maxWidth / w); w = maxWidth; }
+      var canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      callback(canvas.toDataURL('image/jpeg', quality));
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+// ══════════════════════════════════════════
+// 5. Settings
+// ══════════════════════════════════════════
+function hydrateSettings() {
+  var profile = SpontixStore.getVenueProfile();
+  if (!profile) return;
+  var nameInput = document.getElementById('settingsVenueName');
+  var cityInput = document.getElementById('settingsCity');
+  var typeInput = document.getElementById('settingsType');
+  var hoursInput = document.getElementById('settingsHours');
+  if (nameInput) nameInput.value = profile.venueName || '';
+  if (cityInput) cityInput.value = profile.city || '';
+  if (typeInput) typeInput.value = profile.type || 'Sports Bar';
+  if (hoursInput) hoursInput.value = profile.hours || '';
+}
+
+async function saveVenueSettings() {
+  var name = (document.getElementById('settingsVenueName').value || '').trim();
+  var city = (document.getElementById('settingsCity').value || '').trim();
+  var type = document.getElementById('settingsType').value;
+  var hours = (document.getElementById('settingsHours').value || '').trim();
+
+  if (!name) { showToast('Please enter a venue name'); return; }
+
+  var venueId = getCurrentVenueId();
+  var patch = { name: name, city: city, type: type, hours: hours };
+
+  try {
+    var result = await SpontixStoreAsync.updateVenue(venueId, patch);
+    if (result && result.error) {
+      showToast('Error: ' + (result.error || 'Could not save'));
+      return;
+    }
+  } catch (err) {
+    // Sync fallback
+    var profile = SpontixStore.getVenueProfile();
+    if (profile) {
+      profile.venueName = name;
+      profile.city = city;
+      profile.type = type;
+      profile.hours = hours;
+      SpontixStore.saveVenueProfile(profile);
+    }
+  }
+  hydrateVenueProfile();
+  hydrateSettings();
+  updatePreviewCard();
+  showToast('Venue settings saved!');
+}
+
+// ══════════════════════════════════════════
+// DOMContentLoaded — initialise everything
+// ══════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', function() {
+  hydrateVenueProfile();
+  hydrateVenueBadges();
+  hydrateVenueTrophies();
+  hydrateVenuePhotos();
+  hydrateSettings();
+
+  // Re-render on Supabase cache refreshes
+  window.addEventListener('spontix-events-refreshed', function() {
+    hydrateVenueProfile();
+  });
+  window.addEventListener('spontix-venue-badges-refreshed', function() {
+    hydrateVenueBadges();
+    hydrateVenueProfile();
+  });
+  window.addEventListener('spontix-venue-custom-trophies-refreshed', function() {
+    hydrateVenueTrophies();
+    hydrateVenueProfile();
+  });
+  window.addEventListener('spontix-venue-photos-refreshed', function() {
+    hydrateVenuePhotos();
+  });
+  window.addEventListener('spontix-venues-refreshed', function() {
+    hydrateVenueProfile();
+    hydrateSettings();
+    updatePreviewCard();
+  });
+});
+</script>
+
+</body>
+</html>

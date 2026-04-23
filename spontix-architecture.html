@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Spontyx — Architecture Map</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --navy: #1A1A2E; --navy-light: #22223A; --navy-card: #2A2A44;
+    --lime: #A8E10C; --purple: #7C5CFC; --coral: #FF6B6B; --teal: #4ECDC4;
+    --gold: #FFD700; --orange: #FF9F43; --off-white: #E8E8F0; --grey: #9898B0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Inter', system-ui, sans-serif; background: var(--navy); color: var(--off-white); min-height: 100vh; }
+
+  .header { padding: 32px 40px 20px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .header h1 { font-size: 1.6rem; font-weight: 900; }
+  .header h1 span { color: var(--purple); }
+  .header p { color: var(--grey); font-size: 0.82rem; margin-top: 4px; }
+
+  .tabs { display: flex; gap: 4px; padding: 16px 40px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .tab { padding: 8px 18px; border-radius: 8px; font-size: 0.78rem; font-weight: 700; cursor: pointer; border: none;
+    background: transparent; color: var(--grey); transition: all 0.15s; }
+  .tab:hover { background: rgba(255,255,255,0.04); color: var(--off-white); }
+  .tab.active { background: var(--purple); color: #fff; }
+
+  .view { display: none; padding: 28px 40px; }
+  .view.active { display: block; }
+
+  /* ── Overview Stats ── */
+  .stats-row { display: flex; gap: 14px; margin-bottom: 28px; flex-wrap: wrap; }
+  .stat-card { background: var(--navy-card); border-radius: 12px; padding: 18px 22px; flex: 1; min-width: 140px;
+    border: 1px solid rgba(255,255,255,0.06); }
+  .stat-val { font-size: 1.8rem; font-weight: 900; }
+  .stat-label { font-size: 0.68rem; font-weight: 700; color: var(--grey); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+
+  /* ── Page Cards ── */
+  .section-title { font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; color: var(--grey);
+    margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .section-title .dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .page-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; margin-bottom: 32px; }
+  .page-card { background: var(--navy-card); border-radius: 12px; padding: 18px; cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.06); transition: all 0.2s; position: relative; overflow: hidden; }
+  .page-card:hover { border-color: rgba(124,92,252,0.3); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.3); }
+  .page-card.selected { border-color: var(--purple); box-shadow: 0 0 0 2px rgba(124,92,252,0.2); }
+  .page-name { font-size: 0.88rem; font-weight: 800; margin-bottom: 4px; }
+  .page-desc { font-size: 0.7rem; color: var(--grey); line-height: 1.4; margin-bottom: 10px; }
+  .page-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+  .badge { padding: 3px 8px; border-radius: 6px; font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px; }
+  .badge-green { background: rgba(168,225,12,0.12); color: var(--lime); }
+  .badge-purple { background: rgba(124,92,252,0.12); color: var(--purple); }
+  .badge-orange { background: rgba(255,159,67,0.12); color: var(--orange); }
+  .badge-coral { background: rgba(255,107,107,0.12); color: var(--coral); }
+  .badge-teal { background: rgba(78,205,196,0.12); color: var(--teal); }
+  .badge-grey { background: rgba(152,152,176,0.12); color: var(--grey); }
+
+  .interactivity-bar { height: 3px; border-radius: 2px; background: rgba(255,255,255,0.06); margin-top: 10px; }
+  .interactivity-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+
+  /* ── Issues View ── */
+  .issue-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+  .issue-card { background: var(--navy-card); border-radius: 10px; padding: 16px 20px;
+    border-left: 3px solid var(--coral); display: flex; gap: 14px; align-items: flex-start; }
+  .issue-card.warn { border-left-color: var(--orange); }
+  .issue-card.info { border-left-color: var(--teal); }
+  .issue-card.gap { border-left-color: var(--purple); }
+  .issue-icon { font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
+  .issue-text { flex: 1; }
+  .issue-title { font-size: 0.82rem; font-weight: 700; margin-bottom: 3px; }
+  .issue-desc { font-size: 0.7rem; color: var(--grey); line-height: 1.5; }
+  .issue-tag { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 0.55rem; font-weight: 700;
+    background: rgba(255,255,255,0.06); color: var(--grey); margin-left: 6px; }
+
+  /* ── Flow View ── */
+  .flow-section { margin-bottom: 32px; }
+  .flow-title { font-size: 0.82rem; font-weight: 800; margin-bottom: 12px; color: var(--off-white); }
+  .flow-steps { display: flex; align-items: center; gap: 0; flex-wrap: wrap; }
+  .flow-step { background: var(--navy-card); border-radius: 10px; padding: 12px 16px; font-size: 0.72rem; font-weight: 700;
+    border: 1px solid rgba(255,255,255,0.08); white-space: nowrap; }
+  .flow-step.highlight { border-color: var(--purple); color: var(--purple); }
+  .flow-step.missing { border-color: var(--coral); color: var(--coral); border-style: dashed; opacity: 0.7; }
+  .flow-arrow { color: var(--grey); font-size: 0.8rem; padding: 0 6px; flex-shrink: 0; }
+
+  /* ── Connections View ── */
+  .conn-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .conn-box { background: var(--navy-card); border-radius: 12px; padding: 20px; border: 1px solid rgba(255,255,255,0.06); }
+  .conn-box h3 { font-size: 0.78rem; font-weight: 800; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .conn-link { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 0.72rem; color: var(--grey); }
+  .conn-link .conn-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .conn-link .conn-name { font-weight: 600; color: var(--off-white); }
+  .conn-link .conn-status { margin-left: auto; font-size: 0.6rem; font-weight: 700; }
+  .conn-ok { color: var(--lime); }
+  .conn-miss { color: var(--coral); }
+  .conn-partial { color: var(--orange); }
+
+  /* ── Roadmap ── */
+  .roadmap-track { position: relative; padding-left: 28px; }
+  .roadmap-line { position: absolute; left: 8px; top: 0; bottom: 0; width: 2px; background: rgba(124,92,252,0.2); }
+  .roadmap-item { position: relative; margin-bottom: 20px; }
+  .roadmap-dot { position: absolute; left: -24px; top: 4px; width: 12px; height: 12px; border-radius: 50%;
+    border: 2px solid var(--purple); background: var(--navy); }
+  .roadmap-item.done .roadmap-dot { background: var(--lime); border-color: var(--lime); }
+  .roadmap-item.current .roadmap-dot { background: var(--purple); border-color: var(--purple); box-shadow: 0 0 0 4px rgba(124,92,252,0.2); }
+  .roadmap-phase { font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--purple); margin-bottom: 2px; }
+  .roadmap-item.done .roadmap-phase { color: var(--lime); }
+  .roadmap-label { font-size: 0.82rem; font-weight: 700; }
+  .roadmap-desc { font-size: 0.7rem; color: var(--grey); margin-top: 2px; line-height: 1.4; }
+
+  @media (max-width: 800px) {
+    .conn-grid { grid-template-columns: 1fr; }
+    .header, .tabs, .view { padding-left: 20px; padding-right: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Spontyx <span>Architecture Map</span></h1>
+  <p>Full audit of 27 pages — navigation, interactivity, data state, and gaps</p>
+</div>
+
+<div class="tabs" id="tabs">
+  <button class="tab active" onclick="switchTab('overview')">Overview</button>
+  <button class="tab" onclick="switchTab('pages')">All Pages</button>
+  <button class="tab" onclick="switchTab('flows')">User Flows</button>
+  <button class="tab" onclick="switchTab('issues')">Issues & Gaps</button>
+  <button class="tab" onclick="switchTab('roadmap')">Roadmap</button>
+</div>
+
+<!-- ════ OVERVIEW ════ -->
+<div class="view active" id="view-overview">
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val" style="color:var(--purple);">27</div><div class="stat-label">Total Pages</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--teal);">16</div><div class="stat-label">Player Pages</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--lime);">9</div><div class="stat-label">Venue Pages</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--orange);">2</div><div class="stat-label">Shared Pages</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--coral);">0</div><div class="stat-label">Backend APIs</div></div>
+  </div>
+
+  <div class="section-title"><span class="dot" style="background:var(--teal);"></span> Player Side — 16 Pages</div>
+  <div class="page-grid">
+    <div class="page-card" onclick="switchTab('pages')">
+      <div class="page-name">index.html</div>
+      <div class="page-desc">Landing page with auth modals, pricing, feature showcase</div>
+      <div class="page-badges"><span class="badge badge-green">Entry Point</span><span class="badge badge-purple">Auth Modals</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:40%;background:var(--purple);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">dashboard.html</div>
+      <div class="page-desc">Home hub — action cards, quick stats, navigation to all features</div>
+      <div class="page-badges"><span class="badge badge-green">Hub</span><span class="badge badge-grey">Static</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:15%;background:var(--grey);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">discover.html</div>
+      <div class="page-desc">Browse public leagues, filters, join/preview modals</div>
+      <div class="page-badges"><span class="badge badge-purple">Modals</span><span class="badge badge-orange">Filters Broken</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:50%;background:var(--orange);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">my-leagues.html</div>
+      <div class="page-desc">User's joined leagues, stats summary, create CTA</div>
+      <div class="page-badges"><span class="badge badge-purple">Cards</span><span class="badge badge-grey">Static Data</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:35%;background:var(--purple);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">league.html</div>
+      <div class="page-desc">Single league view — tabs: overview, schedule, standings, chat</div>
+      <div class="page-badges"><span class="badge badge-purple">Tabs</span><span class="badge badge-orange">Chat Stub</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:45%;background:var(--purple);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">create-league.html</div>
+      <div class="page-desc">4-step wizard: type, duration, rules, review</div>
+      <div class="page-badges"><span class="badge badge-purple">Wizard</span><span class="badge badge-coral">No Submit</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:60%;background:var(--purple);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">matches.html</div>
+      <div class="page-desc">Browse live/upcoming matches, favorites, date tabs</div>
+      <div class="page-badges"><span class="badge badge-purple">Filters</span><span class="badge badge-orange">Non-functional</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:50%;background:var(--orange);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">live.html</div>
+      <div class="page-desc">Real-time match view — questions, stats, leaderboard</div>
+      <div class="page-badges"><span class="badge badge-green">Core Game</span><span class="badge badge-coral">Static</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:25%;background:var(--coral);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">battle-royale.html</div>
+      <div class="page-desc">Elimination game mode — games picker, queue, results</div>
+      <div class="page-badges"><span class="badge badge-teal">Game Mode</span><span class="badge badge-purple">Screens</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:55%;background:var(--teal);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">trivia.html</div>
+      <div class="page-desc">Solo/Duel/Party trivia — topics, play screen, results</div>
+      <div class="page-badges"><span class="badge badge-teal">Game Mode</span><span class="badge badge-purple">Multi-screen</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:55%;background:var(--teal);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">leaderboard.html</div>
+      <div class="page-desc">Global/league/friends rankings, time filters</div>
+      <div class="page-badges"><span class="badge badge-grey">Static</span><span class="badge badge-orange">Tabs Broken</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:20%;background:var(--grey);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">profile.html</div>
+      <div class="page-desc">User profile — stats, badges, settings, subscription</div>
+      <div class="page-badges"><span class="badge badge-purple">Edit Modal</span><span class="badge badge-grey">Static</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:25%;background:var(--grey);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">activity.html</div>
+      <div class="page-desc">Feed of unanswered questions, match events, stats</div>
+      <div class="page-badges"><span class="badge badge-grey">Static</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:20%;background:var(--grey);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">upcoming.html</div>
+      <div class="page-desc">Upcoming matches with time-range filter chips</div>
+      <div class="page-badges"><span class="badge badge-grey">Static</span><span class="badge badge-orange">Filters Broken</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:20%;background:var(--grey);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">br-leaderboard.html</div>
+      <div class="page-desc">Battle Royale global leaderboard with tiers</div>
+      <div class="page-badges"><span class="badge badge-grey">Static</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:15%;background:var(--grey);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">notifications.html</div>
+      <div class="page-desc">Notification center — filters, read/unread, actions</div>
+      <div class="page-badges"><span class="badge badge-orange">Shared</span><span class="badge badge-orange">Filters Broken</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:30%;background:var(--orange);"></div></div>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="dot" style="background:var(--lime);"></span> Venue Side — 9 Pages</div>
+  <div class="page-grid">
+    <div class="page-card">
+      <div class="page-name">venue-dashboard.html</div>
+      <div class="page-desc">Venue hub — KPIs, quick actions, navigation grid</div>
+      <div class="page-badges"><span class="badge badge-green">Hub</span><span class="badge badge-grey">Minimal JS</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:10%;background:var(--grey);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">venue-table-map.html</div>
+      <div class="page-desc">Floor plan builder — drag/drop tables, zones, structures</div>
+      <div class="page-badges"><span class="badge badge-green">Functional</span><span class="badge badge-purple">Heavy JS</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:90%;background:var(--lime);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">venue-live-floor.html</div>
+      <div class="page-desc">Live event control — leaderboard, questions, broadcast</div>
+      <div class="page-badges"><span class="badge badge-purple">Tabs</span><span class="badge badge-orange">Static Data</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:50%;background:var(--purple);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">venue-create-event.html</div>
+      <div class="page-desc">4-step wizard — sport, fixtures, settings, review</div>
+      <div class="page-badges"><span class="badge badge-purple">Wizard</span><span class="badge badge-coral">No Submit</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:60%;background:var(--purple);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">venue-teams.html</div>
+      <div class="page-desc">Team management — filters, create modal, invite</div>
+      <div class="page-badges"><span class="badge badge-purple">Modal</span><span class="badge badge-orange">Partial</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:40%;background:var(--orange);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">venue-schedule.html</div>
+      <div class="page-desc">Weekly calendar — events, recurring, upcoming</div>
+      <div class="page-badges"><span class="badge badge-grey">Static</span><span class="badge badge-orange">Nav Broken</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:20%;background:var(--grey);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">venue-analytics.html</div>
+      <div class="page-desc">Metrics dashboard — charts, KPIs, top performers</div>
+      <div class="page-badges"><span class="badge badge-grey">Static Charts</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:15%;background:var(--grey);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">venue-billing.html</div>
+      <div class="page-desc">Subscription plans, billing history, payment methods</div>
+      <div class="page-badges"><span class="badge badge-grey">Static</span><span class="badge badge-coral">No Upgrade</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:15%;background:var(--grey);"></div></div>
+    </div>
+    <div class="page-card">
+      <div class="page-name">venue-tonights-events.html</div>
+      <div class="page-desc">Tonight's events — live status, team scores, controls</div>
+      <div class="page-badges"><span class="badge badge-orange">Filters Broken</span></div>
+      <div class="interactivity-bar"><div class="interactivity-fill" style="width:25%;background:var(--orange);"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ ALL PAGES ════ -->
+<div class="view" id="view-pages">
+  <div class="stats-row">
+    <div class="stat-card"><div class="stat-val" style="color:var(--lime);">1</div><div class="stat-label">Fully Functional</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--purple);">8</div><div class="stat-label">Partial Interactive</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--grey);">18</div><div class="stat-label">Static / Stub</div></div>
+    <div class="stat-card"><div class="stat-val" style="color:var(--coral);">6</div><div class="stat-label">Missing Pages</div></div>
+  </div>
+
+  <div class="section-title"><span class="dot" style="background:var(--lime);"></span> Functional (localStorage, real interactions)</div>
+  <div class="page-grid">
+    <div class="page-card">
+      <div class="page-name" style="color:var(--lime);">venue-table-map.html</div>
+      <div class="page-desc">Canvas drag/drop, zones, custom tables, save/load, undo, fullscreen — the most complete page in the app</div>
+      <div class="page-badges"><span class="badge badge-green">Save/Load</span><span class="badge badge-green">Drag & Drop</span><span class="badge badge-green">Undo</span><span class="badge badge-green">Custom Designer</span></div>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="dot" style="background:var(--purple);"></span> Partial (tabs/modals/wizards work, but no data persistence)</div>
+  <div class="page-grid">
+    <div class="page-card"><div class="page-name">battle-royale.html</div><div class="page-desc">Screen switching (picker → queue → elimination → results), confetti, tiers</div></div>
+    <div class="page-card"><div class="page-name">trivia.html</div><div class="page-desc">Hub → topics → play → results screen flow, answer selection</div></div>
+    <div class="page-card"><div class="page-name">create-league.html</div><div class="page-desc">4-step wizard navigation works, form UI active — but no submit</div></div>
+    <div class="page-card"><div class="page-name">venue-create-event.html</div><div class="page-desc">Wizard steps, sport selection, fixture cards — but no submit</div></div>
+    <div class="page-card"><div class="page-name">venue-live-floor.html</div><div class="page-desc">Tab switching, TV mode toggle — but data is static mock</div></div>
+    <div class="page-card"><div class="page-name">discover.html</div><div class="page-desc">Join modals, filter dropdowns — but filters don't actually filter</div></div>
+    <div class="page-card"><div class="page-name">league.html</div><div class="page-desc">6 tabs work — but chat is stub, questions non-selectable</div></div>
+    <div class="page-card"><div class="page-name">venue-teams.html</div><div class="page-desc">Create team modal, color picker — filter tabs non-functional</div></div>
+  </div>
+
+  <div class="section-title"><span class="dot" style="background:var(--grey);"></span> Static (display-only, toasts on click)</div>
+  <div class="page-grid">
+    <div class="page-card"><div class="page-name">dashboard.html</div><div class="page-desc">Navigation-only hub</div></div>
+    <div class="page-card"><div class="page-name">venue-dashboard.html</div><div class="page-desc">Navigation-only hub</div></div>
+    <div class="page-card"><div class="page-name">my-leagues.html</div><div class="page-desc">Static league cards</div></div>
+    <div class="page-card"><div class="page-name">matches.html</div><div class="page-desc">Static match list, broken filters</div></div>
+    <div class="page-card"><div class="page-name">live.html</div><div class="page-desc">Static match view, no real-time</div></div>
+    <div class="page-card"><div class="page-name">leaderboard.html</div><div class="page-desc">Static ranks, broken tabs</div></div>
+    <div class="page-card"><div class="page-name">profile.html</div><div class="page-desc">Static profile, edit modal stub</div></div>
+    <div class="page-card"><div class="page-name">activity.html</div><div class="page-desc">Static feed</div></div>
+    <div class="page-card"><div class="page-name">upcoming.html</div><div class="page-desc">Static schedule, broken filters</div></div>
+    <div class="page-card"><div class="page-name">br-leaderboard.html</div><div class="page-desc">Static BR rankings</div></div>
+    <div class="page-card"><div class="page-name">notifications.html</div><div class="page-desc">Static notifications, broken filters</div></div>
+    <div class="page-card"><div class="page-name">venue-schedule.html</div><div class="page-desc">Static calendar, week nav broken</div></div>
+    <div class="page-card"><div class="page-name">venue-analytics.html</div><div class="page-desc">Static CSS charts</div></div>
+    <div class="page-card"><div class="page-name">venue-billing.html</div><div class="page-desc">Static plans/invoices</div></div>
+    <div class="page-card"><div class="page-name">venue-tonights-events.html</div><div class="page-desc">Static event cards, broken filters</div></div>
+    <div class="page-card"><div class="page-name">index.html</div><div class="page-desc">Landing page, auth modals are stubs</div></div>
+  </div>
+
+  <div class="section-title"><span class="dot" style="background:var(--coral);"></span> Missing Pages (referenced or needed but don't exist)</div>
+  <div class="page-grid">
+    <div class="page-card" style="border-style:dashed;border-color:rgba(255,107,107,0.3);opacity:0.8;">
+      <div class="page-name" style="color:var(--coral);">settings.html</div>
+      <div class="page-desc">Account settings, notification preferences, data management — currently buried inside profile.html</div>
+    </div>
+    <div class="page-card" style="border-style:dashed;border-color:rgba(255,107,107,0.3);opacity:0.8;">
+      <div class="page-name" style="color:var(--coral);">venue-settings.html</div>
+      <div class="page-desc">Venue profile settings, operating hours, branding — no dedicated page exists</div>
+    </div>
+    <div class="page-card" style="border-style:dashed;border-color:rgba(255,107,107,0.3);opacity:0.8;">
+      <div class="page-name" style="color:var(--coral);">venue-questions.html</div>
+      <div class="page-desc">Question bank management — create, edit, categorize questions for events</div>
+    </div>
+    <div class="page-card" style="border-style:dashed;border-color:rgba(255,107,107,0.3);opacity:0.8;">
+      <div class="page-name" style="color:var(--coral);">admin-dashboard.html</div>
+      <div class="page-desc">Platform admin panel — user management, content moderation, system health</div>
+    </div>
+    <div class="page-card" style="border-style:dashed;border-color:rgba(255,107,107,0.3);opacity:0.8;">
+      <div class="page-name" style="color:var(--coral);">onboarding.html</div>
+      <div class="page-desc">First-time user flow — choose interests, join first league, tutorial</div>
+    </div>
+    <div class="page-card" style="border-style:dashed;border-color:rgba(255,107,107,0.3);opacity:0.8;">
+      <div class="page-name" style="color:var(--coral);">venue-onboarding.html</div>
+      <div class="page-desc">First-time venue setup — add venue info, set up first floor plan, create first event</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ USER FLOWS ════ -->
+<div class="view" id="view-flows">
+  <div class="flow-section">
+    <div class="flow-title">New Player Journey</div>
+    <div class="flow-steps">
+      <div class="flow-step highlight">index.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step missing">onboarding.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step">dashboard.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step">discover.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step">league.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step highlight">live.html</div>
+    </div>
+  </div>
+  <div class="flow-section">
+    <div class="flow-title">Create & Play a League</div>
+    <div class="flow-steps">
+      <div class="flow-step">dashboard.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step highlight">create-league.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step">my-leagues.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step">league.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step">matches.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step highlight">live.html</div>
+    </div>
+  </div>
+  <div class="flow-section">
+    <div class="flow-title">Battle Royale Flow</div>
+    <div class="flow-steps">
+      <div class="flow-step">dashboard.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step highlight">battle-royale.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step" style="color:var(--coral);">Queue → Elimination → Results (internal screens)</div><span class="flow-arrow">→</span>
+      <div class="flow-step">br-leaderboard.html</div>
+    </div>
+  </div>
+  <div class="flow-section">
+    <div class="flow-title">Trivia Flow</div>
+    <div class="flow-steps">
+      <div class="flow-step">dashboard.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step highlight">trivia.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step" style="color:var(--coral);">Hub → Topics → Play → Results (internal screens)</div><span class="flow-arrow">→</span>
+      <div class="flow-step">leaderboard.html</div>
+    </div>
+  </div>
+  <div class="flow-section">
+    <div class="flow-title">Venue: Setup → Run Event</div>
+    <div class="flow-steps">
+      <div class="flow-step missing">venue-onboarding.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step">venue-dashboard.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step highlight">venue-table-map.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step">venue-teams.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step highlight">venue-create-event.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step highlight">venue-live-floor.html</div>
+    </div>
+  </div>
+  <div class="flow-section">
+    <div class="flow-title">Venue: Daily Operations</div>
+    <div class="flow-steps">
+      <div class="flow-step">venue-dashboard.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step">venue-tonights-events.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step highlight">venue-live-floor.html</div><span class="flow-arrow">→</span>
+      <div class="flow-step">venue-analytics.html</div>
+    </div>
+  </div>
+  <div class="flow-section">
+    <div class="flow-title" style="color:var(--coral);">🔴 Missing Bridge: Venue ↔ Player</div>
+    <div class="flow-steps">
+      <div class="flow-step" style="border-color:var(--lime);">venue-live-floor.html</div><span class="flow-arrow" style="color:var(--coral);">✕ no link ✕</span>
+      <div class="flow-step" style="border-color:var(--teal);">live.html</div>
+    </div>
+    <div style="margin-top:8px;font-size:0.7rem;color:var(--grey);line-height:1.5;">
+      The venue pushes questions from <b>venue-live-floor</b> but there's no connection to the player's <b>live.html</b>. These two pages represent the same match from different perspectives but have zero shared data or linking.
+    </div>
+  </div>
+</div>
+
+<!-- ════ ISSUES & GAPS ════ -->
+<div class="view" id="view-issues">
+  <div class="section-title"><span class="dot" style="background:var(--coral);"></span> Critical Gaps</div>
+  <div class="issue-list">
+    <div class="issue-card">
+      <div class="issue-icon">🔴</div>
+      <div class="issue-text">
+        <div class="issue-title">No venue ↔ player bridge <span class="issue-tag">Architecture</span></div>
+        <div class="issue-desc">The venue system (9 pages) and player system (16 pages) are completely isolated. A venue pushes questions on venue-live-floor.html, but there's no mechanism for those to appear on the player's live.html. This is the core gameplay loop and it's disconnected.</div>
+      </div>
+    </div>
+    <div class="issue-card">
+      <div class="issue-icon">🔴</div>
+      <div class="issue-text">
+        <div class="issue-title">No authentication flow <span class="issue-tag">Auth</span></div>
+        <div class="issue-desc">index.html has signup/login modals but they're UI stubs. No auth state exists — every page shows hardcoded user data. No way to distinguish player vs venue owner roles.</div>
+      </div>
+    </div>
+    <div class="issue-card">
+      <div class="issue-icon">🔴</div>
+      <div class="issue-text">
+        <div class="issue-title">Zero data persistence (except Table Map) <span class="issue-tag">Data</span></div>
+        <div class="issue-desc">26 of 27 pages have fully hardcoded data. Creating a league, joining a match, answering a question — none of it persists. Only venue-table-map.html uses localStorage.</div>
+      </div>
+    </div>
+    <div class="issue-card">
+      <div class="issue-icon">🔴</div>
+      <div class="issue-text">
+        <div class="issue-title">No onboarding flow <span class="issue-tag">UX</span></div>
+        <div class="issue-desc">After signup, users land on dashboard.html with no guidance. No interest selection, no tutorial, no first-league prompt. Same gap on venue side — no setup wizard.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="dot" style="background:var(--orange);"></span> UI/UX Issues</div>
+  <div class="issue-list">
+    <div class="issue-card warn">
+      <div class="issue-icon">🟠</div>
+      <div class="issue-text">
+        <div class="issue-title">Inconsistent sidebar across pages <span class="issue-tag">Nav</span></div>
+        <div class="issue-desc">league.html is missing "Live" and "Game Modes" sections. battle-royale.html only links back to dashboard. br-leaderboard.html includes itself in sidebar. Navigation should be identical across all player pages.</div>
+      </div>
+    </div>
+    <div class="issue-card warn">
+      <div class="issue-icon">🟠</div>
+      <div class="issue-text">
+        <div class="issue-title">Broken filter/tab interactions on 7+ pages <span class="issue-tag">Interactivity</span></div>
+        <div class="issue-desc">discover, matches, upcoming, leaderboard, notifications, venue-schedule, venue-tonights-events — all have filter chips/tabs that visually toggle but don't actually filter content.</div>
+      </div>
+    </div>
+    <div class="issue-card warn">
+      <div class="issue-icon">🟠</div>
+      <div class="issue-text">
+        <div class="issue-title">create-league.html wizard doesn't carry state <span class="issue-tag">Forms</span></div>
+        <div class="issue-desc">Step navigation works visually, but selections from Step 1 don't populate the Review in Step 4. Back button may not preserve choices.</div>
+      </div>
+    </div>
+    <div class="issue-card warn">
+      <div class="issue-icon">🟠</div>
+      <div class="issue-text">
+        <div class="issue-title">Orphaned pages: create-league.html, live.html <span class="issue-tag">Nav</span></div>
+        <div class="issue-desc">These pages exist but aren't in the main sidebar. Only reachable via specific action buttons or direct URL — could confuse users.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-title"><span class="dot" style="background:var(--teal);"></span> Suggestions</div>
+  <div class="issue-list">
+    <div class="issue-card info">
+      <div class="issue-icon">💡</div>
+      <div class="issue-text">
+        <div class="issue-title">Add shared CSS/JS foundation</div>
+        <div class="issue-desc">All 27 pages duplicate the same CSS variables, sidebar HTML, and utility functions. Extract into shared styles.css, sidebar.html partial, and utils.js. This will make future changes much easier.</div>
+      </div>
+    </div>
+    <div class="issue-card info">
+      <div class="issue-icon">💡</div>
+      <div class="issue-text">
+        <div class="issue-title">Make filters functional with JS array filtering</div>
+        <div class="issue-desc">Even without a backend, you can make filters work by storing mock data in JS arrays and rendering filtered results on click. This makes the prototype feel much more real.</div>
+      </div>
+    </div>
+    <div class="issue-card gap">
+      <div class="issue-icon">🟣</div>
+      <div class="issue-text">
+        <div class="issue-title">Build a QR code / join flow for venue → player</div>
+        <div class="issue-desc">Venues need a way to get players into their event. A QR code on venue-live-floor.html that links to a join page would bridge the two systems. This is a key missing piece.</div>
+      </div>
+    </div>
+    <div class="issue-card gap">
+      <div class="issue-icon">🟣</div>
+      <div class="issue-text">
+        <div class="issue-title">Add venue-questions.html for question bank</div>
+        <div class="issue-desc">Venues need to manage their custom questions somewhere. Currently venue-create-event only has "auto-push AI questions" toggle but no way to create or browse questions.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════ ROADMAP ════ -->
+<div class="view" id="view-roadmap">
+  <div style="margin-bottom:24px;">
+    <div class="section-title"><span class="dot" style="background:var(--purple);"></span> Suggested Build Order</div>
+    <p style="font-size:0.75rem;color:var(--grey);line-height:1.5;margin-bottom:20px;">Prioritized by impact — fixing architecture before adding features.</p>
+  </div>
+
+  <div class="roadmap-track">
+    <div class="roadmap-line"></div>
+
+    <div class="roadmap-item done">
+      <div class="roadmap-dot"></div>
+      <div class="roadmap-phase">Done</div>
+      <div class="roadmap-label">Core page layouts (27 pages)</div>
+      <div class="roadmap-desc">All pages designed with consistent Spontyx brand. Sidebar nav, card layouts, modals, wizards.</div>
+    </div>
+
+    <div class="roadmap-item done">
+      <div class="roadmap-dot"></div>
+      <div class="roadmap-phase">Done</div>
+      <div class="roadmap-label">Table Map builder (fully functional)</div>
+      <div class="roadmap-desc">Canvas drag/drop, zones, custom table designer, save/load, undo, fullscreen view.</div>
+    </div>
+
+    <div class="roadmap-item current">
+      <div class="roadmap-dot"></div>
+      <div class="roadmap-phase">Current — You Are Here</div>
+      <div class="roadmap-label">Architecture audit & UI consistency pass</div>
+      <div class="roadmap-desc">Fix sidebar inconsistencies, make filters work, ensure all pages link correctly, standardize interactions.</div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="roadmap-dot"></div>
+      <div class="roadmap-phase">Phase 1 — Foundation</div>
+      <div class="roadmap-label">Shared CSS + sidebar + utilities</div>
+      <div class="roadmap-desc">Extract duplicated code into shared files. Single source of truth for nav, colors, components.</div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="roadmap-dot"></div>
+      <div class="roadmap-phase">Phase 2 — Interactivity</div>
+      <div class="roadmap-label">Make all filters, tabs, and forms functional</div>
+      <div class="roadmap-desc">JS-powered filtering on discover, matches, leaderboard, etc. Wizard state persistence. Form validation.</div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="roadmap-dot"></div>
+      <div class="roadmap-phase">Phase 3 — Missing Pages</div>
+      <div class="roadmap-label">Build onboarding, settings, question bank</div>
+      <div class="roadmap-desc">Player onboarding flow, venue onboarding, venue-questions.html, settings pages.</div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="roadmap-dot"></div>
+      <div class="roadmap-phase">Phase 4 — Bridge</div>
+      <div class="roadmap-label">Connect venue ↔ player systems</div>
+      <div class="roadmap-desc">QR join flow, shared event state, question push → player receive, live score sync concept.</div>
+    </div>
+
+    <div class="roadmap-item">
+      <div class="roadmap-dot"></div>
+      <div class="roadmap-phase">Phase 5 — Backend Ready</div>
+      <div class="roadmap-label">Data model design + API structure</div>
+      <div class="roadmap-desc">Define database schema, API endpoints, auth flow, real-time architecture (WebSockets). Prepare for actual development.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+function switchTab(tab) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById('view-' + tab).classList.add('active');
+  const tabs = document.querySelectorAll('.tab');
+  const map = { overview: 0, pages: 1, flows: 2, issues: 3, roadmap: 4 };
+  if (map[tab] !== undefined) tabs[map[tab]].classList.add('active');
+}
+</script>
+</body>
+</html>

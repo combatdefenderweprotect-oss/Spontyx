@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Battle Royale Leaderboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+<style>
+    /* ── Main ── */
+    .main { margin-left: 260px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
+    .topbar {
+      padding: 16px 32px; display: flex; align-items: center; gap: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-search { flex: 1; max-width: 400px; position: relative; }
+    .topbar-search input {
+      width: 100%; padding: 10px 14px 10px 40px; background: var(--navy-light);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-pill);
+      color: var(--off-white); font-size: 0.85rem; font-family: inherit; outline: none;
+    }
+    .topbar-search input::placeholder { color: var(--grey-dark); }
+    .topbar-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--grey-dark); }
+    .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .topbar-btn {
+      width: 40px; height: 40px; border-radius: 50%; border: none;
+      background: var(--navy-light); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; position: relative; text-decoration: none;
+    }
+    .topbar-btn:hover { background: var(--navy-hover); }
+    .topbar-btn svg { width: 18px; height: 18px; stroke: var(--grey); fill: none; stroke-width: 1.8; }
+    .topbar-btn .notif-dot {
+      position: absolute; top: 8px; right: 8px; width: 8px; height: 8px;
+      background: var(--coral); border-radius: 50%; border: 2px solid var(--navy);
+    }
+    .content { padding: 32px; flex: 1; max-width: 1100px; }
+
+    /* ── Page Header ── */
+    .page-header { margin-bottom: 28px; display: flex; align-items: center; gap: 16px; }
+    .page-header h1 { font-size: 1.5rem; font-weight: 800; letter-spacing: -0.5px; display: flex; align-items: center; gap: 10px; }
+    .page-header h1 .br-badge {
+      background: linear-gradient(135deg, var(--coral), #E84545); color: #fff;
+      padding: 4px 12px; border-radius: var(--radius-pill); font-size: 0.65rem;
+      font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .page-header-actions { margin-left: auto; display: flex; gap: 8px; }
+    .header-btn {
+      padding: 9px 18px; border-radius: var(--radius-pill); border: none; cursor: pointer;
+      font-family: inherit; font-size: 0.78rem; font-weight: 700; transition: all 0.2s;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .header-btn svg { width: 14px; height: 14px; stroke-width: 2; fill: none; }
+    .header-btn.primary { background: linear-gradient(135deg, var(--coral), #E84545); color: #fff; }
+    .header-btn.primary svg { stroke: #fff; }
+    .header-btn.primary:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(255,107,107,0.3); }
+    .header-btn.ghost { background: var(--navy-card); color: var(--off-white); border: 1px solid rgba(255,255,255,0.08); }
+    .header-btn.ghost svg { stroke: var(--off-white); }
+    .header-btn.ghost:hover { background: var(--navy-hover); }
+
+    /* ── Your BR Profile Card ── */
+    .br-profile {
+      display: grid; grid-template-columns: auto 1fr auto; gap: 24px; align-items: center;
+      padding: 24px 28px; background: var(--navy-card); border-radius: var(--radius-xl);
+      border: 1px solid rgba(255,255,255,0.06); margin-bottom: 28px;
+    }
+    .br-profile-tier { text-align: center; }
+    .tier-emblem {
+      width: 88px; height: 88px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      margin-bottom: 8px; position: relative;
+    }
+    .tier-emblem svg { width: 44px; height: 44px; }
+    .tier-emblem-ring {
+      position: absolute; inset: 0; border-radius: 50%; border: 3px solid;
+    }
+    .tier-emblem.gold .tier-emblem-ring { border-color: var(--gold-c); box-shadow: 0 0 20px rgba(255,215,0,0.2); }
+    .tier-emblem.gold { background: var(--gold-dim); }
+    .tier-name { font-size: 0.85rem; font-weight: 800; }
+    .tier-name.gold { color: var(--gold-c); }
+
+    .br-profile-stats { display: flex; flex-direction: column; gap: 12px; }
+    .br-profile-row { display: flex; align-items: center; gap: 16px; }
+    .br-profile-name { font-size: 1.1rem; font-weight: 800; }
+    .br-profile-elo { font-size: 1.1rem; font-weight: 900; color: var(--gold-c); }
+    .br-profile-elo span { font-size: 0.7rem; color: var(--grey); font-weight: 600; }
+
+    .elo-bar-wrap { flex: 1; max-width: 300px; }
+    .elo-bar-labels { display: flex; justify-content: space-between; font-size: 0.6rem; color: var(--grey-dark); font-weight: 700; margin-bottom: 4px; }
+    .elo-bar { height: 8px; background: rgba(255,255,255,0.06); border-radius: 4px; overflow: hidden; }
+    .elo-bar-fill { height: 100%; border-radius: 4px; transition: width 0.8s ease; }
+    .elo-bar-fill.gold { background: linear-gradient(90deg, var(--gold-c), var(--orange)); }
+    .elo-bar-hint { font-size: 0.65rem; color: var(--grey-dark); margin-top: 4px; }
+
+    .br-profile-quick-stats { display: flex; gap: 20px; margin-top: 4px; }
+    .br-qs { text-align: center; }
+    .br-qs-value { font-size: 1.1rem; font-weight: 900; }
+    .br-qs-label { font-size: 0.6rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .br-profile-rank { text-align: center; padding: 16px 20px; background: rgba(255,255,255,0.03); border-radius: var(--radius-lg); }
+    .br-rank-value { font-size: 2rem; font-weight: 900; color: var(--lime); }
+    .br-rank-label { font-size: 0.65rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .br-rank-change { font-size: 0.72rem; font-weight: 700; margin-top: 4px; }
+    .br-rank-change.up { color: var(--lime); }
+    .br-rank-change.down { color: var(--coral); }
+
+    /* ── Tier Ladder ── */
+    .tier-ladder { margin-bottom: 28px; }
+    .tier-ladder-title { font-size: 0.72rem; font-weight: 700; color: var(--grey); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; }
+    .tier-ladder-row { display: flex; gap: 8px; align-items: stretch; }
+    .tier-block {
+      flex: 1; padding: 12px 10px; border-radius: var(--radius-md); text-align: center;
+      border: 2px solid transparent; transition: all 0.2s; position: relative;
+    }
+    .tier-block.current { transform: translateY(-4px); }
+    .tier-block-icon { font-size: 1.2rem; margin-bottom: 4px; }
+    .tier-block-name { font-size: 0.68rem; font-weight: 800; margin-bottom: 2px; }
+    .tier-block-range { font-size: 0.55rem; font-weight: 600; opacity: 0.7; }
+    .tier-block-you {
+      position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+      font-size: 0.5rem; font-weight: 800; padding: 2px 6px; border-radius: var(--radius-pill);
+      background: var(--navy); color: var(--off-white); border: 1px solid;
+      display: none;
+    }
+    .tier-block.current .tier-block-you { display: block; }
+
+    .tier-block.bronze { background: var(--bronze-dim); color: var(--bronze); }
+    .tier-block.bronze.current { border-color: var(--bronze); }
+    .tier-block.bronze .tier-block-you { border-color: var(--bronze); color: var(--bronze); }
+    .tier-block.silver { background: var(--silver-dim); color: var(--silver); }
+    .tier-block.silver.current { border-color: var(--silver); }
+    .tier-block.silver .tier-block-you { border-color: var(--silver); color: var(--silver); }
+    .tier-block.gold { background: var(--gold-dim); color: var(--gold-c); }
+    .tier-block.gold.current { border-color: var(--gold-c); }
+    .tier-block.gold .tier-block-you { border-color: var(--gold-c); color: var(--gold-c); }
+    .tier-block.platinum { background: var(--platinum-dim); color: var(--platinum); }
+    .tier-block.platinum.current { border-color: var(--platinum); }
+    .tier-block.platinum .tier-block-you { border-color: var(--platinum); color: var(--platinum); }
+    .tier-block.diamond { background: var(--diamond-dim); color: var(--diamond); }
+    .tier-block.diamond.current { border-color: var(--diamond); }
+    .tier-block.diamond .tier-block-you { border-color: var(--diamond); color: var(--diamond); }
+    .tier-block.champion { background: var(--champion-dim); color: var(--champion); }
+    .tier-block.champion.current { border-color: var(--champion); }
+    .tier-block.champion .tier-block-you { border-color: var(--champion); color: var(--champion); }
+
+    /* ── Tabs ── */
+    .tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--navy-light); border-radius: var(--radius-sm); padding: 4px; }
+    .tab {
+      flex: 1; padding: 10px 16px; border-radius: 6px; border: none; background: none;
+      color: var(--grey); font-size: 0.8rem; font-weight: 600; font-family: inherit;
+      cursor: pointer; transition: all 0.15s; text-align: center;
+    }
+    .tab:hover { color: var(--off-white); }
+    .tab.active { background: var(--navy-card); color: var(--coral); }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+
+    /* ── Rankings Table ── */
+    .rankings-table { width: 100%; }
+    .rank-row {
+      display: flex; align-items: center; gap: 14px; padding: 12px 16px;
+      border-radius: var(--radius-md); transition: background 0.15s; margin-bottom: 4px;
+    }
+    .rank-row:hover { background: rgba(255,255,255,0.03); }
+    .rank-row.you { background: rgba(255,159,67,0.06); border: 1px solid rgba(255,159,67,0.15); }
+    .rank-row.top3 { background: rgba(255,255,255,0.02); }
+    .rank-num {
+      width: 32px; font-size: 0.85rem; font-weight: 900; text-align: center; flex-shrink: 0;
+    }
+    .rank-num.r1 { color: var(--gold-c); }
+    .rank-num.r2 { color: var(--silver); }
+    .rank-num.r3 { color: var(--bronze); }
+    .rank-avatar {
+      width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; font-weight: 800; flex-shrink: 0; border: 2px solid transparent;
+    }
+    .rank-avatar.you-ring { border-color: var(--orange); }
+    .rank-info { flex: 1; min-width: 0; }
+    .rank-name { font-size: 0.85rem; font-weight: 700; display: flex; align-items: center; gap: 6px; }
+    .rank-name .you-tag { font-size: 0.55rem; font-weight: 800; padding: 2px 6px; border-radius: var(--radius-pill); background: var(--orange); color: var(--navy); }
+    .rank-tier-badge {
+      font-size: 0.55rem; font-weight: 800; padding: 2px 8px; border-radius: var(--radius-pill);
+    }
+    .rank-tier-badge.bronze { background: var(--bronze-dim); color: var(--bronze); }
+    .rank-tier-badge.silver { background: var(--silver-dim); color: var(--silver); }
+    .rank-tier-badge.gold { background: var(--gold-dim); color: var(--gold-c); }
+    .rank-tier-badge.platinum { background: var(--platinum-dim); color: var(--platinum); }
+    .rank-tier-badge.diamond { background: var(--diamond-dim); color: var(--diamond); }
+    .rank-tier-badge.champion { background: var(--champion-dim); color: var(--champion); }
+    .rank-meta { font-size: 0.68rem; color: var(--grey); margin-top: 2px; }
+    .rank-elo { font-size: 0.95rem; font-weight: 900; min-width: 60px; text-align: right; }
+    .rank-change { font-size: 0.68rem; font-weight: 700; min-width: 40px; text-align: right; }
+    .rank-change.up { color: var(--lime); }
+    .rank-change.down { color: var(--coral); }
+    .rank-wins { font-size: 0.75rem; font-weight: 700; color: var(--grey); min-width: 50px; text-align: right; }
+
+    /* ── Points Table ── */
+    .points-table {
+      display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin-bottom: 28px;
+    }
+    .points-cell {
+      background: var(--navy-card); border-radius: var(--radius-md); padding: 14px 10px;
+      text-align: center; border: 1px solid rgba(255,255,255,0.04);
+    }
+    .points-cell.header { background: none; border: none; padding-bottom: 6px; }
+    .points-place { font-size: 0.85rem; font-weight: 900; margin-bottom: 2px; }
+    .points-place.r1 { color: var(--gold-c); }
+    .points-place.r2 { color: var(--silver); }
+    .points-place.r3 { color: var(--bronze); }
+    .points-value { font-size: 0.72rem; color: var(--lime); font-weight: 700; }
+    .points-cell.header .points-place { font-size: 0.6rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .points-cell.header .points-value { color: var(--grey-dark); font-size: 0.6rem; }
+
+    /* ── Match History ── */
+    .history-list { display: flex; flex-direction: column; gap: 6px; }
+    .history-item {
+      display: flex; align-items: center; gap: 14px; padding: 14px 16px;
+      background: var(--navy-card); border-radius: var(--radius-md);
+      border: 1px solid rgba(255,255,255,0.04); transition: border-color 0.2s;
+    }
+    .history-item:hover { border-color: rgba(255,255,255,0.08); }
+    .history-place {
+      width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 0.85rem; font-weight: 900; flex-shrink: 0;
+    }
+    .history-place.p1 { background: rgba(255,215,0,0.12); color: var(--gold-c); }
+    .history-place.p2 { background: var(--silver-dim); color: var(--silver); }
+    .history-place.p3 { background: var(--bronze-dim); color: var(--bronze); }
+    .history-place.p4 { background: rgba(78,205,196,0.12); color: var(--teal); }
+    .history-place.p5 { background: rgba(255,107,107,0.1); color: var(--coral); }
+    .history-info { flex: 1; min-width: 0; }
+    .history-match { font-size: 0.85rem; font-weight: 700; }
+    .history-meta { font-size: 0.68rem; color: var(--grey); margin-top: 2px; }
+    .history-elo-change { text-align: right; min-width: 60px; }
+    .history-elo-val { font-size: 0.85rem; font-weight: 800; }
+    .history-elo-val.up { color: var(--lime); }
+    .history-elo-val.down { color: var(--coral); }
+    .history-elo-after { font-size: 0.6rem; color: var(--grey); }
+    .history-rounds { font-size: 0.72rem; font-weight: 700; color: var(--grey); min-width: 70px; text-align: right; }
+
+    /* ── Section Header ── */
+    .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .section-header h2 { font-size: 1.05rem; font-weight: 700; }
+
+
+  </style>
+</head>
+<body>
+
+  <!-- ── SIDEBAR ── -->
+  <div id="sidebar-placeholder"></div>
+
+  <!-- ── MAIN ── -->
+  <div class="main">
+    <header class="topbar">
+      <div class="topbar-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Search players..." />
+      </div>
+      <div class="topbar-right">
+        <a href="notifications.html" class="topbar-btn" title="Notifications" style="text-decoration:none;">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+          <span class="notif-dot"></span>
+        </a>
+        <button class="topbar-btn" title="Messages">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- Page Header -->
+      <div class="page-header">
+        <h1>Battle Royale Rankings <span class="br-badge">ELO</span></h1>
+        <div class="page-header-actions">
+          <a href="battle-royale.html" class="header-btn primary" style="text-decoration:none;">
+            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Play BR
+          </a>
+        </div>
+      </div>
+
+      <!-- Your BR Profile -->
+      <div class="br-profile">
+        <div class="br-profile-tier">
+          <div class="tier-emblem gold">
+            <div class="tier-emblem-ring"></div>
+            <svg viewBox="0 0 24 24" fill="none" stroke="var(--gold-c)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+          </div>
+          <div class="tier-name gold">Gold</div>
+        </div>
+        <div class="br-profile-stats">
+          <div class="br-profile-row">
+            <div class="br-profile-name">Bran</div>
+            <div class="br-profile-elo">1,720 <span>ELO</span></div>
+          </div>
+          <div class="elo-bar-wrap">
+            <div class="elo-bar-labels">
+              <span>Gold — 1,500</span>
+              <span>Platinum — 2,000</span>
+            </div>
+            <div class="elo-bar">
+              <div class="elo-bar-fill gold" style="width: 44%;"></div>
+            </div>
+            <div class="elo-bar-hint">280 ELO to Platinum</div>
+          </div>
+          <div class="br-profile-quick-stats">
+            <div class="br-qs">
+              <div class="br-qs-value" style="color: var(--lime);">47</div>
+              <div class="br-qs-label">Matches</div>
+            </div>
+            <div class="br-qs">
+              <div class="br-qs-value" style="color: var(--gold-c);">8</div>
+              <div class="br-qs-label">Wins</div>
+            </div>
+            <div class="br-qs">
+              <div class="br-qs-value" style="color: var(--orange);">17%</div>
+              <div class="br-qs-label">Win Rate</div>
+            </div>
+            <div class="br-qs">
+              <div class="br-qs-value" style="color: var(--teal);">2.4</div>
+              <div class="br-qs-label">Avg Place</div>
+            </div>
+            <div class="br-qs">
+              <div class="br-qs-value" style="color: var(--coral);">6</div>
+              <div class="br-qs-label">Win Streak</div>
+            </div>
+          </div>
+        </div>
+        <div class="br-profile-rank">
+          <div class="br-rank-value">#34</div>
+          <div class="br-rank-label">Global Rank</div>
+          <div class="br-rank-change up">+5 this week</div>
+        </div>
+      </div>
+
+      <!-- Tier Ladder -->
+      <div class="tier-ladder">
+        <div class="tier-ladder-title">ELO Tier Ladder</div>
+        <div class="tier-ladder-row">
+          <div class="tier-block bronze">
+            <div class="tier-block-you">YOU</div>
+            <div class="tier-block-name">Bronze</div>
+            <div class="tier-block-range">0 – 1,199</div>
+          </div>
+          <div class="tier-block silver">
+            <div class="tier-block-you">YOU</div>
+            <div class="tier-block-name">Silver</div>
+            <div class="tier-block-range">1,200 – 1,499</div>
+          </div>
+          <div class="tier-block gold current">
+            <div class="tier-block-you">YOU</div>
+            <div class="tier-block-name">Gold</div>
+            <div class="tier-block-range">1,500 – 1,999</div>
+          </div>
+          <div class="tier-block platinum">
+            <div class="tier-block-you">YOU</div>
+            <div class="tier-block-name">Platinum</div>
+            <div class="tier-block-range">2,000 – 2,799</div>
+          </div>
+          <div class="tier-block diamond">
+            <div class="tier-block-you">YOU</div>
+            <div class="tier-block-name">Diamond</div>
+            <div class="tier-block-range">2,800 – 3,599</div>
+          </div>
+          <div class="tier-block champion">
+            <div class="tier-block-you">YOU</div>
+            <div class="tier-block-name">Champion</div>
+            <div class="tier-block-range">3,600+</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('rankings')">Global Rankings</button>
+        <button class="tab" onclick="switchTab('points')">Points Table</button>
+        <button class="tab" onclick="switchTab('history')">Your Match History</button>
+      </div>
+
+      <!-- Rankings Tab -->
+      <div class="tab-panel active" id="tab-rankings">
+        <div class="rankings-table" id="br-rankings-table">
+          <div style="padding:40px;text-align:center;color:var(--grey);font-size:0.85rem;">Loading rankings…</div>
+        </div>
+      </div>
+
+      <!-- Points Table Tab -->
+      <div class="tab-panel" id="tab-points">
+        <div class="section-header">
+          <h2>Points Per Placement</h2>
+        </div>
+        <div class="points-table">
+          <div class="points-cell">
+            <div class="points-place r1">1st</div>
+            <div class="points-value">+100 pts</div>
+          </div>
+          <div class="points-cell">
+            <div class="points-place r2">2nd</div>
+            <div class="points-value">+60 pts</div>
+          </div>
+          <div class="points-cell">
+            <div class="points-place r3">3rd</div>
+            <div class="points-value">+40 pts</div>
+          </div>
+          <div class="points-cell">
+            <div class="points-place">4th</div>
+            <div class="points-value">+30 pts</div>
+          </div>
+          <div class="points-cell">
+            <div class="points-place">5th</div>
+            <div class="points-value">+20 pts</div>
+          </div>
+          <div class="points-cell">
+            <div class="points-place">6th</div>
+            <div class="points-value">+15 pts</div>
+          </div>
+          <div class="points-cell">
+            <div class="points-place">7th</div>
+            <div class="points-value">+10 pts</div>
+          </div>
+          <div class="points-cell">
+            <div class="points-place">8th</div>
+            <div class="points-value">+5 pts</div>
+          </div>
+          <div class="points-cell">
+            <div class="points-place">9th</div>
+            <div class="points-value">+3 pts</div>
+          </div>
+          <div class="points-cell">
+            <div class="points-place" style="color: var(--coral);">10th</div>
+            <div class="points-value" style="color: var(--coral);">+1 pt</div>
+          </div>
+        </div>
+        <div class="section-header"><h2>ELO Adjustment</h2></div>
+        <div style="padding: 18px; background: var(--navy-card); border-radius: var(--radius-lg); border: 1px solid rgba(255,255,255,0.06); margin-bottom: 20px;">
+          <p style="font-size: 0.82rem; color: var(--grey); line-height: 1.6;">
+            Base points are adjusted by a <strong style="color: var(--off-white);">lobby strength multiplier</strong>. If your opponents' average ELO is higher than yours, your gains are boosted and losses are reduced. If you're the highest-rated player in the room, gains shrink and a poor finish costs more.
+          </p>
+          <div style="display: flex; gap: 16px; margin-top: 14px;">
+            <div style="flex:1; padding: 12px; background: rgba(168,225,12,0.06); border-radius: var(--radius-sm); text-align: center;">
+              <div style="font-size: 0.85rem; font-weight: 800; color: var(--lime);">+120%</div>
+              <div style="font-size: 0.65rem; color: var(--grey);">Beating higher ELO</div>
+            </div>
+            <div style="flex:1; padding: 12px; background: rgba(255,255,255,0.03); border-radius: var(--radius-sm); text-align: center;">
+              <div style="font-size: 0.85rem; font-weight: 800; color: var(--off-white);">100%</div>
+              <div style="font-size: 0.65rem; color: var(--grey);">Even lobby</div>
+            </div>
+            <div style="flex:1; padding: 12px; background: rgba(255,107,107,0.06); border-radius: var(--radius-sm); text-align: center;">
+              <div style="font-size: 0.85rem; font-weight: 800; color: var(--coral);">80%</div>
+              <div style="font-size: 0.65rem; color: var(--grey);">Below avg lobby</div>
+            </div>
+          </div>
+        </div>
+        <div class="section-header"><h2>Tier Thresholds</h2></div>
+        <div class="tier-ladder">
+          <div class="tier-ladder-row">
+            <div class="tier-block bronze"><div class="tier-block-name">Bronze</div><div class="tier-block-range">0 – 1,199</div></div>
+            <div class="tier-block silver"><div class="tier-block-name">Silver</div><div class="tier-block-range">1,200 – 1,499</div></div>
+            <div class="tier-block gold"><div class="tier-block-name">Gold</div><div class="tier-block-range">1,500 – 1,999</div></div>
+            <div class="tier-block platinum"><div class="tier-block-name">Platinum</div><div class="tier-block-range">2,000 – 2,799</div></div>
+            <div class="tier-block diamond"><div class="tier-block-name">Diamond</div><div class="tier-block-range">2,800 – 3,599</div></div>
+            <div class="tier-block champion"><div class="tier-block-name">Champion</div><div class="tier-block-range">3,600+</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Match History Tab -->
+      <div class="tab-panel" id="tab-history">
+        <div class="section-header"><h2>Your Recent Matches</h2></div>
+        <div class="history-list" id="br-history-list">
+          <div style="padding:40px;text-align:center;color:var(--grey);font-size:0.85rem;">Loading match history…</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    function switchTab(id) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      event.currentTarget.classList.add('active');
+      document.getElementById('tab-' + id).classList.add('active');
+      if (id === 'history') renderHistory();
+    }
+
+    // ── ELO tier helper (mirrors SpontixStore.getEloTier) ────────────────
+    function eloTier(elo) {
+      if (elo >= 4000) return { tier: 'champion', label: 'Champion', color: 'var(--champion)' };
+      if (elo >= 3000) return { tier: 'diamond',  label: 'Diamond',  color: 'var(--diamond)'  };
+      if (elo >= 2000) return { tier: 'platinum', label: 'Platinum', color: 'var(--platinum)'  };
+      if (elo >= 1500) return { tier: 'gold',     label: 'Gold',     color: 'var(--gold-c)'    };
+      if (elo >= 1000) return { tier: 'silver',   label: 'Silver',   color: 'var(--off-white)' };
+      return               { tier: 'bronze',   label: 'Bronze',   color: '#cd7f32'          };
+    }
+
+    // ── Render global ELO rankings ────────────────────────────────────────
+    async function renderRankings() {
+      const table = document.getElementById('br-rankings-table');
+      if (!table) return;
+
+      let entries = [];
+      try {
+        if (typeof SpontixStoreAsync !== 'undefined' && window.sb) {
+          // Fetch all players sorted by elo_rating
+          const res = await window.sb
+            .from('users')
+            .select('id,name,handle,avatar,avatar_color,tier,elo_rating,games_played,total_points')
+            .eq('role', 'player')
+            .order('elo_rating', { ascending: false })
+            .limit(100);
+          entries = res.data || [];
+        }
+      } catch (e) { console.warn('[br-leaderboard] rankings error', e); }
+
+      if (!entries.length) {
+        table.innerHTML = '<div style="padding:40px;text-align:center;color:var(--grey);">No rankings yet — play a Battle Royale to get on the board.</div>';
+        return;
+      }
+
+      const uid = SpontixStore.Session.getCurrentUserId();
+      const myIdx = entries.findIndex(r => r.id === uid);
+
+      let html = '';
+      entries.forEach((row, i) => {
+        const elo    = row.elo_rating || 1000;
+        const t      = eloTier(elo);
+        const isYou  = row.id === uid;
+        const name   = row.name || row.handle || 'Player';
+        const parts  = name.trim().split(/\s+/);
+        const initials = parts.length > 1
+          ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+          : name.slice(0, 2).toUpperCase();
+        const rowClass = (i < 3 ? ' top3' : '') + (isYou ? ' you' : '');
+        const numClass = i === 0 ? 'r1' : i === 1 ? 'r2' : i === 2 ? 'r3' : '';
+        const avClass  = isYou ? 'rank-avatar you-ring av-self' : 'rank-avatar av-user';
+        const avAttr   = isYou ? '' : ` data-name="${initials}"`;
+        const avStyle  = `background:${t.tier}-dim;color:${t.color};border-color:${t.color};`;
+        const youTag   = isYou ? ' <span class="you-tag">You</span>' : '';
+
+        html += `<div class="rank-row${rowClass}">
+          <div class="rank-num ${numClass}">${i + 1}</div>
+          <div class="${avClass}"${avAttr}>${initials}</div>
+          <div class="rank-info">
+            <div class="rank-name">${name}${youTag} <span class="rank-tier-badge ${t.tier}">${t.label}</span></div>
+            <div class="rank-meta">${row.games_played || 0} matches</div>
+          </div>
+          <div class="rank-elo" style="color:${t.color};">${elo.toLocaleString()}</div>
+          <div class="rank-change same">—</div>
+        </div>`;
+
+        // Insert separator + current user row if they're outside top visible range
+        if (i === 4 && myIdx > 5) {
+          html += `<div class="rank-row" style="padding:4px 16px;">
+            <div style="width:100%;text-align:center;color:var(--grey-dark);font-size:0.7rem;">· · ·</div>
+          </div>`;
+        }
+      });
+
+      table.innerHTML = html;
+      SpontixStore.applyAvatarsToPage();
+    }
+
+    // ── Render match history ──────────────────────────────────────────────
+    async function renderHistory() {
+      const list = document.getElementById('br-history-list');
+      if (!list) return;
+
+      let history = [];
+      try {
+        if (typeof SpontixStoreAsync !== 'undefined') {
+          history = await SpontixStoreAsync.getGameHistory();
+        }
+      } catch (e) { history = SpontixStore.getGameHistory(); }
+
+      if (!history.length) {
+        list.innerHTML = '<div style="padding:40px;text-align:center;color:var(--grey);">No matches played yet.</div>';
+        return;
+      }
+
+      list.innerHTML = history.slice(0, 20).map(g => {
+        const rank     = g.rank || '?';
+        const rankNum  = parseInt(rank) || 0;
+        const pClass   = rankNum === 1 ? 'p1' : rankNum === 2 ? 'p2' : rankNum === 3 ? 'p3' : rankNum <= 5 ? 'p4' : 'p5';
+        const date     = g.date ? new Date(g.date).toLocaleDateString('en-GB', { weekday:'short', hour:'2-digit', minute:'2-digit' }) : '';
+        const suffix   = rankNum === 1 ? 'st' : rankNum === 2 ? 'nd' : rankNum === 3 ? 'rd' : 'th';
+
+        // ELO change column — show real delta when available, otherwise show pts
+        const hasElo   = g.elo_before != null && g.elo_after != null;
+        const eloDelta = hasElo ? (g.elo_after - g.elo_before) : null;
+        const eloColor = eloDelta === null ? 'var(--lime)' : eloDelta >= 0 ? 'var(--lime)' : 'var(--coral)';
+        const eloVal   = eloDelta === null ? ('+' + (g.points || 0)) : (eloDelta >= 0 ? '+' : '') + eloDelta;
+        const eloSub   = hasElo
+          ? `${(g.elo_before).toLocaleString()} → ${(g.elo_after).toLocaleString()}`
+          : 'pts';
+
+        return `<div class="history-item">
+          <div class="history-place ${pClass}">${rankNum > 0 ? rankNum + suffix : '?'}</div>
+          <div class="history-info">
+            <div class="history-match">${g.matchTitle || 'Match'}</div>
+            <div class="history-meta">${date} · ${g.correct || 0} correct · ${g.wrong || 0} wrong</div>
+          </div>
+          <div class="history-rounds">${(g.correct || 0) + (g.wrong || 0)} qs</div>
+          <div class="history-elo-change">
+            <div class="history-elo-val" style="color:${eloColor};">${eloVal}</div>
+            <div class="history-elo-after" style="color:var(--grey);font-size:0.65rem;">${eloSub}</div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    // ── Boot ──────────────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      renderRankings();
+    });
+
+    window.addEventListener('spontix-game-history-refreshed', () => {
+      renderHistory();
+    });
+  </script>
+<script src="utils.js"></script>
+<script src="br-elo.js"></script>
+<script src="sidebar.js"></script>
+<script>SpontixSidebar.init({ type: 'player', active: 'leaderboard.html' });</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+</body>
+</html>

@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Sign in</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --navy: #1A1A2E;
+      --navy-light: #22223A;
+      --navy-card: #2A2A44;
+      --navy-hover: #32325A;
+      --lime: #A8E10C;
+      --purple: #7C5CFC;
+      --coral: #FF6B6B;
+      --teal: #4ECDC4;
+      --off-white: #E8E8F0;
+      --grey: #9898B0;
+      --grey-dark: #5A5A78;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-pill: 999px;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background:
+        radial-gradient(1200px 800px at 10% -10%, rgba(124,92,252,0.18), transparent 60%),
+        radial-gradient(1000px 700px at 110% 110%, rgba(168,225,12,0.12), transparent 60%),
+        var(--navy);
+      color: var(--off-white); min-height: 100vh;
+      display: flex; align-items: center; justify-content: center; padding: 24px;
+    }
+
+    .logo { position: absolute; top: 28px; left: 32px; font-size: 1.4rem; font-weight: 900; letter-spacing: -0.5px; display: flex; align-items: baseline; gap: 3px; text-decoration: none; color: var(--off-white); }
+    .logo .dot { width: 7px; height: 7px; background: var(--lime); border-radius: 50%; margin-top: -7px; }
+
+    .card {
+      width: 100%; max-width: 440px; background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.06); border-radius: 20px;
+      padding: 32px 30px; box-shadow: 0 24px 60px rgba(0,0,0,0.4);
+    }
+    h1 { font-size: 1.7rem; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 6px; }
+    h1 .dot { color: var(--lime); }
+    .sub { color: var(--grey); font-size: 0.88rem; margin-bottom: 24px; line-height: 1.5; }
+
+    /* Tab switcher */
+    .tabs { display: flex; gap: 4px; background: var(--navy); padding: 4px; border-radius: var(--radius-md); margin-bottom: 22px; border: 1px solid rgba(255,255,255,0.04); }
+    .tab { flex: 1; padding: 10px; background: transparent; color: var(--grey); border: none; border-radius: 9px; font-family: inherit; font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: all 0.2s; }
+    .tab.active { background: var(--navy-card); color: var(--off-white); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+
+    /* Role picker (Player vs Venue) */
+    .role-row { display: flex; gap: 10px; margin-bottom: 18px; }
+    .role-opt {
+      flex: 1; padding: 14px 12px; border-radius: var(--radius-md);
+      border: 2px solid rgba(255,255,255,0.08); background: var(--navy-light);
+      cursor: pointer; transition: all 0.2s; font-family: inherit; color: var(--off-white); text-align: center;
+    }
+    .role-opt:hover { border-color: rgba(168,225,12,0.35); }
+    .role-opt.selected.player { border-color: var(--lime); background: rgba(168,225,12,0.08); }
+    .role-opt.selected.venue  { border-color: var(--purple); background: rgba(124,92,252,0.08); }
+    .role-opt-icon { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; background: rgba(255,255,255,0.06); }
+    .role-opt-icon svg { width: 16px; height: 16px; stroke-width: 2; fill: none; stroke: currentColor; }
+    .role-opt.selected.player .role-opt-icon { background: rgba(168,225,12,0.12); color: var(--lime); }
+    .role-opt.selected.venue  .role-opt-icon { background: rgba(124,92,252,0.15); color: var(--purple); }
+    .role-opt-name { font-size: 0.85rem; font-weight: 700; }
+    .role-opt-sub { font-size: 0.65rem; color: var(--grey); margin-top: 2px; }
+
+    /* Form */
+    .field { margin-bottom: 14px; }
+    .label { display: block; font-size: 0.72rem; font-weight: 700; color: var(--grey); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .input {
+      width: 100%; padding: 12px 14px; background: var(--navy-light);
+      border: 1.5px solid rgba(255,255,255,0.08); border-radius: var(--radius-md);
+      color: var(--off-white); font-size: 0.9rem; font-family: inherit; outline: none;
+      transition: border-color 0.2s;
+    }
+    .input:focus { border-color: var(--lime); }
+    .input::placeholder { color: var(--grey-dark); }
+
+    .btn {
+      width: 100%; padding: 14px; border: none; border-radius: var(--radius-md);
+      background: var(--lime); color: var(--navy); font-family: inherit;
+      font-size: 0.95rem; font-weight: 800; cursor: pointer;
+      transition: transform 0.15s, opacity 0.15s; margin-top: 8px;
+      box-shadow: 0 6px 20px rgba(168,225,12,0.3);
+    }
+    .btn:hover:not(:disabled) { transform: translateY(-1px); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn.venue { background: var(--purple); color: #fff; box-shadow: 0 6px 20px rgba(124,92,252,0.3); }
+
+    .note {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 10px; padding: 12px 14px; margin-top: 14px;
+      font-size: 0.78rem; color: var(--grey); line-height: 1.5;
+    }
+    .note strong { color: var(--off-white); }
+
+    .alert {
+      padding: 12px 14px; border-radius: 10px; font-size: 0.85rem; margin-top: 14px; line-height: 1.5;
+    }
+    .alert.err { background: rgba(255,107,107,0.08); border: 1px solid rgba(255,107,107,0.25); color: var(--coral); }
+    .alert.ok  { background: rgba(168,225,12,0.08);  border: 1px solid rgba(168,225,12,0.25);  color: var(--lime); }
+    .alert.hidden { display: none; }
+
+    .divider { display: flex; align-items: center; gap: 12px; margin: 18px 0; color: var(--grey-dark); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: rgba(255,255,255,0.06); }
+
+    .secondary-btn {
+      width: 100%; padding: 12px; border-radius: var(--radius-md);
+      background: transparent; color: var(--off-white);
+      border: 1.5px solid rgba(255,255,255,0.12); cursor: pointer;
+      font-family: inherit; font-size: 0.85rem; font-weight: 600; transition: all 0.2s;
+      text-decoration: none; display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .secondary-btn:hover { border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.03); }
+
+    .footer-note { text-align: center; font-size: 0.72rem; color: var(--grey-dark); margin-top: 18px; }
+    .footer-note a { color: var(--lime); text-decoration: none; }
+    .footer-note a:hover { text-decoration: underline; }
+
+    .pane { display: none; }
+    .pane.active { display: block; }
+  </style>
+</head>
+<body>
+  <a href="index.html" class="logo">Spontyx<span class="dot"></span></a>
+
+  <div class="card">
+    <h1 id="heading">Welcome back<span class="dot">.</span></h1>
+    <p class="sub" id="subheading">Sign in to pick up where you left off.</p>
+
+    <div class="tabs">
+      <button type="button" class="tab active" data-pane="signin" onclick="switchTab('signin')">Sign in</button>
+      <button type="button" class="tab"        data-pane="signup" onclick="switchTab('signup')">Create account</button>
+    </div>
+
+    <!-- ── Sign In pane ── -->
+    <div class="pane active" id="pane-signin">
+      <form id="signin-form">
+        <div class="field">
+          <label class="label" for="signin-email">Email</label>
+          <input class="input" type="email" id="signin-email" required autocomplete="email" placeholder="you@example.com" />
+        </div>
+        <div class="field">
+          <label class="label" for="signin-password">Password</label>
+          <input class="input" type="password" id="signin-password" required autocomplete="current-password" placeholder="••••••••" />
+        </div>
+        <button type="submit" class="btn" id="signin-submit">Sign in</button>
+      </form>
+      <div id="signin-alert" class="alert hidden"></div>
+      <p style="text-align:center;margin-top:12px;">
+        <a href="#" onclick="event.preventDefault(); switchTab('reset')" style="color:var(--grey);font-size:0.78rem;text-decoration:none;transition:color 0.15s;" onmouseover="this.style.color='var(--lime)'" onmouseout="this.style.color='var(--grey)'">Forgot your password?</a>
+      </p>
+    </div>
+
+    <!-- ── Sign Up pane ── -->
+    <div class="pane" id="pane-signup">
+      <div class="role-row">
+        <button type="button" class="role-opt player selected" data-role="player" onclick="pickRole('player')">
+          <div class="role-opt-icon"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+          <div class="role-opt-name">Player</div>
+          <div class="role-opt-sub">Join leagues & games</div>
+        </button>
+        <button type="button" class="role-opt venue" data-role="venue-owner" onclick="pickRole('venue-owner')">
+          <div class="role-opt-icon"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4 8 4v14"/><path d="M9 21v-4h6v4"/></svg></div>
+          <div class="role-opt-name">Venue owner</div>
+          <div class="role-opt-sub">Host events & trivia</div>
+        </button>
+      </div>
+
+      <form id="signup-form">
+        <div class="field">
+          <label class="label" for="signup-name">Your name</label>
+          <input class="input" type="text" id="signup-name" required autocomplete="name" placeholder="Jordan Smith" />
+        </div>
+        <div class="field">
+          <label class="label" for="signup-email">Email</label>
+          <input class="input" type="email" id="signup-email" required autocomplete="email" placeholder="you@example.com" />
+        </div>
+        <div class="field">
+          <label class="label" for="signup-password">Password</label>
+          <input class="input" type="password" id="signup-password" required autocomplete="new-password" minlength="8" placeholder="at least 8 characters" />
+        </div>
+        <button type="submit" class="btn" id="signup-submit">Create account</button>
+      </form>
+      <div id="signup-alert" class="alert hidden"></div>
+      <p class="note">
+        After you sign up, Supabase will email you a confirmation link. Click it to activate the
+        account, then come back here and sign in.
+      </p>
+    </div>
+
+    <!-- ── Reset Password pane (request) ── -->
+    <div class="pane" id="pane-reset">
+      <form id="reset-form">
+        <div class="field">
+          <label class="label" for="reset-email">Email</label>
+          <input class="input" type="email" id="reset-email" required autocomplete="email" placeholder="you@example.com" />
+        </div>
+        <button type="submit" class="btn" id="reset-submit">Send reset link</button>
+      </form>
+      <div id="reset-alert" class="alert hidden"></div>
+      <p style="text-align:center;margin-top:12px;">
+        <a href="#" onclick="event.preventDefault(); switchTab('signin')" style="color:var(--grey);font-size:0.78rem;text-decoration:none;transition:color 0.15s;" onmouseover="this.style.color='var(--lime)'" onmouseout="this.style.color='var(--grey)'">Back to sign in</a>
+      </p>
+    </div>
+
+    <!-- ── Set New Password pane (after clicking email link) ── -->
+    <div class="pane" id="pane-newpassword">
+      <form id="newpassword-form">
+        <div class="field">
+          <label class="label" for="new-password">New Password</label>
+          <input class="input" type="password" id="new-password" required autocomplete="new-password" minlength="8" placeholder="at least 8 characters" />
+        </div>
+        <div class="field">
+          <label class="label" for="confirm-password">Confirm Password</label>
+          <input class="input" type="password" id="confirm-password" required minlength="8" placeholder="repeat your new password" />
+        </div>
+        <button type="submit" class="btn" id="newpassword-submit">Update password</button>
+      </form>
+      <div id="newpassword-alert" class="alert hidden"></div>
+    </div>
+  </div>
+
+  <!-- Supabase client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-client.js"></script>
+
+  <script>
+    // ── Beta access guard ──
+    // Users must unlock the beta password on index.html before reaching this page.
+    // If the flag is missing, send them back to the waitlist.
+    (function betaGuard() {
+      if (sessionStorage.getItem('spontix_beta_access') !== 'granted') {
+        window.location.replace('waitlist.html');
+      }
+    })();
+
+    // ── Tab switching ──
+    function switchTab(name) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.pane === name));
+      document.querySelectorAll('.pane').forEach(p => p.classList.toggle('active', p.id === 'pane-' + name));
+      const h = document.getElementById('heading');
+      const s = document.getElementById('subheading');
+      if (name === 'signup') {
+        h.innerHTML = 'Join Spontyx<span class="dot">.</span>';
+        s.textContent = 'Create an account to host events, join leagues, and earn trophies.';
+      } else if (name === 'reset') {
+        h.innerHTML = 'Reset password<span class="dot">.</span>';
+        s.textContent = 'Enter your email and we\'ll send you a reset link.';
+      } else {
+        h.innerHTML = 'Welcome back<span class="dot">.</span>';
+        s.textContent = 'Sign in to pick up where you left off.';
+      }
+    }
+
+    // ── Role picker ──
+    let selectedRole = 'player';
+    function pickRole(role) {
+      selectedRole = role;
+      document.querySelectorAll('.role-opt').forEach(o => o.classList.toggle('selected', o.dataset.role === role));
+      // Retheme the signup button to match role colour
+      const btn = document.getElementById('signup-submit');
+      btn.classList.toggle('venue', role === 'venue-owner');
+    }
+
+    // ── Alerts ──
+    function showAlert(paneId, kind, message) {
+      const el = document.getElementById(paneId + '-alert');
+      el.className = 'alert ' + kind;
+      el.textContent = message;
+    }
+    function clearAlert(paneId) {
+      document.getElementById(paneId + '-alert').className = 'alert hidden';
+    }
+
+    // ── Sign in ──
+    document.getElementById('signin-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearAlert('signin');
+      const email = document.getElementById('signin-email').value.trim();
+      const password = document.getElementById('signin-password').value;
+      const btn = document.getElementById('signin-submit');
+      btn.disabled = true; btn.textContent = 'Signing in…';
+
+      const { data, error } = await window.sb.auth.signInWithPassword({ email, password });
+
+      btn.disabled = false; btn.textContent = 'Sign in';
+
+      if (error) {
+        showAlert('signin', 'err', error.message);
+        return;
+      }
+
+      // Look up the user's role from public.users so we know where to redirect
+      const { data: profile } = await window.sb
+        .from('users')
+        .select('role')
+        .eq('id', data.user.id)
+        .single();
+
+      const dest = profile && profile.role === 'venue-owner' ? 'venue-dashboard.html' : 'dashboard.html';
+      showAlert('signin', 'ok', 'Signed in. Redirecting…');
+      setTimeout(() => { window.location.href = dest; }, 600);
+    });
+
+    // ── Sign up ──
+    document.getElementById('signup-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearAlert('signup');
+      const name = document.getElementById('signup-name').value.trim();
+      const email = document.getElementById('signup-email').value.trim();
+      const password = document.getElementById('signup-password').value;
+      const role = selectedRole;
+      const btn = document.getElementById('signup-submit');
+      btn.disabled = true; btn.textContent = 'Creating account…';
+
+      // Pass name + role + a sensible default handle via raw_user_meta_data.
+      // Our public.handle_new_user() trigger in Postgres reads these into the
+      // matching public.users row automatically.
+      const handle = '@' + email.split('@')[0].replace(/[^a-z0-9_]/gi, '_').toLowerCase();
+      const { data, error } = await window.sb.auth.signUp({
+        email,
+        password,
+        options: {
+          data: { name, role, handle },
+          emailRedirectTo: window.location.origin + '/login.html',
+        },
+      });
+
+      btn.disabled = false; btn.textContent = 'Create account';
+
+      if (error) {
+        showAlert('signup', 'err', error.message);
+        return;
+      }
+
+      // After signup the trigger auto-populates public.users with name/handle from metadata,
+      // but `role` isn't in the default trigger — update it ourselves.
+      if (data && data.user) {
+        await window.sb.from('users').update({ role }).eq('id', data.user.id);
+      }
+
+      // Supabase sends confirmation email by default. If email confirmations are
+      // disabled on the project, the session is returned immediately.
+      if (data && data.session) {
+        showAlert('signup', 'ok', 'Account created. Redirecting…');
+        const dest = role === 'venue-owner' ? 'venue-dashboard.html' : 'dashboard.html';
+        setTimeout(() => { window.location.href = dest; }, 800);
+      } else {
+        showAlert('signup', 'ok', '✓ Account created. Check your email (' + email + ') for a confirmation link, then come back and sign in.');
+        // Switch to sign-in tab so the email is already in context
+        setTimeout(() => { switchTab('signin'); document.getElementById('signin-email').value = email; }, 2000);
+      }
+    });
+
+    // ── Password reset ──
+    document.getElementById('reset-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearAlert('reset');
+      const email = document.getElementById('reset-email').value.trim();
+      const btn = document.getElementById('reset-submit');
+      btn.disabled = true; btn.textContent = 'Sending…';
+
+      const { error } = await window.sb.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + '/login.html',
+      });
+
+      btn.disabled = false; btn.textContent = 'Send reset link';
+
+      if (error) {
+        showAlert('reset', 'err', error.message);
+        return;
+      }
+
+      showAlert('reset', 'ok', '✓ Reset link sent to ' + email + '. Check your inbox, then come back and sign in with your new password.');
+      setTimeout(() => { switchTab('signin'); document.getElementById('signin-email').value = email; }, 3000);
+    });
+
+    // ── Set new password (after clicking reset link in email) ──
+    document.getElementById('newpassword-form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      clearAlert('newpassword');
+      const pw = document.getElementById('new-password').value;
+      const pw2 = document.getElementById('confirm-password').value;
+      if (pw !== pw2) {
+        showAlert('newpassword', 'err', 'Passwords do not match.');
+        return;
+      }
+      const btn = document.getElementById('newpassword-submit');
+      btn.disabled = true; btn.textContent = 'Updating…';
+
+      const { error } = await window.sb.auth.updateUser({ password: pw });
+
+      btn.disabled = false; btn.textContent = 'Update password';
+
+      if (error) {
+        showAlert('newpassword', 'err', error.message);
+        return;
+      }
+
+      showAlert('newpassword', 'ok', '✓ Password updated! Redirecting…');
+      const { data: { session } } = await window.sb.auth.getSession();
+      if (session) {
+        const { data: profile } = await window.sb.from('users').select('role').eq('id', session.user.id).single();
+        const dest = profile && profile.role === 'venue-owner' ? 'venue-dashboard.html' : 'dashboard.html';
+        setTimeout(() => { window.location.href = dest; }, 1000);
+      }
+    });
+
+    // ── Detect password recovery flow from URL hash ──
+    // Supabase puts type=recovery in the hash when user clicks a reset link.
+    // We intercept this to show the "set new password" form instead of auto-redirecting.
+    function isRecoveryFlow() {
+      var hash = window.location.hash || '';
+      return hash.indexOf('type=recovery') !== -1;
+    }
+
+    // ── If already signed in, skip the page (unless in recovery flow) ──
+    (async function checkExistingSession() {
+      if (!window.sb) return;
+
+      // If this is a password recovery redirect, show the new password form
+      if (isRecoveryFlow()) {
+        switchTab('newpassword');
+        return;
+      }
+
+      const { data: { session } } = await window.sb.auth.getSession();
+      if (!session) return;
+      const { data: profile } = await window.sb.from('users').select('role').eq('id', session.user.id).single();
+      const dest = profile && profile.role === 'venue-owner' ? 'venue-dashboard.html' : 'dashboard.html';
+      showAlert('signin', 'ok', 'Already signed in — redirecting…');
+      setTimeout(() => { window.location.href = dest; }, 400);
+    })();
+  </script>
+</body>
+</html>

@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Home</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+<style>
+    /* ── Main Area ── */
+    .main { margin-left: 260px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* Top Bar */
+    .topbar {
+      padding: 16px 32px; display: flex; align-items: center; gap: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-search { flex: 1; max-width: 480px; position: relative; }
+    .topbar-search input {
+      width: 100%; padding: 10px 14px 10px 40px; background: var(--navy-light);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-pill);
+      color: var(--off-white); font-size: 0.85rem; font-family: inherit; outline: none;
+      transition: border-color 0.2s;
+    }
+    .topbar-search input::placeholder { color: var(--grey-dark); }
+    .topbar-search input:focus { border-color: rgba(168,225,12,0.3); }
+    .topbar-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--grey-dark); }
+    .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .topbar-btn {
+      width: 40px; height: 40px; border-radius: 50%; border: none;
+      background: var(--navy-light); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; position: relative; transition: background 0.2s;
+    }
+    .topbar-btn:hover { background: var(--navy-hover); }
+    .topbar-btn svg { width: 18px; height: 18px; stroke: var(--grey); fill: none; stroke-width: 1.8; }
+    .topbar-btn .notif-dot {
+      position: absolute; top: 8px; right: 8px; width: 8px; height: 8px;
+      background: var(--coral); border-radius: 50%; border: 2px solid var(--navy);
+    }
+
+    /* Content */
+    .content { padding: 32px; flex: 1; max-width: 1200px; }
+
+    /* Page Header */
+    .page-header { margin-bottom: 32px; }
+    .page-header h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+    .page-header h1 span { color: var(--lime); }
+    .page-header p { color: var(--grey); font-size: 0.9rem; }
+
+    /* ── Action Cards Grid ── */
+    .action-cards-grid {
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 28px;
+    }
+    .action-card {
+      background: var(--navy-card); border-radius: var(--radius-lg); padding: 18px 20px; border: 2px solid rgba(255,255,255,0.06);
+      display: flex; align-items: center; gap: 14px; cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.16,1,0.3,1); text-decoration: none; color: var(--off-white);
+      position: relative; overflow: hidden;
+    }
+    .action-card:hover { transform: translateY(-2px); }
+
+    /* Create League — LIME (main brand) */
+    .action-card.lime-accent {
+      background: var(--lime);
+      border-color: var(--lime);
+      color: var(--navy);
+    }
+    .action-card.lime-accent .action-card-title { color: var(--navy); }
+    .action-card.lime-accent .action-card-desc { color: rgba(26,26,46,0.65); }
+    .action-card.lime-accent:hover {
+      background: #b8f01c;
+      border-color: #b8f01c;
+    }
+
+    /* Join League — PURPLE (secondary) */
+    .action-card.purple-accent {
+      background: var(--purple);
+      border-color: var(--purple);
+      color: #fff;
+    }
+    .action-card.purple-accent .action-card-title { color: #fff; }
+    .action-card.purple-accent .action-card-desc { color: rgba(255,255,255,0.75); }
+    .action-card.purple-accent:hover {
+      background: #8d72fc;
+      border-color: #8d72fc;
+    }
+
+    .action-card-icon {
+      width: 40px; height: 40px; border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;
+    }
+    .action-card.lime-accent .action-card-icon { background: rgba(26,26,46,0.15); color: var(--navy); }
+    .action-card.purple-accent .action-card-icon { background: rgba(255,255,255,0.2); color: #fff; }
+
+    .action-card-
+    .action-card-title { font-size: 0.95rem; font-weight: 700; }
+    .action-card-desc { font-size: 0.75rem; line-height: 1.4; margin-top: 2px; }
+
+    /* ── Section Header ── */
+    .section-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; margin-top: 28px;
+    }
+    .section-header h2 { font-size: 1.15rem; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+    .section-header .view-all {
+      font-size: 0.78rem; font-weight: 600; color: var(--grey); text-decoration: none;
+      transition: color 0.15s; display: flex; align-items: center; gap: 4px;
+    }
+    .section-header .view-all:hover { color: var(--lime); }
+
+    /* ── Quick Nav Links ── */
+    .nav-links-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px; margin-bottom: 36px;
+    }
+    .nav-link-card {
+      display: flex; align-items: center; gap: 14px; padding: 18px 20px;
+      background: var(--navy-card); border-radius: var(--radius-lg);
+      border: 1px solid rgba(255,255,255,0.06); transition: all 0.2s;
+      cursor: pointer; text-decoration: none; color: var(--off-white);
+    }
+    .nav-link-card:hover { transform: translateY(-2px); }
+    .nav-link-icon {
+      width: 44px; height: 44px; border-radius: var(--radius-md); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .nav-link-icon svg { width: 20px; height: 20px; stroke-width: 2; fill: none; }
+    .nav-link-
+    .nav-link-title { font-size: 0.9rem; font-weight: 700; }
+    .nav-link-sub { font-size: 0.7rem; color: var(--grey); margin-top: 2px; }
+    .nav-link-arrow { color: var(--grey-dark); flex-shrink: 0; transition: color 0.2s; }
+    .nav-link-arrow svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .nav-link-card:hover .nav-link-arrow { color: var(--off-white); }
+
+    .nav-link-card.coral-link { border-color: rgba(255,107,107,0.2); }
+    .nav-link-card.coral-link:hover { border-color: rgba(255,107,107,0.4); }
+    .nav-link-card.coral-link .nav-link-icon { background: rgba(255,107,107,0.12); }
+    .nav-link-card.coral-link .nav-link-icon svg { stroke: var(--coral); }
+
+    .nav-link-card.teal-link { border-color: rgba(78,205,196,0.2); }
+    .nav-link-card.teal-link:hover { border-color: rgba(78,205,196,0.4); }
+    .nav-link-card.teal-link .nav-link-icon { background: rgba(78,205,196,0.12); }
+    .nav-link-card.teal-link .nav-link-icon svg { stroke: var(--teal); }
+
+    .nav-link-card.lime-link { border-color: rgba(168,225,12,0.2); }
+    .nav-link-card.lime-link:hover { border-color: rgba(168,225,12,0.4); }
+    .nav-link-card.lime-link .nav-link-icon { background: var(--lime-dim); }
+    .nav-link-card.lime-link .nav-link-icon svg { stroke: var(--lime); }
+
+    .nav-link-card.purple-link { border-color: rgba(124,92,252,0.2); }
+    .nav-link-card.purple-link:hover { border-color: rgba(124,92,252,0.4); }
+    .nav-link-card.purple-link .nav-link-icon { background: rgba(124,92,252,0.12); }
+    .nav-link-card.purple-link .nav-link-icon svg { stroke: var(--purple); }
+
+    .nav-link-badge {
+      margin-left: 6px; padding: 2px 7px; border-radius: var(--radius-pill);
+      font-size: 0.6rem; font-weight: 800; vertical-align: middle;
+    }
+    .nav-link-badge.coral { background: var(--coral); color: #fff; }
+    .nav-link-badge.lime { background: var(--lime); color: var(--navy); }
+
+    /* ── Unanswered Alert ── */
+    .unanswered-alert {
+      display: flex; align-items: center; gap: 16px; padding: 16px 20px; margin-bottom: 20px;
+      background: rgba(255,107,107,0.08); border: 1px solid rgba(255,107,107,0.3);
+      border-radius: var(--radius-lg); text-decoration: none; color: var(--off-white);
+      transition: all 0.2s; position: relative; overflow: hidden;
+    }
+    .unanswered-alert::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+      background: var(--coral);
+    }
+    .unanswered-alert:hover { border-color: rgba(255,107,107,0.5); background: rgba(255,107,107,0.12); transform: translateY(-1px); }
+    .unanswered-alert-pulse {
+      width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+      background: rgba(255,107,107,0.15); display: flex; align-items: center; justify-content: center;
+      position: relative;
+    }
+    .unanswered-alert-pulse::after {
+      content: ''; position: absolute; inset: -4px; border-radius: 50%;
+      border: 2px solid var(--coral); opacity: 0; animation: alert-ping 2s cubic-bezier(0,0,0.2,1) infinite;
+    }
+    @keyframes alert-ping { 0% { opacity: 0.6; transform: scale(0.8); } 100% { opacity: 0; transform: scale(1.4); } }
+    .unanswered-alert-count {
+      font-size: 1.1rem; font-weight: 900; color: var(--coral);
+    }
+    .unanswered-alert-
+    .unanswered-alert-title { font-size: 0.9rem; font-weight: 700; color: var(--off-white); }
+    .unanswered-alert-title strong { color: var(--coral); }
+    .unanswered-alert-matches { font-size: 0.75rem; color: var(--grey); margin-top: 3px; }
+    .unanswered-alert-btn {
+      flex-shrink: 0; padding: 9px 20px; border-radius: var(--radius-pill);
+      background: var(--coral); color: #fff; font-size: 0.78rem; font-weight: 700;
+      border: none; font-family: inherit; cursor: pointer; transition: opacity 0.2s;
+    }
+    .unanswered-alert-btn:hover { opacity: 0.85; }
+
+    /* ── Profile Preview ── */
+    .profile-preview {
+      display: flex; align-items: center; gap: 20px; margin-bottom: 32px;
+      padding: 20px 24px; background: var(--navy-card); border-radius: var(--radius-lg);
+      border: 1px solid rgba(255,255,255,0.06); position: relative; overflow: hidden;
+    }
+    .profile-preview::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: radial-gradient(ellipse at 0% 50%, rgba(168,225,12,0.06), transparent 60%);
+      pointer-events: none;
+    }
+    .profile-preview-avatar {
+      width: 56px; height: 56px; border-radius: 50%; flex-shrink: 0;
+      background: linear-gradient(135deg, var(--lime), var(--teal));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; font-weight: 900; color: var(--navy);
+    }
+    .profile-preview-info { flex: 1; min-width: 0; }
+    .profile-preview-name { font-size: 1.05rem; font-weight: 800; letter-spacing: -0.3px; margin-bottom: 2px; }
+    .profile-preview-handle { font-size: 0.75rem; color: var(--grey); margin-bottom: 8px; }
+    .profile-preview-stats { display: flex; gap: 20px; flex-wrap: wrap; }
+    .pp-stat { display: flex; flex-direction: column; align-items: center; }
+    .pp-stat-value { font-size: 1.1rem; font-weight: 900; line-height: 1; }
+    .pp-stat-value.lime { color: var(--lime); }
+    .pp-stat-value.teal { color: var(--teal); }
+    .pp-stat-value.purple { color: var(--purple); }
+    .pp-stat-value.coral { color: var(--coral); }
+    .pp-stat-label { font-size: 0.6rem; color: var(--grey-dark); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 3px; }
+    .pp-divider { width: 1px; background: rgba(255,255,255,0.06); align-self: stretch; }
+    .profile-preview-tier {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 12px; border-radius: var(--radius-pill);
+      background: rgba(168,225,12,0.1); border: 1px solid rgba(168,225,12,0.2);
+      font-size: 0.65rem; font-weight: 700; color: var(--lime); text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .profile-preview-link {
+      flex-shrink: 0; padding: 9px 18px; border-radius: var(--radius-pill);
+      border: 1px solid rgba(255,255,255,0.1); background: none; color: var(--grey);
+      font-size: 0.75rem; font-weight: 600; font-family: inherit; cursor: pointer;
+      transition: all 0.15s; text-decoration: none; display: flex; align-items: center; gap: 6px;
+    }
+    .profile-preview-link:hover { border-color: rgba(168,225,12,0.3); color: var(--off-white); }
+    .profile-preview-link svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+    @media (max-width: 700px) {
+      .profile-preview { flex-wrap: wrap; }
+      .profile-preview-stats { gap: 14px; }
+      .profile-preview-link { width: 100%; justify-content: center; }
+    }
+
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .action-cards-grid, .nav-links-grid { grid-template-columns: 1fr; }
+    }</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar-placeholder"></div>
+
+<!-- Main Content -->
+<div class="main">
+  <!-- Top Bar -->
+  <header class="topbar">
+    <button class="mobile-menu-btn" onclick="toggleSidebar()">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="topbar-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Search leagues..." />
+    </div>
+    <div class="topbar-right">
+      <a href="notifications.html" class="topbar-btn" title="Notifications" style="text-decoration:none;">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        <span class="notif-dot"></span>
+      </a>
+      <button class="topbar-btn" title="Messages">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="content">
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1>Welcome back, <span>Bran</span></h1>
+      <p>Your prediction gaming hub — create, join, and compete.</p>
+    </div>
+
+    <!-- Profile Preview -->
+    <div class="profile-preview">
+      <div class="profile-preview-avatar av-self">B</div>
+      <div class="profile-preview-info">
+        <div class="profile-preview-name">Bran</div>
+        <div class="profile-preview-handle">@bran_predicts</div>
+        <span class="profile-preview-tier">Pro (Trial)</span>
+      </div>
+      <div class="pp-divider"></div>
+      <div class="profile-preview-stats">
+        <div class="pp-stat">
+          <span class="pp-stat-value lime">1,240</span>
+          <span class="pp-stat-label">ELO</span>
+        </div>
+        <div class="pp-stat">
+          <span class="pp-stat-value teal">68%</span>
+          <span class="pp-stat-label">Win Rate</span>
+        </div>
+        <div class="pp-stat">
+          <span class="pp-stat-value purple">7</span>
+          <span class="pp-stat-label">Best Streak</span>
+        </div>
+        <div class="pp-stat">
+          <span class="pp-stat-value coral" id="dash-trophy-count">4</span>
+          <span class="pp-stat-label">Trophies</span>
+        </div>
+      </div>
+      <div class="pp-divider"></div>
+      <a href="profile.html" class="profile-preview-link">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        View Profile
+      </a>
+    </div>
+
+    <!-- Unanswered Questions Alert -->
+    <a href="activity.html" class="unanswered-alert">
+      <div class="unanswered-alert-pulse">
+        <span class="unanswered-alert-count">4</span>
+      </div>
+      <div class="unanswered-alert-body">
+        <div class="unanswered-alert-title">You have <strong>4 unanswered questions</strong> waiting</div>
+        <div class="unanswered-alert-matches">Barcelona vs Real Madrid (2) · Liverpool vs Man City (2)</div>
+      </div>
+      <div class="unanswered-alert-btn">Answer Now</div>
+    </a>
+
+    <!-- Quick Action Cards -->
+    <div class="action-cards-grid">
+      <!-- Create League Card -->
+      <a href="create-league.html" class="action-card lime-accent" style="text-decoration:none;color:inherit;">
+        <div class="action-card-icon">+</div>
+        <div class="action-card-body">
+          <div class="action-card-title">Create League</div>
+          <div class="action-card-desc">Start a new season-long league or single-match game</div>
+        </div>
+      </a>
+
+      <!-- Join League Card -->
+      <a href="discover.html" class="action-card purple-accent" style="text-decoration:none;color:inherit;">
+        <div class="action-card-icon">👥</div>
+        <div class="action-card-body">
+          <div class="action-card-title">Join a League</div>
+          <div class="action-card-desc">Browse public leagues or enter an invite code</div>
+        </div>
+      </a>
+    </div>
+
+    <!-- Quick Nav Links -->
+    <div class="nav-links-grid">
+
+      <a href="activity.html" class="nav-link-card coral-link">
+        <div class="nav-link-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        </div>
+        <div class="nav-link-body">
+          <div class="nav-link-title">Your Games <span class="nav-link-badge coral">2 live</span></div>
+          <div class="nav-link-sub">See your active matches and answer questions</div>
+        </div>
+        <div class="nav-link-arrow"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </a>
+
+      <a href="upcoming.html" class="nav-link-card teal-link">
+        <div class="nav-link-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        </div>
+        <div class="nav-link-body">
+          <div class="nav-link-title">Schedule</div>
+          <div class="nav-link-sub">3 matches coming up this week</div>
+        </div>
+        <div class="nav-link-arrow"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </a>
+
+      <a href="my-leagues.html" class="nav-link-card lime-link">
+        <div class="nav-link-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+        </div>
+        <div class="nav-link-body">
+          <div class="nav-link-title">My Leagues <span class="nav-link-badge lime">3</span></div>
+          <div class="nav-link-sub">Manage your active leagues and standings</div>
+        </div>
+        <div class="nav-link-arrow"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </a>
+
+      <a href="battle-royale.html" class="nav-link-card purple-link">
+        <div class="nav-link-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="8"/><path d="M12 18v4"/><path d="M8 22h8"/></svg>
+        </div>
+        <div class="nav-link-body">
+          <div class="nav-link-title">Battle Royale</div>
+          <div class="nav-link-sub">Jump into a live match — last one standing wins</div>
+        </div>
+        <div class="nav-link-arrow"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </a>
+
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="utils.js"></script>
+<script src="sidebar.js"></script>
+<script>SpontixSidebar.init({ type: 'player', active: 'dashboard.html' });</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+<script>
+
+  function hydrateFromStore() {
+    const p = SpontixStore.getPlayer();
+
+    // Update welcome header
+    document.querySelector('.page-header h1 span').textContent = p.name;
+
+    // Update profile preview section
+    SpontixStore.applyAvatarsToPage(); // renders .av-self with profile photo
+    document.querySelector('.profile-preview-name').textContent = p.name;
+    document.querySelector('.profile-preview-handle').textContent = p.handle;
+    document.querySelector('.profile-preview-tier').textContent = SpontixStore.getTierLabel(p.tier);
+
+    // Update profile preview stats
+    const statValues = document.querySelectorAll('.profile-preview-stats .pp-stat-value');
+    statValues[0].textContent = SpontixStore.formatNumber(p.totalPoints); // ELO
+    statValues[1].textContent = SpontixStore.getWinRate(p) + '%'; // Win Rate
+    statValues[2].textContent = p.bestStreak; // Best Streak
+
+    // Hydrate trophy count
+    var trophyEl = document.getElementById('dash-trophy-count');
+    if (trophyEl) {
+      trophyEl.textContent = SpontixStore.getTrophies().length;
+    }
+
+    // Update sidebar profile
+    document.querySelector('.sidebar-avatar').textContent = p.avatar;
+    document.querySelector('.sidebar-profile-name').textContent = p.name;
+    document.querySelector('.sidebar-profile-tier').textContent = SpontixStore.getTierLabel(p.tier);
+  }
+
+  document.addEventListener('DOMContentLoaded', hydrateFromStore);
+</script>
+
+</body>
+</html>

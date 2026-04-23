@@ -1,0 +1,1162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spontyx - Player Onboarding</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background-color: #1A1A2E;
+            color: #FFFFFF;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Main container */
+        .onboarding-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 40px 20px;
+            position: relative;
+        }
+
+        /* Header area */
+        .onboarding-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .logo {
+            font-size: 24px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .logo-dot {
+            width: 8px;
+            height: 8px;
+            background-color: #A8E10C;
+            border-radius: 50%;
+        }
+
+        .skip-link {
+            font-size: 14px;
+            color: #A8E10C;
+            text-decoration: none;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .skip-link:hover {
+            opacity: 0.8;
+        }
+
+        /* Progress bar */
+        .progress-section {
+            margin-bottom: 30px;
+        }
+
+        .progress-bar-container {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+
+        .progress-step {
+            flex: 1;
+            height: 4px;
+            background-color: #22223A;
+            border-radius: 2px;
+            transition: background-color 0.3s;
+        }
+
+        .progress-step.active {
+            background-color: #A8E10C;
+        }
+
+        .progress-step.completed {
+            background-color: #A8E10C;
+        }
+
+        .step-labels {
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .step-label {
+            font-size: 12px;
+            color: #888;
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .step-label.active {
+            color: #A8E10C;
+        }
+
+        /* Content area */
+        .content-wrapper {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        .step-content {
+            position: absolute;
+            width: 100%;
+            max-width: 600px;
+            padding: 0 20px;
+            animation: fadeInUp 0.4s ease-out;
+            opacity: 1;
+        }
+
+        .step-content.hidden {
+            display: none;
+            opacity: 0;
+        }
+
+        .step-content.exit-left {
+            animation: slideOutLeft 0.3s ease-in;
+        }
+
+        .step-content.exit-right {
+            animation: slideOutRight 0.3s ease-in;
+        }
+
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideOutLeft {
+            to {
+                opacity: 0;
+                transform: translateX(-30px);
+            }
+        }
+
+        @keyframes slideOutRight {
+            to {
+                opacity: 0;
+                transform: translateX(30px);
+            }
+        }
+
+        /* Step content styling */
+        .step-title {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            text-align: center;
+        }
+
+        .step-subtitle {
+            font-size: 16px;
+            color: #AAA;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        /* Step 1: Avatar & Profile */
+        .profile-section {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .form-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #E0E0E0;
+        }
+
+        .form-input,
+        .form-textarea {
+            background-color: #22223A;
+            border: 1px solid #33334F;
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: #FFFFFF;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .form-input:focus,
+        .form-textarea:focus {
+            outline: none;
+            border-color: #A8E10C;
+            background-color: #25254A;
+        }
+
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        /* Avatar color picker */
+        .color-picker-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .color-swatch {
+            width: 50px;
+            height: 50px;
+            border-radius: 8px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .color-swatch:hover {
+            transform: scale(1.08);
+        }
+
+        .color-swatch.selected {
+            border-color: #A8E10C;
+            box-shadow: 0 0 0 2px #1A1A2E, 0 0 0 4px #A8E10C;
+        }
+
+        /* Avatar preview */
+        .avatar-preview-section {
+            text-align: center;
+            padding: 20px;
+            background-color: #22223A;
+            border-radius: 12px;
+            margin-top: 10px;
+        }
+
+        .avatar-preview {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 700;
+            margin: 0 auto 10px;
+            color: #FFFFFF;
+        }
+
+        .avatar-label {
+            font-size: 12px;
+            color: #999;
+        }
+
+        /* Step 2: Interest Selection */
+        .interests-section {
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .sports-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 12px;
+        }
+
+        .sport-card {
+            background-color: #22223A;
+            border: 2px solid #33334F;
+            border-radius: 12px;
+            padding: 16px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .sport-card:hover {
+            border-color: #A8E10C;
+            background-color: #262649;
+        }
+
+        .sport-card.selected {
+            background-color: #A8E10C;
+            color: #1A1A2E;
+            border-color: #A8E10C;
+        }
+
+        .sport-icon {
+            font-size: 32px;
+        }
+
+        .teams-input-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #E0E0E0;
+            margin-top: 10px;
+        }
+
+        .teams-input-container {
+            position: relative;
+            margin-top: 10px;
+        }
+
+        .teams-input {
+            width: 100%;
+            background-color: #22223A;
+            border: 1px solid #33334F;
+            border-radius: 8px;
+            padding: 12px 16px;
+            color: #FFFFFF;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+
+        .teams-input:focus {
+            outline: none;
+            border-color: #A8E10C;
+            background-color: #25254A;
+        }
+
+        .teams-pills-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+            min-height: 32px;
+        }
+
+        .team-pill {
+            background-color: #A8E10C;
+            color: #1A1A2E;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            animation: slideInPill 0.2s ease-out;
+        }
+
+        @keyframes slideInPill {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .team-pill-remove {
+            cursor: pointer;
+            font-weight: 700;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+
+        .team-pill-remove:hover {
+            opacity: 1;
+        }
+
+        /* Step 3: Feature Tour */
+        .feature-tour-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 25px;
+        }
+
+        .feature-card {
+            background-color: #22223A;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            width: 100%;
+            min-height: 280px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .feature-icon {
+            font-size: 64px;
+            margin-bottom: 15px;
+        }
+
+        .feature-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+
+        .feature-description {
+            font-size: 14px;
+            color: #AAA;
+            line-height: 1.6;
+        }
+
+        .feature-nav {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .feature-nav-button {
+            background-color: #22223A;
+            border: 1px solid #33334F;
+            border-radius: 8px;
+            padding: 8px 12px;
+            color: #AAA;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+        .feature-nav-button:hover:not(:disabled) {
+            border-color: #A8E10C;
+            color: #A8E10C;
+        }
+
+        .feature-nav-button:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .feature-dots {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 15px;
+        }
+
+        .feature-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background-color: #33334F;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .feature-dot.active {
+            background-color: #A8E10C;
+            width: 24px;
+            border-radius: 4px;
+        }
+
+        /* Step 4: Join First League */
+        .leagues-section {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-height: calc(100vh - 300px);
+            overflow-y: auto;
+        }
+
+        .league-card {
+            background-color: #22223A;
+            border: 1px solid #33334F;
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            transition: border-color 0.2s;
+        }
+
+        .league-card:hover {
+            border-color: #A8E10C;
+        }
+
+        .league-info {
+            flex: 1;
+            text-align: left;
+        }
+
+        .league-name {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .league-details {
+            display: flex;
+            gap: 12px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .league-sport-pill {
+            background-color: rgba(168, 225, 12, 0.15);
+            color: #A8E10C;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .join-button {
+            background-color: #A8E10C;
+            color: #1A1A2E;
+            border: none;
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .join-button:hover:not(.joined) {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .join-button.joined {
+            background-color: #22223A;
+            color: #A8E10C;
+            border: 1px solid #A8E10C;
+            cursor: default;
+        }
+
+        .skip-league-link {
+            text-align: center;
+            font-size: 14px;
+            color: #999;
+            text-decoration: none;
+            cursor: pointer;
+            transition: color 0.2s;
+            margin-top: 15px;
+        }
+
+        .skip-league-link:hover {
+            color: #AAA;
+        }
+
+        /* Footer buttons */
+        .button-group {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 30px;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: #A8E10C;
+            color: #1A1A2E;
+            flex: 1;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            opacity: 0.9;
+            transform: translateY(-2px);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background-color: transparent;
+            color: #A8E10C;
+            border: 1px solid #A8E10C;
+            padding: 10px 20px;
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(168, 225, 12, 0.1);
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .onboarding-container {
+                padding: 20px 16px;
+            }
+
+            .step-title {
+                font-size: 24px;
+            }
+
+            .sports-grid {
+                grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            }
+
+            .feature-card {
+                min-height: 250px;
+                padding: 20px;
+            }
+
+            .feature-icon {
+                font-size: 48px;
+            }
+
+            .league-card {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .button-group {
+                flex-direction: column-reverse;
+            }
+
+            .btn-secondary {
+                width: 100%;
+                text-align: center;
+            }
+        }
+
+        /* Scrollbar styling */
+        .leagues-section::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .leagues-section::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .leagues-section::-webkit-scrollbar-thumb {
+            background-color: #33334F;
+            border-radius: 3px;
+        }
+
+        .leagues-section::-webkit-scrollbar-thumb:hover {
+            background-color: #A8E10C;
+        }
+    </style>
+</head>
+<body>
+    <div class="onboarding-container">
+        <!-- Header -->
+        <div class="onboarding-header">
+            <div class="logo">
+                Spontyx
+                <div class="logo-dot"></div>
+            </div>
+            <a class="skip-link" onclick="skipOnboarding()">Skip Onboarding</a>
+        </div>
+
+        <!-- Progress section -->
+        <div class="progress-section">
+            <div class="progress-bar-container">
+                <div class="progress-step completed" id="progress-0"></div>
+                <div class="progress-step" id="progress-1"></div>
+                <div class="progress-step" id="progress-2"></div>
+                <div class="progress-step" id="progress-3"></div>
+            </div>
+            <div class="step-labels">
+                <div class="step-label active" id="label-0">Avatar & Profile</div>
+                <div class="step-label" id="label-1">Interests</div>
+                <div class="step-label" id="label-2">Feature Tour</div>
+                <div class="step-label" id="label-3">Join League</div>
+            </div>
+        </div>
+
+        <!-- Content area -->
+        <div class="content-wrapper">
+            <!-- Step 1: Avatar & Profile Setup -->
+            <div class="step-content" id="step-0">
+                <h1 class="step-title">Create Your Profile</h1>
+                <p class="step-subtitle">Let's get to know you</p>
+
+                <div class="profile-section">
+                    <div class="form-group">
+                        <label class="form-label">Display Name</label>
+                        <input type="text" class="form-input" id="display-name" placeholder="Enter your name">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Avatar Color</label>
+                        <div class="color-picker-group">
+                            <div class="color-swatch selected" style="background-color: #A8E10C;" data-color="#A8E10C" onclick="selectColor(this)"></div>
+                            <div class="color-swatch" style="background-color: #FF6B6B;" data-color="#FF6B6B" onclick="selectColor(this)"></div>
+                            <div class="color-swatch" style="background-color: #00D4D4;" data-color="#00D4D4" onclick="selectColor(this)"></div>
+                            <div class="color-swatch" style="background-color: #9D4EDD;" data-color="#9D4EDD" onclick="selectColor(this)"></div>
+                            <div class="color-swatch" style="background-color: #FFD60A;" data-color="#FFD60A" onclick="selectColor(this)"></div>
+                            <div class="color-swatch" style="background-color: #3A86FF;" data-color="#3A86FF" onclick="selectColor(this)"></div>
+                            <div class="color-swatch" style="background-color: #FF006E;" data-color="#FF006E" onclick="selectColor(this)"></div>
+                            <div class="color-swatch" style="background-color: #FF8C42;" data-color="#FF8C42" onclick="selectColor(this)"></div>
+                        </div>
+                    </div>
+
+                    <div class="avatar-preview-section">
+                        <div class="avatar-preview" id="avatar-preview" style="background-color: #A8E10C; color: #1A1A2E;">S</div>
+                        <div class="avatar-label">Your avatar preview</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">Short Bio (Optional)</label>
+                        <textarea class="form-textarea" id="bio" placeholder="Football fanatic, prediction machine..."></textarea>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-primary" onclick="nextStep()">Next</button>
+                </div>
+            </div>
+
+            <!-- Step 2: Interest Selection -->
+            <div class="step-content hidden" id="step-1">
+                <h1 class="step-title">What Sports Are You Into?</h1>
+                <p class="step-subtitle">Select at least one sport to continue</p>
+
+                <div class="interests-section">
+                    <div class="sports-grid">
+                        <div class="sport-card" data-sport="Football" onclick="toggleSport(this)">
+                            <div class="sport-icon">⚽</div>
+                            <div>Football</div>
+                        </div>
+                        <div class="sport-card" data-sport="Basketball" onclick="toggleSport(this)">
+                            <div class="sport-icon">🏀</div>
+                            <div>Basketball</div>
+                        </div>
+                        <div class="sport-card" data-sport="Tennis" onclick="toggleSport(this)">
+                            <div class="sport-icon">🎾</div>
+                            <div>Tennis</div>
+                        </div>
+                        <div class="sport-card" data-sport="Cricket" onclick="toggleSport(this)">
+                            <div class="sport-icon">🏏</div>
+                            <div>Cricket</div>
+                        </div>
+                        <div class="sport-card" data-sport="Baseball" onclick="toggleSport(this)">
+                            <div class="sport-icon">⚾</div>
+                            <div>Baseball</div>
+                        </div>
+                        <div class="sport-card" data-sport="Rugby" onclick="toggleSport(this)">
+                            <div class="sport-icon">🏉</div>
+                            <div>Rugby</div>
+                        </div>
+                        <div class="sport-card" data-sport="MMA" onclick="toggleSport(this)">
+                            <div class="sport-icon">🥊</div>
+                            <div>MMA</div>
+                        </div>
+                        <div class="sport-card" data-sport="F1" onclick="toggleSport(this)">
+                            <div class="sport-icon">🏎️</div>
+                            <div>F1</div>
+                        </div>
+                        <div class="sport-card" data-sport="Ice Hockey" onclick="toggleSport(this)">
+                            <div class="sport-icon">🏒</div>
+                            <div>Ice Hockey</div>
+                        </div>
+                        <div class="sport-card" data-sport="American Football" onclick="toggleSport(this)">
+                            <div class="sport-icon">🏈</div>
+                            <div>American Football</div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="teams-input-label">Pick your favourite teams (optional)</label>
+                        <div class="teams-input-container">
+                            <input type="text" class="teams-input" id="teams-input" placeholder="Type team name and press Enter...">
+                        </div>
+                        <div class="teams-pills-container" id="teams-pills-container"></div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-secondary" onclick="prevStep()">Back</button>
+                    <button class="btn btn-primary" id="next-step-2" onclick="nextStep()" disabled>Next</button>
+                </div>
+            </div>
+
+            <!-- Step 3: Feature Tour -->
+            <div class="step-content hidden" id="step-2">
+                <h1 class="step-title">Welcome to Spontyx</h1>
+                <p class="step-subtitle">Discover what makes it special</p>
+
+                <div class="feature-tour-section">
+                    <div class="feature-card">
+                        <div>
+                            <div class="feature-icon" id="feature-icon">⚡</div>
+                            <h3 class="feature-title" id="feature-title">Live Predictions</h3>
+                            <p class="feature-description" id="feature-description">Answer real-time questions during live matches. Score points for speed and accuracy.</p>
+                        </div>
+                        <div class="feature-nav">
+                            <button class="feature-nav-button" id="prev-feature" onclick="prevFeature()" disabled>← Previous</button>
+                            <div class="feature-dots">
+                                <div class="feature-dot active" onclick="goToFeature(0)"></div>
+                                <div class="feature-dot" onclick="goToFeature(1)"></div>
+                                <div class="feature-dot" onclick="goToFeature(2)"></div>
+                                <div class="feature-dot" onclick="goToFeature(3)"></div>
+                            </div>
+                            <button class="feature-nav-button" id="next-feature" onclick="nextFeature()">Next →</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn btn-secondary" onclick="prevStep()">Back</button>
+                    <button class="btn btn-primary" onclick="nextStep()">Continue</button>
+                </div>
+            </div>
+
+            <!-- Step 4: Join First League -->
+            <div class="step-content hidden" id="step-3">
+                <h1 class="step-title">Join Your First League</h1>
+                <p class="step-subtitle">Get into action and compete with others</p>
+
+                <div class="leagues-section" id="leagues-container">
+                    <!-- Leagues will be loaded here -->
+                </div>
+
+                <a class="skip-league-link" onclick="skipLeague()">Skip for now</a>
+
+                <div class="button-group">
+                    <button class="btn btn-secondary" onclick="prevStep()">Back</button>
+                    <button class="btn btn-primary" onclick="completeOnboarding()">Let's Go!</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+    <script>
+        // State management
+        const state = {
+            currentStep: 0,
+            displayName: '',
+            avatarColor: '#A8E10C',
+            bio: '',
+            selectedSports: [],
+            teams: [],
+            currentFeature: 0,
+            joinedLeagues: new Set()
+        };
+
+        const features = [
+            {
+                icon: '⚡',
+                title: 'Live Predictions',
+                description: 'Answer real-time questions during live matches. Score points for speed and accuracy.'
+            },
+            {
+                icon: '🏆',
+                title: 'Leagues & Seasons',
+                description: 'Join or create leagues that span entire seasons. Climb the ranks week by week.'
+            },
+            {
+                icon: '📍',
+                title: 'Venues & Bars',
+                description: 'Find Spontyx venues near you. Play on the big screen with other fans.'
+            },
+            {
+                icon: '🎖️',
+                title: 'Leaderboards & Badges',
+                description: 'Compete globally or with mates. Earn badges for streaks, accuracy, and more.'
+            }
+        ];
+
+        // Initialize onboarding
+        function init() {
+            // Check if already completed
+            if (localStorage.getItem('spontix_onboarding_complete') === 'true') {
+                window.location.href = 'dashboard.html';
+                return;
+            }
+
+            // Pre-fill display name from signup
+            const signupName = localStorage.getItem('spontix_signup_name');
+            if (signupName) {
+                document.getElementById('display-name').value = signupName;
+                state.displayName = signupName;
+                updateAvatarPreview();
+            }
+
+            // Load leagues for step 4
+            loadLeagues();
+
+            // Setup teams input
+            document.getElementById('teams-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addTeam();
+                }
+            });
+
+            // Setup display name input
+            document.getElementById('display-name').addEventListener('input', (e) => {
+                state.displayName = e.target.value.trim();
+                updateAvatarPreview();
+            });
+        }
+
+        // Update avatar preview
+        function updateAvatarPreview() {
+            const preview = document.getElementById('avatar-preview');
+            const letter = state.displayName.charAt(0).toUpperCase() || 'S';
+            preview.textContent = letter;
+            preview.style.backgroundColor = state.avatarColor;
+        }
+
+        // Color selection
+        function selectColor(element) {
+            document.querySelectorAll('.color-swatch').forEach(el => el.classList.remove('selected'));
+            element.classList.add('selected');
+            state.avatarColor = element.dataset.color;
+            updateAvatarPreview();
+        }
+
+        // Sport selection
+        function toggleSport(element) {
+            const sport = element.dataset.sport;
+            element.classList.toggle('selected');
+
+            if (element.classList.contains('selected')) {
+                state.selectedSports.push(sport);
+            } else {
+                state.selectedSports = state.selectedSports.filter(s => s !== sport);
+            }
+
+            // Enable/disable next button
+            document.getElementById('next-step-2').disabled = state.selectedSports.length === 0;
+        }
+
+        // Team management
+        function addTeam() {
+            const input = document.getElementById('teams-input');
+            const team = input.value.trim();
+
+            if (team && !state.teams.includes(team)) {
+                state.teams.push(team);
+                renderTeams();
+                input.value = '';
+            }
+        }
+
+        function removeTeam(team) {
+            state.teams = state.teams.filter(t => t !== team);
+            renderTeams();
+        }
+
+        function renderTeams() {
+            const container = document.getElementById('teams-pills-container');
+            container.innerHTML = state.teams.map(team => `
+                <div class="team-pill">
+                    ${team}
+                    <span class="team-pill-remove" onclick="removeTeam('${team}')">×</span>
+                </div>
+            `).join('');
+        }
+
+        // Feature tour
+        function updateFeature() {
+            const feature = features[state.currentFeature];
+            document.getElementById('feature-icon').textContent = feature.icon;
+            document.getElementById('feature-title').textContent = feature.title;
+            document.getElementById('feature-description').textContent = feature.description;
+
+            // Update dots
+            document.querySelectorAll('.feature-dot').forEach((dot, i) => {
+                dot.classList.toggle('active', i === state.currentFeature);
+            });
+
+            // Update buttons
+            document.getElementById('prev-feature').disabled = state.currentFeature === 0;
+            document.getElementById('next-feature').disabled = state.currentFeature === features.length - 1;
+        }
+
+        function nextFeature() {
+            if (state.currentFeature < features.length - 1) {
+                state.currentFeature++;
+                updateFeature();
+            }
+        }
+
+        function prevFeature() {
+            if (state.currentFeature > 0) {
+                state.currentFeature--;
+                updateFeature();
+            }
+        }
+
+        function goToFeature(index) {
+            state.currentFeature = index;
+            updateFeature();
+        }
+
+        // Load leagues
+        function loadLeagues() {
+            const container = document.getElementById('leagues-container');
+            const leagues = SpontixStore.getDiscoverLeagues();
+
+            container.innerHTML = leagues.map(league => `
+                <div class="league-card">
+                    <div class="league-info">
+                        <div class="league-name">${league.name}</div>
+                        <div class="league-details">
+                            <div class="league-sport-pill">${league.sport}</div>
+                            <span>${league.members} members</span>
+                        </div>
+                    </div>
+                    <button class="join-button" id="join-btn-${league.id}" onclick="joinLeague('${league.id}', this)">
+                        Join
+                    </button>
+                </div>
+            `).join('');
+        }
+
+        function joinLeague(leagueId, button) {
+            SpontixStore.joinLeague(leagueId);
+            state.joinedLeagues.add(leagueId);
+            button.classList.add('joined');
+            button.textContent = 'Joined ✓';
+        }
+
+        function skipLeague() {
+            // Don't require joining a league, just proceed
+            completeOnboarding();
+        }
+
+        // Navigation
+        function showStep(step) {
+            // Hide all steps
+            document.querySelectorAll('.step-content').forEach(el => {
+                el.classList.add('hidden');
+                el.classList.remove('exit-left', 'exit-right');
+            });
+
+            // Show current step
+            const stepEl = document.getElementById(`step-${step}`);
+            stepEl.classList.remove('hidden');
+
+            // Update progress
+            updateProgress(step);
+
+            // Reset feature tour if entering step 3
+            if (step === 2) {
+                state.currentFeature = 0;
+                updateFeature();
+            }
+
+            // Scroll to top
+            window.scrollTo(0, 0);
+        }
+
+        function updateProgress(step) {
+            document.querySelectorAll('.progress-step').forEach((el, i) => {
+                el.classList.remove('completed', 'active');
+                if (i < step) {
+                    el.classList.add('completed');
+                } else if (i === step) {
+                    el.classList.add('active');
+                }
+            });
+
+            document.querySelectorAll('.step-label').forEach((el, i) => {
+                el.classList.toggle('active', i === step);
+            });
+        }
+
+        function nextStep() {
+            // Validate current step
+            if (state.currentStep === 0) {
+                if (!state.displayName.trim()) {
+                    alert('Please enter your display name');
+                    return;
+                }
+            } else if (state.currentStep === 1) {
+                if (state.selectedSports.length === 0) {
+                    alert('Please select at least one sport');
+                    return;
+                }
+            }
+
+            if (state.currentStep < 3) {
+                state.currentStep++;
+                showStep(state.currentStep);
+            }
+        }
+
+        function prevStep() {
+            if (state.currentStep > 0) {
+                state.currentStep--;
+                showStep(state.currentStep);
+            }
+        }
+
+        function skipOnboarding() {
+            if (confirm('Skip onboarding? You can always complete it later.')) {
+                localStorage.setItem('spontix_onboarding_complete', 'true');
+                window.location.href = 'dashboard.html';
+            }
+        }
+
+        function completeOnboarding() {
+            // Save player profile
+            const player = SpontixStore.getPlayer();
+            const updatedPlayer = {
+                ...player,
+                name: state.displayName || player.name,
+                displayName: state.displayName,
+                avatar: state.displayName ? state.displayName.charAt(0).toUpperCase() : player.avatar,
+                avatarColor: state.avatarColor,
+                bio: document.getElementById('bio').value.trim() || state.bio,
+                interests: state.selectedSports,
+                teams: state.teams
+            };
+
+            SpontixStore.savePlayer(updatedPlayer);
+
+            // Mark onboarding as complete
+            localStorage.setItem('spontix_onboarding_complete', 'true');
+
+            // Redirect to dashboard
+            window.location.href = 'dashboard.html';
+        }
+
+        // Initialize on load
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

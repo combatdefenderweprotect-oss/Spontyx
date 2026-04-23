@@ -1,0 +1,193 @@
+/* ══════════════════════════════════════════════
+   SPONTIX — Shared Styles
+   Include on every page: <link rel="stylesheet" href="styles.css" />
+   ══════════════════════════════════════════════ */
+
+/* ── CSS Variables ── */
+:root {
+  --navy: #1A1A2E;
+  --navy-light: #22223A;
+  --navy-card: #2A2A44;
+  --navy-hover: #32325A;
+  --lime: #A8E10C;
+  --lime-dim: rgba(168,225,12,0.12);
+  --lime-hover: #BFEF3F;
+  --coral: #FF6B6B;
+  --teal: #4ECDC4;
+  --purple: #7C5CFC;
+  --off-white: #E8E8F0;
+  --grey: #9898B0;
+  --grey-dark: #5A5A78;
+  --gold: #FFD700;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 100px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.25);
+  --shadow-lg: 0 8px 40px rgba(0,0,0,0.35);
+}
+
+/* ── Reset ── */
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  background: var(--navy);
+  color: var(--off-white);
+  display: flex;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+a { text-decoration: none; color: inherit; }
+
+/* ══════════════════════════════════════════════
+   SIDEBAR
+   ══════════════════════════════════════════════ */
+.sidebar {
+  width: 260px; background: var(--navy-light);
+  border-right: 1px solid rgba(255,255,255,0.06);
+  display: flex; flex-direction: column;
+  position: fixed; top: 0; left: 0; bottom: 0; z-index: 100; transition: transform 0.3s;
+}
+.sidebar-logo {
+  padding: 24px 24px 20px;
+  display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--off-white);
+}
+.sidebar-logo-img { height: 28px; width: auto; display: block; }
+.sidebar-logo .dot { width: 7px; height: 7px; background: var(--lime); border-radius: 50%; margin-top: -7px; }
+.sidebar-logo .venue-tag {
+  font-size: 0.55rem; font-weight: 800; background: var(--purple); color: #fff;
+  padding: 2px 7px; border-radius: var(--radius-pill); margin-left: 8px;
+  text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+.sidebar-nav {
+  flex: 1; padding: 8px 12px; display: flex; flex-direction: column; gap: 2px; overflow-y: auto;
+  /* Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(168,225,12,0.35) transparent;
+}
+/* WebKit / Chromium — Spontyx-branded scrollbar */
+.sidebar-nav::-webkit-scrollbar { width: 6px; }
+.sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+  margin: 6px 0;
+}
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(168,225,12,0.45), rgba(168,225,12,0.2));
+  border-radius: 999px;
+  transition: background 0.2s;
+}
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--lime), rgba(168,225,12,0.5));
+  box-shadow: 0 0 8px rgba(168,225,12,0.4);
+}
+/* Venue sidebar uses purple brand color instead of lime */
+.sidebar-venue .sidebar-nav { scrollbar-color: rgba(124,92,252,0.4) transparent; }
+.sidebar-venue .sidebar-nav::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(124,92,252,0.5), rgba(124,92,252,0.2));
+}
+.sidebar-venue .sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, var(--purple), rgba(124,92,252,0.55));
+  box-shadow: 0 0 8px rgba(124,92,252,0.45);
+}
+.sidebar-section { padding: 16px 12px 6px; font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: var(--grey-dark); }
+.sidebar-link {
+  display: flex; align-items: center; gap: 12px; padding: 10px 12px;
+  border-radius: var(--radius-sm); color: var(--grey); font-size: 0.875rem; font-weight: 500;
+  text-decoration: none; transition: all 0.15s; cursor: pointer;
+}
+.sidebar-link:hover { background: rgba(255,255,255,0.04); color: var(--off-white); }
+.sidebar-link.active { background: var(--lime-dim); color: var(--lime); }
+.sidebar-link.active svg { stroke: var(--lime); }
+.sidebar-link svg { width: 20px; height: 20px; stroke: var(--grey); stroke-width: 1.8; fill: none; flex-shrink: 0; }
+.sidebar-link .badge {
+  margin-left: auto; background: var(--coral); color: #fff; font-size: 0.65rem;
+  font-weight: 700; padding: 2px 7px; border-radius: var(--radius-pill); min-width: 20px; text-align: center;
+}
+.sidebar-link .badge.lime { background: var(--lime); color: var(--navy); }
+.sidebar-link .badge.orange { background: var(--purple); color: #fff; }
+
+/* Sidebar — Upgrade Box (player = lime, venue = purple) */
+.sidebar-upgrade {
+  margin: 12px; padding: 16px;
+  background: linear-gradient(135deg, rgba(168,225,12,0.15), rgba(78,205,196,0.08));
+  border: 1px solid rgba(168,225,12,0.25); border-radius: var(--radius-md);
+}
+.sidebar-upgrade-title { font-size: 0.75rem; font-weight: 800; color: var(--lime); margin-bottom: 4px; }
+.sidebar-upgrade-text { font-size: 0.7rem; color: var(--grey); line-height: 1.4; margin-bottom: 10px; }
+.sidebar-upgrade-btn {
+  display: block; width: 100%; padding: 8px; background: var(--lime); color: var(--navy);
+  border: none; border-radius: var(--radius-sm); font-size: 0.75rem; font-weight: 800;
+  cursor: pointer; text-align: center; transition: opacity 0.2s, transform 0.2s; font-family: inherit;
+  box-shadow: 0 4px 14px rgba(168,225,12,0.25);
+}
+.sidebar-upgrade-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+
+/* Venue sidebar keeps purple upgrade branding */
+.sidebar-venue .sidebar-upgrade {
+  background: linear-gradient(135deg, rgba(124,92,252,0.15), rgba(168,225,12,0.1));
+  border-color: rgba(124,92,252,0.25);
+}
+.sidebar-venue .sidebar-upgrade-title { color: var(--purple); }
+.sidebar-venue .sidebar-upgrade-btn {
+  background: var(--purple); color: #fff;
+  box-shadow: 0 4px 14px rgba(124,92,252,0.25);
+}
+
+/* Sidebar — Profile */
+.sidebar-profile {
+  padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.06);
+  display: flex; align-items: center; gap: 12px; cursor: pointer; transition: background 0.15s;
+}
+.sidebar-profile:hover { background: rgba(255,255,255,0.03); }
+.sidebar-avatar {
+  width: 36px; height: 36px; border-radius: 50%; background: var(--lime);
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 800; font-size: 0.8rem; color: var(--navy); flex-shrink: 0;
+}
+.sidebar-profile-info { flex: 1; min-width: 0; }
+.sidebar-profile-name { font-size: 0.8rem; font-weight: 600; color: var(--off-white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sidebar-profile-tier { font-size: 0.65rem; color: var(--lime); font-weight: 600; }
+
+/* Venue overrides */
+.sidebar-venue .sidebar-avatar { border-radius: var(--radius-sm); background: var(--purple); }
+.sidebar-venue .sidebar-profile-tier { color: var(--purple); }
+
+/* ══════════════════════════════════════════════
+   MAIN CONTENT AREA
+   ══════════════════════════════════════════════ */
+.main { margin-left: 260px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+/* ══════════════════════════════════════════════
+   TOAST NOTIFICATION
+   ══════════════════════════════════════════════ */
+.toast {
+  position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(80px);
+  background: var(--navy-card); border: 1px solid rgba(255,255,255,0.1); color: var(--off-white);
+  padding: 14px 28px; border-radius: var(--radius-pill); font-size: 0.85rem; font-weight: 600;
+  z-index: 999; opacity: 0; transition: all 0.4s cubic-bezier(0.16,1,0.3,1); pointer-events: none;
+  box-shadow: var(--shadow-lg);
+}
+.toast.show, .toast.active { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ══════════════════════════════════════════════
+   MOBILE MENU BUTTON
+   ══════════════════════════════════════════════ */
+.mobile-menu-btn {
+  display: none; width: 40px; height: 40px; border-radius: 50%; border: none;
+  background: var(--navy-light); color: var(--off-white); cursor: pointer;
+  align-items: center; justify-content: center;
+}
+.mobile-menu-btn svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+/* ══════════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .main { margin-left: 0; }
+  .mobile-menu-btn { display: flex; }
+}

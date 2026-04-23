@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Venues &amp; Bars</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+<style>/* ── Sidebar (shared) ── */
+
+    /* ── Main ── */
+    .main { margin-left: 260px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* Top Bar */
+    .topbar {
+      padding: 16px 32px; display: flex; align-items: center; gap: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-title { font-size: 1rem; font-weight: 800; }
+    .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .topbar-btn {
+      width: 40px; height: 40px; border-radius: 50%; border: none;
+      background: var(--navy-light); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; position: relative; transition: background 0.2s;
+    }
+    .topbar-btn:hover { background: var(--navy-hover); }
+    .topbar-btn svg { width: 18px; height: 18px; stroke: var(--grey); fill: none; stroke-width: 1.8; }
+    .topbar-btn .notif-dot {
+      position: absolute; top: 8px; right: 8px; width: 8px; height: 8px;
+      background: var(--coral); border-radius: 50%; border: 2px solid var(--navy);
+    }
+
+    /* ── Content ── */
+    .content { padding: 32px; flex: 1; max-width: 1200px; }
+
+    /* ── Page Header ── */
+    .page-header { margin-bottom: 24px; display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+    .page-header-text { flex: 1; min-width: 260px; }
+    .page-header h1 { font-size: 1.8rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+    .page-header h1 span { color: var(--lime); }
+    .page-header p { color: var(--grey); font-size: 0.9rem; }
+
+    /* ── Play Live CTA ── */
+    .play-live-btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      padding: 14px 22px; border-radius: 999px;
+      background: linear-gradient(135deg, #A8E10C, #7BC400);
+      color: var(--navy); font-family: inherit; font-size: 0.9rem; font-weight: 800;
+      text-decoration: none; border: none; cursor: pointer;
+      box-shadow: 0 8px 24px rgba(168,225,12,0.35);
+      transition: transform 0.2s, box-shadow 0.2s;
+      position: relative; overflow: hidden; white-space: nowrap;
+    }
+    .play-live-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(168,225,12,0.5); }
+    .play-live-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.2; }
+    .play-live-btn .live-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--navy);
+      box-shadow: 0 0 0 0 rgba(26,26,46,0.7);
+      animation: play-live-pulse 1.6s infinite;
+    }
+    @keyframes play-live-pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(26,26,46,0.55); }
+      70%  { box-shadow: 0 0 0 10px rgba(26,26,46,0); }
+      100% { box-shadow: 0 0 0 0 rgba(26,26,46,0); }
+    }
+
+    /* ── Search & Filter Bar ── */
+    .filter-bar {
+      display: flex; gap: 12px; margin-bottom: 24px; flex-wrap: wrap; align-items: stretch;
+    }
+    .search-box {
+      flex: 1; min-width: 220px; position: relative;
+    }
+    .search-box input {
+      width: 100%; padding: 12px 14px 12px 42px; background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md);
+      color: var(--off-white); font-size: 0.88rem; font-family: inherit; outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-box input::placeholder { color: var(--grey-dark); }
+    .search-box input:focus { border-color: rgba(168,225,12,0.3); }
+    .search-box svg {
+      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+      width: 18px; height: 18px; stroke: var(--grey-dark); fill: none; stroke-width: 1.8;
+    }
+    .filter-select {
+      padding: 10px 14px; background: var(--navy-card); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-md); color: var(--off-white); font-family: inherit;
+      font-size: 0.82rem; font-weight: 600; cursor: pointer; outline: none; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%239898B0' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px;
+      min-width: 140px;
+    }
+    .filter-select:focus { border-color: rgba(168,225,12,0.3); }
+
+    /* ── Radius Slider ── */
+    .radius-filter {
+      display: flex; align-items: center; gap: 10px; padding: 8px 16px;
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-md); min-width: 200px;
+    }
+    .radius-filter svg {
+      width: 18px; height: 18px; stroke: var(--purple); fill: none; stroke-width: 1.8; flex-shrink: 0;
+    }
+    .radius-filter-label { font-size: 0.72rem; font-weight: 700; color: var(--grey); white-space: nowrap; }
+    .radius-filter-value { font-size: 0.78rem; font-weight: 800; color: var(--lime); min-width: 42px; text-align: right; }
+    .radius-slider {
+      -webkit-appearance: none; appearance: none; flex: 1; height: 4px;
+      background: rgba(255,255,255,0.08); border-radius: 2px; outline: none; cursor: pointer;
+    }
+    .radius-slider::-webkit-slider-thumb {
+      -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%;
+      background: var(--purple); cursor: pointer; border: 2px solid var(--navy-card);
+      box-shadow: 0 0 8px rgba(124,92,252,0.4);
+    }
+
+    /* ── Location Banner ── */
+    .location-banner {
+      display: flex; align-items: center; gap: 10px; padding: 12px 18px;
+      background: linear-gradient(90deg, rgba(124,92,252,0.08), rgba(168,225,12,0.05));
+      border: 1px solid rgba(124,92,252,0.15); border-radius: var(--radius-md);
+      margin-bottom: 24px; font-size: 0.82rem; color: var(--grey);
+    }
+    .location-banner svg {
+      width: 18px; height: 18px; stroke: var(--purple); fill: none; stroke-width: 2; flex-shrink: 0;
+    }
+    .location-banner strong { color: var(--off-white); }
+    .location-banner-btn {
+      margin-left: auto; padding: 6px 14px; background: var(--purple); color: #fff;
+      border: none; border-radius: var(--radius-pill); font-size: 0.72rem; font-weight: 700;
+      cursor: pointer; font-family: inherit; transition: opacity 0.2s; white-space: nowrap;
+    }
+    .location-banner-btn:hover { opacity: 0.85; }
+
+    /* ── Results Info ── */
+    .results-info {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 18px; font-size: 0.82rem; color: var(--grey);
+    }
+    .results-info strong { color: var(--off-white); }
+    .sort-toggle {
+      display: flex; gap: 4px; background: var(--navy-card); border-radius: var(--radius-sm); padding: 3px;
+    }
+    .sort-btn {
+      padding: 5px 12px; border: none; border-radius: 6px; font-size: 0.72rem; font-weight: 700;
+      font-family: inherit; cursor: pointer; transition: all 0.2s; background: transparent; color: var(--grey);
+    }
+    .sort-btn.active { background: var(--lime-dim); color: var(--lime); }
+
+    /* ── Venue Cards Grid ── */
+    .venues-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px;
+      align-items: stretch;
+    }
+    .venue-card {
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg); overflow: hidden; transition: all 0.25s;
+      cursor: pointer;
+      display: flex; flex-direction: column; height: 100%;
+    }
+    .venue-card:hover { transform: translateY(-3px); border-color: rgba(124,92,252,0.2); box-shadow: var(--shadow); }
+    .venue-card-header {
+      height: 100px; flex-shrink: 0; display: flex; align-items: flex-end; padding: 14px 16px;
+      position: relative; overflow: hidden;
+    }
+    .venue-card-header::after {
+      content: ''; position: absolute; inset: 0;
+      background: linear-gradient(transparent 30%, rgba(26,26,46,0.9));
+    }
+    /* Stronger darken when a real photo is used so venue name stays legible */
+    .venue-card-header.has-photo::after {
+      background: linear-gradient(transparent 10%, rgba(0,0,0,0.35) 55%, rgba(26,26,46,0.95));
+    }
+    .venue-card-live {
+      position: absolute; top: 10px; right: 10px; z-index: 2;
+      display: flex; align-items: center; gap: 4px; padding: 3px 10px;
+      background: rgba(255,107,107,0.9); border-radius: var(--radius-pill);
+      font-size: 0.6rem; font-weight: 800; color: #fff; text-transform: uppercase;
+    }
+    .venue-card-live .pulse { width: 5px; height: 5px; border-radius: 50%; background: #fff; animation: pulse-live 2s infinite; }
+    @keyframes pulse-live { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+    .venue-card-distance {
+      position: absolute; top: 10px; left: 10px; z-index: 2;
+      padding: 3px 10px; background: rgba(26,26,46,0.75); border-radius: var(--radius-pill);
+      font-size: 0.65rem; font-weight: 700; color: var(--off-white); backdrop-filter: blur(6px);
+    }
+    .venue-card-name {
+      position: relative; z-index: 2; font-size: 1rem; font-weight: 800; color: #fff;
+    }
+    .venue-card-body { padding: 14px 16px; flex: 1; display: flex; flex-direction: column; }
+    /* Next event block gets pushed to the bottom of the body so footers align */
+    .venue-card-body .venue-card-event { margin-top: auto; }
+    /* When a card has NO next event, the footer still aligns because the body flex-grows */
+    .venue-card-meta {
+      display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px;
+    }
+    .venue-meta-tag {
+      display: flex; align-items: center; gap: 4px; font-size: 0.7rem; color: var(--grey); font-weight: 600;
+    }
+    .venue-meta-tag svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; flex-shrink: 0; }
+    .venue-meta-tag.type { color: var(--purple); }
+    .venue-card-sports {
+      display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px;
+    }
+    .sport-pill {
+      padding: 3px 8px; border-radius: var(--radius-pill); font-size: 0.6rem; font-weight: 700;
+      background: var(--lime-dim); color: var(--lime); text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .venue-card-event {
+      background: rgba(124,92,252,0.06); border: 1px solid rgba(124,92,252,0.12);
+      border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 12px;
+    }
+    .venue-event-label {
+      font-size: 0.6rem; font-weight: 800; color: var(--purple); text-transform: uppercase;
+      letter-spacing: 0.5px; margin-bottom: 4px;
+    }
+    .venue-event-name { font-size: 0.82rem; font-weight: 700; color: var(--off-white); margin-bottom: 2px; }
+    .venue-event-time { font-size: 0.7rem; color: var(--grey); }
+    .venue-card-footer {
+      display: flex; gap: 8px; padding: 0 16px 14px;
+      flex-shrink: 0; margin-top: auto;
+    }
+    .venue-btn {
+      flex: 1; padding: 9px 14px; border-radius: var(--radius-pill); border: none;
+      font-family: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer;
+      transition: all 0.2s; text-align: center;
+    }
+    .venue-btn.primary { background: var(--lime); color: var(--navy); font-weight: 800; box-shadow: 0 4px 14px rgba(168,225,12,0.25); }
+    .venue-btn.primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .venue-btn.secondary {
+      background: transparent; color: var(--grey); border: 1px solid rgba(255,255,255,0.08);
+    }
+    .venue-btn.secondary:hover { border-color: rgba(255,255,255,0.2); color: var(--off-white); }
+    .venue-badges-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+    .venue-badge-pill {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 3px 8px; border-radius: var(--radius-pill); font-size: 0.55rem; font-weight: 700;
+    }
+    .venue-badge-pill svg { flex-shrink: 0; }
+    .venue-badge-pill.more { background: rgba(255,255,255,0.05); color: var(--grey); border: 1px solid rgba(255,255,255,0.08); }
+    .venue-trophies-row {
+      display: flex; align-items: center; gap: 6px; margin-bottom: 10px;
+      font-size: 0.62rem; color: #FFD93D; font-weight: 700;
+    }
+    .venue-trophy-name {
+      background: rgba(255,217,61,0.08); border: 1px solid rgba(255,217,61,0.15);
+      padding: 2px 8px; border-radius: var(--radius-pill); font-size: 0.55rem;
+    }
+    .venue-trophy-more {
+      font-size: 0.55rem; color: var(--grey); font-weight: 600;
+    }
+
+    /* ── Empty State ── */
+    .empty-state {
+      text-align: center; padding: 60px 20px;
+    }
+    .empty-state-icon { font-size: 3rem; margin-bottom: 12px; }
+    .empty-state-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 6px; }
+    .empty-state-sub { font-size: 0.85rem; color: var(--grey); max-width: 400px; margin: 0 auto; }
+
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .venues-grid { grid-template-columns: 1fr; }
+      .filter-bar { flex-direction: column; }
+    }</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar-placeholder"></div>
+
+<!-- Main -->
+<div class="main">
+
+  <!-- Top Bar -->
+  <header class="topbar">
+    <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="topbar-title">Venues &amp; Bars</div>
+    <div class="topbar-right">
+      <button class="topbar-btn" onclick="showToast('Notifications coming soon')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        <div class="notif-dot"></div>
+      </button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <div class="page-header-text">
+        <h1>Venues &amp; <span>Bars</span></h1>
+        <p>Find venues near you hosting live Spontyx games. Join events, reserve spots, and compete with the crowd.</p>
+      </div>
+      <a href="live.html" class="play-live-btn">
+        <span class="live-dot"></span>
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+        Play Live Now
+      </a>
+    </div>
+
+    <!-- Location Banner -->
+    <div class="location-banner" id="locationBanner">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+      <span id="locationText">Searching for your location...</span>
+      <button class="location-banner-btn" id="locationBtn" onclick="requestLocation()">Allow Location</button>
+    </div>
+
+    <!-- Search & Filter Bar -->
+    <div class="filter-bar">
+      <div class="search-box">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="searchInput" placeholder="Search venues, bars, cities..." oninput="filterVenues()" />
+      </div>
+      <select class="filter-select" id="filterSport" onchange="filterVenues()">
+        <option value="">All Sports</option>
+        <option value="Football">Football</option>
+        <option value="Basketball">Basketball</option>
+        <option value="Rugby">Rugby</option>
+        <option value="Cricket">Cricket</option>
+        <option value="Tennis">Tennis</option>
+        <option value="MMA">MMA</option>
+        <option value="Boxing">Boxing</option>
+      </select>
+      <select class="filter-select" id="filterType" onchange="filterVenues()">
+        <option value="">All Types</option>
+        <option value="Sports Bar">Sports Bar</option>
+        <option value="Pub">Pub</option>
+        <option value="Restaurant">Restaurant</option>
+        <option value="Stadium">Stadium</option>
+        <option value="Hotel">Hotel</option>
+      </select>
+      <div class="radius-filter">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg>
+        <input type="range" class="radius-slider" id="radiusSlider" min="1" max="50" value="10" oninput="updateRadius()" />
+        <div class="radius-filter-value" id="radiusValue">10 km</div>
+      </div>
+    </div>
+
+    <!-- Results Info -->
+    <div class="results-info">
+      <span id="resultsCount"><strong>0</strong> venues found</span>
+      <div class="sort-toggle">
+        <button class="sort-btn active" onclick="sortVenues('distance', this)">Nearest</button>
+        <button class="sort-btn" onclick="sortVenues('events', this)">Events</button>
+        <button class="sort-btn" onclick="sortVenues('name', this)">A-Z</button>
+      </div>
+    </div>
+
+    <!-- Venues Grid -->
+    <div class="venues-grid" id="venuesGrid">
+      <!-- Populated by JS -->
+    </div>
+
+    <!-- Empty State -->
+    <div class="empty-state" id="emptyState" style="display:none;">
+      <div class="empty-state-icon">🏟️</div>
+      <div class="empty-state-title">No venues found</div>
+      <div class="empty-state-sub">Try expanding your search radius or changing your filters. Venues appear here as soon as they register on Spontyx.</div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="utils.js"></script>
+<script src="sidebar.js"></script>
+<script>SpontixSidebar.init({ type: 'player', active: 'venues.html' });</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+<script>
+  // ══════════════════════════════════════════
+  // VENUES & BARS — Discovery Page
+  // ══════════════════════════════════════════
+
+  // ── Venue trophy display helper ──
+  function getVenueTrophyHtml(venueName) {
+    var customTrophies = SpontixStore.getVenueCustomTrophies();
+    var venueTrophies = customTrophies.filter(function(t) { return t.venueName === venueName; });
+    if (venueTrophies.length === 0) return '';
+    var html = '<div class="venue-trophies-row">';
+    html += '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#FFD93D" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5H6M18 9h1.5a2.5 2.5 0 000-5H18M18 2H6v7a6 6 0 0012 0V2z"/></svg> ';
+    venueTrophies.slice(0, 2).forEach(function(t) {
+      html += '<span class="venue-trophy-name">' + t.name + '</span>';
+    });
+    if (venueTrophies.length > 2) html += '<span class="venue-trophy-more">+' + (venueTrophies.length - 2) + '</span>';
+    html += '</div>';
+    return html;
+  }
+
+  let userLat = null;
+  let userLng = null;
+  let currentSort = 'distance';
+  let allVenues = [];
+
+  // ── Demo / seed venues ──
+  // IMPORTANT: `id` values must match those in SpontixStore._seedVenues().
+  // Photos, custom trophies, and badges all resolve via this venueId.
+  const SEED_VENUES = [
+    {
+      id: "11111111-1111-1111-1111-111111111101",
+      name: "The Penalty Box", type: "Sports Bar", city: "London", country: "UK",
+      address: "42 Brick Lane, Shoreditch", lat: 51.5219, lng: -0.0714,
+      sports: ["Football", "Rugby", "Boxing"], color: "purple",
+      description: "The ultimate matchday experience. 12 screens, draft beers, and Spontyx trivia every game night.",
+      capacity: 120, hours: "11:00 - 01:00", hasLiveEvent: true,
+      nextEvent: { name: "Champions League Final Night", date: "Sat, Apr 18 · 8:00 PM", spots: 8 },
+      upcomingEvents: 3
+    },
+    {
+      id: "11111111-1111-1111-1111-111111111102",
+      name: "Score Sports Lounge", type: "Sports Bar", city: "Manchester", country: "UK",
+      address: "15 Deansgate, City Centre", lat: 53.4794, lng: -2.2453,
+      sports: ["Football", "Cricket", "Tennis"], color: "lime",
+      description: "Premium sports viewing with immersive Spontyx leagues running every weekend.",
+      capacity: 85, hours: "12:00 - 00:00", hasLiveEvent: false,
+      nextEvent: { name: "Premier League Super Sunday", date: "Sun, Apr 19 · 2:00 PM", spots: 15 },
+      upcomingEvents: 5
+    },
+    {
+      id: "11111111-1111-1111-1111-111111111103",
+      name: "The Dugout", type: "Pub", city: "Liverpool", country: "UK",
+      address: "8 Mathew Street", lat: 53.4055, lng: -2.9877,
+      sports: ["Football", "Boxing", "MMA"], color: "coral",
+      description: "Old-school pub, new-school games. Weekly Spontyx tournaments with cash prizes.",
+      capacity: 60, hours: "14:00 - 23:00", hasLiveEvent: false,
+      nextEvent: { name: "Merseyside Derby Trivia", date: "Sat, Apr 25 · 3:00 PM", spots: 22 },
+      upcomingEvents: 2
+    },
+    {
+      id: "11111111-1111-1111-1111-111111111104",
+      name: "Arena Bar & Grill", type: "Restaurant", city: "Birmingham", country: "UK",
+      address: "99 Broad St", lat: 52.4744, lng: -1.9149,
+      sports: ["Football", "Basketball", "Rugby"], color: "teal",
+      description: "Great food, cold beers, and the best trivia in Brum. Book a table for game night.",
+      capacity: 150, hours: "11:00 - 23:00", hasLiveEvent: true,
+      nextEvent: { name: "NBA Playoffs Watch Party", date: "Tonight · 9:30 PM", spots: 3 },
+      upcomingEvents: 4
+    },
+    {
+      id: "11111111-1111-1111-1111-111111111105",
+      name: "Full Time Sports Café", type: "Sports Bar", city: "Leeds", country: "UK",
+      address: "22 Briggate", lat: 53.7960, lng: -1.5424,
+      sports: ["Football", "Rugby", "Cricket"], color: "gold",
+      description: "Yorkshire's premier sports café. 20+ screens and Spontyx trivia every match day.",
+      capacity: 100, hours: "10:00 - 00:00", hasLiveEvent: false,
+      nextEvent: { name: "Yorkshire Rugby Showdown", date: "Fri, Apr 24 · 7:45 PM", spots: 30 },
+      upcomingEvents: 6
+    },
+    {
+      id: "11111111-1111-1111-1111-111111111106",
+      name: "The Final Whistle", type: "Pub", city: "Dublin", country: "Ireland",
+      address: "Temple Bar, Dublin 2", lat: 53.3454, lng: -6.2632,
+      sports: ["Football", "Rugby", "MMA", "Boxing"], color: "purple",
+      description: "Legendary Dublin pub now powered by Spontyx. Live games every weekend.",
+      capacity: 80, hours: "12:00 - 01:30", hasLiveEvent: false,
+      nextEvent: { name: "Six Nations Special", date: "Sat, Apr 26 · 5:00 PM", spots: 12 },
+      upcomingEvents: 2
+    }
+  ];
+
+  // ── Color gradients for venue card headers ──
+  const colorGradients = {
+    purple: 'linear-gradient(135deg, #7C5CFC, #5A3FD4)',
+    lime: 'linear-gradient(135deg, #6D9E00, #4A6B00)',
+    teal: 'linear-gradient(135deg, #3BA89E, #2A7A72)',
+    coral: 'linear-gradient(135deg, #E84545, #B83232)',
+    gold: 'linear-gradient(135deg, #C9A800, #8A7300)',
+    grey: 'linear-gradient(135deg, #5A5A78, #3A3A4A)',
+  };
+
+  // ── Haversine distance (km) ──
+  function haversine(lat1, lon1, lat2, lon2) {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  }
+
+  // ── Location ──
+  function requestLocation() {
+    if (navigator.geolocation) {
+      document.getElementById('locationText').innerHTML = '<strong>Locating you...</strong>';
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          userLat = pos.coords.latitude;
+          userLng = pos.coords.longitude;
+          document.getElementById('locationText').innerHTML = 'Showing venues near <strong>your location</strong>';
+          document.getElementById('locationBtn').textContent = 'Update';
+          loadVenues();
+        },
+        () => {
+          document.getElementById('locationText').innerHTML = 'Location access denied. Showing <strong>all venues</strong>.';
+          document.getElementById('locationBtn').textContent = 'Try Again';
+          loadVenues();
+        }
+      );
+    } else {
+      document.getElementById('locationText').innerHTML = 'Location not supported. Showing <strong>all venues</strong>.';
+      loadVenues();
+    }
+  }
+
+  // ── Load venues from Supabase (with localStorage cache fallback) ──
+  // First paint: cached/seed data → instant.
+  // Second paint: live Supabase data → replaces cache-backed grid once it arrives.
+  // Both paints go through filterVenues() so active filters/sort are respected.
+  async function loadVenues() {
+    allVenues = buildVenueList(SpontixStore.getVenues());
+    recalcDistances();
+    filterVenues();
+
+    try {
+      const liveVenues = await SpontixStoreAsync.getVenues();
+      if (liveVenues && liveVenues.length) {
+        allVenues = buildVenueList(liveVenues);
+        recalcDistances();
+        filterVenues();
+      }
+    } catch (e) { /* offline — first paint stands */ }
+  }
+
+  // Listen for cache refreshes kicked off by other pages / sidebar warm-up
+  window.addEventListener('spontix-venues-refreshed', (e) => {
+    if (!e.detail || !e.detail.venues) return;
+    allVenues = buildVenueList(e.detail.venues);
+    recalcDistances();
+    filterVenues();
+  });
+
+  // Re-render venue cards when photos are refreshed (title photos may change)
+  window.addEventListener('spontix-venue-photos-refreshed', () => {
+    filterVenues();
+  });
+
+  // Re-render when reservations are refreshed from Supabase
+  window.addEventListener('spontix-reservations-refreshed', () => {
+    filterVenues();
+  });
+
+  // Merges hardcoded SEED_VENUES (which have rich nextEvent/hasLiveEvent
+  // data the DB doesn't carry yet) with DB-sourced venues. Dedupes by
+  // venue NAME rather than id: three sources (DB, store seed, page seed)
+  // historically used different id formats; name is the only stable key.
+  function buildVenueList(dbVenues) {
+    const seedByName = Object.fromEntries(SEED_VENUES.map(v => [v.name, v]));
+    const merged = [];
+    const seenNames = new Set();
+
+    (dbVenues || []).forEach(dbv => {
+      const name = dbv.venueName;
+      if (!name || seenNames.has(name)) return;
+      seenNames.add(name);
+      const seed = seedByName[name];
+      merged.push({
+        // Prefer the DB id (real UUID) over the seed id (legacy short string)
+        id:         dbv.id || (seed && seed.id),
+        name:       name,
+        type:       dbv.type        || (seed && seed.type),
+        city:       dbv.city        || (seed && seed.city),
+        country:    dbv.country     || (seed && seed.country),
+        address:    dbv.address     || (seed && seed.address) || '',
+        lat:        dbv.lat != null ? Number(dbv.lat) : (seed && seed.lat),
+        lng:        dbv.lng != null ? Number(dbv.lng) : (seed && seed.lng),
+        sports:     (dbv.sports && dbv.sports.length ? dbv.sports : (seed && seed.sports)) || [],
+        color:      dbv.color       || (seed && seed.color)      || 'purple',
+        description:dbv.description || (seed && seed.description)|| '',
+        capacity:   dbv.capacity    || (seed && seed.capacity)   || 50,
+        hours:      dbv.hours       || (seed && seed.hours)      || '',
+        // Computed from venue_events in a later domain port; for now the
+        // seed supplies these "alive"-looking details for demo venues.
+        hasLiveEvent: seed ? seed.hasLiveEvent : false,
+        nextEvent:    seed ? seed.nextEvent : null,
+        upcomingEvents: seed ? seed.upcomingEvents : 0,
+        isNew:      !seed,
+      });
+    });
+
+    // Any SEED_VENUES not mirrored in the DB response (e.g. offline mode)
+    SEED_VENUES.forEach(seed => {
+      if (!seenNames.has(seed.name)) {
+        seenNames.add(seed.name);
+        merged.push({ ...seed });
+      }
+    });
+
+    return merged;
+  }
+
+  function recalcDistances() {
+    allVenues.forEach(v => {
+      if (userLat && userLng && v.lat && v.lng) v.distance = haversine(userLat, userLng, v.lat, v.lng);
+      else v.distance = null;
+    });
+  }
+
+  // ── Filter & render ──
+  function filterVenues() {
+    const search = document.getElementById('searchInput').value.toLowerCase();
+    const sport = document.getElementById('filterSport').value;
+    const type = document.getElementById('filterType').value;
+    const radius = parseInt(document.getElementById('radiusSlider').value);
+
+    let filtered = allVenues.filter(v => {
+      // Search
+      if (search && !v.name.toLowerCase().includes(search) && !v.city.toLowerCase().includes(search) && !v.address.toLowerCase().includes(search)) return false;
+      // Sport
+      if (sport && !v.sports.includes(sport)) return false;
+      // Type
+      if (type && v.type !== type) return false;
+      // Radius
+      if (v.distance !== null && v.distance > radius) return false;
+      return true;
+    });
+
+    // Sort
+    if (currentSort === 'distance') {
+      filtered.sort((a, b) => (a.distance || 9999) - (b.distance || 9999));
+    } else if (currentSort === 'events') {
+      filtered.sort((a, b) => b.upcomingEvents - a.upcomingEvents);
+    } else if (currentSort === 'name') {
+      filtered.sort((a, b) => a.name.localeCompare(b.name));
+    }
+
+    renderVenues(filtered);
+  }
+
+  function renderVenues(venues) {
+    const grid = document.getElementById('venuesGrid');
+    const empty = document.getElementById('emptyState');
+
+    document.getElementById('resultsCount').innerHTML = '<strong>' + venues.length + '</strong> venue' + (venues.length !== 1 ? 's' : '') + ' found';
+
+    if (venues.length === 0) {
+      grid.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    grid.innerHTML = venues.map(v => {
+      const gradient = colorGradients[v.color] || colorGradients.purple;
+      const distLabel = v.distance !== null ? (v.distance < 1 ? (v.distance * 1000).toFixed(0) + ' m' : v.distance.toFixed(1) + ' km') : v.city;
+      const sportPills = v.sports.slice(0, 4).map(s => '<span class="sport-pill">' + s + '</span>').join('');
+
+      // Resolve venue header background: title photo overrides gradient if enabled
+      // Prefer venueId (stable) over venueName (legacy / rename-sensitive)
+      const titlePhoto = SpontixStore.getVenueTitlePhotoUrl(v.id || v.name);
+      const headerStyle = titlePhoto
+        ? 'background-image:url(' + titlePhoto + '); background-size:cover; background-position:center;'
+        : 'background:' + gradient + ';';
+      const headerHasPhoto = !!titlePhoto;
+
+      let eventHtml = '';
+      if (v.nextEvent) {
+        eventHtml = '<div class="venue-card-event">' +
+          '<div class="venue-event-label">Next Event</div>' +
+          '<div class="venue-event-name">' + v.nextEvent.name + '</div>' +
+          '<div class="venue-event-time">' + v.nextEvent.date + (v.nextEvent.spots ? ' · ' + v.nextEvent.spots + ' spots left' : '') + '</div>' +
+          '</div>';
+      }
+
+      // Check if player has reserved a spot at this venue
+      const reservations = SpontixStore.getReservations();
+      const hasReservation = reservations.some(r => r.venue === v.name || r.venueId === v.id);
+      const reservationStatus = hasReservation ? '<div class="venue-card-live" style="background:rgba(78,205,196,0.9);"><span class="pulse" style="background:var(--navy);"></span> RESERVED</div>' : '';
+
+      const liveHtml = v.hasLiveEvent ? '<div class="venue-card-live"><span class="pulse"></span> LIVE NOW</div>' : '';
+      const newBadge = v.isNew ? '<div class="venue-card-live" style="background:rgba(168,225,12,0.9);"><span class="pulse" style="background:var(--navy);"></span> NEW</div>' : '';
+
+      return '<div class="venue-card" onclick="showToast(\'Opening ' + v.name.replace(/'/g, "\\'") + '...\')"><div class="venue-card-header' + (headerHasPhoto ? ' has-photo' : '') + '" style="' + headerStyle + '">' +
+        '<div class="venue-card-distance">' + distLabel + '</div>' +
+        reservationStatus + liveHtml + newBadge +
+        '<div class="venue-card-name">' + v.name + '</div>' +
+        '</div><div class="venue-card-body">' +
+        '<div class="venue-card-meta">' +
+        '<div class="venue-meta-tag type"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l8-4 8 4v14"/></svg> ' + v.type + '</div>' +
+        '<div class="venue-meta-tag"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> ' + v.hours + '</div>' +
+        '<div class="venue-meta-tag"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg> ' + v.capacity + '</div>' +
+        '</div>' +
+        '<div class="venue-card-sports">' + sportPills + '</div>' +
+        '<div class="venue-badges-row">' + SpontixStore.renderVenueBadgePills(v.name) + '</div>' +
+        getVenueTrophyHtml(v.name) +
+        eventHtml +
+        '</div><div class="venue-card-footer">' +
+        (v.nextEvent && !hasReservation ? '<button class="venue-btn primary" onclick="event.stopPropagation(); reserveSpot(\'' + (v.id || '').replace(/'/g, "\\'") + '\', null, \'' + v.name.replace(/'/g, "\\'") + '\', \'' + (v.nextEvent.name || '').replace(/'/g, "\\'") + '\')">Reserve Spot</button>' : (hasReservation ? '<button class="venue-btn primary" style="opacity:0.6;" disabled>✓ Reserved</button>' : '')) +
+        '<button class="venue-btn secondary" onclick="event.stopPropagation(); showToast(\'View details coming soon\')">View Details</button>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  function updateRadius() {
+    const val = document.getElementById('radiusSlider').value;
+    document.getElementById('radiusValue').textContent = val + ' km';
+    filterVenues();
+  }
+
+  function sortVenues(sortBy, btn) {
+    currentSort = sortBy;
+    document.querySelectorAll('.sort-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    filterVenues();
+  }
+
+  async function reserveSpot(venueId, eventId, venueName, eventName) {
+    try {
+      var result = await SpontixStoreAsync.reserveSpot(venueId, eventId, venueName, eventName || 'General Event');
+      if (result && !result.ok) {
+        SpontixStore.reserveSpot(venueName, eventName || 'General Event');
+      }
+    } catch (err) {
+      SpontixStore.reserveSpot(venueName, eventName || 'General Event');
+    }
+    showToast('Spot reserved at ' + (venueName || 'venue') + '! Check your schedule.');
+    filterVenues();
+  }
+
+  // ── Listen for venue registrations ──
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'spontix_venue_profile') {
+      loadVenues();
+    }
+  });
+
+  // ── Boot ──
+  loadVenues();
+</script>
+</body>
+</html>

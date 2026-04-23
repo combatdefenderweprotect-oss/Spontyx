@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Upcoming</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+<style>
+    /* ── Main ── */
+    .main { margin-left: 260px; flex: 1; min-height: 100vh; display: flex; flex-direction: column; }
+    .topbar {
+      padding: 16px 32px; display: flex; align-items: center; gap: 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy);
+      position: sticky; top: 0; z-index: 50;
+    }
+    .topbar-search { flex: 1; max-width: 400px; position: relative; }
+    .topbar-search input {
+      width: 100%; padding: 10px 14px 10px 40px; background: var(--navy-light);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-pill);
+      color: var(--off-white); font-size: 0.85rem; font-family: inherit; outline: none;
+    }
+    .topbar-search input::placeholder { color: var(--grey-dark); }
+    .topbar-search input:focus { border-color: rgba(168,225,12,0.3); }
+    .topbar-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--grey-dark); }
+    .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+    .topbar-btn {
+      width: 40px; height: 40px; border-radius: 50%; border: none;
+      background: var(--navy-light); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; position: relative; transition: background 0.2s;
+    }
+    .topbar-btn:hover { background: var(--navy-hover); }
+    .topbar-btn svg { width: 18px; height: 18px; stroke: var(--grey); fill: none; stroke-width: 1.8; }
+    .topbar-btn .notif-dot {
+      position: absolute; top: 8px; right: 8px; width: 8px; height: 8px;
+      background: var(--coral); border-radius: 50%; border: 2px solid var(--navy);
+    }
+
+    .content { padding: 32px; flex: 1; max-width: 1100px; }
+
+    /* ── Page Header ── */
+    .page-header { margin-bottom: 28px; }
+    .page-header h1 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
+    .page-header h1 span { color: var(--lime); }
+    .page-header p { color: var(--grey); font-size: 0.88rem; }
+
+    /* ── Filter Chips ── */
+    .filter-row { display: flex; gap: 8px; margin-bottom: 28px; flex-wrap: wrap; align-items: center; }
+    .filter-chip {
+      padding: 7px 16px; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.1);
+      background: transparent; color: var(--grey); font-size: 0.8rem; font-weight: 600;
+      font-family: inherit; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+    }
+    .filter-chip:hover { border-color: rgba(168,225,12,0.3); color: var(--off-white); }
+    .filter-chip.active { background: var(--lime); color: var(--navy); border-color: var(--lime); }
+
+    /* ── Day Group ── */
+    .day-group { margin-bottom: 32px; }
+    .day-header {
+      display: flex; align-items: center; gap: 12px; margin-bottom: 14px; padding-bottom: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .day-label { font-size: 0.95rem; font-weight: 700; }
+    .day-label span { color: var(--lime); }
+    .day-date { font-size: 0.78rem; color: var(--grey); }
+    .day-count {
+      margin-left: auto; font-size: 0.68rem; font-weight: 700; padding: 3px 10px;
+      border-radius: var(--radius-pill); background: rgba(255,255,255,0.06); color: var(--grey);
+    }
+
+    /* ── Match Card ── */
+    .match-list { display: flex; flex-direction: column; gap: 10px; }
+
+    .match-card {
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg); padding: 18px 20px;
+      display: flex; align-items: center; gap: 16px;
+      transition: border-color 0.2s, transform 0.15s; cursor: pointer;
+      flex-wrap: wrap;
+    }
+    .match-card:hover { border-color: rgba(168,225,12,0.15); transform: translateY(-1px); }
+    .match-card.tonight { border-color: rgba(168,225,12,0.2); background: linear-gradient(135deg, var(--navy-card), rgba(168,225,12,0.03)); }
+
+    .match-time-box {
+      display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0;
+      min-width: 68px; padding: 10px 14px; border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.04); text-align: center;
+    }
+    .match-time-box.soon { background: rgba(168,225,12,0.08); }
+    .match-time-day { font-size: 0.6rem; color: var(--grey); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
+    .match-time-hour { font-size: 1.05rem; font-weight: 800; }
+    .match-time-countdown { font-size: 0.6rem; font-weight: 600; }
+    .match-time-countdown.soon { color: var(--lime); }
+    .match-time-countdown.normal { color: var(--teal); }
+
+    .match-info { flex: 1; min-width: 0; }
+    .match-teams { font-size: 0.95rem; font-weight: 700; margin-bottom: 5px; }
+    .match-meta { font-size: 0.75rem; color: var(--grey); display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .match-meta-item { display: flex; align-items: center; gap: 4px; }
+    .match-meta-item svg { width: 12px; height: 12px; stroke: var(--grey-dark); fill: none; stroke-width: 2; }
+
+    .match-pending {
+      display: flex; align-items: center; gap: 5px; padding: 5px 12px;
+      border-radius: var(--radius-pill); font-size: 0.72rem; font-weight: 700; flex-shrink: 0;
+    }
+    .match-pending svg { width: 13px; height: 13px; fill: none; stroke-width: 2; }
+    .match-pending.has-pending { background: rgba(255,159,67,0.12); color: var(--orange); }
+    .match-pending.has-pending svg { stroke: var(--orange); }
+    .match-pending.all-done { background: rgba(168,225,12,0.08); color: var(--lime); }
+    .match-pending.all-done svg { stroke: var(--lime); }
+
+    .match-notify-btn {
+      padding: 8px 14px; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.1);
+      background: transparent; color: var(--grey); font-size: 0.75rem; font-weight: 600;
+      font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 5px;
+      white-space: nowrap; transition: all 0.2s; flex-shrink: 0;
+    }
+    .match-notify-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .match-notify-btn:hover { border-color: var(--lime); color: var(--lime); }
+    .match-notify-btn.notified { border-color: var(--lime); color: var(--lime); background: var(--lime-dim); }
+
+    /* ── Loading / Empty ── */
+    .schedule-loading {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 80px 32px; gap: 16px; color: var(--grey);
+    }
+    .schedule-loading .spinner {
+      width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.08);
+      border-top-color: var(--lime); border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .schedule-empty {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      padding: 80px 32px; gap: 12px; text-align: center;
+    }
+    .schedule-empty .empty-icon { font-size: 3rem; opacity: 0.4; }
+    .schedule-empty h3 { font-size: 1.1rem; font-weight: 700; margin: 0; }
+    .schedule-empty p { color: var(--grey); font-size: 0.85rem; max-width: 340px; margin: 0; }
+    .schedule-empty a {
+      margin-top: 8px; padding: 10px 24px; background: var(--lime); color: var(--navy);
+      border-radius: var(--radius-pill); font-weight: 700; font-size: 0.85rem;
+      text-decoration: none; transition: opacity 0.2s;
+    }
+    .schedule-empty a:hover { opacity: 0.85; }
+
+    /* ── Saved badge (for personally-saved matches not tied to a league) ── */
+    .match-saved-badge {
+      display: flex; align-items: center; gap: 4px; padding: 5px 12px;
+      border-radius: var(--radius-pill); font-size: 0.72rem; font-weight: 700; flex-shrink: 0;
+      background: rgba(168,225,12,0.08); color: var(--lime); border: 1px solid rgba(168,225,12,0.15);
+    }
+    .match-saved-badge svg { width: 11px; height: 11px; fill: var(--lime); stroke: none; }
+    .match-card.is-saved { border-color: rgba(168,225,12,0.15); }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<div id="sidebar-placeholder"></div>
+
+<!-- Main -->
+<div class="main">
+  <header class="topbar">
+    <button class="mobile-menu-btn" onclick="toggleSidebar()">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+    </button>
+    <div class="topbar-search">
+      <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" placeholder="Search upcoming matches..." id="search-input" />
+    </div>
+    <div class="topbar-right">
+      <a href="notifications.html" class="topbar-btn" title="Notifications" style="text-decoration:none;">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        <span class="notif-dot"></span>
+      </a>
+      <button class="topbar-btn" title="Messages">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+      </button>
+    </div>
+  </header>
+
+  <div class="content">
+
+    <div class="page-header">
+      <h1><span>Upcoming</span> Matches</h1>
+      <p>Your week at a glance — every football match scheduled across your leagues.</p>
+    </div>
+
+    <!-- Filters — populated dynamically -->
+    <div class="filter-row" id="filter-row">
+      <button class="filter-chip active" onclick="setFilter(this,'all')">All Leagues</button>
+    </div>
+
+    <!-- Dynamic schedule content -->
+    <div id="schedule-content">
+      <div class="schedule-loading">
+        <div class="spinner"></div>
+        <span>Loading your schedule…</span>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="utils.js"></script>
+<script src="sidebar.js"></script>
+<script>SpontixSidebar.init({ type: 'player', active: 'upcoming.html' });</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+<script>
+  let activeFilter = 'all';
+  let allMatchItems = [];   // flat array of rendered match data for filter/search
+
+  /* ── Filter ── */
+  function setFilter(chip, leagueId) {
+    activeFilter = leagueId;
+    document.querySelectorAll('#filter-row .filter-chip').forEach(c => c.classList.remove('active'));
+    chip.classList.add('active');
+    applyFilters();
+  }
+
+  function applyFilters() {
+    const searchVal = (document.getElementById('search-input').value || '').toLowerCase();
+    document.querySelectorAll('.match-card').forEach(card => {
+      const leagueMatch = activeFilter === 'all' || card.dataset.leagueId === activeFilter;
+      const searchMatch = !searchVal || card.dataset.searchText.includes(searchVal);
+      card.style.display = (leagueMatch && searchMatch) ? '' : 'none';
+    });
+    // Hide empty day groups
+    document.querySelectorAll('.day-group').forEach(group => {
+      const visible = group.querySelectorAll('.match-card:not([style*="display: none"])').length;
+      const countEl = group.querySelector('.day-count');
+      if (countEl) countEl.textContent = visible + ' match' + (visible !== 1 ? 'es' : '');
+      group.style.display = visible === 0 ? 'none' : '';
+    });
+  }
+
+  /* ── Notify Toggle ── */
+  function toggleNotify(btn) {
+    if (btn.classList.contains('notified')) {
+      btn.classList.remove('notified');
+      btn.innerHTML = bellSvg() + ' Notify';
+      showToast('Notification removed');
+    } else {
+      btn.classList.add('notified');
+      btn.innerHTML = bellSvg() + ' On';
+      showToast("You'll be notified when this match starts");
+    }
+  }
+
+  function bellSvg() {
+    return '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>';
+  }
+
+  /* ── Countdown label ── */
+  function countdownLabel(kickoffDate) {
+    const now = new Date();
+    const diffMs = kickoffDate - now;
+    if (diffMs < 0) return 'Live';
+    const diffH = diffMs / 3600000;
+    if (diffH < 1) return 'in <1h';
+    if (diffH < 24) return 'in ' + Math.round(diffH) + 'h';
+    const diffD = Math.floor(diffH / 24);
+    if (diffD === 1) return 'tomorrow';
+    return diffD + ' days';
+  }
+
+  /* ── Date bucket label ── */
+  function dateBucket(d) {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const target = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const diffDays = Math.round((target - today) / 86400000);
+    if (diffDays === 0) return 'today';
+    if (diffDays === 1) return 'tomorrow';
+    if (diffDays <= 6) return d.toLocaleDateString('en-GB', { weekday: 'long' }).toLowerCase();
+    return 'next-week';
+  }
+
+  function bucketLabel(bucket, date) {
+    if (bucket === 'today') return '<span>Today</span> — ' + date.toLocaleDateString('en-GB', { weekday: 'long' });
+    if (bucket === 'tomorrow') return '<span>Tomorrow</span> — ' + date.toLocaleDateString('en-GB', { weekday: 'long' });
+    if (bucket === 'next-week') return 'Next Week';
+    return date.toLocaleDateString('en-GB', { weekday: 'long' });
+  }
+
+  function bucketDateStr(bucket, date) {
+    if (bucket === 'next-week') {
+      const end = new Date(date); end.setDate(end.getDate() + 6);
+      return date.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' }) + ' – ' +
+             end.toLocaleDateString('en-GB', { month: 'short', day: 'numeric' });
+    }
+    return date.toLocaleDateString('en-GB', { year: 'numeric', month: 'long', day: 'numeric' });
+  }
+
+  /* ── Render ── */
+  function renderSchedule(matches) {
+    const container = document.getElementById('schedule-content');
+
+    if (!matches.length) {
+      container.innerHTML = `
+        <div class="schedule-empty">
+          <div class="empty-icon">⚽</div>
+          <h3>No upcoming matches</h3>
+          <p>Join a football league to see scheduled matches here.</p>
+          <a href="discover.html">Browse Leagues</a>
+        </div>`;
+      return;
+    }
+
+    // Group by date bucket
+    const buckets = {};
+    matches.forEach(m => {
+      const b = dateBucket(m.kickoff);
+      if (!buckets[b]) buckets[b] = [];
+      buckets[b].push(m);
+    });
+
+    const bucketOrder = ['today', 'tomorrow', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', 'next-week'];
+    const orderedBuckets = Object.keys(buckets).sort((a, b) => {
+      const ai = bucketOrder.indexOf(a); const bi = bucketOrder.indexOf(b);
+      return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+    });
+
+    let html = '';
+    orderedBuckets.forEach(bucket => {
+      const items = buckets[bucket];
+      const firstDate = items[0].kickoff;
+      const isToday = bucket === 'today';
+
+      html += `
+      <div class="day-group" data-bucket="${esc(bucket)}">
+        <div class="day-header">
+          <div class="day-label">${bucketLabel(bucket, firstDate)}</div>
+          <div class="day-date">${bucketDateStr(bucket, firstDate)}</div>
+          <div class="day-count">${items.length} match${items.length !== 1 ? 'es' : ''}</div>
+        </div>
+        <div class="match-list">`;
+
+      items.forEach(m => {
+        const isSoon = isToday;
+        const timeDay = isSoon ? 'Today' : m.kickoff.toLocaleDateString('en-GB', { weekday: 'short' });
+        const timeHour = m.kickoff.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        const countdown = countdownLabel(m.kickoff);
+        const searchText = [m.home, m.away, m.leagueName, m.competitionName].join(' ').toLowerCase();
+
+        // Saved-only match (no league) vs league match
+        const badgeHtml = m.isSaved
+          ? `<div class="match-saved-badge"><svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z"/></svg> Saved</div>`
+          : (() => {
+              const preQCount = m.preQCount || 0;
+              const preQClass = preQCount > 0 ? 'has-pending' : 'all-done';
+              const preQText  = preQCount === 0 ? 'Ready' : (preQCount === 1 ? '1 pre-Q' : preQCount + ' pre-Qs');
+              const preQIcon  = preQCount > 0
+                ? '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>'
+                : '<polyline points="20 6 9 17 4 12"/>';
+              return `<div class="match-pending ${preQClass}"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">${preQIcon}</svg>${preQText}</div>`;
+            })();
+
+        const clickAction = m.isSaved
+          ? `onclick="window.location='matches.html'"`
+          : `onclick="window.location='league.html?id=${esc(m.leagueId)}'"`;
+
+        const leagueLabel = m.isSaved
+          ? (m.competitionName || 'Football')
+          : m.leagueName;
+
+        html += `
+          <div class="match-card${isSoon ? ' tonight' : ''}${m.isSaved ? ' is-saved' : ''}"
+               data-league-id="${esc(m.leagueId || 'saved')}"
+               data-search-text="${esc(searchText)}"
+               ${clickAction}>
+            <div class="match-time-box${isSoon ? ' soon' : ''}">
+              <div class="match-time-day">${timeDay}</div>
+              <div class="match-time-hour">${timeHour}</div>
+              <div class="match-time-countdown ${isSoon ? 'soon' : 'normal'}">${countdown}</div>
+            </div>
+            <div class="match-info">
+              <div class="match-teams">${esc(m.home)} vs ${esc(m.away)}</div>
+              <div class="match-meta">
+                <span class="match-meta-item">
+                  <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                  ${esc(leagueLabel)}
+                </span>
+                ${m.competitionName && !m.isSaved ? `<span class="match-meta-item">
+                  <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                  ${esc(m.competitionName)}
+                </span>` : ''}
+              </div>
+            </div>
+            ${badgeHtml}
+            <button class="match-notify-btn" onclick="event.stopPropagation();toggleNotify(this)">
+              ${bellSvg()} Notify
+            </button>
+          </div>`;
+      });
+
+      html += `</div></div>`;
+    });
+
+    container.innerHTML = html;
+  }
+
+  /* ── Build filter chips ── */
+  function buildFilterChips(leagues) {
+    const row = document.getElementById('filter-row');
+    row.innerHTML = '<button class="filter-chip active" onclick="setFilter(this,\'all\')">All Leagues</button>';
+    leagues.forEach(lg => {
+      const btn = document.createElement('button');
+      btn.className = 'filter-chip';
+      btn.textContent = lg.name;
+      btn.onclick = function() { setFilter(this, lg.id); };
+      row.appendChild(btn);
+    });
+  }
+
+  /* ── Main load ── */
+  async function loadSchedule() {
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return;
+
+    // Helper: fall through to saved-only render if no league data
+    async function renderSavedOnly() {
+      buildFilterChips([]);
+      const savedRows = await SpontixStoreAsync.getSavedMatches();
+      const now2 = new Date();
+      const savedMatches = savedRows
+        .filter(s => !s.kickoff_at || new Date(s.kickoff_at) > now2)
+        .map(s => ({
+          key: 'saved_' + s.match_id, matchId: s.match_id,
+          leagueId: null, leagueName: s.competition || 'Football',
+          competitionName: s.competition || '',
+          home: s.home_team, away: s.away_team,
+          kickoff: s.kickoff_at ? new Date(s.kickoff_at) : new Date(Date.now() + 86400000),
+          preQCount: 0, isSaved: true,
+        }))
+        .sort((a, b) => a.kickoff - b.kickoff);
+      if (savedMatches.length) {
+        const row = document.getElementById('filter-row');
+        const chip = document.createElement('button');
+        chip.className = 'filter-chip';
+        chip.textContent = '⭐ Saved';
+        chip.onclick = function() { setFilter(this, 'saved'); };
+        row.appendChild(chip);
+      }
+      renderSchedule(savedMatches);
+    }
+
+    // 1. User's football leagues
+    const { data: memberships } = await sb.from('league_members')
+      .select('league_id')
+      .eq('user_id', user.id);
+    if (!memberships || !memberships.length) {
+      await renderSavedOnly();
+      return;
+    }
+
+    const leagueIds = memberships.map(m => m.league_id);
+
+    const { data: leagues } = await sb.from('leagues')
+      .select('id, name, sport, api_sports_league_id')
+      .in('id', leagueIds)
+      .eq('sport', 'football');
+    if (!leagues || !leagues.length) {
+      await renderSavedOnly();
+      return;
+    }
+
+    buildFilterChips(leagues);
+
+    const footballLeagueIds = leagues.map(l => l.id);
+    const leagueMap = {};
+    leagues.forEach(l => { leagueMap[l.id] = l; });
+
+    // 2. Competition names
+    const apiLeagueIds = [...new Set(leagues.map(l => parseInt(l.api_sports_league_id)).filter(Boolean))];
+    let competitionMap = {};
+    if (apiLeagueIds.length) {
+      const { data: comps } = await sb.from('sports_competitions')
+        .select('api_league_id, name')
+        .in('api_league_id', apiLeagueIds);
+      if (comps) comps.forEach(c => { competitionMap[c.api_league_id] = c.name; });
+    }
+
+    // 3. Pending questions with match_id
+    const now = new Date().toISOString();
+    const { data: questions } = await sb.from('questions')
+      .select('id, match_id, team_ids, answer_closes_at, resolves_after, question_type, league_id')
+      .in('league_id', footballLeagueIds)
+      .eq('resolution_status', 'pending')
+      .not('match_id', 'is', null)
+      .gt('resolves_after', now)
+      .order('answer_closes_at', { ascending: true });
+
+    if (!questions || !questions.length) {
+      await renderSavedOnly();
+      return;
+    }
+
+    // 4. Collect all team API IDs
+    const teamApiIds = new Set();
+    questions.forEach(q => {
+      if (q.team_ids && q.team_ids.length >= 2) {
+        const h = parseInt(q.team_ids[0]); const a = parseInt(q.team_ids[1]);
+        if (h) teamApiIds.add(h);
+        if (a) teamApiIds.add(a);
+      }
+    });
+
+    let teamNameMap = {};
+    if (teamApiIds.size) {
+      const { data: teams } = await sb.from('sports_teams')
+        .select('api_team_id, name')
+        .in('api_team_id', [...teamApiIds]);
+      if (teams) teams.forEach(t => { teamNameMap[t.api_team_id] = t.name; });
+    }
+
+    // 5. Deduplicate by matchId + leagueId; use CORE_MATCH_PREMATCH answer_closes_at as kickoff
+    const matchMap = {};
+    questions.forEach(q => {
+      const key = q.match_id + '_' + q.league_id;
+      if (!matchMap[key]) {
+        const homeId = q.team_ids && parseInt(q.team_ids[0]);
+        const awayId = q.team_ids && parseInt(q.team_ids[1]);
+        matchMap[key] = {
+          key,
+          matchId: q.match_id,
+          leagueId: q.league_id,
+          leagueName: leagueMap[q.league_id] ? leagueMap[q.league_id].name : '',
+          competitionName: leagueMap[q.league_id]
+            ? (competitionMap[parseInt(leagueMap[q.league_id].api_sports_league_id)] || '')
+            : '',
+          home: teamNameMap[homeId] || 'Home Team',
+          away: teamNameMap[awayId] || 'Away Team',
+          kickoff: null,
+          preQCount: 0,
+        };
+      }
+      const item = matchMap[key];
+      // Use earliest PREMATCH answer_closes_at as kickoff proxy
+      if (q.question_type === 'CORE_MATCH_PREMATCH' && q.answer_closes_at) {
+        const t = new Date(q.answer_closes_at);
+        if (!item.kickoff || t < item.kickoff) item.kickoff = t;
+        item.preQCount++;
+      }
+      // Fallback kickoff from any resolves_after
+      if (!item.kickoff && q.resolves_after) {
+        item.kickoff = new Date(q.resolves_after);
+      }
+    });
+
+    // Fill kickoff fallback and filter out past matches
+    const leagueMatches = Object.values(matchMap).filter(m => {
+      if (!m.kickoff) m.kickoff = new Date(Date.now() + 86400000);
+      return m.kickoff > new Date();
+    });
+
+    // 6. Merge personally-saved matches (saved via Browse Matches)
+    //    Run in parallel with above processing — already done by now
+    const savedRows = await SpontixStoreAsync.getSavedMatches();
+    const now2 = new Date();
+
+    // Build a set of match_ids already covered by league entries so we don't duplicate
+    const leagueMatchIds = new Set(leagueMatches.map(m => String(m.matchId)));
+
+    const savedMatches = savedRows
+      .filter(s => !leagueMatchIds.has(String(s.match_id)))  // skip if already in a league
+      .filter(s => !s.kickoff_at || new Date(s.kickoff_at) > now2)
+      .map(s => ({
+        key:             'saved_' + s.match_id,
+        matchId:         s.match_id,
+        leagueId:        null,
+        leagueName:      s.competition || 'Football',
+        competitionName: s.competition || '',
+        home:            s.home_team,
+        away:            s.away_team,
+        kickoff:         s.kickoff_at ? new Date(s.kickoff_at) : new Date(Date.now() + 86400000),
+        preQCount:       0,
+        isSaved:         true,
+      }));
+
+    // Add "Saved" chip to filter row if any saved-only matches exist
+    if (savedMatches.length) {
+      const row = document.getElementById('filter-row');
+      const savedChip = document.createElement('button');
+      savedChip.className = 'filter-chip';
+      savedChip.textContent = '⭐ Saved';
+      savedChip.onclick = function() { setFilter(this, 'saved'); };
+      row.appendChild(savedChip);
+    }
+
+    const allMatches = [...leagueMatches, ...savedMatches]
+      .sort((a, b) => a.kickoff - b.kickoff);
+
+    if (!allMatches.length) {
+      renderSchedule([]);
+      return;
+    }
+
+    renderSchedule(allMatches);
+  }
+
+  function esc(s) {
+    return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  /* ── Search ── */
+  document.addEventListener('DOMContentLoaded', () => {
+    loadSchedule();
+    document.getElementById('search-input').addEventListener('input', applyFilters);
+  });
+</script>
+
+</body>
+</html>
