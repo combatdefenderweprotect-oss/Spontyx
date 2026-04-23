@@ -416,13 +416,13 @@
   function hydrateFromStore() {
     const p = SpontixStore.getPlayer();
 
-    // Welcome uses username (handle), fallback to first name
-    document.querySelector('.page-header h1 span').textContent = p.handle || p.name;
+    // Welcome uses username (handle), fallback to first name — strip any legacy @ prefix
+    document.querySelector('.page-header h1 span').textContent = (p.handle || p.name).replace(/^@/, '');
 
     // Update profile preview section
     SpontixStore.applyAvatarsToPage(); // renders .av-self with profile photo
     document.querySelector('.profile-preview-name').textContent = p.name;
-    document.querySelector('.profile-preview-handle').textContent = p.handle;
+    document.querySelector('.profile-preview-handle').textContent = (p.handle || '').replace(/^@/, '');
     document.querySelector('.profile-preview-tier').textContent = SpontixStore.getTierLabel(p.tier);
 
     // Update profile preview stats
