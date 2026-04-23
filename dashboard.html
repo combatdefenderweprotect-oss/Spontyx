@@ -443,7 +443,29 @@
     document.querySelector('.sidebar-profile-tier').textContent = SpontixStore.getTierLabel(p.tier);
   }
 
-  document.addEventListener('DOMContentLoaded', hydrateFromStore);
+  function applyRealProfile(profile) {
+    if (!profile || !profile.name) return;
+    var nameSpan = document.querySelector('.page-header h1 span');
+    if (nameSpan) nameSpan.textContent = profile.name;
+    var previewName = document.querySelector('.profile-preview-name');
+    if (previewName) previewName.textContent = profile.name;
+    var previewHandle = document.querySelector('.profile-preview-handle');
+    if (previewHandle && profile.handle) previewHandle.textContent = profile.handle;
+    var sidebarName = document.querySelector('.sidebar-profile-name');
+    if (sidebarName) sidebarName.textContent = profile.name;
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    hydrateFromStore();
+    // Fetch real name from Supabase and overwrite any seed/cached data
+    if (typeof SpontixStoreAsync !== 'undefined' && SpontixStoreAsync.getProfile) {
+      SpontixStoreAsync.getProfile().then(applyRealProfile).catch(function() {});
+    }
+    // Also update when the store fires its own profile-refreshed event
+    window.addEventListener('spontix-profile-refreshed', function(e) {
+      if (e.detail && e.detail.profile) applyRealProfile(e.detail.profile);
+    });
+  });
 </script>
 
 </body>
