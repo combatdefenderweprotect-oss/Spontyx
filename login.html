@@ -334,7 +334,14 @@
       btn.disabled = false; btn.textContent = 'Create account';
 
       if (error) {
-        showAlert('signup', 'err', error.message);
+        const msg = error.message || '';
+        if (msg.toLowerCase().includes('already registered') || msg.toLowerCase().includes('already been registered') || msg.toLowerCase().includes('email address is already')) {
+          showAlert('signup', 'err', 'An account with this email already exists. Try signing in instead.');
+        } else if (msg.toLowerCase().includes('password')) {
+          showAlert('signup', 'err', 'Password must be at least 8 characters.');
+        } else {
+          showAlert('signup', 'err', msg);
+        }
         return;
       }
 
