@@ -1,6 +1,6 @@
 # Spontix — Project State & Developer Handoff
 
-Last updated 2026-04-23 — Beta access flow live. Full end-to-end simulation verified (all 10 checkpoints passed). Football only. Max 2 active questions. Scoring simplified to base × time_pressure × streak (difficulty/comeback/clutch bypassed to 1.0 via MVP_BYPASS). Three-lane question architecture locked: CORE_MATCH_PREMATCH, CORE_MATCH_LIVE, REAL_WORLD. Save Match feature fully implemented (migration 009, store methods, matches.html, upcoming.html, venue-schedule.html, create-league.html prefill). league.html UI/UX upgrade complete: 3-lane type badges, timer progress bar, primary card hierarchy, Real World purple styling, leaderboard float notification, match context strip, multiplier breakdown display, glow/shake micro-animations. Pre-launch alignment complete and DEPLOYED: migration 010 run in Supabase — question_type column live, existing rows backfilled, index active. detectLane() now reads DB column directly for all questions; heuristic fallback is dead code. source_badge computed from lane on all new generation. All advanced systems preserved intact for post-launch activation.
+Last updated 2026-04-24 — Username system live. Beta access flow live. Full end-to-end simulation verified (all 10 checkpoints passed). Football only. Max 2 active questions. Scoring simplified to base × time_pressure × streak (difficulty/comeback/clutch bypassed to 1.0 via MVP_BYPASS). Three-lane question architecture locked: CORE_MATCH_PREMATCH, CORE_MATCH_LIVE, REAL_WORLD. Save Match feature fully implemented (migration 009, store methods, matches.html, upcoming.html, venue-schedule.html, create-league.html prefill). league.html UI/UX upgrade complete: 3-lane type badges, timer progress bar, primary card hierarchy, Real World purple styling, leaderboard float notification, match context strip, multiplier breakdown display, glow/shake micro-animations. Pre-launch alignment complete and DEPLOYED: migration 010 run in Supabase — question_type column live, existing rows backfilled, index active. detectLane() now reads DB column directly for all questions; heuristic fallback is dead code. source_badge computed from lane on all new generation. All advanced systems preserved intact for post-launch activation.
 
 ---
 
@@ -2642,3 +2642,43 @@ The 3 Rayo vs Espanyol questions (`answer_closes_at = 18:00 UTC 2026-04-23`, `re
 | Not logged in | Any protected page | → `login.html` |
 
 **One-email-per-account:** Supabase Auth enforces this at the DB level. No two accounts can share an email. The friendly error message in `login.html` surfaces this clearly to the user.
+
+---
+
+### 2026-04-24 — Username system + dashboard name fix
+
+**New migration: `011_username_constraints.sql`**
+- Strips `@` prefix from all existing `handle` values in `public.users`
+- Adds `idx_users_handle_ci` — case-insensitive unique index on `lower(handle) WHERE handle IS NOT NULL`
+- Updates `handle_new_user` trigger: reads `first_name` + `last_name` from metadata to build `name`; reads `username` from metadata as handle (no `@` prefix); venue-owners get `NULL` handle (no username field in their signup)
+
+**`login.html` — sign-up form:**
+- "Your name" field replaced with First name + Last name (side by side)
+- Username field added for players: real-time format validation + debounced availability check against DB; hidden for venue-owners
+- Format rules enforced: lowercase letters, numbers, underscores, 3–20 characters, unique (case-insensitive)
+- Metadata passed to Supabase: `{ name, first_name, last_name, role, username }` (username omitted for venues)
+
+**`login.html` — sign-in:**
+- Input changed from `type="email"` to `type="text"`, label updated to "Email or username"
+- If input has no `@` → queries `public.users WHERE handle = lower(input)` to get email, then signs in with email + password
+- Venue owners have NULL handle so username login naturally only works for players
+
+**`profile.html` — settings:**
+- Username field wired with real-time format validation + uniqueness check (excludes current user's own handle via `.neq('id', uid)`)
+- `saveProfileSettings()` validates format and blocks save if handle is taken
+- Handle stored without `@` prefix; `_handleOriginal` tracks baseline to skip self-check
+
+**`spontix-store.js`:**
+- `_mapUserFromDb` updated: handle stored/returned without `@` prefix (`row.handle.replace(/^@/, '')`)
+- `_mapUserToDb` already stripped `@` — unchanged
+
+**`dashboard.html`:**
+- Welcome message uses `handle` (username) instead of `name`: "Welcome back, richutis"
+- Both sync (`hydrateFromStore`) and async (`applyRealProfile`) paths strip legacy `@` prefix
+- Profile card still shows full name; handle shown below it without `@`
+
+**Known behaviour — account deletion and JWT expiry:**
+- When a user is deleted from the Supabase Auth dashboard, their existing JWT (stored in browser localStorage) remains valid for up to 1 hour (JWT TTL). They can still load the app during this window.
+- This is standard JWT behaviour — Supabase free tier does not support instant session revocation.
+- For beta this is not a risk: users cannot delete their own accounts from the UI (the button shows a toast only). Only admins can delete from the dashboard.
+- Post-launch fix: server-side session blocklist via a Postgres function. Not needed for MVP.
