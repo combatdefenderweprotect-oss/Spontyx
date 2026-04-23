@@ -73,7 +73,7 @@ function uuid() {
     var filename = path.split('/').pop() || '';
 
     // Pages that don't require auth
-    var publicPages = ['login.html', 'index.html', 'supabase-test.html', 'spontix-architecture.html', ''];
+    var publicPages = ['login.html', 'index.html', 'waitlist.html', 'supabase-test.html', 'spontix-architecture.html', ''];
     if (publicPages.indexOf(filename) !== -1) return;
 
     // Check for a real Supabase auth session
@@ -97,11 +97,23 @@ function uuid() {
     try { existingSession = JSON.parse(localStorage.getItem('spontix_session') || 'null'); } catch (e) {}
     if (existingSession && (existingSession.userId === 'usr_bran' || existingSession.userId === 'usr_arena')) {
       localStorage.removeItem('spontix_session');
+      existingSession = null;
+    }
+
+    // Role-based routing — keep players out of venue pages and vice versa
+    var userRole = existingSession && existingSession.role;
+    var isVenuePage = filename.indexOf('venue') === 0;
+    if (userRole === 'player' && isVenuePage) {
+      window.location.href = 'dashboard.html';
+      return;
+    }
+    if (userRole === 'venue-owner' && filename === 'dashboard.html') {
+      window.location.href = 'venue-dashboard.html';
+      return;
     }
 
     // Force Elite tier until Stripe billing is wired up.
     // Remove this block when real subscriptions land.
-    var isVenuePage = filename.indexOf('venue') === 0;
     var desiredTier = isVenuePage ? 'venue-elite' : 'elite';
     localStorage.setItem('spontix_user_tier', desiredTier);
   } catch (e) { /* no-op */ }
@@ -127,6 +139,7 @@ if (typeof window !== 'undefined') {
       const sessionObj = {
         userId:  session.user.id,
         venueId: venues && venues[0] ? venues[0].id : null,
+        role:    profile ? profile.role : null,
       };
       localStorage.setItem('spontix_session', JSON.stringify(sessionObj));
 
