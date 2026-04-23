@@ -456,7 +456,22 @@
 <script src="spontix-store.js"></script>
   <script src="sidebar.js"></script>
   <script>SpontixSidebar.init({ type: 'venue', active: 'venue-dashboard.html' });</script>
-  <script>    // ══════════════════════════════════════════
+  <script>
+    // Guard: verify this user actually owns a venue — if not, send to registration
+    (async function venueOwnerGuard() {
+      if (!window.sb) return;
+      try {
+        const { data: { session } } = await window.sb.auth.getSession();
+        if (!session) return;
+        const { data: venues } = await window.sb
+          .from('venues').select('id').eq('owner_id', session.user.id).limit(1);
+        if (!venues || venues.length === 0) {
+          window.location.replace('venue-register.html');
+        }
+      } catch (e) {}
+    })();
+
+    // ══════════════════════════════════════════
     // Hydrate Dashboard with SpontixStore
     // ══════════════════════════════════════════
     function hydrateVenueDashboard() {
