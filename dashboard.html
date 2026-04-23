@@ -184,7 +184,6 @@
     .unanswered-alert-count {
       font-size: 1.1rem; font-weight: 900; color: var(--coral);
     }
-    .unanswered-alert-
     .unanswered-alert-title { font-size: 0.9rem; font-weight: 700; color: var(--off-white); }
     .unanswered-alert-title strong { color: var(--coral); }
     .unanswered-alert-matches { font-size: 0.75rem; color: var(--grey); margin-top: 3px; }
@@ -194,6 +193,24 @@
       border: none; font-family: inherit; cursor: pointer; transition: opacity 0.2s;
     }
     .unanswered-alert-btn:hover { opacity: 0.85; }
+
+    /* ── All Clear Banner ── */
+    .all-clear-banner {
+      display: flex; align-items: center; gap: 16px; padding: 14px 20px; margin-bottom: 20px;
+      background: rgba(168,225,12,0.06); border: 1px solid rgba(168,225,12,0.18);
+      border-radius: var(--radius-lg); position: relative; overflow: hidden;
+    }
+    .all-clear-banner::before {
+      content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+      background: var(--lime);
+    }
+    .all-clear-icon {
+      width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+      background: rgba(168,225,12,0.12); display: flex; align-items: center; justify-content: center;
+    }
+    .all-clear-icon svg { width: 18px; height: 18px; stroke: var(--lime); fill: none; stroke-width: 2.5; }
+    .all-clear-title { font-size: 0.88rem; font-weight: 700; color: var(--lime); }
+    .all-clear-sub { font-size: 0.75rem; color: var(--grey); margin-top: 2px; }
 
     /* ── Profile Preview ── */
     .profile-preview {
@@ -319,17 +336,8 @@
       </a>
     </div>
 
-    <!-- Unanswered Questions Alert -->
-    <a href="activity.html" class="unanswered-alert">
-      <div class="unanswered-alert-pulse">
-        <span class="unanswered-alert-count">4</span>
-      </div>
-      <div class="unanswered-alert-body">
-        <div class="unanswered-alert-title">You have <strong>4 unanswered questions</strong> waiting</div>
-        <div class="unanswered-alert-matches">Barcelona vs Real Madrid (2) · Liverpool vs Man City (2)</div>
-      </div>
-      <div class="unanswered-alert-btn">Answer Now</div>
-    </a>
+    <!-- Unanswered Questions Alert — populated dynamically -->
+    <div id="activity-alert"></div>
 
     <!-- Quick Action Cards -->
     <div class="action-cards-grid">
@@ -461,16 +469,99 @@
     if (sidebarName) sidebarName.textContent = displayName;
   }
 
+  function escHtml(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function renderActivityAlert(count, leagueText) {
+    const noun = count === 1 ? 'question' : 'questions';
+    document.getElementById('activity-alert').innerHTML = `
+      <a href="activity.html" class="unanswered-alert">
+        <div class="unanswered-alert-pulse">
+          <span class="unanswered-alert-count">${count}</span>
+        </div>
+        <div class="unanswered-alert-body">
+          <div class="unanswered-alert-title">You have <strong>${count} unanswered ${noun}</strong> waiting</div>
+          <div class="unanswered-alert-matches">${escHtml(leagueText)}</div>
+        </div>
+        <div class="unanswered-alert-btn">Answer Now</div>
+      </a>`;
+  }
+
+  function renderAllClear() {
+    document.getElementById('activity-alert').innerHTML = `
+      <div class="all-clear-banner">
+        <div class="all-clear-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div>
+          <div class="all-clear-title">You're all caught up</div>
+          <div class="all-clear-sub">No open questions right now — check back when your next match goes live.</div>
+        </div>
+      </div>`;
+  }
+
+  async function loadActivityAlert() {
+    const sb = window.sb;
+    if (!sb) return;
+    const { data: { user } } = await sb.auth.getUser();
+    if (!user) return;
+
+    const now = new Date().toISOString();
+
+    const { data: memberships } = await sb
+      .from('league_members')
+      .select('league_id, leagues(name)')
+      .eq('user_id', user.id);
+
+    const leagueIds = (memberships || []).map(m => m.league_id);
+    if (!leagueIds.length) { renderAllClear(); return; }
+
+    const leagueNames = {};
+    (memberships || []).forEach(m => { leagueNames[m.league_id] = m.leagues?.name || 'League'; });
+
+    const { data: openQs } = await sb
+      .from('questions')
+      .select('id, league_id')
+      .in('league_id', leagueIds)
+      .neq('resolution_status', 'resolved')
+      .neq('resolution_status', 'voided')
+      .or(`answer_closes_at.gt.${now},deadline.gt.${now}`);
+
+    if (!openQs?.length) { renderAllClear(); return; }
+
+    const openIds = openQs.map(q => q.id);
+    const { data: myAnswers } = await sb
+      .from('player_answers')
+      .select('question_id')
+      .eq('user_id', user.id)
+      .in('question_id', openIds);
+
+    const answered = new Set((myAnswers || []).map(a => a.question_id));
+    const unanswered = openQs.filter(q => !answered.has(q.id));
+
+    if (!unanswered.length) { renderAllClear(); return; }
+
+    // Group by league name for the sub-line
+    const grouped = {};
+    unanswered.forEach(q => {
+      const name = leagueNames[q.league_id] || 'League';
+      grouped[name] = (grouped[name] || 0) + 1;
+    });
+    const leagueText = Object.entries(grouped).map(([n, c]) => `${n} (${c})`).join(' · ');
+
+    renderActivityAlert(unanswered.length, leagueText);
+  }
+
   document.addEventListener('DOMContentLoaded', function() {
     hydrateFromStore();
-    // Fetch real name from Supabase and overwrite any seed/cached data
     if (typeof SpontixStoreAsync !== 'undefined' && SpontixStoreAsync.getProfile) {
       SpontixStoreAsync.getProfile().then(applyRealProfile).catch(function() {});
     }
-    // Also update when the store fires its own profile-refreshed event
     window.addEventListener('spontix-profile-refreshed', function(e) {
       if (e.detail && e.detail.profile) applyRealProfile(e.detail.profile);
     });
+    loadActivityAlert().catch(function() { renderAllClear(); });
   });
 </script>
 
