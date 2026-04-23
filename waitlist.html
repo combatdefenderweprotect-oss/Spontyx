@@ -44,10 +44,15 @@
         var(--navy);
       color: var(--off-white);
       min-height: 100vh;
+      margin: 0;
+    }
+
+    .page-wrap {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
+      min-height: 100vh;
       padding: 180px 20px 60px;
     }
 
@@ -404,17 +409,20 @@
 </head>
 <body>
 
-  <!-- Wordmark — top left -->
+  <!-- Wordmark — top left (fixed, outside page-wrap) -->
   <a href="index.html" class="logo">Spontyx<span class="dot"></span></a>
 
-  <!-- Brand icon — top center -->
+  <!-- Brand icon — top center (fixed, outside page-wrap) -->
   <div class="nav-icon">
     <img src="spontyx-icon.svg" alt="" aria-hidden="true" />
   </div>
 
-  <!-- Decorative orbs -->
+  <!-- Decorative orbs (fixed, outside page-wrap) -->
   <div class="orb orb-1"></div>
   <div class="orb orb-2"></div>
+
+  <!-- Scrollable content wrapper -->
+  <div class="page-wrap">
 
   <!-- Hero text -->
   <div class="hero">
@@ -499,6 +507,7 @@
     </span>
   </div>
 
+  </div><!-- end .page-wrap -->
 
   <!-- Beta password modal -->
   <div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
