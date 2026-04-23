@@ -368,8 +368,8 @@
           <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
         </div>
         <div class="nav-link-body">
-          <div class="nav-link-title">Your Games <span class="nav-link-badge coral">2 live</span></div>
-          <div class="nav-link-sub">See your active matches and answer questions</div>
+          <div class="nav-link-title">Your Games <span class="nav-link-badge coral" id="badge-live" style="display:none"></span></div>
+          <div class="nav-link-sub" id="nav-games-sub">See your active matches and answer questions</div>
         </div>
         <div class="nav-link-arrow"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
       </a>
@@ -380,7 +380,7 @@
         </div>
         <div class="nav-link-body">
           <div class="nav-link-title">Schedule</div>
-          <div class="nav-link-sub">3 matches coming up this week</div>
+          <div class="nav-link-sub" id="nav-schedule-sub">Loading…</div>
         </div>
         <div class="nav-link-arrow"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
       </a>
@@ -390,8 +390,8 @@
           <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
         </div>
         <div class="nav-link-body">
-          <div class="nav-link-title">My Leagues <span class="nav-link-badge lime">3</span></div>
-          <div class="nav-link-sub">Manage your active leagues and standings</div>
+          <div class="nav-link-title">My Leagues <span class="nav-link-badge lime" id="badge-leagues" style="display:none"></span></div>
+          <div class="nav-link-sub" id="nav-leagues-sub">Manage your active leagues and standings</div>
         </div>
         <div class="nav-link-arrow"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
       </a>
@@ -515,7 +515,11 @@
       .eq('user_id', user.id);
 
     const leagueIds = (memberships || []).map(m => m.league_id);
-    if (!leagueIds.length) { renderAllClear(); return; }
+    if (!leagueIds.length) {
+      renderAllClear();
+      updateNavCards(sb, user.id, 0, 0, now);
+      return;
+    }
 
     const leagueNames = {};
     (memberships || []).forEach(m => { leagueNames[m.league_id] = m.leagues?.name || 'League'; });
@@ -528,7 +532,11 @@
       .neq('resolution_status', 'voided')
       .or(`answer_closes_at.gt.${now},deadline.gt.${now}`);
 
-    if (!openQs?.length) { renderAllClear(); return; }
+    if (!openQs?.length) {
+      renderAllClear();
+      updateNavCards(sb, user.id, leagueIds.length, 0, now);
+      return;
+    }
 
     const openIds = openQs.map(q => q.id);
     const { data: myAnswers } = await sb
@@ -540,7 +548,11 @@
     const answered = new Set((myAnswers || []).map(a => a.question_id));
     const unanswered = openQs.filter(q => !answered.has(q.id));
 
-    if (!unanswered.length) { renderAllClear(); return; }
+    if (!unanswered.length) {
+      renderAllClear();
+      updateNavCards(sb, user.id, leagueIds.length, openQs.length, now);
+      return;
+    }
 
     // Group by league name for the sub-line
     const grouped = {};
@@ -551,6 +563,49 @@
     const leagueText = Object.entries(grouped).map(([n, c]) => `${n} (${c})`).join(' · ');
 
     renderActivityAlert(unanswered.length, leagueText);
+    updateNavCards(sb, user.id, leagueIds.length, openQs.length, now);
+  }
+
+  async function updateNavCards(sb, uid, leagueCount, openCount, now) {
+    // Your Games badge
+    const badgeLive = document.getElementById('badge-live');
+    const gamesSub  = document.getElementById('nav-games-sub');
+    if (openCount > 0) {
+      badgeLive.textContent = `${openCount} live`;
+      badgeLive.style.display = '';
+      if (gamesSub) gamesSub.textContent = `${openCount} open question${openCount === 1 ? '' : 's'} waiting for you`;
+    } else {
+      if (badgeLive) badgeLive.style.display = 'none';
+      if (gamesSub) gamesSub.textContent = 'No open questions right now';
+    }
+
+    // My Leagues badge
+    const badgeLeagues = document.getElementById('badge-leagues');
+    const leaguesSub   = document.getElementById('nav-leagues-sub');
+    if (leagueCount > 0) {
+      badgeLeagues.textContent = leagueCount;
+      badgeLeagues.style.display = '';
+      if (leaguesSub) leaguesSub.textContent = `${leagueCount} active league${leagueCount === 1 ? '' : 's'}`;
+    } else {
+      if (badgeLeagues) badgeLeagues.style.display = 'none';
+      if (leaguesSub) leaguesSub.textContent = 'Join a league to get started';
+    }
+
+    // Schedule — upcoming saved matches in next 7 days
+    const scheduleSub = document.getElementById('nav-schedule-sub');
+    if (!scheduleSub) return;
+    const nextWeek = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+    const { count: upcomingCount } = await sb
+      .from('saved_matches')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', uid)
+      .is('venue_id', null)
+      .gte('kickoff_at', now)
+      .lt('kickoff_at', nextWeek);
+    const n = upcomingCount || 0;
+    scheduleSub.textContent = n > 0
+      ? `${n} saved match${n === 1 ? '' : 'es'} coming up this week`
+      : 'No saved matches this week';
   }
 
   document.addEventListener('DOMContentLoaded', function() {
