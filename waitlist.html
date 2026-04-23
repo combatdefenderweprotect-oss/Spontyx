@@ -36,6 +36,11 @@
 
     html { scroll-behavior: smooth; }
 
+    html, body {
+      height: 100%;
+      margin: 0;
+    }
+
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background:
@@ -43,8 +48,33 @@
         radial-gradient(ellipse 900px  600px at 100% 110%, rgba(168,225,12,0.14), transparent 55%),
         var(--navy);
       color: var(--off-white);
-      min-height: 100vh;
-      margin: 0;
+      overflow: hidden; /* body itself never scrolls — scroll-container handles it */
+      height: 100%;
+    }
+
+    /* Scroll happens here, not on body — keeps position:fixed reliable on all browsers */
+    .scroll-container {
+      height: 100%;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    /* Fixed header — S logo lives here, never moves */
+    .fixed-header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 160px;
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
+    }
+    .fixed-header img {
+      height: 130px;
+      width: 130px;
+      display: block;
+      pointer-events: none;
     }
 
     .page-wrap {
@@ -52,7 +82,7 @@
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      min-height: 100vh;
+      min-height: 100%;
       padding: 180px 20px 60px;
     }
 
@@ -409,23 +439,19 @@
 </head>
 <body>
 
-  <!-- Wordmark — top left (fixed, outside page-wrap) -->
+  <!-- Wordmark top left — fixed -->
   <a href="index.html" class="logo">Spontyx<span class="dot"></span></a>
 
-  <!-- Brand icon — top center (fixed, outside page-wrap) -->
-  <div class="nav-icon">
-    <img src="spontyx-icon.svg" alt="" aria-hidden="true" />
-  </div>
-
-  <!-- Decorative orbs (fixed, outside page-wrap) -->
   <div class="orb orb-1"></div>
   <div class="orb orb-2"></div>
 
-  <!-- Scrollable content wrapper -->
+  <!-- Scroll container — all page content scrolls inside here -->
+  <div class="scroll-container">
   <div class="page-wrap">
 
   <!-- Hero text -->
   <div class="hero">
+    <img src="spontyx-icon.svg" alt="" aria-hidden="true" style="height:120px;width:120px;display:block;margin:0 auto 16px;" />
     <div class="badge">
       <span class="badge-dot"></span>
       Coming Soon
@@ -508,6 +534,7 @@
   </div>
 
   </div><!-- end .page-wrap -->
+  </div><!-- end .scroll-container -->
 
   <!-- Beta password modal -->
   <div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
