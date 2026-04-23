@@ -3351,7 +3351,7 @@ SpontixStore._mapUserFromDb = function (row) {
   return {
     id:             row.id,
     name:           row.name || 'Player',
-    handle:         row.handle ? ('@' + row.handle.replace(/^@/, '')) : '@player',
+    handle:         row.handle ? row.handle.replace(/^@/, '') : '',
     email:          row.email || '',
     role:           row.role || 'player',
     avatar:            row.avatar || (row.name ? row.name[0].toUpperCase() : 'P'),

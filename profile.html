@@ -996,7 +996,9 @@
           </div>
           <div class="form-group">
             <label class="form-label">Username</label>
-            <input type="text" class="form-input" id="settingsHandle" value="" />
+            <input type="text" class="form-input" id="settingsHandle" value="" maxlength="20" autocomplete="username" placeholder="richutis" />
+            <div id="handle-status" style="font-size:0.72rem;margin-top:4px;min-height:16px;"></div>
+            <div style="font-size:0.68rem;color:var(--grey-dark);margin-top:3px;">Lowercase letters, numbers, underscores · 3–20 chars</div>
           </div>
         </div>
         <div class="form-group">
@@ -1622,6 +1624,54 @@ async function saveAvatarChoice() {
   if (btn) { btn.disabled = false; btn.textContent = 'Save Photo'; }
 }
 
+// ── Username validation (settings) ──
+function validateUsernameFormat(u) {
+  if (!u) return 'Username is required';
+  if (u.length < 3) return 'At least 3 characters';
+  if (u.length > 20) return 'Maximum 20 characters';
+  if (!/^[a-z0-9_]+$/.test(u)) return 'Only lowercase letters, numbers and underscores';
+  return null;
+}
+
+function setHandleStatus(msg, color) {
+  var el = document.getElementById('handle-status');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = color || 'var(--grey)';
+}
+
+var _handleTimer = null;
+var _handleAvailable = true;
+var _handleOriginal = '';
+
+(function wireHandleInput() {
+  var inp = document.getElementById('settingsHandle');
+  if (!inp) return;
+  inp.addEventListener('input', function () {
+    var raw = this.value.trim().toLowerCase();
+    this.value = raw;
+    _handleAvailable = false;
+    if (!raw || raw === _handleOriginal) {
+      setHandleStatus('', '');
+      _handleAvailable = true;
+      return;
+    }
+    var err = validateUsernameFormat(raw);
+    if (err) { setHandleStatus(err, 'var(--coral)'); return; }
+    setHandleStatus('Checking…', 'var(--grey)');
+    clearTimeout(_handleTimer);
+    _handleTimer = setTimeout(async function () {
+      if (!window.sb) { _handleAvailable = true; setHandleStatus('', ''); return; }
+      var uid = SpontixStore.Session.getCurrentUserId();
+      var { data } = await window.sb.from('users').select('id')
+        .eq('handle', raw).neq('id', uid || '').maybeSingle();
+      _handleAvailable = !data;
+      if (_handleAvailable) setHandleStatus('✓ Available', 'var(--lime)');
+      else setHandleStatus('Already taken — choose another', 'var(--coral)');
+    }, 500);
+  });
+})();
+
 // ── Settings form hydration ──
 function hydrateSettingsForm() {
   var player = SpontixStore.getPlayer();
@@ -1629,7 +1679,11 @@ function hydrateSettingsForm() {
   var handleInput = document.getElementById('settingsHandle');
   var emailInput = document.getElementById('settingsEmail');
   if (nameInput) nameInput.value = player.name || '';
-  if (handleInput) handleInput.value = (player.handle || '').replace(/^@/, '');
+  if (handleInput) {
+    var h = (player.handle || '').replace(/^@/, '');
+    handleInput.value = h;
+    _handleOriginal = h;
+  }
   if (emailInput) emailInput.value = player.email || '';
 }
 
@@ -1645,11 +1699,21 @@ function shareProfile() {
 }
 
 async function saveProfileSettings() {
-  var name = (document.getElementById('settingsName').value || '').trim();
-  var handle = (document.getElementById('settingsHandle').value || '').trim().replace(/^@/, '');
+  var name   = (document.getElementById('settingsName').value || '').trim();
+  var handle = (document.getElementById('settingsHandle').value || '').trim().toLowerCase().replace(/^@/, '');
   if (!name) { showToast('Please enter a display name'); return; }
 
-  var patch = { name: name, handle: '@' + handle, avatar: name[0].toUpperCase() };
+  // Validate username format
+  var fmtErr = validateUsernameFormat(handle);
+  if (fmtErr) { showToast(fmtErr); return; }
+
+  // Block save if uniqueness check is still pending or failed
+  if (!_handleAvailable && handle !== _handleOriginal) {
+    showToast('That username is already taken — choose another');
+    return;
+  }
+
+  var patch = { name: name, handle: handle, avatar: name[0].toUpperCase() };
   try {
     var result = await SpontixStoreAsync.updateProfile(patch);
     if (result && !result.ok) {
@@ -1657,11 +1721,12 @@ async function saveProfileSettings() {
       return;
     }
   } catch (err) {
-    // Sync fallback
     var player = SpontixStore.getPlayer();
     Object.assign(player, patch);
     SpontixStore.savePlayer(player);
   }
+  _handleOriginal = handle;
+  setHandleStatus('', '');
   hydrateProfile();
   showToast('Profile updated!');
 }

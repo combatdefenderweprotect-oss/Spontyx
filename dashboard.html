@@ -416,8 +416,8 @@
   function hydrateFromStore() {
     const p = SpontixStore.getPlayer();
 
-    // Update welcome header
-    document.querySelector('.page-header h1 span').textContent = p.name;
+    // Welcome uses username (handle), fallback to first name
+    document.querySelector('.page-header h1 span').textContent = p.handle || p.name;
 
     // Update profile preview section
     SpontixStore.applyAvatarsToPage(); // renders .av-self with profile photo
@@ -444,15 +444,21 @@
   }
 
   function applyRealProfile(profile) {
-    if (!profile || !profile.name) return;
+    if (!profile) return;
+    var displayName = profile.handle || profile.name || '';
+    if (!displayName) return;
+    // Welcome header uses username
     var nameSpan = document.querySelector('.page-header h1 span');
-    if (nameSpan) nameSpan.textContent = profile.name;
+    if (nameSpan) nameSpan.textContent = displayName;
+    // Profile card shows full name
     var previewName = document.querySelector('.profile-preview-name');
-    if (previewName) previewName.textContent = profile.name;
+    if (previewName) previewName.textContent = profile.name || displayName;
+    // Handle row
     var previewHandle = document.querySelector('.profile-preview-handle');
-    if (previewHandle && profile.handle) previewHandle.textContent = profile.handle;
+    if (previewHandle) previewHandle.textContent = profile.handle || '';
+    // Sidebar also uses username
     var sidebarName = document.querySelector('.sidebar-profile-name');
-    if (sidebarName) sidebarName.textContent = profile.name;
+    if (sidebarName) sidebarName.textContent = displayName;
   }
 
   document.addEventListener('DOMContentLoaded', function() {

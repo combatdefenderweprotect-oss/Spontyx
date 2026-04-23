@@ -141,8 +141,8 @@
     <div class="pane active" id="pane-signin">
       <form id="signin-form">
         <div class="field">
-          <label class="label" for="signin-email">Email</label>
-          <input class="input" type="email" id="signin-email" required autocomplete="email" placeholder="you@example.com" />
+          <label class="label" for="signin-email">Email or username</label>
+          <input class="input" type="text" id="signin-email" required autocomplete="username" placeholder="you@example.com or richutis" />
         </div>
         <div class="field">
           <label class="label" for="signin-password">Password</label>
@@ -172,9 +172,20 @@
       </div>
 
       <form id="signup-form">
-        <div class="field">
-          <label class="label" for="signup-name">Your name</label>
-          <input class="input" type="text" id="signup-name" required autocomplete="name" placeholder="Jordan Smith" />
+        <div style="display:flex;gap:10px;">
+          <div class="field" style="flex:1;">
+            <label class="label" for="signup-first-name">First name</label>
+            <input class="input" type="text" id="signup-first-name" autocomplete="given-name" placeholder="Jordan" />
+          </div>
+          <div class="field" style="flex:1;">
+            <label class="label" for="signup-last-name">Last name</label>
+            <input class="input" type="text" id="signup-last-name" autocomplete="family-name" placeholder="Smith" />
+          </div>
+        </div>
+        <div class="field" id="username-field-wrap">
+          <label class="label" for="signup-username">Username</label>
+          <input class="input" type="text" id="signup-username" autocomplete="username" placeholder="richutis" maxlength="20" />
+          <div id="username-status" style="font-size:0.72rem;margin-top:4px;min-height:16px;"></div>
         </div>
         <div class="field">
           <label class="label" for="signup-email">Email</label>
@@ -262,10 +273,63 @@
     function pickRole(role) {
       selectedRole = role;
       document.querySelectorAll('.role-opt').forEach(o => o.classList.toggle('selected', o.dataset.role === role));
-      // Retheme the signup button to match role colour
       const btn = document.getElementById('signup-submit');
       btn.classList.toggle('venue', role === 'venue-owner');
+      // Username field only for players
+      const usernameWrap = document.getElementById('username-field-wrap');
+      if (usernameWrap) usernameWrap.style.display = role === 'player' ? 'block' : 'none';
     }
+
+    // ── Username validation ──
+    function validateUsernameFormat(u) {
+      if (!u) return 'Username is required';
+      if (u.length < 3) return 'At least 3 characters';
+      if (u.length > 20) return 'Maximum 20 characters';
+      if (!/^[a-z0-9_]+$/.test(u)) return 'Only lowercase letters, numbers and underscores';
+      return null;
+    }
+
+    let _usernameTimer = null;
+    let _usernameAvailable = false;
+    let _lastChecked = '';
+
+    function setUsernameStatus(msg, color) {
+      const el = document.getElementById('username-status');
+      if (!el) return;
+      el.textContent = msg;
+      el.style.color = color || 'var(--grey)';
+    }
+
+    async function checkUsernameAvailable(username) {
+      if (!window.sb) return true;
+      const { data } = await window.sb.from('users').select('id')
+        .eq('handle', username).maybeSingle();
+      return !data;
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      const usernameInput = document.getElementById('signup-username');
+      if (usernameInput) {
+        usernameInput.addEventListener('input', function () {
+          const raw = this.value.trim().toLowerCase();
+          this.value = raw; // force lowercase as user types
+          _usernameAvailable = false;
+          if (!raw) { setUsernameStatus('', ''); return; }
+          const err = validateUsernameFormat(raw);
+          if (err) { setUsernameStatus(err, 'var(--coral)'); return; }
+          setUsernameStatus('Checking…', 'var(--grey)');
+          clearTimeout(_usernameTimer);
+          _usernameTimer = setTimeout(async function () {
+            _lastChecked = raw;
+            const available = await checkUsernameAvailable(raw);
+            if (raw !== _lastChecked) return; // stale
+            _usernameAvailable = available;
+            if (available) setUsernameStatus('✓ Available', 'var(--lime)');
+            else setUsernameStatus('Already taken — choose another', 'var(--coral)');
+          }, 500);
+        });
+      }
+    });
 
     // ── Alerts ──
     function showAlert(paneId, kind, message) {
@@ -281,17 +345,30 @@
     document.getElementById('signin-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       clearAlert('signin');
-      const email = document.getElementById('signin-email').value.trim();
+      const input = document.getElementById('signin-email').value.trim();
       const password = document.getElementById('signin-password').value;
       const btn = document.getElementById('signin-submit');
       btn.disabled = true; btn.textContent = 'Signing in…';
+
+      // If no @ treat as username — look up email first
+      let email = input;
+      if (!input.includes('@')) {
+        const { data: userRow } = await window.sb
+          .from('users').select('email').eq('handle', input.toLowerCase()).maybeSingle();
+        if (!userRow || !userRow.email) {
+          btn.disabled = false; btn.textContent = 'Sign in';
+          showAlert('signin', 'err', 'No account found with that username.');
+          return;
+        }
+        email = userRow.email;
+      }
 
       const { data, error } = await window.sb.auth.signInWithPassword({ email, password });
 
       btn.disabled = false; btn.textContent = 'Sign in';
 
       if (error) {
-        showAlert('signin', 'err', error.message);
+        showAlert('signin', 'err', 'Invalid email/username or password.');
         return;
       }
 
@@ -311,22 +388,37 @@
     document.getElementById('signup-form').addEventListener('submit', async (e) => {
       e.preventDefault();
       clearAlert('signup');
-      const name = document.getElementById('signup-name').value.trim();
-      const email = document.getElementById('signup-email').value.trim();
-      const password = document.getElementById('signup-password').value;
       const role = selectedRole;
+      const firstName = (document.getElementById('signup-first-name').value || '').trim();
+      const lastName  = (document.getElementById('signup-last-name').value  || '').trim();
+      const email    = document.getElementById('signup-email').value.trim();
+      const password = document.getElementById('signup-password').value;
       const btn = document.getElementById('signup-submit');
+
+      if (!firstName) { showAlert('signup', 'err', 'Please enter your first name.'); return; }
+
+      // Username required for players
+      let username = null;
+      if (role === 'player') {
+        username = (document.getElementById('signup-username').value || '').trim().toLowerCase();
+        const fmtErr = validateUsernameFormat(username);
+        if (fmtErr) { showAlert('signup', 'err', fmtErr); return; }
+        // Final availability check (covers race condition where typing stopped early)
+        const available = await checkUsernameAvailable(username);
+        if (!available) { showAlert('signup', 'err', 'That username is already taken. Please choose another.'); return; }
+      }
+
       btn.disabled = true; btn.textContent = 'Creating account…';
 
-      // Pass name + role + a sensible default handle via raw_user_meta_data.
-      // Our public.handle_new_user() trigger in Postgres reads these into the
-      // matching public.users row automatically.
-      const handle = '@' + email.split('@')[0].replace(/[^a-z0-9_]/gi, '_').toLowerCase();
+      const fullName = (firstName + ' ' + lastName).trim();
+      const metadata = { name: fullName, first_name: firstName, last_name: lastName, role };
+      if (username) metadata.username = username;
+
       const { data, error } = await window.sb.auth.signUp({
         email,
         password,
         options: {
-          data: { name, role, handle },
+          data: metadata,
           emailRedirectTo: window.location.origin + '/login.html',
         },
       });
@@ -345,21 +437,17 @@
         return;
       }
 
-      // After signup the trigger auto-populates public.users with name/handle from metadata,
-      // but `role` isn't in the default trigger — update it ourselves.
+      // Trigger populates name/handle from metadata — update role separately
       if (data && data.user) {
         await window.sb.from('users').update({ role }).eq('id', data.user.id);
       }
 
-      // Supabase sends confirmation email by default. If email confirmations are
-      // disabled on the project, the session is returned immediately.
       if (data && data.session) {
         showAlert('signup', 'ok', 'Account created. Redirecting…');
         const dest = role === 'venue-owner' ? 'venue-dashboard.html' : 'dashboard.html';
         setTimeout(() => { window.location.href = dest; }, 800);
       } else {
         showAlert('signup', 'ok', '✓ Account created. Check your email (' + email + ') for a confirmation link, then come back and sign in.');
-        // Switch to sign-in tab so the email is already in context
         setTimeout(() => { switchTab('signin'); document.getElementById('signin-email').value = email; }, 2000);
       }
     });
