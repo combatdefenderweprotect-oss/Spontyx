@@ -178,6 +178,39 @@
     }
     .unanswered-answer-btn:hover { background: var(--lime); color: var(--navy); }
 
+    /* ── Section icon pill ── */
+    .section-icon {
+      width: 30px; height: 30px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .section-icon svg { width: 16px; height: 16px; fill: none; stroke-width: 2; }
+    .section-icon.coral { background: rgba(255,107,107,0.15); }
+    .section-icon.coral svg { stroke: var(--coral); }
+    .section-icon.orange { background: rgba(255,159,67,0.15); }
+    .section-icon.orange svg { stroke: var(--orange); }
+
+    /* ── Match / question list containers ── */
+    #live-matches-container { display: flex; flex-direction: column; gap: 12px; }
+    #unanswered-container   { display: flex; flex-direction: column; gap: 10px; }
+
+    /* ── Empty state card ── */
+    .empty-state {
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg); padding: 36px 24px;
+      display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center;
+    }
+    .empty-icon {
+      width: 48px; height: 48px; border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center; margin-bottom: 6px;
+    }
+    .empty-icon svg { width: 22px; height: 22px; fill: none; stroke-width: 2; }
+    .empty-icon.coral { background: rgba(255,107,107,0.1); }
+    .empty-icon.coral svg { stroke: var(--coral); }
+    .empty-icon.orange { background: rgba(255,159,67,0.1); }
+    .empty-icon.orange svg { stroke: var(--orange); }
+    .empty-title { font-size: 0.9rem; font-weight: 700; }
+    .empty-sub { font-size: 0.78rem; color: var(--grey); max-width: 300px; line-height: 1.5; }
+
     @media (max-width: 700px) {
       .summary-row { flex-direction: column; }
       .live-match { flex-direction: column; align-items: flex-start; }
@@ -256,16 +289,13 @@
     <div class="section" id="sec-live">
       <div class="section-header">
         <h2>
-          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--coral);"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+          <span class="section-icon coral"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></span>
           Live Now
           <span class="section-count coral" id="live-count-badge">—</span>
         </h2>
       </div>
-      <div class="live-matches">
-
-        <div id="live-matches-container">
-          <div class="feed-loading" style="color:var(--grey);font-size:0.85rem;padding:12px 0;">Loading live matches…</div>
-        </div>
+      <div id="live-matches-container">
+        <div class="feed-loading" style="color:var(--grey);font-size:0.85rem;padding:12px 0;">Loading live matches…</div>
       </div>
     </div>
 
@@ -273,7 +303,7 @@
     <div class="section" id="sec-unanswered">
       <div class="section-header">
         <h2>
-          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round" style="stroke:var(--orange);"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <span class="section-icon orange"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></span>
           Unanswered Questions
           <span class="section-count orange" id="unanswered-count-badge">—</span>
         </h2>
@@ -329,10 +359,7 @@
     document.getElementById('stat-live').textContent = count;
     document.getElementById('live-count-badge').textContent = count === 1 ? '1 match' : `${count} matches`;
 
-    if (!count) {
-      el.innerHTML = `<p style="color:var(--grey);font-size:0.85rem;padding:8px 0;">No live matches right now.</p>`;
-      return;
-    }
+    if (!count) { el.innerHTML = EMPTY_LIVE; return; }
 
     el.innerHTML = matches.map(m => {
       const ids = Array.isArray(m.teamIds) ? m.teamIds.map(String) : [];
@@ -367,10 +394,7 @@
     document.getElementById('stat-unanswered').textContent = count;
     document.getElementById('unanswered-count-badge').textContent = `${count} pending`;
 
-    if (!count) {
-      el.innerHTML = `<p style="color:var(--grey);font-size:0.85rem;padding:8px 0;">You're all caught up — no open questions.</p>`;
-      return;
-    }
+    if (!count) { el.innerHTML = EMPTY_UNANSWERED; return; }
 
     el.innerHTML = questions.map(q => {
       const closes = q.answer_closes_at || q.deadline;
@@ -400,11 +424,22 @@
     }).join('');
   }
 
+  const EMPTY_LIVE = `
+    <div class="empty-state">
+      <div class="empty-icon coral"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+      <div class="empty-title">No live matches right now</div>
+      <div class="empty-sub">When a match in your leagues goes live, it'll appear here. Check back closer to kick-off.</div>
+    </div>`;
+  const EMPTY_UNANSWERED = `
+    <div class="empty-state">
+      <div class="empty-icon orange"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="20 6 9 17 4 12"/></svg></div>
+      <div class="empty-title">You're all caught up</div>
+      <div class="empty-sub">No open questions across your leagues right now. New questions drop when matches go live.</div>
+    </div>`;
+
   function showLoadError() {
-    document.getElementById('live-matches-container').innerHTML =
-      `<p style="color:var(--grey);font-size:0.85rem;padding:8px 0;">No live matches right now.</p>`;
-    document.getElementById('unanswered-container').innerHTML =
-      `<p style="color:var(--grey);font-size:0.85rem;padding:8px 0;">No open questions right now.</p>`;
+    document.getElementById('live-matches-container').innerHTML = EMPTY_LIVE;
+    document.getElementById('unanswered-container').innerHTML = EMPTY_UNANSWERED;
     ['stat-live','stat-unanswered','stat-today'].forEach(id => {
       document.getElementById(id).textContent = '0';
     });
