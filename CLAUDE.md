@@ -2575,3 +2575,70 @@ The 3 Rayo vs Espanyol questions (`answer_closes_at = 18:00 UTC 2026-04-23`, `re
 - Standard deploy command going forward: `git add -A && git commit -m "message" && git push`
 
 **Note for future sessions:** if a user reports being stuck in a login redirect loop, ask them to clear `spontix_beta_access` from localStorage in browser DevTools (Application → Local Storage). This is a stale entry from the old `localStorage`-based implementation.
+
+---
+
+### 2026-04-24 — Waitlist page UI fixes
+
+**S logo / content positioning:**
+- S logo (`spontyx-icon.svg`) moved inside `.hero` div as normal page content — no longer fixed. Sits above "Coming Soon" badge and scrolls with the page.
+- Logo size increased to 160×160px
+- Top padding reduced: desktop `60px`, mobile `20px` (via `@media (max-width: 768px)`)
+- Social proof strip (3 feature bullets) removed
+- `overflow-x: hidden` removed from `body` — was breaking `position: fixed` on iOS Safari
+- `display: flex` moved from `body` → `.page-wrap` wrapper div — was breaking `position: fixed` on iOS Safari. Fixed elements (logo, orbs) are now siblings of `.scroll-container`, not inside it.
+- `.scroll-container` added: `height: 100%; overflow-y: auto; -webkit-overflow-scrolling: touch` — scrolling happens here, not on body. This is the bulletproof pattern for keeping `position: fixed` reliable across all browsers.
+
+**Spontyx wordmark (top left):**
+- Text logo (`Spontyx` + lime dot) replaced with `spontyx-logo.svg` (SVG brand asset, transparent background)
+- New file: `spontyx-logo.svg` — copy of `spontyx_clash_pack/spontyx_primary_navy.svg` with the navy `<rect>` background removed
+- CSS updated: `.logo` simplified to `position: fixed; top: 16px; left: 24px` + `img { height: 44px }`
+
+---
+
+### 2026-04-24 — Login page fixes
+
+**Logo:**
+- Text logo replaced with `spontyx-logo.svg` (same as waitlist page)
+- `.logo` CSS simplified to `position: absolute; top: 20px; left: 24px` + `img { height: 40px }`
+
+**Mobile overlap fix:**
+- Body `padding` changed from `24px` → `80px 24px 24px` so the card doesn't overlap the logo on small screens
+
+**Duplicate email error:**
+- Supabase raw error message replaced with friendly copy: "An account with this email already exists. Try signing in instead."
+- Also catches password-too-short errors with friendly message
+
+---
+
+### 2026-04-24 — Role-based access control
+
+**Problem:** any logged-in user could navigate directly to any page regardless of role. New venue owners saw Richard's cached "Arena Bar and Grill" venue data.
+
+**Root cause:** `authGate()` only checked for a Supabase session — never checked the user's role.
+
+**Fix 1 — Store role in session (`spontix-store.js`):**
+- `hydrateSessionFromSupabase()` now includes `role` in the `spontix_session` object written to localStorage
+- `sessionObj` = `{ userId, venueId, role }`
+
+**Fix 2 — Role-based routing in `authGate()` (`spontix-store.js`):**
+- `waitlist.html` added to `publicPages` list
+- Stale demo session clear now resets `existingSession` to null so the role check below it works correctly
+- Players on any `venue-*.html` page → redirected to `dashboard.html`
+- Venue owners on `dashboard.html` → redirected to `venue-dashboard.html`
+
+**Fix 3 — New venue owner guard (`venue-dashboard.html`):**
+- Async IIFE runs on load: queries Supabase for venues owned by current user
+- If no venues found → redirect to `venue-register.html`
+- Prevents new venue owners from seeing cached venue data (e.g. Richard's Arena Bar and Grill)
+
+**Access control matrix (post-fix):**
+
+| User | Tries to access | Result |
+|---|---|---|
+| Player | `venue-*.html` | → `dashboard.html` |
+| Venue owner | `dashboard.html` | → `venue-dashboard.html` |
+| Venue owner (no venue) | `venue-dashboard.html` | → `venue-register.html` |
+| Not logged in | Any protected page | → `login.html` |
+
+**One-email-per-account:** Supabase Auth enforces this at the DB level. No two accounts can share an email. The friendly error message in `login.html` surfaces this clearly to the user.
