@@ -480,7 +480,7 @@
     <div class="divider-text">Already have access?</div>
     <div class="divider-line"></div>
   </div>
-  <button class="btn-beta" onclick="openBetaModal()">🔑 Enter Beta Version</button>
+  <button class="btn-beta" onclick="sessionStorage.getItem(BETA_FLAG_KEY) === BETA_FLAG_VALUE ? window.location.href='login.html' : openBetaModal()">🔑 Enter Beta Version</button>
 
   <!-- Social proof -->
   <div class="proof">
@@ -639,8 +639,8 @@
     var BETA_FLAG_KEY   = 'spontix_beta_access';
     var BETA_FLAG_VALUE = 'granted';
 
-    // On load: if already logged in → go to dashboard; if beta flag set → go to login.
-    // Beta flag lives in sessionStorage so it clears when the browser session ends.
+    // On load: if already logged in → go to dashboard. That's the only auto-redirect.
+    // If beta flag is set but not logged in, stay on waitlist (back button must work).
     (async function checkAccess() {
       if (window.sb) {
         try {
@@ -655,8 +655,10 @@
           }
         } catch (e) {}
       }
+      // If already unlocked this session, update the button label
       if (sessionStorage.getItem(BETA_FLAG_KEY) === BETA_FLAG_VALUE) {
-        window.location.replace('login.html');
+        const btn = document.querySelector('.btn-beta');
+        if (btn) btn.textContent = '→ Go to Login';
       }
     })();
 
