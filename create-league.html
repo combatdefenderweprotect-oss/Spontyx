@@ -1856,60 +1856,27 @@ async function onMatchNightCompChange() {
 async function loadMatchesForCompetition(apiLeagueId) {
   if (!window.sb) return [];
 
-  // Get Spontix league IDs for this competition
-  const { data: leagues } = await window.sb
-    .from('leagues')
-    .select('id')
-    .eq('api_sports_league_id', apiLeagueId)
-    .eq('sport', 'football');
+  const nowMinus3h = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+  const now14d     = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
-  if (!leagues || leagues.length === 0) return [];
-  const leagueIds = leagues.map(l => l.id);
+  const { data: fixtures } = await window.sb
+    .from('api_football_fixtures')
+    .select('fixture_id, kickoff_at, home_team_name, away_team_name, round')
+    .eq('league_id', apiLeagueId)
+    .gte('kickoff_at', nowMinus3h)
+    .lte('kickoff_at', now14d)
+    .order('kickoff_at')
+    .limit(20);
 
-  // Get distinct upcoming matches — pending questions whose match hasn't resolved yet
-  const { data: questionRows } = await window.sb
-    .from('questions')
-    .select('match_id, team_ids, visible_from, resolves_after')
-    .in('league_id', leagueIds)
-    .not('match_id', 'is', null)
-    .eq('resolution_status', 'pending')
-    .order('resolves_after');
+  if (!fixtures || fixtures.length === 0) return [];
 
-  if (!questionRows || questionRows.length === 0) return [];
-
-  // Deduplicate by match_id
-  const seen = new Set();
-  const unique = [];
-  for (const q of questionRows) {
-    if (q.match_id && !seen.has(q.match_id)) {
-      seen.add(q.match_id);
-      unique.push({ match_id: q.match_id, team_ids: q.team_ids, visible_from: q.visible_from });
-    }
-  }
-  if (unique.length === 0) return [];
-
-  // Collect all team IDs and look up names
-  const allTeamIds = new Set();
-  unique.forEach(m => {
-    (Array.isArray(m.team_ids) ? m.team_ids : []).forEach(id => allTeamIds.add(String(id)));
-  });
-
-  const { data: teams } = await window.sb
-    .from('sports_teams')
-    .select('api_team_id, name')
-    .in('api_team_id', [...allTeamIds]);
-
-  const teamMap = {};
-  (teams || []).forEach(t => { teamMap[String(t.api_team_id)] = t.name; });
-
-  return unique.map(m => {
-    const ids = Array.isArray(m.team_ids) ? m.team_ids : [];
-    return {
-      ...m,
-      homeTeamName: teamMap[String(ids[0])] || 'Home Team',
-      awayTeamName: teamMap[String(ids[1])] || 'Away Team',
-    };
-  });
+  return fixtures.map(f => ({
+    match_id:      String(f.fixture_id),
+    visible_from:  f.kickoff_at,
+    homeTeamName:  f.home_team_name || 'Home Team',
+    awayTeamName:  f.away_team_name || 'Away Team',
+    round:         f.round || null,
+  }));
 }
 
 function formatMatchOption(m) {
