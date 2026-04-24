@@ -1866,15 +1866,14 @@ async function loadMatchesForCompetition(apiLeagueId) {
   if (!leagues || leagues.length === 0) return [];
   const leagueIds = leagues.map(l => l.id);
 
-  // Get distinct upcoming matches from questions (allow matches from up to 6h ago)
-  const cutoff = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+  // Get distinct upcoming matches — pending questions whose match hasn't resolved yet
   const { data: questionRows } = await window.sb
     .from('questions')
-    .select('match_id, team_ids, visible_from')
+    .select('match_id, team_ids, visible_from, resolves_after')
     .in('league_id', leagueIds)
     .not('match_id', 'is', null)
-    .gte('visible_from', cutoff)
-    .order('visible_from');
+    .eq('resolution_status', 'pending')
+    .order('resolves_after');
 
   if (!questionRows || questionRows.length === 0) return [];
 
