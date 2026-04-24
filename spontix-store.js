@@ -3506,7 +3506,7 @@ SpontixStoreAsync.uploadPlayerPhoto = async function (dataUrl) {
   if (uid && typeof window !== 'undefined' && window.sb) {
     try {
       var blob = SpontixStore._dataUrlToBlob(dataUrl);
-      var fileName = uid + '/profile_' + Date.now() + '.jpg';
+      var fileName = uid + '/profile.jpg';  // fixed name — upsert replaces previous
       var uploadResult = await window.sb.storage
         .from('user-photos')
         .upload(fileName, blob, { contentType: 'image/jpeg', upsert: true });
