@@ -30,6 +30,10 @@
 
 /* ── Reset ── */
 * { margin: 0; padding: 0; box-sizing: border-box; }
+
+/* Paint the background before CSS finishes loading — eliminates the white/black flash on page navigation */
+html { background: #1A1A2E; }
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
   background: var(--navy);
@@ -37,6 +41,12 @@ body {
   display: flex;
   min-height: 100vh;
   overflow-x: hidden;
+  animation: page-enter 120ms ease;
+}
+
+@keyframes page-enter {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 a { text-decoration: none; color: inherit; }
