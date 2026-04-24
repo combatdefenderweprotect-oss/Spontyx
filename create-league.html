@@ -570,6 +570,42 @@
     .ai-questions-config { display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06); }
     .ai-questions-config.visible { display: block; }
 
+    /* ══ QUESTION MODE CARDS (Match Night) ══ */
+    .qmode-cards { display: flex; flex-direction: column; gap: 10px; margin-bottom: 8px; }
+    .qmode-card {
+      padding: 16px 18px; border-radius: var(--radius-md); border: 2px solid rgba(255,255,255,0.08);
+      background: var(--navy-card); cursor: pointer; transition: all 0.2s;
+      display: flex; align-items: center; gap: 14px; position: relative;
+    }
+    .qmode-card:hover { border-color: rgba(168,225,12,0.25); transform: translateY(-1px); }
+    .qmode-card.selected { border-color: var(--lime); background: var(--lime-dim); }
+    .qmode-card.locked { opacity: 0.55; cursor: not-allowed; }
+    .qmode-card.locked:hover { transform: none; border-color: rgba(255,255,255,0.08); }
+    .qmode-icon {
+      width: 42px; height: 42px; border-radius: var(--radius-sm); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .qmode-icon svg { width: 20px; height: 20px; stroke-width: 2; fill: none; }
+    .qmode-body { flex: 1; }
+    .qmode-name { font-size: 0.88rem; font-weight: 700; margin-bottom: 3px; }
+    .qmode-desc { font-size: 0.72rem; color: var(--grey); line-height: 1.4; }
+    .qmode-check {
+      width: 22px; height: 22px; border-radius: 50%; border: 2px solid var(--grey-dark);
+      flex-shrink: 0; display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+    }
+    .qmode-card.selected .qmode-check { border-color: var(--lime); background: var(--lime); }
+    .qmode-check svg { width: 11px; height: 11px; stroke: var(--navy); stroke-width: 3; fill: none; display: none; }
+    .qmode-card.selected .qmode-check svg { display: block; }
+
+    /* Match night badge strip */
+    .matchnight-badge {
+      display: inline-flex; align-items: center; gap: 5px; font-size: 0.62rem; font-weight: 700;
+      color: var(--coral); text-transform: uppercase; letter-spacing: 0.8px;
+      padding: 3px 10px; background: rgba(255,107,107,0.1); border-radius: var(--radius-pill);
+      margin-bottom: 20px;
+    }
+    .matchnight-badge svg { width: 12px; height: 12px; stroke: var(--coral); fill: none; stroke-width: 2; }
+
     /* ══ RESPONSIVE ══ */
     @media (max-width: 640px) {
       .wizard { padding: 20px 16px; }
@@ -729,8 +765,8 @@
       </div>
     </div>
 
-    <!-- Coverage Scope -->
-    <div class="form-group">
+    <!-- Coverage Scope (hidden for Match Night) -->
+    <div class="form-group" id="scope-section">
       <label class="form-label">Coverage Scope</label>
       <div class="scope-toggle">
         <div class="scope-card selected" id="scope-full" onclick="selectScope('full_league')">
@@ -762,8 +798,8 @@
       </select>
     </div>
 
-    <!-- League Duration -->
-    <div class="form-row">
+    <!-- League Duration (hidden for Match Night) -->
+    <div class="form-row" id="dates-section">
       <div class="form-group">
         <label class="form-label">Start Date</label>
         <input type="date" class="form-input" id="league-start-date" />
@@ -776,11 +812,60 @@
     <div class="form-hint" style="margin-top:-8px;margin-bottom:8px;">Used to calculate your AI question quota for the league duration.</div>
 
     <div class="form-group" id="match-select-group" style="display:none;">
-      <label class="form-label">Match / Event</label>
-      <select class="form-input" id="league-match">
-        <option value="">Select a match or event...</option>
-        <option value="custom">Custom event (enter details)</option>
+      <label class="form-label">Match</label>
+      <select class="form-input" id="league-match" onchange="onMatchSelect()">
+        <option value="">Select a competition first...</option>
       </select>
+      <div class="form-hint" id="match-select-hint" style="display:none; margin-top:6px; color:var(--grey-dark);">No upcoming matches found in our database for this competition yet.</div>
+    </div>
+
+    <!-- Question Mode (Match Night only) -->
+    <div id="matchnight-extra" style="display:none;">
+      <div class="form-group">
+        <label class="form-label">Question Style</label>
+        <div class="form-hint" style="margin-bottom:14px;">Choose what questions your players get during the match night.</div>
+        <div class="qmode-cards">
+
+          <!-- Pre-match only — all tiers -->
+          <div class="qmode-card" onclick="selectQuestionMode('prematch', this)">
+            <div class="qmode-icon" style="background:var(--lime-dim);">
+              <svg viewBox="0 0 24 24" stroke="var(--lime)" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+            </div>
+            <div class="qmode-body">
+              <div class="qmode-name">Pre-match only</div>
+              <div class="qmode-desc">Predictions set before kick-off — scorers, outcomes, clean sheets.</div>
+            </div>
+            <div class="qmode-check"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+          </div>
+
+          <!-- Live in-game — Pro+ -->
+          <div class="qmode-card" id="qmode-live-card" onclick="selectQuestionModeGated('live', this, 'pro', 'Live in-game questions')">
+            <span class="lock-badge" id="qmode-live-badge" style="display:none;">Pro</span>
+            <div class="qmode-icon" style="background:rgba(255,107,107,0.12);">
+              <svg viewBox="0 0 24 24" stroke="var(--coral)" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+            </div>
+            <div class="qmode-body">
+              <div class="qmode-name">Live in-game <span class="tier-badge pro" id="qmode-live-tier" style="display:none;">Pro</span></div>
+              <div class="qmode-desc">Real-time questions as the match unfolds — goals, cards, corners.</div>
+            </div>
+            <div class="qmode-check"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+          </div>
+
+          <!-- Hybrid — Pro+ -->
+          <div class="qmode-card" id="qmode-hybrid-card" onclick="selectQuestionModeGated('hybrid', this, 'pro', 'Hybrid mode')">
+            <span class="lock-badge" id="qmode-hybrid-badge" style="display:none;">Pro</span>
+            <div class="qmode-icon" style="background:rgba(78,205,196,0.12);">
+              <svg viewBox="0 0 24 24" stroke="var(--teal)" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            </div>
+            <div class="qmode-body">
+              <div class="qmode-name">Hybrid <span class="tier-badge pro" id="qmode-hybrid-tier" style="display:none;">Pro</span></div>
+              <div class="qmode-desc">Pre-match predictions plus live questions during the game — best of both.</div>
+            </div>
+            <div class="qmode-check"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+          </div>
+
+        </div>
+      </div>
     </div>
 
     <!-- Team Mode -->
@@ -1222,6 +1307,8 @@
       <div class="review-row"><span class="review-label">Competition</span><span class="review-value" id="review-comp">—</span></div>
       <div class="review-row" id="review-scope-row"><span class="review-label">Scope</span><span class="review-value" id="review-scope">All Matches</span></div>
       <div class="review-row" id="review-team-row" style="display:none;"><span class="review-label">Team</span><span class="review-value" id="review-team" style="color:var(--lime);">—</span></div>
+      <div class="review-row" id="review-match-row" style="display:none;"><span class="review-label">Match</span><span class="review-value" id="review-match" style="color:var(--lime);">—</span></div>
+      <div class="review-row" id="review-qmode-row" style="display:none;"><span class="review-label">Questions</span><span class="review-value" id="review-qmode" style="color:var(--teal);">—</span></div>
       <div class="review-row" id="review-duration-row"><span class="review-label">Duration</span><span class="review-value" id="review-duration" style="color:var(--teal);">—</span></div>
     </div>
 
@@ -1278,6 +1365,11 @@ let aiQuestionsEnabled = false;
 let selectedCompetition = null;
 // Holds the full row from sports_teams for the chosen team
 let selectedScopedTeam = null;
+// Match Night specific state
+let matchNightMode = ''; // 'prematch' | 'live' | 'hybrid'
+let selectedMatch = null; // { match_id, team_ids, visible_from, homeTeamName, awayTeamName }
+// La Liga (140) and Premier League (39) — only competitions available for Match Night MVP
+const MATCH_NIGHT_API_LEAGUE_IDS = [39, 140];
 let selectedTrophy = { type: 'league_champion', name: 'League Champion', desc: 'Won a full league season', icon: 'trophy-gold', rarity: 'legendary', custom: false };
 
 // ── Trophy Picker ──
@@ -1443,6 +1535,7 @@ function updateProgress() {
 
 function nextStep() {
   if (currentStep === 0 && !leagueType) return;
+  if (currentStep === 0) initStep1();
   if (currentStep === 3 && !generatedCode) generateCode();
   if (currentStep < totalSteps - 1) {
     currentStep++;
@@ -1474,12 +1567,17 @@ function restoreStepState(step) {
     document.getElementById('custom-duration').classList.toggle('show', leagueType === 'custom');
   }
   if (step === 1) {
+    // Re-init match night vs standard layout
+    if (leagueType === 'match') {
+      initMatchNightStep(false);
+    } else {
+      initStandardStep(false);
+    }
     // Play mode cards
     document.querySelectorAll('.mode-card').forEach((c, i) => {
       c.classList.toggle('selected', (i === 0 && playMode === 'individual') || (i === 1 && playMode === 'team'));
     });
     document.getElementById('team-config').classList.toggle('visible', playMode === 'team');
-    // Name and competition values persist in input elements automatically
     validateStep1();
   }
   // Steps 2 & 3 — chip selections and slider values persist in DOM naturally
@@ -1517,7 +1615,13 @@ function selectDuration(chip, val) {
 function validateStep1() {
   const name = document.getElementById('league-name').value.trim();
   const comp = document.getElementById('league-comp').value;
-  document.getElementById('btn-next-1').disabled = !(name.length > 0 && comp && comp !== '');
+  if (leagueType === 'match') {
+    const match = document.getElementById('league-match').value;
+    const ok = name.length > 0 && comp !== '' && match !== '' && matchNightMode !== '';
+    document.getElementById('btn-next-1').disabled = !ok;
+  } else {
+    document.getElementById('btn-next-1').disabled = !(name.length > 0 && comp && comp !== '');
+  }
 }
 
 // ── Sport / Competition / Team dynamic loading ──
@@ -1549,6 +1653,10 @@ async function onSportChange() {
 }
 
 async function onCompetitionChange() {
+  if (leagueType === 'match') {
+    await onMatchNightCompChange();
+    return;
+  }
   const compEl   = document.getElementById('league-comp');
   const selected = compEl.options[compEl.selectedIndex];
   selectedCompetition = selected && selected.dataset.row
@@ -1588,6 +1696,274 @@ function onTeamChange() {
   selectedScopedTeam = selected && selected.dataset.row
     ? JSON.parse(selected.dataset.row)
     : null;
+}
+
+// ══════════════════════════════════════════
+//  MATCH NIGHT FLOW
+// ══════════════════════════════════════════
+
+function initStep1() {
+  if (leagueType === 'match') {
+    initMatchNightStep(true);
+  } else {
+    initStandardStep(true);
+  }
+}
+
+// reloadComps = true means we fire the competition loader; false = skip (already loaded)
+function initMatchNightStep(reloadComps) {
+  // Update title/subtitle
+  document.querySelector('#step-1 .wizard-title').textContent = 'Match Night setup';
+  document.querySelector('#step-1 .wizard-sub').textContent =
+    'Pick the match, choose your question style, and name your league.';
+
+  // Hide standard-only fields
+  document.getElementById('scope-section').style.display = 'none';
+  document.getElementById('scoped-team-group').style.display = 'none';
+  document.getElementById('dates-section').style.display = 'none';
+
+  // Show match night fields
+  document.getElementById('match-select-group').style.display = 'block';
+  document.getElementById('matchnight-extra').style.display = 'block';
+
+  // Apply tier gating to Live/Hybrid cards
+  applyMatchNightTierGating();
+
+  if (reloadComps) loadMatchNightCompetitions();
+}
+
+function initStandardStep(reloadComps) {
+  // Restore title/subtitle
+  document.querySelector('#step-1 .wizard-title').textContent = 'League details';
+  document.querySelector('#step-1 .wizard-sub').textContent =
+    'Name it, pick your sport, and choose the competition.';
+
+  // Show standard fields
+  document.getElementById('scope-section').style.display = 'block';
+  document.getElementById('dates-section').style.display = 'flex';
+
+  // Hide match night fields
+  document.getElementById('match-select-group').style.display = 'none';
+  document.getElementById('matchnight-extra').style.display = 'none';
+
+  // Reset match night state
+  matchNightMode = '';
+  selectedMatch = null;
+
+  if (reloadComps) onSportChange();
+}
+
+function applyMatchNightTierGating() {
+  const player = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
+  const tier = player ? (player.tier || 'starter') : 'starter';
+  const tierRank = { starter: 0, pro: 1, elite: 2 };
+  const userRank = tierRank[tier] || 0;
+  const isPro = userRank >= 1;
+
+  // Live card
+  const liveCard  = document.getElementById('qmode-live-card');
+  const liveBadge = document.getElementById('qmode-live-badge');
+  const liveTier  = document.getElementById('qmode-live-tier');
+  if (!isPro) {
+    liveCard.classList.add('locked');
+    if (liveBadge) liveBadge.style.display = 'inline-block';
+    if (liveTier)  liveTier.style.display  = 'none';
+  } else {
+    liveCard.classList.remove('locked');
+    if (liveBadge) liveBadge.style.display = 'none';
+    if (liveTier)  liveTier.style.display  = 'none';
+  }
+
+  // Hybrid card
+  const hybridCard  = document.getElementById('qmode-hybrid-card');
+  const hybridBadge = document.getElementById('qmode-hybrid-badge');
+  const hybridTier  = document.getElementById('qmode-hybrid-tier');
+  if (!isPro) {
+    hybridCard.classList.add('locked');
+    if (hybridBadge) hybridBadge.style.display = 'inline-block';
+    if (hybridTier)  hybridTier.style.display  = 'none';
+  } else {
+    hybridCard.classList.remove('locked');
+    if (hybridBadge) hybridBadge.style.display = 'none';
+    if (hybridTier)  hybridTier.style.display  = 'none';
+  }
+}
+
+async function loadMatchNightCompetitions() {
+  const compEl = document.getElementById('league-comp');
+  compEl.innerHTML = '<option value="">Loading...</option>';
+  selectedCompetition = null;
+  selectedMatch = null;
+  document.getElementById('league-match').innerHTML = '<option value="">Select a competition first...</option>';
+  document.getElementById('match-select-hint').style.display = 'none';
+  validateStep1();
+
+  if (!window.sb) return;
+  const { data } = await window.sb
+    .from('sports_competitions')
+    .select('*')
+    .eq('sport', 'football')
+    .eq('is_active', true)
+    .in('api_league_id', MATCH_NIGHT_API_LEAGUE_IDS)
+    .order('display_order');
+
+  compEl.innerHTML = '<option value="">Select competition...</option>';
+  (data || []).forEach(c => {
+    const opt = document.createElement('option');
+    opt.value       = c.id;
+    opt.textContent = c.name;
+    opt.dataset.row = JSON.stringify(c);
+    compEl.appendChild(opt);
+  });
+  validateStep1();
+}
+
+async function onMatchNightCompChange() {
+  const compEl   = document.getElementById('league-comp');
+  const selected = compEl.options[compEl.selectedIndex];
+  selectedCompetition = selected && selected.dataset.row ? JSON.parse(selected.dataset.row) : null;
+  selectedMatch = null;
+
+  const matchEl   = document.getElementById('league-match');
+  const hintEl    = document.getElementById('match-select-hint');
+  matchEl.innerHTML = '<option value="">Loading matches...</option>';
+  hintEl.style.display = 'none';
+  validateStep1();
+
+  if (!selectedCompetition) {
+    matchEl.innerHTML = '<option value="">Select a competition first...</option>';
+    return;
+  }
+
+  const matches = await loadMatchesForCompetition(selectedCompetition.api_league_id);
+  matchEl.innerHTML = '<option value="">Select a match...</option>';
+
+  if (matches.length === 0) {
+    hintEl.style.display = 'block';
+  } else {
+    hintEl.style.display = 'none';
+    matches.forEach(m => {
+      const opt = document.createElement('option');
+      opt.value       = m.match_id;
+      opt.textContent = formatMatchOption(m);
+      opt.dataset.row = JSON.stringify(m);
+      matchEl.appendChild(opt);
+    });
+  }
+  validateStep1();
+}
+
+async function loadMatchesForCompetition(apiLeagueId) {
+  if (!window.sb) return [];
+
+  // Get Spontix league IDs for this competition
+  const { data: leagues } = await window.sb
+    .from('leagues')
+    .select('id')
+    .eq('api_sports_league_id', apiLeagueId)
+    .eq('sport', 'football');
+
+  if (!leagues || leagues.length === 0) return [];
+  const leagueIds = leagues.map(l => l.id);
+
+  // Get distinct upcoming matches from questions (allow matches from up to 6h ago)
+  const cutoff = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString();
+  const { data: questionRows } = await window.sb
+    .from('questions')
+    .select('match_id, team_ids, visible_from')
+    .in('league_id', leagueIds)
+    .not('match_id', 'is', null)
+    .gte('visible_from', cutoff)
+    .order('visible_from');
+
+  if (!questionRows || questionRows.length === 0) return [];
+
+  // Deduplicate by match_id
+  const seen = new Set();
+  const unique = [];
+  for (const q of questionRows) {
+    if (q.match_id && !seen.has(q.match_id)) {
+      seen.add(q.match_id);
+      unique.push({ match_id: q.match_id, team_ids: q.team_ids, visible_from: q.visible_from });
+    }
+  }
+  if (unique.length === 0) return [];
+
+  // Collect all team IDs and look up names
+  const allTeamIds = new Set();
+  unique.forEach(m => {
+    (Array.isArray(m.team_ids) ? m.team_ids : []).forEach(id => allTeamIds.add(String(id)));
+  });
+
+  const { data: teams } = await window.sb
+    .from('sports_teams')
+    .select('api_team_id, name')
+    .in('api_team_id', [...allTeamIds]);
+
+  const teamMap = {};
+  (teams || []).forEach(t => { teamMap[String(t.api_team_id)] = t.name; });
+
+  return unique.map(m => {
+    const ids = Array.isArray(m.team_ids) ? m.team_ids : [];
+    return {
+      ...m,
+      homeTeamName: teamMap[String(ids[0])] || 'Home Team',
+      awayTeamName: teamMap[String(ids[1])] || 'Away Team',
+    };
+  });
+}
+
+function formatMatchOption(m) {
+  const home = m.homeTeamName || 'Home';
+  const away = m.awayTeamName || 'Away';
+  if (!m.visible_from) return `${home} vs ${away}`;
+  const d = new Date(m.visible_from);
+  const dateStr = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+  const timeStr = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+  return `${home} vs ${away} — ${dateStr}, ${timeStr}`;
+}
+
+function onMatchSelect() {
+  const matchEl  = document.getElementById('league-match');
+  const selected = matchEl.options[matchEl.selectedIndex];
+  selectedMatch  = selected && selected.dataset.row ? JSON.parse(selected.dataset.row) : null;
+
+  // Auto-fill league name if field is empty
+  if (selectedMatch && selectedMatch.homeTeamName) {
+    const nameEl = document.getElementById('league-name');
+    if (!nameEl.value.trim()) {
+      nameEl.value = `${selectedMatch.homeTeamName} vs ${selectedMatch.awayTeamName}`;
+    }
+  }
+  validateStep1();
+}
+
+function selectQuestionMode(mode, el) {
+  matchNightMode = mode;
+  document.querySelectorAll('.qmode-card').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+  validateStep1();
+}
+
+function selectQuestionModeGated(mode, el, minTier, featureName) {
+  if (el.classList.contains('locked')) {
+    SpontixSidebar.showUpgradeModal({
+      feature: featureName,
+      requiredTier: 'Pro',
+      isVenue: false,
+      icon: '⚡',
+      description: 'Upgrade to <strong>Pro</strong> to unlock live in-game questions and hybrid mode.',
+      benefits: [
+        'Live in-game questions during the match',
+        'Hybrid mode — pre-match + live combined',
+        'Streak bonuses and risky answers',
+        'All question types',
+        'Ad-free experience'
+      ]
+    });
+    return;
+  }
+  selectQuestionMode(mode, el);
 }
 
 // ── Scope selection ──
@@ -1795,6 +2171,31 @@ function populateReview() {
     : (compEl.selectedIndex > 0 ? compEl.options[compEl.selectedIndex].text : '—');
   document.getElementById('review-comp').textContent = compName;
 
+  // Match Night vs standard: show/hide scope and show match + mode
+  if (leagueType === 'match') {
+    document.getElementById('review-scope-row').style.display = 'none';
+    document.getElementById('review-team-row').style.display = 'none';
+    document.getElementById('review-duration-row').style.display = 'none';
+    // Match
+    const matchRow = document.getElementById('review-match-row');
+    const matchVal = document.getElementById('review-match');
+    if (selectedMatch) {
+      matchRow.style.display = 'flex';
+      matchVal.textContent = `${selectedMatch.homeTeamName} vs ${selectedMatch.awayTeamName}`;
+    } else {
+      matchRow.style.display = 'none';
+    }
+    // Question mode
+    const qmodeRow = document.getElementById('review-qmode-row');
+    const qmodeVal = document.getElementById('review-qmode');
+    const modeLabels = { prematch: 'Pre-match only', live: 'Live in-game', hybrid: 'Hybrid' };
+    qmodeRow.style.display = matchNightMode ? 'flex' : 'none';
+    qmodeVal.textContent = modeLabels[matchNightMode] || '—';
+  } else {
+    document.getElementById('review-match-row').style.display = 'none';
+    document.getElementById('review-qmode-row').style.display = 'none';
+  }
+
   // Scope + Team
   document.getElementById('review-scope').textContent = leagueScope === 'team_specific' ? 'Team Specific' : 'Full League';
   if (leagueScope === 'team_specific' && selectedScopedTeam) {
@@ -1915,6 +2316,16 @@ async function launchLeague() {
   const diffMs    = startVal && endVal ? new Date(endVal) - new Date(startVal) : 0;
   const weeks     = diffMs > 0 ? Math.max(1, Math.ceil(diffMs / (7 * 24 * 60 * 60 * 1000))) : 1;
 
+  // For Match Night: auto-derive start/end dates from the selected match kickoff
+  let resolvedStart = startVal;
+  let resolvedEnd   = endVal;
+  if (leagueType === 'match' && selectedMatch && selectedMatch.visible_from) {
+    const kickoff = new Date(selectedMatch.visible_from);
+    const dateStr = kickoff.toISOString().slice(0, 10);
+    resolvedStart = dateStr;
+    resolvedEnd   = dateStr;
+  }
+
   const leagueData = {
     name: document.getElementById('league-name').value || 'Untitled League',
     sport: sportEl.options[sportEl.selectedIndex].value,
@@ -1927,17 +2338,18 @@ async function launchLeague() {
     maxMembers: parseInt(document.getElementById('player-slider').value) || 50,
     trophy: selectedTrophy,
     // AI / sports fields
-    scope:                leagueScope,
+    scope:                leagueType === 'match' ? 'full_league' : leagueScope,
     scoped_team_id:       leagueScope === 'team_specific' && selectedScopedTeam ? selectedScopedTeam.api_team_id : null,
     scoped_team_name:     leagueScope === 'team_specific' && selectedScopedTeam ? selectedScopedTeam.name : null,
     api_sports_league_id: selectedCompetition ? selectedCompetition.api_league_id : null,
     api_sports_team_id:   leagueScope === 'team_specific' && selectedScopedTeam ? selectedScopedTeam.api_team_id : null,
     api_sports_season:    selectedCompetition ? selectedCompetition.season : null,
-    league_start_date:    startVal || null,
-    league_end_date:      endVal   || null,
-    ai_questions_enabled: aiQuestionsEnabled && !!selectedCompetition,
-    ai_weekly_quota:      aiQuestionsEnabled ? weekly : null,
-    ai_total_quota:       aiQuestionsEnabled ? weekly * weeks : null,
+    league_start_date:    resolvedStart || null,
+    league_end_date:      resolvedEnd   || null,
+    // Match Night: always enable AI questions; mode stored for future pipeline use
+    ai_questions_enabled: leagueType === 'match' ? !!selectedCompetition : (aiQuestionsEnabled && !!selectedCompetition),
+    ai_weekly_quota:      leagueType === 'match' ? weekly : (aiQuestionsEnabled ? weekly : null),
+    ai_total_quota:       leagueType === 'match' ? weekly : (aiQuestionsEnabled ? weekly * weeks : null),
   };
 
   var newLeagueId = null;
