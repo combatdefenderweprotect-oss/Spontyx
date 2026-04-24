@@ -36,7 +36,14 @@
       "Bash(awk '{print $5, $9}')",
       "Bash(gh auth *)",
       "mcp__Claude_Preview__preview_start",
-      "Bash(node -e ' *)"
+      "Bash(node -e ' *)",
+      "Bash(sed -n '533,541p' activity.html)",
+      "Bash(sed -n '1223,1231p' profile.html)",
+      "Bash(sed -n '1165,1180p' profile.html)",
+      "Bash(sed -n '972,985p' discover.html)",
+      "Bash(sed -n '206,220p' upcoming.html)",
+      "Bash(sed -n '273,286p' matches.html)",
+      "Bash(python3 -)"
     ]
   }
 }
