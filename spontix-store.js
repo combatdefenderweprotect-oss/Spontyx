@@ -376,11 +376,14 @@ const SpontixStore = {
       try {
         const player = JSON.parse(stored);
         // Purge stale seed values so they never flash in the sidebar
-        if (player.name === 'Bran') player.name = '';
-        if (player.handle === '@bran_predicts') player.handle = '';
-        if (player.avatar === 'B' && !player.name) player.avatar = '';
-        // Merge with defaults for any missing fields
-        return { ...this.defaultPlayer(), ...player };
+        let dirty = false;
+        if (player.name === 'Bran') { player.name = ''; dirty = true; }
+        if (player.handle === '@bran_predicts') { player.handle = ''; dirty = true; }
+        if (player.avatar === 'B' && !player.name) { player.avatar = ''; dirty = true; }
+        const merged = { ...this.defaultPlayer(), ...player };
+        // Persist the purge so we don't re-read stale values on the next page load
+        if (dirty) this.savePlayer(merged);
+        return merged;
       } catch (e) {}
     }
     // First time — initialize with seed data so pages aren't empty

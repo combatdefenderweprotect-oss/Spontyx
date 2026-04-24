@@ -106,18 +106,21 @@ const SpontixSidebar = {
         '</div>';
     }
 
-    // Profile (will be hydrated by store if available)
-    const profileName = isVenue ? (typeof SpontixStore !== 'undefined' ? SpontixStore.DEFAULT_VENUE_NAME : 'Arena Bar & Grill') : 'Bran';
+    // Profile — read cached player once so name + avatar use the same data
+    const _cachedPlayer = !isVenue && typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
+    const profileName = isVenue
+      ? (typeof SpontixStore !== 'undefined' ? SpontixStore.DEFAULT_VENUE_NAME : 'Arena Bar & Grill')
+      : (_cachedPlayer ? (_cachedPlayer.handle || _cachedPlayer.name || '') : '');
     const currentTierLabel = (typeof SpontixStore !== 'undefined' && SpontixStore.getTierLabel) ? SpontixStore.getTierLabel(localStorage.getItem('spontix_user_tier') || (isVenue ? 'venue-starter' : 'starter')) : (isVenue ? 'Venue Starter' : 'Starter');
     const profileTier = currentTierLabel;
     const profileLink = isVenue ? 'venue-profile.html' : 'profile.html';
     const venueClass = isVenue ? ' sidebar-venue' : '';
 
     // Build avatar HTML — for players, use photo config from store
-    let avatarInnerHTML = isVenue ? 'TC' : 'B';
+    let avatarInnerHTML = isVenue ? 'TC' : '';
     let avatarExtraStyle = '';
-    if (!isVenue && typeof SpontixStore !== 'undefined' && SpontixStore.getPlayerAvatarStyle) {
-      const player = SpontixStore.getPlayer();
+    if (!isVenue && _cachedPlayer && typeof SpontixStore !== 'undefined' && SpontixStore.getPlayerAvatarStyle) {
+      const player = _cachedPlayer;
       const avStyle = SpontixStore.getPlayerAvatarStyle(player);
       if (avStyle.type === 'image') {
         avatarInnerHTML = '<img src="' + avStyle.src + '" style="width:100%;height:100%;object-fit:cover;border-radius:50%;" alt="' + avStyle.initial + '" />';
