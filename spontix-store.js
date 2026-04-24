@@ -851,15 +851,28 @@ const SpontixStore = {
 
   TIER_LIMITS: {
     // ── Player Tiers ──
+    // Pricing: Starter=Free, Pro=€7.99/mo, Elite=€19.99/mo
+    // See docs/TIER_ARCHITECTURE.md for full rationale and feature gate matrix.
     'starter': {
       label: 'Starter',
+      price: 0,
+      // ── Leagues ──
       leaguesCreatePerWeek: 1,
       leaguesJoinMax: 3,
       leagueMaxPlayers: 10,
       teamMaxTeams: 2,
       teamMaxPlayers: 3,
+      // ── Question Lanes (canonical: CORE_MATCH_PREMATCH / CORE_MATCH_LIVE / REAL_WORLD) ──
+      liveQuestionsEnabled: false,        // CORE_MATCH_LIVE locked
+      realWorldQuestionsEnabled: false,   // REAL_WORLD locked
+      realWorldQuestionsPerMonth: 0,
       aiQuestionsPerMonth: 30,
-      questionTypes: ['pre-match', 'halftime'],
+      questionTypes: ['pre-match', 'halftime'], // legacy compat
+      // ── Game Modes ──
+      battleRoyalePerDay: 3,
+      triviaModesAllowed: ['solo'],
+      triviaGamesPerDay: 5,
+      // ── Mechanics ──
       riskyAnswers: false,
       streakBonuses: false,
       liveStats: false,
@@ -867,30 +880,44 @@ const SpontixStore = {
       seasonLong: false,
       customQuestions: false,
       scheduleQuestions: false,
-      battleRoyalePerDay: 1,
-      triviaModesAllowed: ['solo'],
-      triviaGamesPerDay: 3,
+      // ── UX / Display ──
       customLeagueThemes: false,
       adFree: false,
       fullMatchSchedule: false,
       leagueAdminTools: false,
       badges: false,
       venueReservations: false,
+      advancedAnalytics: false,
+      predictionHistoryExport: false,
+      earlyAccess: false,
+      // ── Customization ──
+      customPhotoUpload: false,       // profile photo upload locked
+      customLeagueCoverPhoto: false,  // league cover photo locked
       // ── Trophies ──
-      // Free: 1 basic system trophy only
       trophyPresets: ['league_champion'],
       customTrophyCreation: false,
-      trophiesAllowed: true, // can receive trophies
+      trophiesAllowed: true,
     },
     'pro': {
       label: 'Pro',
+      price: 7.99,
+      // ── Leagues ──
       leaguesCreatePerWeek: 5,
-      leaguesJoinMax: 10,
-      leagueMaxPlayers: 25,
+      leaguesJoinMax: 20,
+      leagueMaxPlayers: 40,
       teamMaxTeams: 6,
       teamMaxPlayers: 5,
-      aiQuestionsPerMonth: 500,
+      // ── Question Lanes ──
+      liveQuestionsEnabled: true,           // CORE_MATCH_LIVE unlocked
+      realWorldQuestionsEnabled: 'limited', // REAL_WORLD: limited quota
+      realWorldQuestionsPerMonth: 10,
+      aiQuestionsPerMonth: 400,
       questionTypes: ['pre-match', 'halftime', 'live', 'prediction', 'news', 'history'],
+      // ── Game Modes ──
+      battleRoyalePerDay: Infinity,
+      triviaModesAllowed: ['solo', '1v1'],
+      triviaGamesPerDay: Infinity,
+      // ── Mechanics ──
       riskyAnswers: true,
       streakBonuses: true,
       liveStats: false,
@@ -898,30 +925,44 @@ const SpontixStore = {
       seasonLong: false,
       customQuestions: false,
       scheduleQuestions: false,
-      battleRoyalePerDay: 5,
-      triviaModesAllowed: ['solo', '1v1'],
-      triviaGamesPerDay: 15,
+      // ── UX / Display ──
       customLeagueThemes: true,
       adFree: true,
       fullMatchSchedule: true,
       leagueAdminTools: false,
-      badges: false,
-      venueReservations: false,
+      badges: true,
+      venueReservations: true,
+      advancedAnalytics: false,
+      predictionHistoryExport: false,
+      earlyAccess: false,
+      // ── Customization ──
+      customPhotoUpload: true,
+      customLeagueCoverPhoto: true,
       // ── Trophies ──
-      // Pro: expanded system trophy catalogue, still no AI creation
       trophyPresets: ['league_champion', 'league_podium', 'league_runner_up', 'undefeated_season', 'season_champion'],
       customTrophyCreation: false,
       trophiesAllowed: true,
     },
     'elite': {
       label: 'Elite',
+      price: 19.99,
+      // ── Leagues ──
       leaguesCreatePerWeek: Infinity,
       leaguesJoinMax: Infinity,
-      leagueMaxPlayers: 50,
+      leagueMaxPlayers: 100,
       teamMaxTeams: Infinity,
       teamMaxPlayers: 10,
-      aiQuestionsPerMonth: Infinity,
+      // ── Question Lanes ──
+      liveQuestionsEnabled: true,      // CORE_MATCH_LIVE full
+      realWorldQuestionsEnabled: true, // REAL_WORLD full + priority
+      realWorldQuestionsPerMonth: Infinity,
+      aiQuestionsPerMonth: 1500,
       questionTypes: ['pre-match', 'halftime', 'live', 'prediction', 'news', 'history', 'custom'],
+      // ── Game Modes ──
+      battleRoyalePerDay: Infinity,
+      triviaModesAllowed: ['solo', '1v1', 'party-room'],
+      triviaGamesPerDay: Infinity,
+      // ── Mechanics ──
       riskyAnswers: true,
       streakBonuses: true,
       liveStats: true,
@@ -929,34 +970,48 @@ const SpontixStore = {
       seasonLong: true,
       customQuestions: true,
       scheduleQuestions: true,
-      battleRoyalePerDay: Infinity,
-      triviaModesAllowed: ['solo', '1v1', 'party-room'],
-      triviaGamesPerDay: Infinity,
+      // ── UX / Display ──
       customLeagueThemes: true,
       adFree: true,
       fullMatchSchedule: true,
       leagueAdminTools: true,
       badges: true,
       venueReservations: true,
+      advancedAnalytics: true,
+      predictionHistoryExport: true,
+      earlyAccess: true,
+      // ── Customization ──
+      customPhotoUpload: true,
+      customLeagueCoverPhoto: true,
       // ── Trophies ──
-      // Elite: full catalogue + AI custom trophy creation
       trophyPresets: ['league_champion', 'league_podium', 'league_runner_up', 'undefeated_season', 'season_champion', 'trivia_perfect', 'trivia_streak_10'],
       customTrophyCreation: true,
       trophiesAllowed: true,
     },
     // ── Venue Tiers ──
+    // Pricing: Venue Starter=Free, Venue Pro=€29.99/mo, Venue Elite=€79.99/mo
+    // See docs/TIER_ARCHITECTURE.md for full rationale and feature gate matrix.
     'venue-starter': {
       label: 'Venue Starter',
-      eventsPerWeek: 1,
-      maxParticipants: 15,
+      price: 0,
+      // ── Events ──
+      eventsPerMonth: 2,
+      eventsPerWeek: 1,           // legacy compat key
+      maxParticipants: 25,
+      concurrentEvents: 1,
       teamMaxTeams: 4,
       teamMaxPlayers: 4,
-      aiQuestionsPerMonth: 30,
+      // ── Question Lanes ──
+      liveQuestionsEnabled: false,       // AI live questions locked
+      realWorldQuestionsEnabled: false,  // Real World locked
+      realWorldQuestionsPerMonth: 0,
+      aiQuestionsPerMonth: 0,            // no AI on free — pre-made bank only
       questionTypes: ['pre-match', 'halftime'],
       customQuestionsLive: false,
-      questionBank: false,
+      questionBank: false,               // pre-made question bank locked
       aiBulkGeneration: false,
       sponsoredQuestions: false,
+      // ── Live Floor ──
       liveFloor: 'basic',
       tvDisplayMode: false,
       tableMap: false,
@@ -964,40 +1019,49 @@ const SpontixStore = {
       eventScheduling: false,
       playerInviteTools: false,
       nfcJoin: false,
+      // ── Branding ──
       customBranding: false,
       whiteLabelOption: false,
       removeSpontixBranding: false,
+      // ── Analytics ──
       basicAnalytics: false,
       advancedAnalytics: false,
       apiAccess: false,
       multiVenue: false,
       prizeManagement: false,
       liveStatsTV: false,
-      concurrentEvents: 1,
       adFree: false,
       // ── Trophies ──
-      // Venue Starter: can't create or award trophies
       trophyPresets: [],
       customTrophyCreation: false,
+      customTrophyMax: 0,
       canAwardTrophies: false,
-      // ── Title Photos ──
-      // Venue Starter: color OR premade stock photos only — no custom uploads
+      // ── Photos ──
       photoCustomUpload: false,
       photoPresetsAllowed: true,
       photoMaxCustom: 0,
     },
     'venue-pro': {
       label: 'Venue Pro',
+      price: 29.99,
+      // ── Events ──
+      eventsPerMonth: Infinity,
       eventsPerWeek: Infinity,
-      maxParticipants: 100,
+      maxParticipants: 150,
+      concurrentEvents: 5,
       teamMaxTeams: 12,
       teamMaxPlayers: 6,
-      aiQuestionsPerMonth: 1000,
+      // ── Question Lanes ──
+      liveQuestionsEnabled: true,           // AI live questions enabled
+      realWorldQuestionsEnabled: 'limited', // Real World: limited quota
+      realWorldQuestionsPerMonth: 20,
+      aiQuestionsPerMonth: 300,
       questionTypes: ['pre-match', 'halftime', 'live', 'prediction', 'news', 'trivia'],
       customQuestionsLive: true,
       questionBank: true,
       aiBulkGeneration: false,
       sponsoredQuestions: false,
+      // ── Live Floor ──
       liveFloor: 'full',
       tvDisplayMode: true,
       tableMap: true,
@@ -1005,40 +1069,49 @@ const SpontixStore = {
       eventScheduling: true,
       playerInviteTools: true,
       nfcJoin: true,
+      // ── Branding ──
       customBranding: true,
       whiteLabelOption: false,
       removeSpontixBranding: true,
+      // ── Analytics ──
       basicAnalytics: true,
       advancedAnalytics: true,
       apiAccess: false,
       multiVenue: false,
       prizeManagement: false,
       liveStatsTV: false,
-      concurrentEvents: 5,
       adFree: true,
       // ── Trophies ──
-      // Venue Pro: can award from preset trophy catalogue, no AI creation
       trophyPresets: ['venue_event_champion', 'venue_regular', 'trivia_1v1_champion', 'trivia_party_winner', 'trivia_perfect'],
       customTrophyCreation: false,
+      customTrophyMax: 5,
       canAwardTrophies: true,
-      // ── Title Photos ──
-      // Venue Pro: custom uploads + presets
+      // ── Photos ──
       photoCustomUpload: true,
       photoPresetsAllowed: true,
-      photoMaxCustom: 12,
+      photoMaxCustom: 8,
     },
     'venue-elite': {
       label: 'Venue Elite',
+      price: 79.99,
+      // ── Events ──
+      eventsPerMonth: Infinity,
       eventsPerWeek: Infinity,
       maxParticipants: 500,
+      concurrentEvents: Infinity,
       teamMaxTeams: Infinity,
       teamMaxPlayers: Infinity,
-      aiQuestionsPerMonth: Infinity,
+      // ── Question Lanes ──
+      liveQuestionsEnabled: true,      // full AI live questions
+      realWorldQuestionsEnabled: true, // Real World full + priority
+      realWorldQuestionsPerMonth: Infinity,
+      aiQuestionsPerMonth: 1000,
       questionTypes: ['pre-match', 'halftime', 'live', 'prediction', 'news', 'trivia', 'custom', 'sponsored'],
       customQuestionsLive: true,
       questionBank: true,
       aiBulkGeneration: true,
       sponsoredQuestions: true,
+      // ── Live Floor ──
       liveFloor: 'full',
       tvDisplayMode: true,
       tableMap: true,
@@ -1046,24 +1119,24 @@ const SpontixStore = {
       eventScheduling: true,
       playerInviteTools: true,
       nfcJoin: true,
+      // ── Branding ──
       customBranding: true,
       whiteLabelOption: true,
       removeSpontixBranding: true,
+      // ── Analytics ──
       basicAnalytics: true,
       advancedAnalytics: true,
       apiAccess: true,
       multiVenue: true,
       prizeManagement: true,
       liveStatsTV: true,
-      concurrentEvents: Infinity,
       adFree: true,
       // ── Trophies ──
-      // Venue Elite: full preset catalogue + AI custom trophy creation
       trophyPresets: ['venue_event_champion', 'venue_regular', 'trivia_1v1_champion', 'trivia_party_winner', 'trivia_perfect', 'trivia_streak_10', 'br_champion', 'br_flawless'],
       customTrophyCreation: true,
+      customTrophyMax: Infinity,
       canAwardTrophies: true,
-      // ── Title Photos ──
-      // Venue Elite: unlimited custom uploads + presets
+      // ── Photos ──
       photoCustomUpload: true,
       photoPresetsAllowed: true,
       photoMaxCustom: Infinity,

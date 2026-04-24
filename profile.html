@@ -1481,6 +1481,30 @@ function closeAvatarPicker() {
 }
 
 function switchAvatarTab(tab) {
+  if (tab === 'upload') {
+    var player = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
+    var tier = player ? (player.tier || 'starter') : 'starter';
+    var limits = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(tier) : null;
+    if (limits && !limits.customPhotoUpload) {
+      if (typeof SpontixSidebar !== 'undefined') {
+        SpontixSidebar.showUpgradeModal({
+          feature: 'Custom photo upload',
+          requiredTier: 'Pro',
+          isVenue: false,
+          icon: '📸',
+          description: 'Upgrade to <strong>Pro</strong> to upload a custom profile photo.',
+          benefits: [
+            'Upload any profile photo',
+            'Custom league cover photos',
+            'Live match predictions unlocked',
+            'Streak bonuses and risky answers',
+            'Ad-free experience'
+          ]
+        });
+      }
+      return;
+    }
+  }
   ['colors','presets','upload'].forEach(function(t) {
     document.getElementById('atab-' + t).classList.toggle('active', t === tab);
     document.getElementById('avatar-tab-' + t).classList.toggle('active', t === tab);

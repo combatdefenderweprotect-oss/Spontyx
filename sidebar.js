@@ -95,14 +95,14 @@ const SpontixSidebar = {
     if (isVenue) {
       upgradeHTML = '<div class="sidebar-upgrade">' +
         '<div class="sidebar-upgrade-title">Upgrade to Venue Pro</div>' +
-        '<div class="sidebar-upgrade-text">TV Mode, Question Bank, custom Qs live, analytics, 100 players.</div>' +
-        '<button class="sidebar-upgrade-btn" onclick="showToast(\'Venue upgrade flow coming soon!\')">Upgrade — $49.99/mo</button>' +
+        '<div class="sidebar-upgrade-text">Let AI run your match night — live questions, TV mode, analytics, 150 players.</div>' +
+        '<button class="sidebar-upgrade-btn" onclick="showToast(\'Venue upgrade flow coming soon!\')">Upgrade — €29.99/mo</button>' +
         '</div>';
     } else {
       upgradeHTML = '<div class="sidebar-upgrade">' +
         '<div class="sidebar-upgrade-title">Upgrade to Pro</div>' +
-        '<div class="sidebar-upgrade-text">All question types, 500 AI Qs, risky answers, ad-free, BR x5/day.</div>' +
-        '<button class="sidebar-upgrade-btn">Upgrade — $5.99/mo</button>' +
+        '<div class="sidebar-upgrade-text">Unlock Live Match Predictions — live questions, 1v1 trivia, streak bonuses.</div>' +
+        '<button class="sidebar-upgrade-btn">Upgrade — €7.99/mo</button>' +
         '</div>';
     }
 
@@ -275,8 +275,8 @@ const SpontixSidebar = {
     const isVenue = opts.isVenue || false;
     const tierName = opts.requiredTier || (isVenue ? 'Venue Pro' : 'Pro');
     const price = tierName.includes('Elite')
-      ? (isVenue ? '$149.99/mo' : '$14.99/mo')
-      : (isVenue ? '$49.99/mo' : '$5.99/mo');
+      ? (isVenue ? '€79.99/mo' : '€19.99/mo')
+      : (isVenue ? '€29.99/mo' : '€7.99/mo');
 
     document.getElementById('tg-icon').textContent = opts.icon || '🔒';
     document.getElementById('tg-title').textContent = 'Upgrade to ' + tierName;

@@ -1755,16 +1755,15 @@ function initStandardStep(reloadComps) {
 
 function applyMatchNightTierGating() {
   const player = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
-  const tier = player ? (player.tier || 'starter') : 'starter';
-  const tierRank = { starter: 0, pro: 1, elite: 2 };
-  const userRank = tierRank[tier] || 0;
-  const isPro = userRank >= 1;
+  const tier   = player ? (player.tier || 'starter') : 'starter';
+  const limits = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(tier) : null;
+  const canLive = limits ? !!limits.liveQuestionsEnabled : false;
 
-  // Live card
+  // Live card — requires liveQuestionsEnabled (Pro+)
   const liveCard  = document.getElementById('qmode-live-card');
   const liveBadge = document.getElementById('qmode-live-badge');
   const liveTier  = document.getElementById('qmode-live-tier');
-  if (!isPro) {
+  if (!canLive) {
     liveCard.classList.add('locked');
     if (liveBadge) liveBadge.style.display = 'inline-block';
     if (liveTier)  liveTier.style.display  = 'none';
@@ -1774,11 +1773,11 @@ function applyMatchNightTierGating() {
     if (liveTier)  liveTier.style.display  = 'none';
   }
 
-  // Hybrid card
+  // Hybrid card — also requires liveQuestionsEnabled (Pro+)
   const hybridCard  = document.getElementById('qmode-hybrid-card');
   const hybridBadge = document.getElementById('qmode-hybrid-badge');
   const hybridTier  = document.getElementById('qmode-hybrid-tier');
-  if (!isPro) {
+  if (!canLive) {
     hybridCard.classList.add('locked');
     if (hybridBadge) hybridBadge.style.display = 'inline-block';
     if (hybridTier)  hybridTier.style.display  = 'none';

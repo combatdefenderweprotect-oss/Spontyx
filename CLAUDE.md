@@ -1399,6 +1399,16 @@ System correctness is more important than always generating content. If the data
 
 The principle: a skipped generation cycle is always better than a voided question. Voided questions degrade user trust and waste resolver cycles.
 
+### Tier architecture
+
+**Full tier documentation: [`docs/TIER_ARCHITECTURE.md`](docs/TIER_ARCHITECTURE.md)**
+
+Pricing: Player Starter=Free, Pro=€7.99/mo, Elite=€19.99/mo. Venue Starter=Free, Venue Pro=€29.99/mo, Venue Elite=€79.99/mo.
+
+Core monetization rule: `CORE_MATCH_PREMATCH` is Starter+, `CORE_MATCH_LIVE` is Pro+, `REAL_WORLD` is Pro (limited) / Elite (full). Live questions are the primary upgrade hook.
+
+Central config: `TIER_LIMITS` in `spontix-store.js`. Always read via `SpontixStore.getTierLimits(tier)`. Never hardcode tier strings in feature checks — use the boolean keys (`liveQuestionsEnabled`, `realWorldQuestionsEnabled`, `customPhotoUpload`, etc.).
+
 ### Three-layer tier enforcement
 
 Every gated feature is defended at three independent layers:
