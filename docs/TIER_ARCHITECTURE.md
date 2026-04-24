@@ -228,6 +228,7 @@ Purpose: large venues, multi-location operators, hospitality groups.
 | Key | Starter | Pro | Elite |
 |---|---|---|---|
 | `liveQuestionsEnabled` | `false` | `true` | `true` |
+| `liveQuestionsPerMatch` | `3` | `Infinity` | `Infinity` |
 | `realWorldQuestionsEnabled` | `false` | `'limited'` | `true` |
 | `realWorldQuestionsPerMonth` | `0` | `10` | `Infinity` |
 | `aiQuestionsPerMonth` | `30` | `400` | `1500` |
@@ -254,6 +255,7 @@ Purpose: large venues, multi-location operators, hospitality groups.
 | `eventsPerMonth` | `2` | `Infinity` | `Infinity` |
 | `maxParticipants` | `25` | `150` | `500` |
 | `aiQuestionsPerMonth` | `0` | `300` | `1000` |
+| `aiPreviewPerEvent` | `3` | `Infinity` | `Infinity` |
 | `liveQuestionsEnabled` | `false` | `true` | `true` |
 | `realWorldQuestionsEnabled` | `false` | `'limited'` | `true` |
 | `realWorldQuestionsPerMonth` | `0` | `20` | `Infinity` |
@@ -341,23 +343,28 @@ if (tier === 'starter') { /* show upgrade modal */ }
 ## Enforcement Status
 
 ### Currently enforced (frontend UI + handler)
-- Live questions locked in `create-league.html` (question mode selector)
-- Custom photo upload locked in `profile.html` (Upload Photo tab)
+- Live questions locked in `create-league.html` (question mode selector) via `liveQuestionsEnabled`
+- Custom photo upload locked in `profile.html` (Upload Photo tab) via `customPhotoUpload`
 - Season-long league locked in `create-league.html` (Step 0 type selector — "Elite" badge)
 - Upgrade modal pricing uses correct €7.99 / €19.99 / €29.99 / €79.99 values
+
+### Currently enforced (frontend handler — localStorage-tracked)
+- `liveQuestionsPerMatch` — Starter limited to 3 live answer submissions per match in `league.html` `handleAnswer()`. Key: `spontix_live_count_{userId}_{matchRef}`.
+- `aiPreviewPerEvent` — Venue Starter limited to 3 AI question pushes per event in `venue-live-floor.html` `pushNextQuestion()`.
+
+### Currently enforced (Edge Function — server-side)
+- `realWorldQuestionsPerMonth` — enforced in `generate-questions` Edge Function via `checkRealWorldQuota()` in `lib/quota-checker.ts`. Starter: fully blocked (`real_world_tier_locked`). Pro: 10/month per league (`real_world_quota_reached` when limit hit). Elite: unlimited. Quota is checked against `questions` table monthly count. Owner tier resolved from `users.tier` via `owner_id` on `leagues`.
 
 ### UI-only — backend RLS enforcement needed post-launch
 - `leaguesCreatePerWeek` — checked in handler but not enforced at DB level
 - `leaguesJoinMax` — checked in handler but not enforced at DB level
 - `leagueMaxPlayers` — checked in handler but not enforced at DB level
 - `aiQuestionsPerMonth` — generation pipeline uses quota from `leagues.ai_weekly_quota` (set at creation), not from live tier check
-- `realWorldQuestionsPerMonth` — not yet enforced in generation pipeline
 - `battleRoyalePerDay` / `triviaGamesPerDay` — checked in handler only
 
 ### Not yet wired (post-launch)
 - Stripe billing → real tier reads from `users.tier`
 - RLS policies mirroring tier limits for league creation and membership
-- Real World question quota enforcement in `generate-questions` Edge Function
 - Venue event count enforcement at DB level
 
 ---

@@ -1,6 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import type { LeagueWithConfig, ValidatedQuestion, RejectionLogEntry, LeagueRunResult } from './lib/types.ts';
-import { classifyLeague, sortLeaguesByPriority, checkQuota, getRecentQuestionTexts } from './lib/quota-checker.ts';
+import { classifyLeague, sortLeaguesByPriority, checkQuota, getRecentQuestionTexts, checkRealWorldQuota } from './lib/quota-checker.ts';
 import { fetchSportsContext } from './lib/sports-adapter/index.ts';
 import { fetchNewsContext }   from './lib/news-adapter/index.ts';
 import { buildContextPacket, buildPredicatePrompt, computeResolvesAfter } from './lib/context-builder.ts';
@@ -102,7 +102,7 @@ Deno.serve(async (req: Request) => {
         scoped_team_id, scoped_team_name,
         api_sports_league_id, api_sports_team_id, api_sports_season,
         ai_weekly_quota, ai_total_quota,
-        league_start_date, league_end_date
+        league_start_date, league_end_date, owner_id
       `)
       .eq('ai_questions_enabled', true)
       .not('api_sports_league_id', 'is', null);
@@ -114,6 +114,16 @@ Deno.serve(async (req: Request) => {
     }
 
     runStats.leaguesEvaluated = leagues.length;
+
+    // Build owner tier map for Real World quota enforcement
+    const ownerIds = [...new Set((leagues as LeagueWithConfig[]).map((l) => l.owner_id).filter(Boolean) as string[])];
+    const ownerTierMap = new Map<string, string>();
+    if (ownerIds.length > 0) {
+      const { data: ownerRows } = await sb.from('users').select('id, tier').in('id', ownerIds);
+      for (const row of ownerRows ?? []) {
+        ownerTierMap.set(row.id, row.tier ?? 'starter');
+      }
+    }
 
     // ── Classify leagues by match imminence ───────────────────────────
     const classifications = await Promise.all(
@@ -259,9 +269,15 @@ Deno.serve(async (req: Request) => {
       const existingPools = await findReadyPools(sb, upcomingMatchIds, baseKey);
       let totalAttached = 0;
 
+      const ownerTier = ownerTierMap.get(league.owner_id ?? '') ?? 'starter';
+      const rwQuota = await checkRealWorldQuota(sb, league.id, ownerTier);
+
       for (const [matchId, pool] of existingPools) {
         if (totalAttached >= quota.questionsToGenerate) break;
-        const poolQs = await getPoolQuestions(sb, pool.id, baseKey.mode);
+        let poolQs = await getPoolQuestions(sb, pool.id, baseKey.mode);
+        if (!rwQuota.allowed) {
+          poolQs = poolQs.filter((pq) => computeLane(pq.matchMinuteAtGeneration, pq.matchId) !== 'REAL_WORLD');
+        }
         const attached = await attachPoolQuestionsToLeague(
           sb, poolQs, league, runId, PROMPT_VERSION,
           recentQuestions, totalAttached, quota.questionsToGenerate,
@@ -444,6 +460,18 @@ Deno.serve(async (req: Request) => {
                 generation_trigger:         raw.generation_trigger ?? 'time_driven',
               });
             }
+          }
+
+          // Filter out REAL_WORLD questions if league owner's tier doesn't allow them
+          if (!rwQuota.allowed) {
+            const beforeFilter = validatedQuestions.length;
+            const filtered = validatedQuestions.filter((q) => q.question_type !== 'REAL_WORLD');
+            const dropped = beforeFilter - filtered.length;
+            if (dropped > 0) {
+              console.log(`[real_world_quota] dropped ${dropped} REAL_WORLD question(s) for league ${league.id}: ${rwQuota.skipReason}`);
+              result.questionsRejected += dropped;
+            }
+            validatedQuestions.splice(0, validatedQuestions.length, ...filtered);
           }
 
           // Phase C: group by match_id → store in pool → attach to league

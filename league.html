@@ -1630,6 +1630,46 @@ async function handleAnswer(btn, questionId, answer) {
     return;
   }
 
+  // ── LIVE quota gate for Starter tier ─────────────────────────────────
+  // Starter users can answer up to liveQuestionsPerMatch LIVE questions per match.
+  // Tracked in localStorage per (userId, matchId) — cheap, no extra DB round-trip.
+  var _lane = detectLane(q);
+  var _liveCountKey = null;
+  var _livePerMatchLimit = Infinity;
+  if (_lane === 'LIVE') {
+    var _tierPlayer = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
+    var _tierName   = _tierPlayer ? (_tierPlayer.tier || 'starter') : 'starter';
+    var _tierLimits = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(_tierName) : null;
+    _livePerMatchLimit = (_tierLimits && _tierLimits.liveQuestionsPerMatch !== undefined)
+      ? _tierLimits.liveQuestionsPerMatch
+      : Infinity;
+    if (isFinite(_livePerMatchLimit)) {
+      var _matchRef   = q.match_id || currentLeagueId;
+      _liveCountKey   = 'spontix_live_count_' + currentUserId + '_' + _matchRef;
+      var _liveUsed   = parseInt(localStorage.getItem(_liveCountKey) || '0', 10);
+      if (_liveUsed >= _livePerMatchLimit) {
+        if (typeof SpontixSidebar !== 'undefined') {
+          SpontixSidebar.showUpgradeModal({
+            feature: 'Live Match Questions',
+            requiredTier: 'Pro',
+            isVenue: false,
+            icon: '⚡',
+            description: "You've used all " + _livePerMatchLimit + " live answers for this match. Upgrade to <strong>Pro</strong> for unlimited Live Match Predictions.",
+            benefits: [
+              'Unlimited live in-game answers per match',
+              'Full Real World intelligence questions',
+              'Streak bonuses and risky answers',
+              '1v1 trivia with friends',
+              'Ad-free experience'
+            ]
+          });
+        }
+        return;
+      }
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────
+
   // Optimistic UI
   var siblings = btn.parentElement.querySelectorAll('.question-option');
   siblings.forEach(function(s) { s.classList.remove('selected'); });
@@ -1677,6 +1717,12 @@ async function handleAnswer(btn, questionId, answer) {
       .upsert(payload, { onConflict: 'question_id,user_id' });
 
     if (error) throw error;
+
+    // Increment LIVE answer counter for Starter users after confirmed save
+    if (_liveCountKey) {
+      var _prev = parseInt(localStorage.getItem(_liveCountKey) || '0', 10);
+      localStorage.setItem(_liveCountKey, String(_prev + 1));
+    }
   } catch(e) {
     console.warn('[answer] save failed:', e);
     // Postgres constraint violation (23514) = question window just closed

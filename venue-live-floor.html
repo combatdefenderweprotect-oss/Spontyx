@@ -1630,6 +1630,36 @@
 
     function pushNextQuestion() {
       if (!sessionActive) return;
+
+      // ── AI preview gate for Venue Starter ────────────────────────────
+      var _venueTier = (typeof SpontixStore !== 'undefined' && localStorage.getItem('spontix_user_tier')) || 'venue-starter';
+      var _venueLimits = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(_venueTier) : null;
+      var _aiPreviewLimit = (_venueLimits && _venueLimits.aiPreviewPerEvent !== undefined)
+        ? _venueLimits.aiPreviewPerEvent
+        : 3;
+      if (isFinite(_aiPreviewLimit)) {
+        var _pushedSoFar = currentQuestionIdx + 1; // currentQuestionIdx is 0-based, so +1 = total pushed
+        if (_pushedSoFar >= _aiPreviewLimit) {
+          if (typeof SpontixSidebar !== 'undefined') {
+            SpontixSidebar.showUpgradeModal({
+              feature: 'AI Questions',
+              requiredTier: 'Venue Pro',
+              isVenue: true,
+              icon: '🤖',
+              description: 'You\'ve used all ' + _aiPreviewLimit + ' AI preview questions for this event. <strong>Upgrade to Venue Pro</strong> to get unlimited AI-generated questions for every event.',
+              benefits: [
+                'Unlimited AI questions per event',
+                'Live match questions powered by real data',
+                'Custom branding and trophies',
+                'Up to 150 participants per event',
+                'Advanced analytics'
+              ]
+            });
+          }
+          return;
+        }
+      }
+
       currentQuestionIdx++;
       if (currentQuestionIdx >= QUESTION_BANK.length) {
         showToast('All questions have been pushed!');
@@ -1639,7 +1669,7 @@
 
       const q = QUESTION_BANK[currentQuestionIdx];
       const questions = JSON.parse(localStorage.getItem('spontix_live_questions') || '[]');
-      questions.push({ id: currentQuestionIdx, ...q, status: 'active', pushedAt: Date.now() });
+      questions.push({ id: currentQuestionIdx, ...q, status: 'active', pushedAt: Date.now(), aiPreview: isFinite(_aiPreviewLimit) });
 
       // Mark previous question as revealed
       if (questions.length > 1) {

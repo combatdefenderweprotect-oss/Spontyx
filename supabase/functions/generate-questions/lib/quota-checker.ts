@@ -223,3 +223,36 @@ export function getWeeklyQuotaForTier(tier: string): number {
     default:      return 2;   // starter
   }
 }
+
+// ── Real World quota check ────────────────────────────────────────────
+// Enforces per-tier Real World question limits before questions are attached.
+// Called once per league per generation run — does NOT block CORE_MATCH questions.
+
+export async function checkRealWorldQuota(
+  sb: SupabaseClient,
+  leagueId: string,
+  ownerTier: string,
+): Promise<{ allowed: boolean; skipReason?: string }> {
+  if (ownerTier === 'elite') return { allowed: true };
+  if (ownerTier !== 'pro') {
+    return { allowed: false, skipReason: 'real_world_tier_locked' };
+  }
+  // Pro: check monthly usage for this league
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  const { count, error } = await sb
+    .from('questions')
+    .select('*', { count: 'exact', head: true })
+    .eq('league_id', leagueId)
+    .eq('question_type', 'REAL_WORLD')
+    .gte('created_at', monthStart);
+  if (error) {
+    console.warn('[real_world_quota] count query failed:', error.message);
+    return { allowed: false, skipReason: 'real_world_quota_check_failed' };
+  }
+  const RW_PRO_MONTHLY_LIMIT = 10;
+  if ((count ?? 0) >= RW_PRO_MONTHLY_LIMIT) {
+    return { allowed: false, skipReason: 'real_world_quota_reached' };
+  }
+  return { allowed: true };
+}

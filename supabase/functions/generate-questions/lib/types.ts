@@ -102,6 +102,7 @@ export interface LeagueWithConfig {
   ai_total_quota: number;
   league_start_date: string | null;
   league_end_date: string | null;
+  owner_id: string | null;       // used for Real World quota tier lookup
 }
 
 export interface LeagueClassification {

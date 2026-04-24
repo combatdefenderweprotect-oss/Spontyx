@@ -863,7 +863,8 @@ const SpontixStore = {
       teamMaxTeams: 2,
       teamMaxPlayers: 3,
       // ── Question Lanes (canonical: CORE_MATCH_PREMATCH / CORE_MATCH_LIVE / REAL_WORLD) ──
-      liveQuestionsEnabled: false,        // CORE_MATCH_LIVE locked
+      liveQuestionsEnabled: false,        // CORE_MATCH_LIVE locked for league creation
+      liveQuestionsPerMatch: 3,           // Starter: 3 live answer submissions per match
       realWorldQuestionsEnabled: false,   // REAL_WORLD locked
       realWorldQuestionsPerMonth: 0,
       aiQuestionsPerMonth: 30,
@@ -909,6 +910,7 @@ const SpontixStore = {
       teamMaxPlayers: 5,
       // ── Question Lanes ──
       liveQuestionsEnabled: true,           // CORE_MATCH_LIVE unlocked
+      liveQuestionsPerMatch: Infinity,      // Pro: unlimited live answers
       realWorldQuestionsEnabled: 'limited', // REAL_WORLD: limited quota
       realWorldQuestionsPerMonth: 10,
       aiQuestionsPerMonth: 400,
@@ -954,6 +956,7 @@ const SpontixStore = {
       teamMaxPlayers: 10,
       // ── Question Lanes ──
       liveQuestionsEnabled: true,      // CORE_MATCH_LIVE full
+      liveQuestionsPerMatch: Infinity, // Elite: unlimited live answers
       realWorldQuestionsEnabled: true, // REAL_WORLD full + priority
       realWorldQuestionsPerMonth: Infinity,
       aiQuestionsPerMonth: 1500,
@@ -1006,6 +1009,7 @@ const SpontixStore = {
       realWorldQuestionsEnabled: false,  // Real World locked
       realWorldQuestionsPerMonth: 0,
       aiQuestionsPerMonth: 0,            // no AI on free — pre-made bank only
+      aiPreviewPerEvent: 3,              // 3 AI-style preview questions per event
       questionTypes: ['pre-match', 'halftime'],
       customQuestionsLive: false,
       questionBank: false,               // pre-made question bank locked
@@ -1048,6 +1052,7 @@ const SpontixStore = {
       eventsPerMonth: Infinity,
       eventsPerWeek: Infinity,
       maxParticipants: 150,
+      aiPreviewPerEvent: Infinity,       // Pro: unlimited AI questions per event
       concurrentEvents: 5,
       teamMaxTeams: 12,
       teamMaxPlayers: 6,
@@ -1098,6 +1103,7 @@ const SpontixStore = {
       eventsPerMonth: Infinity,
       eventsPerWeek: Infinity,
       maxParticipants: 500,
+      aiPreviewPerEvent: Infinity,       // Elite: unlimited AI questions per event
       concurrentEvents: Infinity,
       teamMaxTeams: Infinity,
       teamMaxPlayers: Infinity,
