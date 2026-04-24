@@ -868,6 +868,7 @@ const SpontixStore = {
       realWorldQuestionsEnabled: false,   // REAL_WORLD locked
       realWorldQuestionsPerMonth: 0,
       aiQuestionsPerMonth: 30,
+      aiWeeklyQuota: 2,              // per-league weekly AI question budget (matches Edge Function)
       questionTypes: ['pre-match', 'halftime'], // legacy compat
       // ── Game Modes ──
       battleRoyalePerDay: 3,
@@ -914,6 +915,7 @@ const SpontixStore = {
       realWorldQuestionsEnabled: 'limited', // REAL_WORLD: limited quota
       realWorldQuestionsPerMonth: 10,
       aiQuestionsPerMonth: 400,
+      aiWeeklyQuota: 5,
       questionTypes: ['pre-match', 'halftime', 'live', 'prediction', 'news', 'history'],
       // ── Game Modes ──
       battleRoyalePerDay: Infinity,
@@ -960,6 +962,7 @@ const SpontixStore = {
       realWorldQuestionsEnabled: true, // REAL_WORLD full + priority
       realWorldQuestionsPerMonth: Infinity,
       aiQuestionsPerMonth: 1500,
+      aiWeeklyQuota: 10,
       questionTypes: ['pre-match', 'halftime', 'live', 'prediction', 'news', 'history', 'custom'],
       // ── Game Modes ──
       battleRoyalePerDay: Infinity,

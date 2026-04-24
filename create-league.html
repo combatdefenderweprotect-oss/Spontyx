@@ -1018,7 +1018,7 @@
         <div class="slider-value" id="player-count">10</div>
       </div>
       <input type="range" min="2" max="50" value="10" id="player-slider" oninput="updatePlayerCount(this)" />
-      <div class="form-hint">Free: up to 10 · <span style="color:var(--purple);">Pro: up to 25</span> · <span style="color:var(--coral);">Elite: up to 50</span></div>
+      <div class="form-hint">Starter: up to 10 · <span style="color:var(--purple);">Pro: up to 40</span> · <span style="color:var(--coral);">Elite: up to 100</span></div>
     </div>
 
     <div style="margin-bottom:4px;">
@@ -1958,7 +1958,8 @@ function updateAIQuotaDisplay() {
 
   const player    = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
   const tier      = player ? (player.tier || 'starter') : 'starter';
-  const weekly    = tier === 'elite' ? 10 : tier === 'pro' ? 5 : 2;
+  const limits    = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(tier) : null;
+  const weekly    = (limits && limits.aiWeeklyQuota) || 2;
 
   const startVal  = document.getElementById('league-start-date').value;
   const endVal    = document.getElementById('league-end-date').value;
@@ -2216,10 +2217,21 @@ function populateReview() {
   document.getElementById('review-qtypes').textContent = selectedTypes.join(', ') || 'None selected';
 
   document.getElementById('review-players').textContent = document.getElementById('player-slider').value;
-  document.getElementById('review-risky').textContent = 'Locked (Pro)';
-  document.getElementById('review-risky').style.color = 'var(--grey-dark)';
-  document.getElementById('review-streaks').textContent = 'Locked (Pro)';
-  document.getElementById('review-streaks').style.color = 'var(--grey-dark)';
+  (function() {
+    var _p = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
+    var _t = _p ? (_p.tier || 'starter') : 'starter';
+    var _l = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(_t) : null;
+    var riskyEl   = document.getElementById('review-risky');
+    var streakEl  = document.getElementById('review-streaks');
+    if (riskyEl) {
+      riskyEl.textContent  = (_l && _l.riskyAnswers)   ? '✓ Enabled' : 'Locked (Pro)';
+      riskyEl.style.color  = (_l && _l.riskyAnswers)   ? 'var(--lime)' : 'var(--grey-dark)';
+    }
+    if (streakEl) {
+      streakEl.textContent = (_l && _l.streakBonuses)  ? '✓ Enabled' : 'Locked (Pro)';
+      streakEl.style.color = (_l && _l.streakBonuses)  ? 'var(--lime)' : 'var(--grey-dark)';
+    }
+  })();
   document.getElementById('review-code').textContent = document.getElementById('generated-code').textContent;
   document.getElementById('review-invited').textContent = invitedCount > 0 ? invitedCount + ' people' : 'None yet — share the code!';
 
@@ -2228,7 +2240,8 @@ function populateReview() {
   if (aiQuestionsEnabled && selectedCompetition) {
     const player  = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
     const tier    = player ? (player.tier || 'starter') : 'starter';
-    const weekly  = tier === 'elite' ? 10 : tier === 'pro' ? 5 : 2;
+    const _lims   = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(tier) : null;
+    const weekly  = (_lims && _lims.aiWeeklyQuota) || 2;
     const diffMs  = startVal && endVal ? new Date(endVal) - new Date(startVal) : 0;
     const weeks   = diffMs > 0 ? Math.max(1, Math.ceil(diffMs / (7 * 24 * 60 * 60 * 1000))) : 1;
     const total   = weekly * weeks;
@@ -2277,7 +2290,8 @@ async function launchLeague() {
 
   // Compute AI quota
   const tier      = player ? (player.tier || 'starter') : 'starter';
-  const weekly    = tier === 'elite' ? 10 : tier === 'pro' ? 5 : 2;
+  const _launchLimits = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(tier) : null;
+  const weekly    = (_launchLimits && _launchLimits.aiWeeklyQuota) || 2;
   const diffMs    = startVal && endVal ? new Date(endVal) - new Date(startVal) : 0;
   const weeks     = diffMs > 0 ? Math.max(1, Math.ceil(diffMs / (7 * 24 * 60 * 60 * 1000))) : 1;
 

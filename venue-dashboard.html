@@ -486,6 +486,49 @@
       if (avatar) avatar.textContent = name.split(' ').map(function(w) { return w[0]; }).join('').toUpperCase().slice(0, 2);
     }
 
+    function applyVenueTierUI() {
+      var tier   = localStorage.getItem('spontix_user_tier') || 'venue-starter';
+      var limits = SpontixStore.getTierLimits(tier);
+
+      // Update tier badge text dynamically
+      var tierLabels = { 'venue-starter': 'Venue Starter', 'venue-pro': 'Venue Pro', 'venue-elite': 'Venue Elite' };
+      var tierBadge = document.querySelector('.profile-preview-tier');
+      if (tierBadge) tierBadge.textContent = tierLabels[tier] || 'Venue Starter';
+
+      // Show event quota on "Create Event" card for Venue Starter
+      if (isFinite(limits.eventsPerMonth)) {
+        var events = SpontixStore.getVenueEvents();
+        var monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+        var usedThisMonth = events.filter(function(e) {
+          return new Date(e.createdAt).getTime() >= monthStart.getTime();
+        }).length;
+        var createDesc = document.querySelector('.action-card.orange-accent .action-card-desc');
+        if (createDesc) {
+          createDesc.textContent = usedThisMonth + ' / ' + limits.eventsPerMonth + ' events used this month';
+          if (usedThisMonth >= limits.eventsPerMonth) {
+            createDesc.style.color = 'rgba(255,107,107,0.9)';
+          }
+        }
+      }
+
+      // Add "Pro" lock badge to Analytics link for Venue Starter
+      if (!limits.basicAnalytics) {
+        var analyticsTitle = document.querySelector('.nav-link-card.purple-link .nav-link-title');
+        if (analyticsTitle && !analyticsTitle.querySelector('.nav-link-badge')) {
+          analyticsTitle.insertAdjacentHTML('beforeend', ' <span class="nav-link-badge" style="background:rgba(124,92,252,0.2);color:var(--purple);border:1px solid rgba(124,92,252,0.3);">Pro</span>');
+        }
+      }
+
+      // Add "Pro" lock badge to Question Bank access (Questions nav link if present)
+      if (!limits.aiQuestionsPerMonth) {
+        var liveFloorTitle = document.querySelector('.nav-link-card.coral-link .nav-link-title');
+        // Only add if not already there
+        if (liveFloorTitle && !liveFloorTitle.querySelector('.lock-badge')) {
+          liveFloorTitle.insertAdjacentHTML('beforeend', ' <span class="lock-badge" style="font-size:0.6rem;font-weight:700;padding:2px 6px;border-radius:99px;background:rgba(255,107,107,0.15);color:var(--coral);border:1px solid rgba(255,107,107,0.25);vertical-align:middle;">Preview</span>');
+        }
+      }
+    }
+
     function hydrateVenueDashboard() {
       const profile = SpontixStore.getVenueProfile();
       const stats = SpontixStore.getVenueStats();
@@ -522,6 +565,8 @@
 
       const teamsBadge = document.querySelector('.nav-link-card.lime-link .nav-link-badge');
       if (teamsBadge) teamsBadge.textContent = stats ? stats.totalTeams : '6';
+
+      applyVenueTierUI();
     }
 
 

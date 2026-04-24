@@ -1319,19 +1319,19 @@
       const tier = localStorage.getItem('spontix_user_tier') || 'venue-starter';
       const limits = SpontixStore.getTierLimits(tier);
 
-      // Check events-per-week limit
-      if (limits.eventsPerWeek !== Infinity) {
+      // Check events-per-month limit
+      if (limits.eventsPerMonth !== Infinity) {
         const events = SpontixStore.getVenueEvents();
-        const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-        const thisWeekEvents = events.filter(e => new Date(e.createdAt).getTime() > oneWeekAgo);
-        if (thisWeekEvents.length >= limits.eventsPerWeek) {
+        const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
+        const thisMonthEvents = events.filter(e => new Date(e.createdAt).getTime() >= monthStart.getTime());
+        if (thisMonthEvents.length >= limits.eventsPerMonth) {
           SpontixSidebar.showUpgradeModal({
             feature: 'Unlimited Events',
-            requiredTier: limits.eventsPerWeek === 1 ? 'Venue Pro' : 'Venue Elite',
+            requiredTier: 'Venue Pro',
             isVenue: true,
             icon: '📅',
-            description: 'You\'ve reached your limit of <strong>' + limits.eventsPerWeek + ' event per week</strong> on your current plan. Upgrade to create unlimited events.',
-            benefits: ['Unlimited events per week', 'Up to 100 participants', 'Event scheduling calendar', 'Custom questions live']
+            description: 'You\'ve reached your limit of <strong>' + limits.eventsPerMonth + ' events per month</strong> on Venue Starter. Upgrade to create unlimited events.',
+            benefits: ['Unlimited events per month', 'Up to 150 participants per event', 'AI-generated live questions', 'Custom branding and trophies']
           });
           return;
         }

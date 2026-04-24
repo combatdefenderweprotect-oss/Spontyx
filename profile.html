@@ -1365,10 +1365,11 @@ function hydrateTrophies(filter) {
     grid.innerHTML = trophies.map(t => SpontixStore.renderTrophyCard(t)).join('');
   }
 
-  // Show AI trophy creation for Elite tier
+  // Show AI trophy creation based on customTrophyCreation tier limit
   const player = SpontixStore.getPlayer();
   const cta = document.getElementById('trophyAiCta');
-  if (player.tier === 'elite') {
+  const _trophyLimits = SpontixStore.getTierLimits(player.tier || 'starter');
+  if (_trophyLimits && _trophyLimits.customTrophyCreation) {
     cta.style.display = 'block';
   }
 
