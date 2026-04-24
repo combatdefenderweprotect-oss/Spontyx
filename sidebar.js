@@ -196,8 +196,9 @@ const SpontixSidebar = {
         } else if (avatarEl && player.avatar) {
           avatarEl.textContent = player.avatar;
         }
-        // Hide upgrade box if already pro or elite
-        if (player.tier === 'pro' || player.tier === 'elite') {
+        // Hide upgrade box if already pro or elite — use forced tier key, not DB tier
+        const _effectiveTier = localStorage.getItem('spontix_user_tier') || player.tier;
+        if (_effectiveTier === 'pro' || _effectiveTier === 'elite') {
           const upg = document.querySelector('.sidebar-upgrade');
           if (upg) upg.style.display = 'none';
         }

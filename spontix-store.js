@@ -104,7 +104,7 @@ function uuid() {
 
     // Role-based routing — keep players out of venue pages and vice versa
     var userRole = existingSession && existingSession.role;
-    var isVenuePage = filename.indexOf('venue') === 0;
+    var isVenuePage = filename.indexOf('venue-') === 0;
     if (userRole === 'player' && isVenuePage) {
       window.location.href = 'dashboard.html';
       return;
