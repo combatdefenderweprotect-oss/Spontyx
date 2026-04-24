@@ -8,6 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 <style>
+    :root { --orange: #FF9F43; }
     .content { flex: 1; margin-left: 260px; padding: 32px 36px; }
 
     .page-header { margin-bottom: 24px; }
@@ -585,21 +586,42 @@
 
   /* ─── main load ─── */
   async function loadMatches(){
-    // 1. All football leagues
-    const { data: leagues } = await sb.from('leagues')
-      .select('id, name, api_sports_league_id')
-      .eq('sport', 'football');
-    if(!leagues || !leagues.length){
-      document.getElementById('matchList').innerHTML = `<div class="matches-empty"><div class="empty-icon">⚽</div><h3>No football leagues</h3><p>No football leagues are set up yet.</p></div>`;
+    const LIVE_STATUSES = new Set(['1H','HT','2H','ET','BT','P']);
+
+    // 1. Fetch upcoming + live fixtures from cache (primary source)
+    // Lower bound: 3h ago (catches currently-live matches); upper bound: 14 days ahead
+    const nowMinus3h = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+    const now14d     = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000).toISOString();
+    let fixtures, fixErr;
+    try {
+      ({ data: fixtures, error: fixErr } = await sb
+        .from('api_football_fixtures')
+        .select('fixture_id, league_id, kickoff_at, status_short, home_team_name, away_team_name, round')
+        .gte('kickoff_at', nowMinus3h)
+        .lte('kickoff_at', now14d)
+        .order('kickoff_at', { ascending: true })
+        .limit(200));
+    } catch(e) {
+      console.error('[matches] fixture query threw:', e);
+      document.getElementById('matchList').innerHTML = `<div class="matches-empty"><div class="empty-icon">⚽</div><h3>Error loading fixtures</h3><p>${e.message}</p></div>`;
       return;
     }
 
-    const leagueIds    = leagues.map(l => l.id);
-    const leagueById   = {};
-    leagues.forEach(l => { leagueById[l.id] = l; });
+    if(fixErr) {
+      console.error('[matches] fixture query error:', fixErr);
+      document.getElementById('matchList').innerHTML = `<div class="matches-empty"><div class="empty-icon">⚽</div><h3>Error loading fixtures</h3><p>${fixErr.message}</p></div>`;
+      return;
+    }
 
-    // 2. Competition names
-    const apiLeagueIds = [...new Set(leagues.map(l => parseInt(l.api_sports_league_id)).filter(Boolean))];
+    if(!fixtures || !fixtures.length){
+      document.getElementById('matchList').innerHTML = `<div class="matches-empty"><div class="empty-icon">⚽</div><h3>No upcoming fixtures</h3><p>Fixture data syncs daily at 6 AM UTC. Check back soon or try refreshing.</p></div>`;
+      ['stat-live','stat-today','stat-comps','stat-total'].forEach(id => document.getElementById(id).textContent = '0');
+      document.getElementById('compList').innerHTML = '<div style="font-size:0.78rem;color:var(--grey-dark);padding:8px 10px;">No data</div>';
+      return;
+    }
+
+    // 2. Competition names (PL=39, La Liga=140 → display names)
+    const apiLeagueIds = [...new Set(fixtures.map(f => f.league_id).filter(Boolean))];
     const compById = {};
     if(apiLeagueIds.length){
       const { data: comps } = await sb.from('sports_competitions')
@@ -608,83 +630,59 @@
       if(comps) comps.forEach(c => { compById[c.api_league_id] = c.name; });
     }
 
-    // 3. Pending questions with match_id
-    const now = new Date().toISOString();
-    const { data: questions } = await sb.from('questions')
-      .select('id, match_id, team_ids, answer_closes_at, resolves_after, question_type, league_id, resolution_status')
-      .in('league_id', leagueIds)
-      .eq('resolution_status', 'pending')
-      .not('match_id', 'is', null)
-      .gt('resolves_after', now)
-      .order('answer_closes_at', { ascending: true });
+    // 3. Map api_league_id → first matching spontix league_id (for invite CTA prefill)
+    const { data: leagues } = await sb.from('leagues')
+      .select('id, api_sports_league_id')
+      .eq('sport', 'football');
+    const leagueByApiId = {};
+    if(leagues) leagues.forEach(l => {
+      const k = parseInt(l.api_sports_league_id);
+      if(k && !leagueByApiId[k]) leagueByApiId[k] = l.id;
+    });
 
-    if(!questions || !questions.length){
-      document.getElementById('matchList').innerHTML = `<div class="matches-empty"><div class="empty-icon">⚽</div><h3>No upcoming fixtures</h3><p>No upcoming matches found. The AI generator runs every 6 hours — check back soon.</p></div>`;
+    // 4. Question counts per fixture (optional enrichment — don't block on failure)
+    const fixtureIds = fixtures.map(f => String(f.fixture_id));
+    const qCountByFixture = {};
+    try {
+      const { data: qs } = await sb.from('questions')
+        .select('match_id, question_type, answer_closes_at, resolution_status')
+        .in('match_id', fixtureIds)
+        .eq('resolution_status', 'pending');
+      if(qs) {
+        qs.forEach(q => {
+          const key = String(q.match_id);
+          if(!qCountByFixture[key]) qCountByFixture[key] = { preQCount: 0, isLive: false };
+          if(q.question_type === 'CORE_MATCH_PREMATCH') qCountByFixture[key].preQCount++;
+          if(q.question_type === 'CORE_MATCH_LIVE' && q.answer_closes_at && new Date(q.answer_closes_at) > new Date())
+            qCountByFixture[key].isLive = true;
+        });
+      }
+    } catch(e) { /* non-fatal */ }
+
+    // 5. Build match objects from fixtures
+    allMatches = fixtures.map(f => {
+      const qData = qCountByFixture[String(f.fixture_id)] || { preQCount: 0, isLive: false };
+      return {
+        matchId:   String(f.fixture_id),
+        leagueId:  leagueByApiId[f.league_id] || null,
+        compId:    String(f.league_id),
+        compName:  compById[f.league_id] || `League ${f.league_id}`,
+        home:      f.home_team_name || 'Home Team',
+        away:      f.away_team_name || 'Away Team',
+        kickoff:   f.kickoff_at ? new Date(f.kickoff_at) : new Date(Date.now() + 86400000),
+        preQCount: qData.preQCount,
+        isLive:    qData.isLive || LIVE_STATUSES.has(f.status_short),
+        round:     f.round || null,
+      };
+    }).filter(m => m.isLive || m.kickoff > new Date());
+
+    if(!allMatches.length){
+      document.getElementById('matchList').innerHTML = `<div class="matches-empty"><div class="empty-icon">⚽</div><h3>No upcoming fixtures</h3><p>No matches scheduled in the next 14 days.</p></div>`;
       ['stat-live','stat-today','stat-comps','stat-total'].forEach(id => document.getElementById(id).textContent = '0');
-      document.getElementById('compList').innerHTML = '<div style="font-size:0.78rem;color:var(--grey-dark);padding:8px 10px;">No data</div>';
       return;
     }
 
-    // 4. Team IDs
-    const teamApiIds = new Set();
-    questions.forEach(q => {
-      if(q.team_ids && q.team_ids.length >= 2){
-        const h = parseInt(q.team_ids[0]); const a = parseInt(q.team_ids[1]);
-        if(h) teamApiIds.add(h);
-        if(a) teamApiIds.add(a);
-      }
-    });
-    const teamNames = {};
-    if(teamApiIds.size){
-      const { data: teams } = await sb.from('sports_teams')
-        .select('api_team_id, name')
-        .in('api_team_id', [...teamApiIds]);
-      if(teams) teams.forEach(t => { teamNames[t.api_team_id] = t.name; });
-    }
-
-    // 5. Deduplicate by match_id (one card per match across all leagues)
-    const matchMap = {};
-    questions.forEach(q => {
-      const key = q.match_id;
-      if(!matchMap[key]){
-        const lg      = leagueById[q.league_id] || {};
-        const apiLId  = parseInt(lg.api_sports_league_id);
-        const homeId  = q.team_ids && parseInt(q.team_ids[0]);
-        const awayId  = q.team_ids && parseInt(q.team_ids[1]);
-        matchMap[key] = {
-          matchId:   q.match_id,
-          leagueId:  q.league_id,
-          compId:    String(apiLId || q.league_id),
-          compName:  compById[apiLId] || lg.name || 'Football',
-          home:      teamNames[homeId] || 'Home Team',
-          away:      teamNames[awayId] || 'Away Team',
-          kickoff:   null,
-          preQCount: 0,
-          isLive:    false,
-        };
-      }
-      const item = matchMap[key];
-      // kickoff from PREMATCH answer_closes_at
-      if(q.question_type === 'CORE_MATCH_PREMATCH' && q.answer_closes_at){
-        const t = new Date(q.answer_closes_at);
-        if(!item.kickoff || t < item.kickoff) item.kickoff = t;
-        item.preQCount++;
-      }
-      // live signal: CORE_MATCH_LIVE question open right now
-      if(q.question_type === 'CORE_MATCH_LIVE' && q.answer_closes_at){
-        const closeT = new Date(q.answer_closes_at);
-        if(closeT > new Date()) item.isLive = true;
-      }
-      // fallback kickoff
-      if(!item.kickoff && q.resolves_after) item.kickoff = new Date(q.resolves_after);
-    });
-
-    allMatches = Object.values(matchMap)
-      .filter(m => { if(!m.kickoff) m.kickoff = new Date(Date.now() + 86400000); return true; })
-      .filter(m => m.isLive || m.kickoff > new Date())
-      .sort((a,b) => a.kickoff - b.kickoff);
-
-    // Pre-load which matches this user has already saved
+    // Pre-load saved state
     const saved = await SpontixStoreAsync.getSavedMatches();
     saved.forEach(s => savedMatchIds.add(String(s.match_id)));
 
