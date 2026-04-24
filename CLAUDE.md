@@ -1,6 +1,6 @@
 # Spontix — Project State & Developer Handoff
 
-Last updated 2026-04-24 — Username system live. Beta access flow live. Full end-to-end simulation verified (all 10 checkpoints passed). Football only. Max 2 active questions. Scoring simplified to base × time_pressure × streak (difficulty/comeback/clutch bypassed to 1.0 via MVP_BYPASS). Three-lane question architecture locked: CORE_MATCH_PREMATCH, CORE_MATCH_LIVE, REAL_WORLD. Save Match feature fully implemented (migration 009, store methods, matches.html, upcoming.html, venue-schedule.html, create-league.html prefill). league.html UI/UX upgrade complete: 3-lane type badges, timer progress bar, primary card hierarchy, Real World purple styling, leaderboard float notification, match context strip, multiplier breakdown display, glow/shake micro-animations. Pre-launch alignment complete and DEPLOYED: migration 010 run in Supabase — question_type column live, existing rows backfilled, index active. detectLane() now reads DB column directly for all questions; heuristic fallback is dead code. source_badge computed from lane on all new generation. All advanced systems preserved intact for post-launch activation.
+Last updated 2026-04-24 — Live & Activity page fully dynamic (real Supabase data, styled empty states). Dashboard alert + nav cards connected to real data (unanswered questions, league count, saved schedule). Username system live. Beta access flow live. Full end-to-end simulation verified (all 10 checkpoints passed). Football only. Max 2 active questions. Scoring simplified to base × time_pressure × streak (difficulty/comeback/clutch bypassed to 1.0 via MVP_BYPASS). Three-lane question architecture locked: CORE_MATCH_PREMATCH, CORE_MATCH_LIVE, REAL_WORLD. Save Match feature fully implemented (migration 009, store methods, matches.html, upcoming.html, venue-schedule.html, create-league.html prefill). league.html UI/UX upgrade complete: 3-lane type badges, timer progress bar, primary card hierarchy, Real World purple styling, leaderboard float notification, match context strip, multiplier breakdown display, glow/shake micro-animations. Pre-launch alignment complete and DEPLOYED: migration 010 run in Supabase — question_type column live, existing rows backfilled, index active. detectLane() now reads DB column directly for all questions; heuristic fallback is dead code. source_badge computed from lane on all new generation. All advanced systems preserved intact for post-launch activation.
 
 ---
 
@@ -2682,3 +2682,31 @@ The 3 Rayo vs Espanyol questions (`answer_closes_at = 18:00 UTC 2026-04-23`, `re
 - This is standard JWT behaviour — Supabase free tier does not support instant session revocation.
 - For beta this is not a risk: users cannot delete their own accounts from the UI (the button shows a toast only). Only admins can delete from the dashboard.
 - Post-launch fix: server-side session blocklist via a Postgres function. Not needed for MVP.
+
+---
+
+### 2026-04-24 — Live & Activity page + Dashboard fully dynamic
+
+**`activity.html` — all placeholder content replaced with real Supabase data:**
+- All three hardcoded sections (Live Now, Unanswered Questions, summary cards) now load from DB
+- `loadActivityData()` — async function using `window.sb`; queries `league_members → questions → player_answers → sports_teams` in sequence
+- **Live Now** — groups open questions by `match_id`; looks up team names from `sports_teams` by `api_team_id`; shows live dot, match minute, active question count, links to `league.html?id=...`
+- **Unanswered Questions** — filters open questions not yet answered by the current user; shows live vs pre-match icon, question text, league name, countdown timer with critical/warning/ok colouring
+- **Summary cards** — Live Matches, Unanswered, Answered Today all show real counts
+- **Styled empty states** — both sections show a card with icon + title + sub-text when empty (not just grey text)
+- **Section header icons** — wrapped in `.section-icon` pill with coral/orange backgrounds, consistent with summary card icons
+- **`--orange: #FF9F43`** defined in page `<style>` block — was missing from `styles.css`, causing all orange icons to render transparent
+- **Flex layout fix** — removed redundant `.live-matches` wrapper div; `#live-matches-container` and `#unanswered-container` now have the flex+gap layout directly
+
+**`dashboard.html` — alert banner and nav cards connected to real data:**
+- Hardcoded "4 unanswered questions / Barcelona vs Real Madrid" alert replaced with `<div id="activity-alert">` populated by `loadActivityAlert()`
+- `loadActivityAlert()` — same Supabase query pattern as activity.html; runs on every page load
+- **Alert states**: coral pulsing banner (unanswered questions exist) or lime "You're all caught up" banner (all clear); falls back to all-clear on any error
+- League breakdown in alert sub-text: "LaLiga Legends (2) · UCL Knockout (1)" — real league names + counts
+- Fixed broken CSS rule `.unanswered-alert-` (was a dangling selector with no properties)
+- **Nav cards updated from real data** via `updateNavCards()` — piggybacks on `loadActivityAlert()` data, no extra round trips except one `saved_matches` count:
+  - **Your Games** — "X live" badge shows real open question count, hidden when 0; sub-text shows "X open questions waiting" or "No open questions right now"
+  - **Schedule** — sub-text shows real count of saved matches with `kickoff_at` in next 7 days ("X saved matches coming up this week" or "No saved matches this week")
+  - **My Leagues** — badge shows real league membership count, hidden when 0; sub-text shows "X active leagues" or "Join a league to get started"
+  - **Battle Royale** — static (no real-time data to connect)
+- All early-return paths (no leagues, no open questions, all answered) still call `updateNavCards()` with appropriate counts before returning
