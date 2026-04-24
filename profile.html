@@ -1612,9 +1612,16 @@ async function saveAvatarChoice() {
       showToast('Could not save: ' + (result.error || 'Unknown error'));
     } else {
       closeAvatarPicker();
-      renderProfileAvatar(SpontixStore.getPlayer());
-      // Fire profile-refreshed so sidebar updates too
-      window.dispatchEvent(new CustomEvent('spontix-profile-refreshed', { detail: { profile: SpontixStore.getPlayer() } }));
+      // Build a player object with the actual photo URL for immediate display.
+      // getPlayer() may not have it if the data URL was too large to cache.
+      var displayPlayer = Object.assign({}, SpontixStore.getPlayer());
+      if (_avatarPick.type === 'custom' && _avatarPick.url) {
+        displayPlayer.profilePhotoType = 'custom';
+        displayPlayer.profilePhotoUrl  = _avatarPick.url;
+      }
+      renderProfileAvatar(displayPlayer);
+      // Pass displayPlayer in detail so the sidebar also gets the photo immediately
+      window.dispatchEvent(new CustomEvent('spontix-profile-refreshed', { detail: { profile: displayPlayer } }));
       showToast('Profile photo updated!');
     }
   } catch(e) {

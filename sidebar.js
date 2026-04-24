@@ -389,13 +389,14 @@ const SpontixSidebar = {
 
 // Re-render the sidebar avatar whenever a profile save fires (e.g. from avatar picker).
 if (typeof window !== 'undefined') {
-  window.addEventListener('spontix-profile-refreshed', function () {
+  window.addEventListener('spontix-profile-refreshed', function (e) {
     if (typeof SpontixStore === 'undefined') return;
     // Only update if this is a player sidebar (not venue)
     if (document.querySelector('.sidebar-venue')) return;
     var avatarEl = document.querySelector('.sidebar-avatar');
     if (!avatarEl) return;
-    var player = SpontixStore.getPlayer();
+    // Prefer event.detail.profile (may include photo URL not yet in localStorage)
+    var player = (e && e.detail && e.detail.profile) || SpontixStore.getPlayer();
     SpontixSidebar._applyPlayerAvatar(avatarEl, player);
     // Also update name/tier in case they changed
     var nameEl = document.querySelector('.sidebar-profile-name');

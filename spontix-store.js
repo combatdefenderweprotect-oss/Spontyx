@@ -414,15 +414,18 @@ const SpontixStore = {
   // ── Save Player ──
   savePlayer(player) {
     try {
-      // Strip data URL photos before caching — they can be several MB and will
-      // silently fail or throw a quota error, preventing handle/name from being
-      // cached too. The photo is always re-fetched from DB via getProfile().
-      var toSave = Object.assign({}, player);
-      if (toSave.profilePhotoUrl && toSave.profilePhotoUrl.startsWith('data:')) {
-        toSave = Object.assign({}, toSave, { profilePhotoUrl: null });
-      }
-      localStorage.setItem(this.KEYS.player, JSON.stringify(toSave));
-    } catch (e) { /* silent — quota exceeded */ }
+      localStorage.setItem(this.KEYS.player, JSON.stringify(player));
+    } catch (e) {
+      // Quota exceeded — retry without the large data URL so at minimum
+      // name/handle/tier are cached for instant sidebar render next load
+      try {
+        var slim = Object.assign({}, player);
+        if (slim.profilePhotoUrl && slim.profilePhotoUrl.startsWith('data:')) {
+          slim = Object.assign({}, slim, { profilePhotoUrl: null });
+        }
+        localStorage.setItem(this.KEYS.player, JSON.stringify(slim));
+      } catch (e2) { /* silent */ }
+    }
   },
 
   // ── ELO calculation (Battle Royale) ──
