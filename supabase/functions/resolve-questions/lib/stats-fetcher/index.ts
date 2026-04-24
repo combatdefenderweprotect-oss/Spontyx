@@ -7,14 +7,15 @@ export interface FetchParams {
   matchId:          string;
   needsPlayerStats: boolean;
   apiKey:           string;
+  sb?:              any;   // Supabase client for cache reads
 }
 
 export async function fetchMatchStats(params: FetchParams): Promise<MatchStats | null> {
-  const { sport, matchId, needsPlayerStats, apiKey } = params;
+  const { sport, matchId, needsPlayerStats, apiKey, sb } = params;
 
   switch (sport) {
     case 'football':
-      return fetchFootballMatchStats(matchId, apiKey, needsPlayerStats);
+      return fetchFootballMatchStats(matchId, apiKey, needsPlayerStats, sb);
     case 'hockey':
       // Hockey player stats not available in free tier; needsPlayerStats is ignored
       return fetchHockeyMatchStats(matchId, apiKey);

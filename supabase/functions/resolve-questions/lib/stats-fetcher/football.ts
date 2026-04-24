@@ -2,61 +2,79 @@ import type { MatchStats, TeamStatBlock, PlayerStatBlock } from '../predicate-ev
 
 const FOOTBALL_BASE = 'https://v3.football.api-sports.io';
 
-// Statuses that mean the match is fully finished
-const FINISHED_STATUSES = new Set(['FT', 'AET', 'PEN', 'AWD', 'WO']);
-// Statuses that mean the match will never finish as planned — void
+const FINISHED_STATUSES  = new Set(['FT', 'AET', 'PEN', 'AWD', 'WO']);
 const CANCELLED_STATUSES = new Set(['PST', 'CANC', 'ABD', 'TBD', 'SUSP']);
 
 export async function fetchFootballMatchStats(
-  matchId:        string,
-  apiKey:         string,
+  matchId:          string,
+  apiKey:           string,
   needsPlayerStats: boolean,
+  sb?:              any,   // Supabase client — used to read from cache tables
 ): Promise<MatchStats | null> {
-  const headers = { 'x-apisports-key': apiKey };
 
-  // Parallel fetch: fixture + team statistics (+ players if needed)
-  const fetches: Promise<Response>[] = [
-    fetch(`${FOOTBALL_BASE}/fixtures?id=${matchId}`, { headers }),
-    fetch(`${FOOTBALL_BASE}/fixtures/statistics?fixture=${matchId}`, { headers }),
-  ];
-  if (needsPlayerStats) {
-    fetches.push(fetch(`${FOOTBALL_BASE}/fixtures/players?fixture=${matchId}`, { headers }));
+  // ── 1. Fixture status + score from cache ─────────────────────────────
+  let statusShort: string;
+  let homeTeamId: string;
+  let awayTeamId: string;
+  let homeScore:  number;
+  let awayScore:  number;
+  let homeWins:   boolean;
+  let awayWins:   boolean;
+
+  const cachedFixture = sb ? await readFixtureFromCache(sb, matchId) : null;
+
+  if (cachedFixture) {
+    statusShort = cachedFixture.status_short ?? '';
+    homeTeamId  = String(cachedFixture.home_team_id ?? '');
+    awayTeamId  = String(cachedFixture.away_team_id ?? '');
+    homeScore   = cachedFixture.home_goals ?? 0;
+    awayScore   = cachedFixture.away_goals ?? 0;
+    homeWins    = cachedFixture.home_winner === true;
+    awayWins    = cachedFixture.away_winner === true;
+    console.log(`[football-stats] fixture ${matchId} read from cache (status: ${statusShort})`);
+  } else {
+    // Fall back to direct API call
+    console.log(`[football-stats] fixture ${matchId} cache miss — calling API`);
+    const fixtureData = await fetchFixtureFromAPI(matchId, apiKey);
+    if (!fixtureData) return null;
+
+    statusShort = fixtureData.fixture?.status?.short ?? '';
+    homeTeamId  = String(fixtureData.teams?.home?.id ?? '');
+    awayTeamId  = String(fixtureData.teams?.away?.id ?? '');
+    homeScore   = fixtureData.score?.fulltime?.home ?? fixtureData.goals?.home ?? 0;
+    awayScore   = fixtureData.score?.fulltime?.away ?? fixtureData.goals?.away ?? 0;
+    homeWins    = fixtureData.teams?.home?.winner === true;
+    awayWins    = fixtureData.teams?.away?.winner === true;
   }
 
-  const responses = await Promise.all(fetches);
-  const [fixtureRes, statsRes, playersRes] = responses;
-
-  if (!fixtureRes.ok) {
-    console.warn(`[football-stats] fixture fetch failed (${fixtureRes.status}) for match ${matchId}`);
-    return null;
-  }
-
-  const fixtureJson = await fixtureRes.json();
-  const fixture = fixtureJson.response?.[0];
-  if (!fixture) {
-    console.warn(`[football-stats] no fixture data for match ${matchId}`);
-    return null;
-  }
-
-  const statusShort = fixture.fixture?.status?.short ?? '';
   const finished    = FINISHED_STATUSES.has(statusShort);
   const cancelled   = CANCELLED_STATUSES.has(statusShort);
-
-  const homeTeamId = String(fixture.teams?.home?.id ?? '');
-  const awayTeamId = String(fixture.teams?.away?.id ?? '');
-  const homeScore  = fixture.score?.fulltime?.home ?? fixture.goals?.home ?? 0;
-  const awayScore  = fixture.score?.fulltime?.away ?? fixture.goals?.away ?? 0;
-
-  const homeWins = fixture.teams?.home?.winner === true;
-  const awayWins = fixture.teams?.away?.winner === true;
-  const isDraw   = finished && !homeWins && !awayWins;
+  const isDraw      = finished && !homeWins && !awayWins;
   const winnerTeamId = homeWins ? homeTeamId : awayWins ? awayTeamId : null;
 
-  // Build team stats from statistics response
+  // ── 2. Team statistics from cache ─────────────────────────────────────
   const teamStats: Record<string, TeamStatBlock> = {};
-  if (statsRes?.ok) {
-    const statsJson = await statsRes.json();
-    for (const entry of (statsJson.response ?? [])) {
+
+  const cachedStats = sb ? await readStatsFromCache(sb, matchId) : null;
+
+  if (cachedStats && cachedStats.length > 0) {
+    for (const row of cachedStats) {
+      const teamId = String(row.team_id ?? '');
+      if (teamId) {
+        teamStats[teamId] = {
+          yellow_cards: row.yellow_cards ?? 0,
+          red_cards:    row.red_cards    ?? 0,
+          corners:      row.corners      ?? 0,
+          shots_total:  row.shots_total  ?? 0,
+          shots_on:     row.shots_on     ?? 0,
+        };
+      }
+    }
+    console.log(`[football-stats] team stats for ${matchId} read from cache`);
+  } else {
+    // Fall back to direct API call
+    const statsData = await fetchStatsFromAPI(matchId, apiKey);
+    for (const entry of statsData) {
       const teamId = String(entry.team?.id ?? '');
       const raw    = entry.statistics ?? [];
       const block: TeamStatBlock = {
@@ -80,40 +98,43 @@ export async function fetchFootballMatchStats(
     }
   }
 
-  // Build player stats from players response
+  // ── 3. Player statistics — always from API (not cached) ───────────────
+  // Player-level stats (goals, assists, minutes, clean sheets) require the
+  // /fixtures/players endpoint which we don't cache. Called only when the
+  // predicate type is player_stat (rare in MVP).
   const playerStats: Record<string, PlayerStatBlock> = {};
-  if (needsPlayerStats && playersRes?.ok) {
-    const playersJson = await playersRes.json();
-    for (const teamEntry of (playersJson.response ?? [])) {
-      const teamId = String(teamEntry.team?.id ?? '');
-      for (const p of (teamEntry.players ?? [])) {
-        const playerId = String(p.player?.id ?? '');
-        const stat     = p.statistics?.[0] ?? {};
 
-        const yellowCards = stat.cards?.yellow ?? 0;
-        const redCards    = stat.cards?.red    ?? 0;
-        const minutesPlayed = stat.games?.minutes ?? 0;
+  if (needsPlayerStats) {
+    const headers = { 'x-apisports-key': apiKey };
+    const playersRes = await fetch(`${FOOTBALL_BASE}/fixtures/players?fixture=${matchId}`, { headers });
+    if (playersRes.ok) {
+      const playersJson = await playersRes.json();
+      for (const teamEntry of (playersJson.response ?? [])) {
+        const teamId = String(teamEntry.team?.id ?? '');
+        for (const p of (teamEntry.players ?? [])) {
+          const playerId      = String(p.player?.id ?? '');
+          const stat          = p.statistics?.[0] ?? {};
+          const minutesPlayed = stat.games?.minutes ?? 0;
+          const isGK          = stat.games?.position === 'G';
+          const oppScore      = teamId === homeTeamId ? awayScore : homeScore;
+          const cleanSheet    = isGK && minutesPlayed >= 60 && oppScore === 0;
 
-        // Clean sheet: goalkeeper who played and conceded 0 goals on their side
-        const isGK = stat.games?.position === 'G';
-        const oppScore = teamId === homeTeamId ? awayScore : homeScore;
-        const cleanSheet = isGK && minutesPlayed >= 60 && oppScore === 0;
-
-        playerStats[playerId] = {
-          goals:          stat.goals?.total    ?? 0,
-          assists:        stat.goals?.assists  ?? 0,
-          shots:          stat.shots?.total    ?? 0,
-          yellow_cards:   yellowCards,
-          red_cards:      redCards,
-          minutes_played: minutesPlayed,
-          clean_sheet:    cleanSheet,
-        };
+          playerStats[playerId] = {
+            goals:          stat.goals?.total    ?? 0,
+            assists:        stat.goals?.assists  ?? 0,
+            shots:          stat.shots?.total    ?? 0,
+            yellow_cards:   stat.cards?.yellow   ?? 0,
+            red_cards:      stat.cards?.red      ?? 0,
+            minutes_played: minutesPlayed,
+            clean_sheet:    cleanSheet,
+          };
+        }
       }
     }
   }
 
   return {
-    finished:    finished || cancelled,  // cancelled = finished for our purposes (will void)
+    finished:    finished || cancelled,
     status:      statusShort,
     homeTeamId,
     awayTeamId,
@@ -124,4 +145,55 @@ export async function fetchFootballMatchStats(
     teamStats,
     playerStats,
   };
+}
+
+// ── Cache readers ─────────────────────────────────────────────────────
+
+async function readFixtureFromCache(sb: any, matchId: string): Promise<any | null> {
+  const { data, error } = await sb
+    .from('api_football_fixtures')
+    .select('status_short, home_team_id, away_team_id, home_goals, away_goals, home_winner, away_winner')
+    .eq('fixture_id', parseInt(matchId, 10))
+    .single();
+
+  if (error || !data) return null;
+  return data;
+}
+
+async function readStatsFromCache(sb: any, matchId: string): Promise<any[]> {
+  const { data, error } = await sb
+    .from('api_football_statistics')
+    .select('team_id, yellow_cards, red_cards, corners, shots_total, shots_on')
+    .eq('fixture_id', parseInt(matchId, 10));
+
+  if (error || !data || data.length === 0) return [];
+  return data;
+}
+
+// ── API fallbacks ─────────────────────────────────────────────────────
+
+async function fetchFixtureFromAPI(matchId: string, apiKey: string): Promise<any | null> {
+  const res = await fetch(`${FOOTBALL_BASE}/fixtures?id=${matchId}`, {
+    headers: { 'x-apisports-key': apiKey },
+  });
+  if (!res.ok) {
+    console.warn(`[football-stats] fixture API ${res.status} for match ${matchId}`);
+    return null;
+  }
+  const json = await res.json();
+  const fixture = json.response?.[0];
+  if (!fixture) {
+    console.warn(`[football-stats] no fixture data for match ${matchId}`);
+    return null;
+  }
+  return fixture;
+}
+
+async function fetchStatsFromAPI(matchId: string, apiKey: string): Promise<any[]> {
+  const res = await fetch(`${FOOTBALL_BASE}/fixtures/statistics?fixture=${matchId}`, {
+    headers: { 'x-apisports-key': apiKey },
+  });
+  if (!res.ok) return [];
+  const json = await res.json();
+  return json.response ?? [];
 }

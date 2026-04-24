@@ -8,9 +8,11 @@ import { fetchTennisContext }   from './tennis.ts';
 export async function fetchSportsContext(
   league: LeagueWithConfig,
   apiKey: string,
+  sb: any,
 ): Promise<SportsContext> {
   const opts = {
     apiKey,
+    sb,
     leagueId:  league.api_sports_league_id,
     season:    league.api_sports_season,
     teamId:    league.api_sports_team_id ?? undefined,

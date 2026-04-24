@@ -4,9 +4,10 @@ const BASE = 'https://v3.football.api-sports.io';
 
 interface FootballAdapterOptions {
   apiKey: string;
+  sb: any;             // Supabase client — used to read from cache tables
   leagueId: number;
   season: number;
-  teamId?: number;        // set for team_specific scope
+  teamId?: number;     // set for team_specific scope
   scopeType: 'full_league' | 'team_specific';
 }
 
@@ -15,9 +16,11 @@ interface FootballAdapterOptions {
 export async function fetchFootballContext(opts: FootballAdapterOptions): Promise<SportsContext> {
   const headers = { 'x-apisports-key': opts.apiKey };
 
+  // Fixtures and standings read from the DB cache (populated by sync-fixtures).
+  // Injuries and top scorers still hit the API directly (not cached yet).
   const [fixturesRes, standingsRes, injuriesRes] = await Promise.allSettled([
-    fetchUpcomingFixtures(opts, headers),
-    fetchStandings(opts, headers),
+    fetchUpcomingFixturesFromCache(opts),
+    fetchStandingsFromCache(opts),
     fetchInjuries(opts, headers),
   ]);
 
@@ -25,21 +28,106 @@ export async function fetchFootballContext(opts: FootballAdapterOptions): Promis
   const standings       = standingsRes.status === 'fulfilled' ? standingsRes.value : [];
   const injuredPlayers  = injuriesRes.status === 'fulfilled' ? injuriesRes.value : [];
 
-  // Build form from the upcoming matches' team context (standings API includes form)
   const form = standings.slice(0, 10).map((s) => buildFormFromStandings(s));
 
-  // Identify key players: top scorers + injured players from upcoming matches
   const keyPlayers = await fetchKeyPlayers(opts, headers, upcomingMatches, injuredPlayers);
 
-  // Derive narrative hooks from the structured data
   const narrativeHooks = deriveNarrativeHooks(upcomingMatches, standings, keyPlayers);
 
   return { upcomingMatches, standings, form, keyPlayers, narrativeHooks };
 }
 
-// ── Upcoming fixtures (next 7 days, status=NS) ────────────────────────
+// ── Upcoming fixtures — reads from api_football_fixtures cache ────────
 
-async function fetchUpcomingFixtures(
+async function fetchUpcomingFixturesFromCache(opts: FootballAdapterOptions): Promise<SportMatch[]> {
+  const now    = new Date().toISOString();
+  const in7d   = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+
+  let query = opts.sb
+    .from('api_football_fixtures')
+    .select('fixture_id, home_team_id, home_team_name, away_team_id, away_team_name, kickoff_at, venue_name, round')
+    .eq('status_short', 'NS')
+    .gte('kickoff_at', now)
+    .lte('kickoff_at', in7d)
+    .order('kickoff_at', { ascending: true })
+    .limit(5);
+
+  if (opts.scopeType === 'team_specific' && opts.teamId) {
+    query = query.or(`home_team_id.eq.${opts.teamId},away_team_id.eq.${opts.teamId}`);
+  } else {
+    query = query.eq('league_id', opts.leagueId);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    console.warn('[football-adapter] fixture cache read error:', error.message);
+    // Fall back to direct API call if cache read fails
+    return fetchUpcomingFixturesFromAPI(opts, { 'x-apisports-key': opts.apiKey });
+  }
+
+  if (!data || data.length === 0) {
+    console.warn('[football-adapter] fixture cache empty for league', opts.leagueId, '— falling back to API');
+    return fetchUpcomingFixturesFromAPI(opts, { 'x-apisports-key': opts.apiKey });
+  }
+
+  return data.map((row: any): SportMatch => ({
+    id:          String(row.fixture_id),
+    sport:       'football',
+    homeTeam:    { id: String(row.home_team_id), name: row.home_team_name },
+    awayTeam:    { id: String(row.away_team_id), name: row.away_team_name },
+    kickoff:     row.kickoff_at,
+    competition: `League ${opts.leagueId}`,
+    venue:       row.venue_name ?? undefined,
+    status:      'not_started',
+  }));
+}
+
+// ── Standings — reads from api_football_standings cache ───────────────
+
+async function fetchStandingsFromCache(opts: FootballAdapterOptions): Promise<StandingsEntry[]> {
+  const { data, error } = await opts.sb
+    .from('api_football_standings')
+    .select('team_id, team_name, rank, points, played, won, drawn, lost, goal_diff, form')
+    .eq('league_id', opts.leagueId)
+    .eq('season', opts.season)
+    .order('rank', { ascending: true })
+    .limit(20);
+
+  if (error || !data || data.length === 0) {
+    if (error) console.warn('[football-adapter] standings cache read error:', error.message);
+    return fetchStandingsFromAPI(opts, { 'x-apisports-key': opts.apiKey });
+  }
+
+  let table = data as any[];
+  if (opts.scopeType === 'team_specific' && opts.teamId) {
+    const idx = table.findIndex((r: any) => r.team_id === opts.teamId);
+    if (idx >= 0) {
+      const start = Math.max(0, idx - 3);
+      const end   = Math.min(table.length, idx + 4);
+      table = table.slice(start, end);
+    } else {
+      table = table.slice(0, 8);
+    }
+  } else {
+    table = table.slice(0, 8);
+  }
+
+  return table.map((r: any): StandingsEntry => ({
+    position:       r.rank,
+    team:           { id: String(r.team_id), name: r.team_name },
+    points:         r.points,
+    played:         r.played,
+    won:            r.won,
+    drawn:          r.drawn,
+    lost:           r.lost,
+    goalDifference: r.goal_diff,
+  }));
+}
+
+// ── API fallbacks (used only when cache is empty / cold start) ────────
+
+async function fetchUpcomingFixturesFromAPI(
   opts: FootballAdapterOptions,
   headers: Record<string, string>,
 ): Promise<SportMatch[]> {
@@ -57,7 +145,6 @@ async function fetchUpcomingFixtures(
 
   return ((json.response ?? []) as any[])
     .filter((f: any) => {
-      // Only matches in the next 7 days
       const kickoff = new Date(f.fixture?.date ?? '').getTime();
       const now = Date.now();
       return kickoff > now && kickoff <= now + 7 * 24 * 60 * 60 * 1000;
@@ -75,16 +162,10 @@ async function fetchUpcomingFixtures(
     }));
 }
 
-// ── Standings ─────────────────────────────────────────────────────────
-
-async function fetchStandings(
+async function fetchStandingsFromAPI(
   opts: FootballAdapterOptions,
   headers: Record<string, string>,
 ): Promise<StandingsEntry[]> {
-  if (opts.scopeType === 'team_specific') {
-    // For team-specific leagues, get the standings of their competition
-    // We still fetch by league so we have context (table position, rivals)
-  }
   const params = new URLSearchParams({
     league: String(opts.leagueId),
     season: String(opts.season),
@@ -93,10 +174,8 @@ async function fetchStandings(
   if (!res.ok) return [];
   const json = await res.json();
 
-  const table: any[] =
-    json.response?.[0]?.league?.standings?.[0] ?? [];
+  const table: any[] = json.response?.[0]?.league?.standings?.[0] ?? [];
 
-  // For team-specific scope, include scoped team + surrounding context (±3 positions)
   let filtered = table;
   if (opts.scopeType === 'team_specific' && opts.teamId) {
     const idx = table.findIndex((r: any) => r.team.id === opts.teamId);
@@ -112,8 +191,8 @@ async function fetchStandings(
   }
 
   return filtered.map((r: any): StandingsEntry => ({
-    position: r.rank,
-    team: { id: String(r.team.id), name: r.team.name },
+    position:       r.rank,
+    team:           { id: String(r.team.id), name: r.team.name },
     points:         r.points,
     played:         r.all?.played ?? 0,
     won:            r.all?.win    ?? 0,
@@ -123,7 +202,7 @@ async function fetchStandings(
   }));
 }
 
-// ── Injuries ──────────────────────────────────────────────────────────
+// ── Injuries — still direct API (not cached) ──────────────────────────
 
 async function fetchInjuries(
   opts: FootballAdapterOptions,
@@ -139,7 +218,7 @@ async function fetchInjuries(
   if (!res.ok) return [];
   const json = await res.json();
 
-  const injured: SportPlayer[] = ((json.response ?? []) as any[])
+  return ((json.response ?? []) as any[])
     .filter((r: any) => {
       if (opts.scopeType === 'team_specific' && opts.teamId) {
         return r.team?.id === opts.teamId;
@@ -156,11 +235,9 @@ async function fetchInjuries(
       injuryStatus: mapInjuryReason(r.player.reason),
       injuryNote:   r.player.reason ?? undefined,
     }));
-
-  return injured;
 }
 
-// ── Key players: top scorers + injured players ────────────────────────
+// ── Key players: top scorers + injured — still direct API ─────────────
 
 async function fetchKeyPlayers(
   opts: FootballAdapterOptions,
@@ -168,7 +245,6 @@ async function fetchKeyPlayers(
   upcomingMatches: SportMatch[],
   injuredPlayers: SportPlayer[],
 ): Promise<SportPlayer[]> {
-  // Fetch top scorers for the competition
   const params = new URLSearchParams({
     league: String(opts.leagueId),
     season: String(opts.season),
@@ -183,7 +259,6 @@ async function fetchKeyPlayers(
         if (opts.scopeType === 'team_specific' && opts.teamId) {
           return r.statistics?.[0]?.team?.id === opts.teamId;
         }
-        // For full league, only include players from upcoming match teams
         const matchTeamIds = upcomingMatches.flatMap((m) => [m.homeTeam.id, m.awayTeam.id]);
         return matchTeamIds.includes(String(r.statistics?.[0]?.team?.id));
       })
@@ -202,17 +277,14 @@ async function fetchKeyPlayers(
       });
   }
 
-  // Merge: injured players override the 'fit' status from top scorers
   const injuredIds = new Set(injuredPlayers.map((p) => p.id));
-  const merged = [
+  return [
     ...injuredPlayers.slice(0, 5),
     ...topScorers.filter((p) => !injuredIds.has(p.id)).slice(0, 7),
-  ];
-
-  return merged.slice(0, 12);
+  ].slice(0, 12);
 }
 
-// ── Derive narrative hooks from structured data ───────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────
 
 function deriveNarrativeHooks(
   matches: SportMatch[],
@@ -221,7 +293,6 @@ function deriveNarrativeHooks(
 ): string[] {
   const hooks: string[] = [];
 
-  // Top-of-table clash
   if (matches.length >= 1 && standings.length >= 2) {
     const top2ids = standings.slice(0, 2).map((s) => s.team.id);
     for (const m of matches) {
@@ -234,7 +305,6 @@ function deriveNarrativeHooks(
     }
   }
 
-  // Relegation battle
   const bottom3 = standings.slice(-3).map((s) => s.team.id);
   for (const m of matches) {
     if (bottom3.includes(m.homeTeam.id) || bottom3.includes(m.awayTeam.id)) {
@@ -243,7 +313,6 @@ function deriveNarrativeHooks(
     }
   }
 
-  // Injury concern for a key match player
   for (const p of players) {
     if (p.injuryStatus === 'doubtful' || p.injuryStatus === 'injured') {
       hooks.push(`${p.name} (${p.teamName}) is listed as ${p.injuryStatus}${p.injuryNote ? ': ' + p.injuryNote : ''}`);
@@ -254,16 +323,8 @@ function deriveNarrativeHooks(
   return hooks.slice(0, 6);
 }
 
-// ── Form proxy from standings (API-Sports includes last 5 in standings) ─
-
-function buildFormFromStandings(s: StandingsEntry): import('../types.ts').TeamForm {
-  // API-Sports standings don't directly expose last5 in our normalised shape.
-  // We approximate from won/drawn/lost totals — good enough for narrative context.
-  return {
-    teamId:   s.team.id,
-    teamName: s.team.name,
-    last5:    [],  // populated when full fixture history is available
-  };
+function buildFormFromStandings(s: StandingsEntry): TeamForm {
+  return { teamId: s.team.id, teamName: s.team.name, last5: [] };
 }
 
 function mapInjuryReason(reason: string | null): SportPlayer['injuryStatus'] {

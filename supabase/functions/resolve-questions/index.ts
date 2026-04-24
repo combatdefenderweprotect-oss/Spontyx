@@ -87,6 +87,7 @@ Deno.serve(async (req: Request) => {
           matchId,
           needsPlayerStats: needsPlayerStats(pred),
           apiKey:           API_SPORTS_KEY,
+          sb,
         });
         statsCache.set(cacheKey, stats);
       }

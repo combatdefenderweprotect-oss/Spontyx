@@ -119,7 +119,7 @@ Deno.serve(async (req: Request) => {
     const classifications = await Promise.all(
       (leagues as LeagueWithConfig[]).map(async (league) => {
         try {
-          const ctx = await fetchSportsContext(league, API_SPORTS_KEY);
+          const ctx = await fetchSportsContext(league, API_SPORTS_KEY, sb);
           return classifyLeague(league, ctx.upcomingMatches);
         } catch (err) {
           console.warn(`[classify] failed for league ${league.id}:`, err);
