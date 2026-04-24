@@ -1166,11 +1166,13 @@ function switchTab(tab) {
 </script>
 
 <script src="utils.js"></script>
-<script src="sidebar.js"></script>
-<script>SpontixSidebar.init({ type: 'player', active: 'profile.html' });</script>
+
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-client.js"></script>
 <script src="spontix-store.js"></script>
+<script src="sidebar.js"></script>
+<script>SpontixSidebar.init({ type: 'player', active: 'profile.html' });</script>
 <script>
 // ══ PUBLIC PROFILE SUPPORT ══
 // If ?user=<userId> is in the URL, show that user's public profile (read-only).
@@ -1219,13 +1221,6 @@ if (isPublicView) {
 function hydrateProfile() {
   const player = isPublicView ? (window._publicProfile || SpontixStore.getPlayer()) : SpontixStore.getPlayer();
   const history = SpontixStore.getGameHistory();
-
-  // ── Sidebar Profile ──
-  document.querySelectorAll('.sidebar-avatar').forEach(el => {
-    el.textContent = player.avatar;
-  });
-  document.querySelector('.sidebar-profile-name').textContent = player.name;
-  document.querySelector('.sidebar-profile-tier').textContent = SpontixStore.getTierLabel(player.tier);
 
   // ── Profile Header ──
   renderProfileAvatar(player);

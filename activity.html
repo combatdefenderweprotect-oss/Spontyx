@@ -321,11 +321,13 @@
 <div class="toast" id="toast"></div>
 
 <script src="utils.js"></script>
-<script src="sidebar.js"></script>
-<script>SpontixSidebar.init({ type: 'player', active: 'activity.html' });</script>
+
+
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-client.js"></script>
 <script src="spontix-store.js"></script>
+<script src="sidebar.js"></script>
+<script>SpontixSidebar.init({ type: 'player', active: 'activity.html' });</script>
 <script>
   const CLOCK_SVG = `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`;
   const LEAGUE_SVG = `<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>`;
@@ -531,12 +533,6 @@
   }
 
   document.addEventListener('DOMContentLoaded', function() {
-    const player = SpontixStore.getPlayer();
-    document.querySelector('.sidebar-avatar').textContent = player.avatar;
-    document.querySelector('.sidebar-avatar').style.backgroundColor = player.avatarColor;
-    document.querySelector('.sidebar-profile-name').textContent = player.name;
-    document.querySelector('.sidebar-profile-tier').textContent = SpontixStore.getTierLabel(player.tier);
-
     loadActivityData().catch(err => { console.warn('[activity]', err); showLoadError(); });
   });
 </script>

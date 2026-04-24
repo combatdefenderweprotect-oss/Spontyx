@@ -414,11 +414,11 @@
 <div class="toast" id="toast"></div>
 
 <script src="utils.js"></script>
-<script src="sidebar.js"></script>
-<script>SpontixSidebar.init({ type: 'player', active: 'dashboard.html' });</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-client.js"></script>
 <script src="spontix-store.js"></script>
+<script src="sidebar.js"></script>
+<script>SpontixSidebar.init({ type: 'player', active: 'dashboard.html' });</script>
 <script>
 
   function hydrateFromStore() {
@@ -445,10 +445,7 @@
       trophyEl.textContent = SpontixStore.getTrophies().length;
     }
 
-    // Update sidebar profile
-    document.querySelector('.sidebar-avatar').textContent = p.avatar;
-    document.querySelector('.sidebar-profile-name').textContent = p.name;
-    document.querySelector('.sidebar-profile-tier').textContent = SpontixStore.getTierLabel(p.tier);
+    // Sidebar is handled by sidebar.js + spontix-profile-refreshed event
   }
 
   function applyRealProfile(profile) {
