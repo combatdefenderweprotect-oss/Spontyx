@@ -2732,3 +2732,36 @@ The 3 Rayo vs Espanyol questions (`answer_closes_at = 18:00 UTC 2026-04-23`, `re
   - **My Leagues** — badge shows real league membership count, hidden when 0; sub-text shows "X active leagues" or "Join a league to get started"
   - **Battle Royale** — static (no real-time data to connect)
 - All early-return paths (no leagues, no open questions, all answered) still call `updateNavCards()` with appropriate counts before returning
+
+---
+
+### 2026-04-24 — Sidebar flash fix + mobile layout fix
+
+**Root cause of sidebar flash identified and fixed:**
+- Every page loaded `sidebar.js` and called `SpontixSidebar.init()` before `spontix-store.js` was loaded. `SpontixStore.getPlayer()` returned null at init time, so the sidebar rendered empty, then flashed through multiple states as subsequent scripts loaded.
+- Fixed by reordering scripts on all affected pages: `spontix-store.js` now loads before `sidebar.js` across all 24 pages. When the sidebar initialises, the player cache is already available and the correct username + photo renders immediately.
+
+**Sidebar name overwrite fixed (3 pages):**
+- `dashboard.html` `hydrateFromStore()`, `activity.html` `DOMContentLoaded`, and `profile.html` `hydrateProfile()` were each overwriting `.sidebar-profile-name` with `player.name` (full name e.g. "Richard Utis") after `sidebar.js` had already correctly rendered the handle. Removed all three sidebar overwrites — `sidebar.js` and the `spontix-profile-refreshed` event are the sole owners of the sidebar DOM.
+
+**`defaultPlayer()` / stale data cleaned up (prior session):**
+- `defaultPlayer()` changed from `{ name: 'Bran', handle: '@bran_predicts' }` to empty strings, eliminating the "Bran" flash on first load.
+- `savePlayer()` now tries full save first, strips data URL only on quota error — was previously silently failing for all fields when a large base64 photo caused `localStorage.setItem` to throw.
+- `getProfile()` preserves `spontix_user_tier` (forced Elite) after DB merge so `public.users.tier = 'starter'` can't overwrite it.
+
+**Supabase Storage photo migration (prior session):**
+- `backend/migrations/014_user_photos_bucket.sql` — creates `user-photos` public bucket (5MB, image types only). RLS: public read, authenticated users own `{uid}/profile.jpg`.
+- `uploadPlayerPhoto()` in `spontix-store.js` now uploads to Supabase Storage and stores a CDN URL instead of a base64 data URL, fixing the localStorage quota issue that was silently blocking all profile field saves.
+- Fixed `saveAvatarChoice()` in `profile.html` to build `displayPlayer` with `_avatarPick.url` directly before rendering — previously re-read from `getPlayer()` which had the URL stripped.
+- Run migration 014 in Supabase SQL editor to activate the bucket.
+
+**Mobile layout fix — content no longer overflows off-screen:**
+- Every page had `.main { margin-left: 260px }` in its own inline `<style>` block, which came after `styles.css` in the cascade and silently overrode the `@media (max-width: 900px) { .main { margin-left: 0 } }` rule already in `styles.css`.
+- Removed the redundant `.main` definition from 14 pages. `styles.css` now controls both desktop and mobile layout correctly.
+- `matches.html` used `.content { margin-left: 260px }` with no mobile breakpoint — added `@media (max-width: 900px) { .content { margin-left: 0 } }`.
+- `venue-table-map.html` had a custom `.main` (height: 100vh + overflow: hidden) — added `margin-left: 0` to its existing mobile override.
+
+**Page navigation flash eliminated:**
+- Added `<style>html{background:#1A1A2E;margin:0;padding:0}</style>` inline in `<head>` of all app pages — fires before Google Fonts and `styles.css`, guaranteeing the dark background is painted on frame zero with no white/black gap between page navigations.
+- Added `<meta name="view-transition" content="same-origin">` to all pages — enables native browser cross-fade between same-origin pages in Chrome/Safari with no JavaScript required.
+- Added `animation: page-enter 120ms ease` to `body` in `styles.css` for a smooth fade-in on every page load.
