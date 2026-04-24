@@ -1,6 +1,6 @@
 # Spontix — Project State & Developer Handoff
 
-Last updated 2026-04-24 — Live & Activity page fully dynamic (real Supabase data, styled empty states). Dashboard alert + nav cards connected to real data (unanswered questions, league count, saved schedule). Username system live. Beta access flow live. Full end-to-end simulation verified (all 10 checkpoints passed). Football only. Max 2 active questions. Scoring simplified to base × time_pressure × streak (difficulty/comeback/clutch bypassed to 1.0 via MVP_BYPASS). Three-lane question architecture locked: CORE_MATCH_PREMATCH, CORE_MATCH_LIVE, REAL_WORLD. Save Match feature fully implemented (migration 009, store methods, matches.html, upcoming.html, venue-schedule.html, create-league.html prefill). league.html UI/UX upgrade complete: 3-lane type badges, timer progress bar, primary card hierarchy, Real World purple styling, leaderboard float notification, match context strip, multiplier breakdown display, glow/shake micro-animations. Pre-launch alignment complete and DEPLOYED: migration 010 run in Supabase — question_type column live, existing rows backfilled, index active. detectLane() now reads DB column directly for all questions; heuristic fallback is dead code. source_badge computed from lane on all new generation. All advanced systems preserved intact for post-launch activation.
+Last updated 2026-04-24 — Player availability filtering live: generation pipeline now fetches fixture-specific injuries + lineups and blocks questions about unavailable players. Auth gate hardened: getUser() server-side validation prevents deleted accounts from remaining logged in indefinitely. Live & Activity page fully dynamic (real Supabase data, styled empty states). Dashboard alert + nav cards connected to real data (unanswered questions, league count, saved schedule). Username system live. Beta access flow live. Full end-to-end simulation verified (all 10 checkpoints passed). Football only. Max 2 active questions. Scoring simplified to base × time_pressure × streak (difficulty/comeback/clutch bypassed to 1.0 via MVP_BYPASS). Three-lane question architecture locked: CORE_MATCH_PREMATCH, CORE_MATCH_LIVE, REAL_WORLD. Save Match feature fully implemented (migration 009, store methods, matches.html, upcoming.html, venue-schedule.html, create-league.html prefill). league.html UI/UX upgrade complete: 3-lane type badges, timer progress bar, primary card hierarchy, Real World purple styling, leaderboard float notification, match context strip, multiplier breakdown display, glow/shake micro-animations. Pre-launch alignment complete and DEPLOYED: migration 010 run in Supabase — question_type column live, existing rows backfilled, index active. detectLane() now reads DB column directly for all questions; heuristic fallback is dead code. source_badge computed from lane on all new generation. All advanced systems preserved intact for post-launch activation.
 
 ---
 
@@ -2677,11 +2677,33 @@ The 3 Rayo vs Espanyol questions (`answer_closes_at = 18:00 UTC 2026-04-23`, `re
 - Both sync (`hydrateFromStore`) and async (`applyRealProfile`) paths strip legacy `@` prefix
 - Profile card still shows full name; handle shown below it without `@`
 
-**Known behaviour — account deletion and JWT expiry:**
-- When a user is deleted from the Supabase Auth dashboard, their existing JWT (stored in browser localStorage) remains valid for up to 1 hour (JWT TTL). They can still load the app during this window.
-- This is standard JWT behaviour — Supabase free tier does not support instant session revocation.
-- For beta this is not a risk: users cannot delete their own accounts from the UI (the button shows a toast only). Only admins can delete from the dashboard.
-- Post-launch fix: server-side session blocklist via a Postgres function. Not needed for MVP.
+**Account deletion — two places to delete (IMPORTANT):**
+- Deleting a row from `public.users` (Table Editor) does NOT revoke login ability. That table is only the profile mirror.
+- To fully remove an account: delete from **Authentication → Users** in the Supabase dashboard. That removes the auth record and invalidates credentials.
+- Deleting only from `public.users` leaves the auth record intact — `signInWithPassword` will still succeed.
+
+**Auth gate — server-side validation (fixed 2026-04-24):**
+- `authGate()` in `spontix-store.js` now runs a two-phase check: (1) fast localStorage pre-check to block users with no token at all, then (2) `supabase.auth.getUser()` on page load which hits the Supabase API and detects deleted/invalid accounts.
+- `getSession()` and the old localStorage string-check both read only from local storage — neither can detect a deleted account. `getUser()` always makes an API call.
+- If `getUser()` returns an error: all `sb-*` localStorage keys, `spontix_session`, and `spontix_beta_access` (sessionStorage) are cleared and the user is redirected to `waitlist.html`.
+- Network failures in the `getUser()` call are silently ignored — a dropped connection will not log the user out.
+
+---
+
+### 2026-04-24 — Auth gate hardened: server-side account validation
+
+**Root cause identified:** `authGate()` was checking only for the presence of a Supabase token string in localStorage — it never called the Supabase API. The Supabase JS SDK silently refreshes JWTs in the background using the refresh token, so a deleted account with a cached token remained "logged in" indefinitely. `getSession()` has the same flaw — it reads from localStorage, not from the server.
+
+**`spontix-store.js` — `authGate()` updated:**
+- Fast pre-check retained: if no `sb-*` token in localStorage at all → redirect immediately (avoids flash of content)
+- New server-side validation on `window load`: calls `window.sb.auth.getUser()` which always hits the Supabase API
+- If `getUser()` returns an error or no user: clears all `sb-*` localStorage keys + `spontix_session` + `sessionStorage.spontix_beta_access`, redirects to `waitlist.html`
+- Network failures caught and ignored — offline users are not logged out
+
+**Key distinction documented:**
+- `public.users` (Table Editor) = profile mirror only. Deleting here does nothing to login ability.
+- `Authentication → Users` (Supabase dashboard) = actual auth record. Must delete here to revoke credentials.
+- Deleting only from `public.users` leaves `signInWithPassword` working — confirmed in testing.
 
 ---
 

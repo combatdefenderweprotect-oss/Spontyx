@@ -184,8 +184,9 @@ const SpontixSidebar = {
         const nameEl = document.querySelector('.sidebar-profile-name');
         const tierEl = document.querySelector('.sidebar-profile-tier');
         const avatarEl = document.querySelector('.sidebar-avatar');
-        if (nameEl && player.name) nameEl.textContent = player.name;
-        if (tierEl) tierEl.textContent = SpontixStore.getTierLabel(player.tier);
+        const displayName = player.handle || player.name;
+        if (nameEl && displayName) nameEl.textContent = displayName;
+        if (tierEl) tierEl.textContent = SpontixStore.getTierLabel(localStorage.getItem('spontix_user_tier') || player.tier);
         // Render avatar with photo support
         if (avatarEl && SpontixStore.getPlayerAvatarStyle) {
           SpontixSidebar._applyPlayerAvatar(avatarEl, player);
@@ -395,7 +396,8 @@ if (typeof window !== 'undefined') {
     // Also update name/tier in case they changed
     var nameEl = document.querySelector('.sidebar-profile-name');
     var tierEl = document.querySelector('.sidebar-profile-tier');
-    if (nameEl && player.name) nameEl.textContent = player.name;
-    if (tierEl && SpontixStore.getTierLabel) tierEl.textContent = SpontixStore.getTierLabel(player.tier);
+    var displayName = player.handle || player.name;
+    if (nameEl && displayName) nameEl.textContent = displayName;
+    if (tierEl && SpontixStore.getTierLabel) tierEl.textContent = SpontixStore.getTierLabel(localStorage.getItem('spontix_user_tier') || player.tier);
   });
 }

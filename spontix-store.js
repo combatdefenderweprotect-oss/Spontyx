@@ -76,18 +76,20 @@ function uuid() {
     var publicPages = ['login.html', 'index.html', 'waitlist.html', 'supabase-test.html', 'spontix-architecture.html', ''];
     if (publicPages.indexOf(filename) !== -1) return;
 
-    // Check for a real Supabase auth session
-    var hasSupabaseSession = false;
+    // Fast pre-check: does a Supabase auth token exist in localStorage at all?
+    // This avoids a flash of content for users with no session. The real
+    // server-side validation below will catch deleted/expired accounts.
+    var hasLocalToken = false;
     for (var i = 0; i < localStorage.length; i++) {
       var key = localStorage.key(i);
       if (key && key.startsWith('sb-') && key.endsWith('-auth-token')) {
         var raw = localStorage.getItem(key);
-        if (raw && raw.indexOf('access_token') !== -1) { hasSupabaseSession = true; break; }
+        if (raw && raw.indexOf('access_token') !== -1) { hasLocalToken = true; break; }
       }
     }
 
-    // No session → redirect to login
-    if (!hasSupabaseSession) {
+    // No token at all → redirect immediately
+    if (!hasLocalToken) {
       window.location.href = 'login.html';
       return;
     }
@@ -116,6 +118,28 @@ function uuid() {
     // Remove this block when real subscriptions land.
     var desiredTier = isVenuePage ? 'venue-elite' : 'elite';
     localStorage.setItem('spontix_user_tier', desiredTier);
+
+    // Server-side validation: once the Supabase SDK is ready, call getUser()
+    // which hits the Supabase API and returns an error for deleted accounts.
+    // getSession() reads only from localStorage and cannot detect deleted users.
+    window.addEventListener('load', function() {
+      if (!window.sb || !window.sb.auth) return;
+      window.sb.auth.getUser().then(function(result) {
+        if (result.error || !result.data || !result.data.user) {
+          // Token exists locally but the account is gone or the token is invalid.
+          // Clear all local auth state and redirect.
+          for (var j = localStorage.length - 1; j >= 0; j--) {
+            var k = localStorage.key(j);
+            if (k && k.startsWith('sb-')) localStorage.removeItem(k);
+          }
+          localStorage.removeItem('spontix_session');
+          sessionStorage.removeItem('spontix_beta_access');
+          window.location.href = 'waitlist.html';
+        }
+      }).catch(function() {
+        // Network failure — do not log out, let the user continue offline.
+      });
+    });
   } catch (e) { /* no-op */ }
 })();
 
@@ -320,9 +344,9 @@ const SpontixStore = {
   // ── Default Player ──
   defaultPlayer() {
     return {
-      name: 'Bran',
-      handle: '@bran_predicts',
-      avatar: 'B',
+      name: '',
+      handle: '',
+      avatar: '',
       avatarColor: 'var(--lime)',
       profilePhotoType: 'color',
       profilePhotoId: 'color_lime',
@@ -351,6 +375,10 @@ const SpontixStore = {
     if (stored) {
       try {
         const player = JSON.parse(stored);
+        // Purge stale seed values so they never flash in the sidebar
+        if (player.name === 'Bran') player.name = '';
+        if (player.handle === '@bran_predicts') player.handle = '';
+        if (player.avatar === 'B' && !player.name) player.avatar = '';
         // Merge with defaults for any missing fields
         return { ...this.defaultPlayer(), ...player };
       } catch (e) {}
@@ -3415,6 +3443,9 @@ SpontixStoreAsync.getProfile = async function (userId) {
   // Update localStorage cache so sync getPlayer() sees fresh data
   var current = SpontixStore.getPlayer();
   var merged = Object.assign({}, current, profile);
+  // Preserve the forced Elite tier from authGate — DB tier column is null until Stripe lands
+  var forcedTier = localStorage.getItem('spontix_user_tier');
+  if (forcedTier) merged.tier = forcedTier;
   SpontixStore.savePlayer(merged);
   return merged;
 };

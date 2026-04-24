@@ -49,12 +49,27 @@ export interface TeamForm {
   awayRecord?: string;
 }
 
+// ── Player availability ───────────────────────────────────────────────
+
+export interface PlayerAvailabilityStatus {
+  playerId: string;
+  playerName: string;
+  teamId: string;
+  teamName: string;
+  fixtureId: string;
+  // unavailable = injured/suspended; doubtful = fitness concern; starting/substitute = confirmed lineup
+  status: 'unavailable' | 'doubtful' | 'available' | 'starting' | 'substitute';
+  reason?: string;
+  source: 'injury_report' | 'lineup' | 'inferred';
+}
+
 export interface SportsContext {
   upcomingMatches: SportMatch[];
   standings: StandingsEntry[];
   form: TeamForm[];
   keyPlayers: SportPlayer[];
   narrativeHooks: string[];  // derived from data, not from news
+  playerAvailability?: PlayerAvailabilityStatus[];  // empty if data unavailable
 }
 
 // ── News layer ────────────────────────────────────────────────────────
@@ -238,7 +253,7 @@ export interface ValidatedQuestion {
 
 export interface RejectionLogEntry {
   attempt: number;
-  stage: 'question_generation' | 'predicate_parse' | 'schema_validation' | 'entity_validation' | 'temporal_validation' | 'logic_validation';
+  stage: 'question_generation' | 'predicate_parse' | 'schema_validation' | 'entity_validation' | 'temporal_validation' | 'logic_validation' | 'availability_validation';
   question_text?: string;
   error: string;
 }

@@ -34,7 +34,9 @@
       "Bash(curl -s 'https://hdulhffpmuqepoqstsor.supabase.co/rest/v1/generation_run_leagues?select=league_id,questions_generated,questions_rejected,rejection_log,generation_mode,duration_ms&order=created_at.desc&limit=6' -H 'apikey: sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5' -H 'Authorization: Bearer sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5')",
       "Bash(curl -s 'https://hdulhffpmuqepoqstsor.supabase.co/rest/v1/generation_run_leagues?select=league_id,questions_generated,questions_rejected,rejection_log,generation_mode,duration_ms&limit=6' -H 'apikey: sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5' -H 'Authorization: Bearer sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5')",
       "Bash(awk '{print $5, $9}')",
-      "Bash(gh auth *)"
+      "Bash(gh auth *)",
+      "mcp__Claude_Preview__preview_start",
+      "Bash(node -e ' *)"
     ]
   }
 }

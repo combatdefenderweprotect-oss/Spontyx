@@ -128,6 +128,54 @@ export function buildContextPacket(params: {
     sections.push(playerLines.join('\n'));
   }
 
+  // ── Player availability ───────────────────────────────────────────
+  const availability = sportsCtx.playerAvailability ?? [];
+  if (availability.length > 0) {
+    const unavailable = availability.filter((a) => a.status === 'unavailable');
+    const doubtful    = availability.filter((a) => a.status === 'doubtful');
+    const starters    = availability.filter((a) => a.status === 'starting').slice(0, 10);
+    const substitutes = availability.filter((a) => a.status === 'substitute').slice(0, 10);
+
+    const paLines: string[] = ['PLAYER AVAILABILITY', '-------------------'];
+    let hasContent = false;
+
+    if (unavailable.length > 0) {
+      hasContent = true;
+      paLines.push('BLOCKED — DO NOT generate any player-specific question about these players:');
+      for (const p of unavailable) {
+        const r = p.reason ? `  |  ${p.reason}` : '';
+        paLines.push(`player_id: ${p.playerId}  |  ${p.playerName}  |  ${p.teamName}  |  UNAVAILABLE${r}`);
+      }
+    }
+
+    if (doubtful.length > 0) {
+      hasContent = true;
+      paLines.push('DOUBTFUL — avoid player-specific questions; prefer team-based alternatives:');
+      for (const p of doubtful) {
+        const r = p.reason ? `  |  ${p.reason}` : '';
+        paLines.push(`player_id: ${p.playerId}  |  ${p.playerName}  |  ${p.teamName}${r}`);
+      }
+    }
+
+    if (starters.length > 0) {
+      hasContent = true;
+      paLines.push('CONFIRMED STARTERS (lineup released — do NOT ask "Will X start?"):');
+      for (const p of starters) {
+        paLines.push(`player_id: ${p.playerId}  |  ${p.playerName}  |  ${p.teamName}  |  Starting XI`);
+      }
+    }
+
+    if (substitutes.length > 0) {
+      hasContent = true;
+      paLines.push('CONFIRMED BENCH (lineup released — player is named substitute, NOT starting — do NOT ask "Will X start?"):');
+      for (const p of substitutes) {
+        paLines.push(`player_id: ${p.playerId}  |  ${p.playerName}  |  ${p.teamName}  |  Substitute`);
+      }
+    }
+
+    if (hasContent) sections.push(paLines.join('\n'));
+  }
+
   // ── Standings + form ─────────────────────────────────────────────
   if (sportsCtx.standings.length > 0 || sportsCtx.form.length > 0) {
     const sfLines: string[] = [];

@@ -1,4 +1,5 @@
 import type { SportMatch, SportPlayer, StandingsEntry, TeamForm, SportsContext } from '../types.ts';
+import type { PlayerAvailabilityStatus } from '../types.ts';
 
 const BASE = 'https://v3.football.api-sports.io';
 
@@ -16,25 +17,36 @@ interface FootballAdapterOptions {
 export async function fetchFootballContext(opts: FootballAdapterOptions): Promise<SportsContext> {
   const headers = { 'x-apisports-key': opts.apiKey };
 
-  // Fixtures and standings read from the DB cache (populated by sync-fixtures).
-  // Injuries and top scorers still hit the API directly (not cached yet).
-  const [fixturesRes, standingsRes, injuriesRes] = await Promise.allSettled([
+  // Phase 1: fixtures + standings in parallel (availability needs fixture IDs)
+  const [fixturesRes, standingsRes] = await Promise.allSettled([
     fetchUpcomingFixturesFromCache(opts),
     fetchStandingsFromCache(opts),
-    fetchInjuries(opts, headers),
   ]);
 
   const upcomingMatches = fixturesRes.status === 'fulfilled' ? fixturesRes.value : [];
   const standings       = standingsRes.status === 'fulfilled' ? standingsRes.value : [];
-  const injuredPlayers  = injuriesRes.status === 'fulfilled' ? injuriesRes.value : [];
 
-  const form = standings.slice(0, 10).map((s) => buildFormFromStandings(s));
+  // Phase 2: player data using fixture IDs — all in parallel
+  const [injuriesRes, lineupsRes, topScorersRes] = await Promise.allSettled([
+    fetchInjuriesByFixtures(upcomingMatches, headers),
+    fetchLineups(upcomingMatches, headers),
+    fetchTopScorers(opts, headers, upcomingMatches),
+  ]);
 
-  const keyPlayers = await fetchKeyPlayers(opts, headers, upcomingMatches, injuredPlayers);
+  const injuryAvailability = injuriesRes.status === 'fulfilled' ? injuriesRes.value : [];
+  const lineupAvailability = lineupsRes.status === 'fulfilled' ? lineupsRes.value : [];
+  const topScorers         = topScorersRes.status === 'fulfilled' ? topScorersRes.value : [];
 
+  // Merge: lineup data takes precedence over injury report for same player+fixture
+  const playerAvailability = mergeAvailability(injuryAvailability, lineupAvailability);
+
+  // Build keyPlayers (SportPlayer[]) for entity validation + narrative hooks
+  const keyPlayers = buildKeyPlayers(playerAvailability, topScorers);
+
+  const form           = standings.slice(0, 10).map((s) => buildFormFromStandings(s));
   const narrativeHooks = deriveNarrativeHooks(upcomingMatches, standings, keyPlayers);
 
-  return { upcomingMatches, standings, form, keyPlayers, narrativeHooks };
+  return { upcomingMatches, standings, form, keyPlayers, narrativeHooks, playerAvailability };
 }
 
 // ── Upcoming fixtures — reads from api_football_fixtures cache ────────
@@ -62,7 +74,6 @@ async function fetchUpcomingFixturesFromCache(opts: FootballAdapterOptions): Pro
 
   if (error) {
     console.warn('[football-adapter] fixture cache read error:', error.message);
-    // Fall back to direct API call if cache read fails
     return fetchUpcomingFixturesFromAPI(opts, { 'x-apisports-key': opts.apiKey });
   }
 
@@ -202,84 +213,210 @@ async function fetchStandingsFromAPI(
   }));
 }
 
-// ── Injuries — still direct API (not cached) ──────────────────────────
+// ── Injuries — fixture-specific (replaces league+date fetch) ──────────
+// Calls /injuries?fixture=X for each upcoming fixture in parallel.
+// More precise than the league+date approach: injuries/suspensions are
+// reported per fixture, so this gives us the exact availability status
+// for each match rather than a league-wide snapshot.
 
-async function fetchInjuries(
-  opts: FootballAdapterOptions,
+async function fetchInjuriesByFixtures(
+  fixtures: SportMatch[],
   headers: Record<string, string>,
-): Promise<SportPlayer[]> {
-  const today = new Date().toISOString().split('T')[0];
-  const params = new URLSearchParams({
-    league: String(opts.leagueId),
-    season: String(opts.season),
-    date:   today,
-  });
-  const res = await fetch(`${BASE}/injuries?${params}`, { headers });
-  if (!res.ok) return [];
-  const json = await res.json();
+): Promise<PlayerAvailabilityStatus[]> {
+  if (fixtures.length === 0) return [];
 
-  return ((json.response ?? []) as any[])
-    .filter((r: any) => {
-      if (opts.scopeType === 'team_specific' && opts.teamId) {
-        return r.team?.id === opts.teamId;
-      }
-      return true;
+  const results = await Promise.allSettled(
+    fixtures.map(async (fixture) => {
+      const res = await fetch(`${BASE}/injuries?fixture=${fixture.id}`, { headers });
+      if (!res.ok) return { fixtureId: fixture.id, items: [] as any[] };
+      const json = await res.json();
+      return { fixtureId: fixture.id, items: (json.response ?? []) as any[] };
     })
-    .slice(0, 20)
-    .map((r: any): SportPlayer => ({
-      id:           String(r.player.id),
-      name:         r.player.name,
-      teamId:       String(r.team.id),
-      teamName:     r.team.name,
-      position:     r.player.type,
-      injuryStatus: mapInjuryReason(r.player.reason),
-      injuryNote:   r.player.reason ?? undefined,
-    }));
+  );
+
+  const seen = new Set<string>(); // dedup by fixtureId:playerId
+  const availability: PlayerAvailabilityStatus[] = [];
+
+  for (const r of results) {
+    if (r.status !== 'fulfilled') continue;
+    const { fixtureId, items } = r.value;
+
+    for (const item of items) {
+      const playerId = String(item.player?.id ?? '');
+      if (!playerId || playerId === 'undefined' || playerId === 'null') continue;
+
+      const key = `${fixtureId}:${playerId}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      const injuryStatus = mapInjuryReason(item.player?.reason);
+      const status: PlayerAvailabilityStatus['status'] =
+        injuryStatus === 'injured' || injuryStatus === 'suspended' ? 'unavailable'
+        : injuryStatus === 'doubtful' ? 'doubtful'
+        : 'available';
+
+      availability.push({
+        playerId,
+        playerName: item.player?.name ?? '',
+        teamId:     String(item.team?.id ?? ''),
+        teamName:   item.team?.name ?? '',
+        fixtureId,
+        status,
+        reason:     item.player?.reason ?? undefined,
+        source:     'injury_report',
+      });
+    }
+  }
+
+  return availability;
 }
 
-// ── Key players: top scorers + injured — still direct API ─────────────
+// ── Lineups — only for fixtures kicking off within 2 hours ────────────
+// Lineups are typically published ~1 hour before kickoff. Fetching them
+// for distant fixtures would always return empty responses.
 
-async function fetchKeyPlayers(
+async function fetchLineups(
+  fixtures: SportMatch[],
+  headers: Record<string, string>,
+): Promise<PlayerAvailabilityStatus[]> {
+  const now = Date.now();
+  const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+
+  const imminentFixtures = fixtures.filter((f) => {
+    const ko = new Date(f.kickoff).getTime();
+    return ko > now && ko <= now + TWO_HOURS_MS;
+  });
+
+  if (imminentFixtures.length === 0) return [];
+
+  const results = await Promise.allSettled(
+    imminentFixtures.map(async (fixture) => {
+      const res = await fetch(`${BASE}/fixtures/lineups?fixture=${fixture.id}`, { headers });
+      if (!res.ok) return { fixtureId: fixture.id, teams: [] as any[] };
+      const json = await res.json();
+      return { fixtureId: fixture.id, teams: (json.response ?? []) as any[] };
+    })
+  );
+
+  const availability: PlayerAvailabilityStatus[] = [];
+
+  for (const r of results) {
+    if (r.status !== 'fulfilled') continue;
+    const { fixtureId, teams } = r.value;
+
+    for (const team of teams) {
+      const teamId   = String(team.team?.id ?? '');
+      const teamName = team.team?.name ?? '';
+
+      for (const entry of (team.startXI ?? [])) {
+        const playerId = String(entry.player?.id ?? '');
+        if (!playerId || playerId === 'undefined') continue;
+        availability.push({
+          playerId,
+          playerName: entry.player?.name ?? '',
+          teamId, teamName, fixtureId,
+          status: 'starting',
+          source: 'lineup',
+        });
+      }
+
+      for (const entry of (team.substitutes ?? [])) {
+        const playerId = String(entry.player?.id ?? '');
+        if (!playerId || playerId === 'undefined') continue;
+        availability.push({
+          playerId,
+          playerName: entry.player?.name ?? '',
+          teamId, teamName, fixtureId,
+          status: 'substitute',
+          source: 'lineup',
+        });
+      }
+    }
+  }
+
+  return availability;
+}
+
+// ── Merge availability: lineup takes precedence over injury report ─────
+
+function mergeAvailability(
+  injuryAvailability: PlayerAvailabilityStatus[],
+  lineupAvailability: PlayerAvailabilityStatus[],
+): PlayerAvailabilityStatus[] {
+  const lineupKeys = new Set(lineupAvailability.map((a) => `${a.fixtureId}:${a.playerId}`));
+  return [
+    ...lineupAvailability,
+    // Exclude injury entries for players already confirmed in lineup data
+    ...injuryAvailability.filter((a) => !lineupKeys.has(`${a.fixtureId}:${a.playerId}`)),
+  ];
+}
+
+// ── Top scorers — direct API (not cached) ─────────────────────────────
+
+async function fetchTopScorers(
   opts: FootballAdapterOptions,
   headers: Record<string, string>,
   upcomingMatches: SportMatch[],
-  injuredPlayers: SportPlayer[],
 ): Promise<SportPlayer[]> {
   const params = new URLSearchParams({
     league: String(opts.leagueId),
     season: String(opts.season),
   });
   const res = await fetch(`${BASE}/players/topscorers?${params}`, { headers });
+  if (!res.ok) return [];
 
-  let topScorers: SportPlayer[] = [];
-  if (res.ok) {
-    const json = await res.json();
-    topScorers = ((json.response ?? []) as any[])
-      .filter((r: any) => {
-        if (opts.scopeType === 'team_specific' && opts.teamId) {
-          return r.statistics?.[0]?.team?.id === opts.teamId;
-        }
-        const matchTeamIds = upcomingMatches.flatMap((m) => [m.homeTeam.id, m.awayTeam.id]);
-        return matchTeamIds.includes(String(r.statistics?.[0]?.team?.id));
-      })
-      .slice(0, 8)
-      .map((r: any): SportPlayer => {
-        const stats = r.statistics?.[0] ?? {};
-        return {
-          id:           String(r.player.id),
-          name:         r.player.name,
-          teamId:       String(stats.team?.id ?? ''),
-          teamName:     stats.team?.name ?? '',
-          position:     r.player.position,
-          injuryStatus: 'fit',
-          recentForm:   `${stats.goals?.total ?? 0} goals this season`,
-        };
-      });
-  }
+  const json = await res.json();
+  return ((json.response ?? []) as any[])
+    .filter((r: any) => {
+      if (opts.scopeType === 'team_specific' && opts.teamId) {
+        return r.statistics?.[0]?.team?.id === opts.teamId;
+      }
+      const matchTeamIds = upcomingMatches.flatMap((m) => [m.homeTeam.id, m.awayTeam.id]);
+      return matchTeamIds.includes(String(r.statistics?.[0]?.team?.id));
+    })
+    .slice(0, 8)
+    .map((r: any): SportPlayer => {
+      const stats = r.statistics?.[0] ?? {};
+      return {
+        id:           String(r.player.id),
+        name:         r.player.name,
+        teamId:       String(stats.team?.id ?? ''),
+        teamName:     stats.team?.name ?? '',
+        position:     r.player.position,
+        injuryStatus: 'fit',
+        recentForm:   `${stats.goals?.total ?? 0} goals this season`,
+      };
+    });
+}
 
-  const injuredIds = new Set(injuredPlayers.map((p) => p.id));
+// ── Build keyPlayers (SportPlayer[]) from availability + top scorers ──
+// Preserves the SportPlayer[] format consumed by entity validation
+// and narrative hooks. Injured/suspended players are included so the
+// context packet still shows their status, and the validator can block
+// questions about them.
+
+function buildKeyPlayers(
+  playerAvailability: PlayerAvailabilityStatus[],
+  topScorers: SportPlayer[],
+): SportPlayer[] {
+  const injuredOrDoubtful: SportPlayer[] = playerAvailability
+    .filter((a) => a.status === 'unavailable' || a.status === 'doubtful')
+    .slice(0, 10)
+    .map((a): SportPlayer => ({
+      id:           a.playerId,
+      name:         a.playerName,
+      teamId:       a.teamId,
+      teamName:     a.teamName,
+      injuryStatus: a.status === 'unavailable'
+        ? (a.reason?.toLowerCase().includes('suspend') ? 'suspended' : 'injured')
+        : 'doubtful',
+      injuryNote:   a.reason,
+    }));
+
+  const injuredIds = new Set(injuredOrDoubtful.map((p) => p.id));
+
   return [
-    ...injuredPlayers.slice(0, 5),
+    ...injuredOrDoubtful.slice(0, 5),
     ...topScorers.filter((p) => !injuredIds.has(p.id)).slice(0, 7),
   ].slice(0, 12);
 }

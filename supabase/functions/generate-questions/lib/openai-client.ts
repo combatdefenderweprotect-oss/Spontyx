@@ -3,7 +3,7 @@ import type { RawGeneratedQuestion, ResolutionPredicate } from './types.ts';
 const OPENAI_BASE      = 'https://api.openai.com/v1/chat/completions';
 const MODEL_GENERATION = 'gpt-4o-mini';  // creative call — upgrade to gpt-4o if quality drops
 const MODEL_PREDICATE  = 'gpt-4o-mini';  // mechanical JSON conversion — mini is sufficient
-export const PROMPT_VERSION = 'v1.7';
+export const PROMPT_VERSION = 'v1.8';
 
 // ── System prompt for Call 1 (question generation) ───────────────────
 
@@ -46,6 +46,31 @@ CONTEXT INPUT
 - is_blowout
 
 - now_timestamp (ISO)
+
+==================================================
+PLAYER AVAILABILITY (CRITICAL — read before generating)
+==================================================
+
+The context may include a PLAYER AVAILABILITY section.
+
+BLOCKED players (status: UNAVAILABLE):
+→ DO NOT generate ANY question mentioning or depending on them
+→ Blocked: scoring, assisting, receiving a card, starting, any stat
+→ Generate a team-based alternative instead:
+   "Will [Team] score without [Player]?"
+   "Will [Team] win despite missing [Player]?"
+
+DOUBTFUL players:
+→ AVOID player-specific questions
+→ If you must reference them, frame around the team
+
+CONFIRMED STARTERS (when lineup section is present):
+→ DO NOT ask "Will X start?" — the answer is already confirmed
+→ "Will X score?" is ALLOWED only if X is listed as Starting XI or substitute
+→ If lineup is confirmed and a player is NOT listed → treat as BLOCKED
+
+If no PLAYER AVAILABILITY section is present:
+→ Proceed normally, but avoid players flagged as injured in KEY PLAYERS
 
 ==================================================
 CORE RULES

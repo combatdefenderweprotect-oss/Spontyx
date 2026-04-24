@@ -37,6 +37,7 @@ export function validateQuestion(
     () => checkEntities(predicate, raw, sportsCtx, league),
     () => checkTemporal(raw),
     () => checkLogic(predicate, raw),
+    () => checkAvailability(predicate, raw, sportsCtx),
   ];
 
   for (const check of checks) {
@@ -287,4 +288,99 @@ function checkLogic(pred: ResolutionPredicate, raw: RawGeneratedQuestion): Valid
   }
 
   return { valid: true };
+}
+
+// ── Check 5: Player availability ──────────────────────────────────────
+// Blocks questions that reference injured or suspended players.
+// Checks both the predicate's player_id and the raw question's player_ids.
+// Safe to run when no availability data is present — passes through.
+
+function checkAvailability(
+  pred: ResolutionPredicate,
+  raw: RawGeneratedQuestion,
+  ctx: SportsContext,
+): ValidationResult {
+  const stage: RejectionLogEntry['stage'] = 'availability_validation';
+
+  // Build the combined set of unavailable player IDs from both data sources
+  const unavailableIds = new Set<string>();
+
+  for (const a of (ctx.playerAvailability ?? [])) {
+    if (a.status === 'unavailable') unavailableIds.add(a.playerId);
+  }
+  // Also catch players flagged in keyPlayers (covers fallback when no fixture-level data)
+  for (const p of ctx.keyPlayers) {
+    if (p.injuryStatus === 'injured' || p.injuryStatus === 'suspended') {
+      unavailableIds.add(p.id);
+    }
+  }
+
+  if (unavailableIds.size === 0) return { valid: true };
+
+  const p = pred as any;
+
+  // Check predicate-level player_id (player_stat and player_status predicates)
+  if (p.player_id) {
+    const pid = String(p.player_id);
+    if (unavailableIds.has(pid)) {
+      const name = lookupPlayerName(pid, ctx);
+      return {
+        valid: false,
+        stage,
+        error: `player_unavailable: ${name} (id: ${pid}) is injured or suspended — cannot generate questions about this player`,
+      };
+    }
+  }
+
+  // Check raw question player_ids list (set by the system from predicate hints)
+  for (const pid of (raw.player_ids ?? [])) {
+    const pidStr = String(pid);
+    if (unavailableIds.has(pidStr)) {
+      const name = lookupPlayerName(pidStr, ctx);
+      return {
+        valid: false,
+        stage,
+        error: `player_unavailable: ${name} (id: ${pidStr}) is injured or suspended`,
+      };
+    }
+  }
+
+  // ── answer_already_known: reject start/availability questions when lineup is confirmed ──
+  // Build the set of players whose lineup status is confirmed (starting or substitute).
+  // Only player_status predicates map to "Will X start?" — those are the only questions
+  // whose answer is trivially known once a lineup is published.
+  const lineupConfirmedIds = new Set(
+    (ctx.playerAvailability ?? [])
+      .filter((a) => a.source === 'lineup' && (a.status === 'starting' || a.status === 'substitute'))
+      .map((a) => a.playerId),
+  );
+
+  if (lineupConfirmedIds.size > 0) {
+    const p2 = pred as any;
+    const isStartQuestion =
+      p2.resolution_type === 'player_status' ||
+      raw.question_subtype === 'player_start' ||
+      /\bstart(s|ing|ed)?\b|\blineup\b|\bselected\b|\bin the squad\b/i.test(raw.question_text ?? '');
+
+    if (isStartQuestion && p2.player_id && lineupConfirmedIds.has(String(p2.player_id))) {
+      const entry = ctx.playerAvailability?.find((a) => a.playerId === String(p2.player_id));
+      const name  = entry?.playerName ?? String(p2.player_id);
+      const status = entry?.status ?? 'in lineup';
+      return {
+        valid: false,
+        stage,
+        error: `answer_already_known: lineup confirmed, ${name} is ${status} — start/availability question has an obvious answer`,
+      };
+    }
+  }
+
+  return { valid: true };
+}
+
+function lookupPlayerName(playerId: string, ctx: SportsContext): string {
+  return (
+    ctx.keyPlayers.find((p) => p.id === playerId)?.name ??
+    ctx.playerAvailability?.find((a) => a.playerId === playerId)?.playerName ??
+    playerId
+  );
 }
