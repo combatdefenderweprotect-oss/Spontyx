@@ -863,7 +863,8 @@ const SpontixStore = {
       teamMaxTeams: 2,
       teamMaxPlayers: 3,
       // ── Question Lanes (canonical: CORE_MATCH_PREMATCH / CORE_MATCH_LIVE / REAL_WORLD) ──
-      liveQuestionsEnabled: false,        // CORE_MATCH_LIVE locked for league creation
+      liveQuestionsEnabled: true,          // Starter CAN see + answer LIVE questions (limited)
+      liveQuestionsMode: 'limited',       // 'limited' = capped per match; 'full' = unlimited
       liveQuestionsPerMatch: 3,           // Starter: 3 live answer submissions per match
       realWorldQuestionsEnabled: false,   // REAL_WORLD locked
       realWorldQuestionsPerMonth: 0,
@@ -871,9 +872,13 @@ const SpontixStore = {
       aiWeeklyQuota: 2,              // per-league weekly AI question budget (matches Edge Function)
       questionTypes: ['pre-match', 'halftime'], // legacy compat
       // ── Game Modes ──
-      battleRoyalePerDay: 3,
+      battleRoyalePerDay: 3,          // Starter: daily cap
+      battleRoyalePerMonth: null,     // null = use daily, not monthly
+      battleRoyaleFairUse: false,     // fair-use protection (Elite only)
       triviaModesAllowed: ['solo'],
-      triviaGamesPerDay: 5,
+      triviaGamesPerDay: 5,           // Starter: daily cap
+      triviaGamesPerMonth: null,      // null = use daily, not monthly
+      triviaFairUse: false,
       // ── Mechanics ──
       riskyAnswers: false,
       streakBonuses: false,
@@ -911,16 +916,21 @@ const SpontixStore = {
       teamMaxPlayers: 5,
       // ── Question Lanes ──
       liveQuestionsEnabled: true,           // CORE_MATCH_LIVE unlocked
-      liveQuestionsPerMatch: Infinity,      // Pro: unlimited live answers
+      liveQuestionsMode: 'full',
+      liveQuestionsPerMatch: -1,            // Pro: unlimited (-1 = no limit)
       realWorldQuestionsEnabled: 'limited', // REAL_WORLD: limited quota
       realWorldQuestionsPerMonth: 10,
       aiQuestionsPerMonth: 400,
       aiWeeklyQuota: 5,
       questionTypes: ['pre-match', 'halftime', 'live', 'prediction', 'news', 'history'],
       // ── Game Modes ──
-      battleRoyalePerDay: Infinity,
+      battleRoyalePerDay: null,       // Pro: no daily cap — uses monthly
+      battleRoyalePerMonth: 50,       // Pro: 50 BR games / month
+      battleRoyaleFairUse: false,
       triviaModesAllowed: ['solo', '1v1'],
-      triviaGamesPerDay: Infinity,
+      triviaGamesPerDay: null,        // Pro: no daily cap — uses monthly
+      triviaGamesPerMonth: 100,       // Pro: 100 trivia games / month
+      triviaFairUse: false,
       // ── Mechanics ──
       riskyAnswers: true,
       streakBonuses: true,
@@ -951,23 +961,28 @@ const SpontixStore = {
       label: 'Elite',
       price: 19.99,
       // ── Leagues ──
-      leaguesCreatePerWeek: Infinity,
-      leaguesJoinMax: Infinity,
+      leaguesCreatePerWeek: -1,
+      leaguesJoinMax: -1,
       leagueMaxPlayers: 100,
-      teamMaxTeams: Infinity,
+      teamMaxTeams: -1,
       teamMaxPlayers: 10,
       // ── Question Lanes ──
       liveQuestionsEnabled: true,      // CORE_MATCH_LIVE full
-      liveQuestionsPerMatch: Infinity, // Elite: unlimited live answers
+      liveQuestionsMode: 'full',
+      liveQuestionsPerMatch: -1,       // Elite: unlimited (-1 = no limit)
       realWorldQuestionsEnabled: true, // REAL_WORLD full + priority
-      realWorldQuestionsPerMonth: Infinity,
+      realWorldQuestionsPerMonth: -1,
       aiQuestionsPerMonth: 1500,
       aiWeeklyQuota: 10,
       questionTypes: ['pre-match', 'halftime', 'live', 'prediction', 'news', 'history', 'custom'],
       // ── Game Modes ──
-      battleRoyalePerDay: Infinity,
+      battleRoyalePerDay: null,       // Elite: no daily cap — unlimited with fair-use
+      battleRoyalePerMonth: -1,       // -1 = unlimited (fair-use applies, not a hard counter)
+      battleRoyaleFairUse: true,      // one session at a time + cooldown between sessions
       triviaModesAllowed: ['solo', '1v1', 'party-room'],
-      triviaGamesPerDay: Infinity,
+      triviaGamesPerDay: null,        // Elite: no daily cap
+      triviaGamesPerMonth: -1,        // -1 = unlimited (fair-use applies)
+      triviaFairUse: true,
       // ── Mechanics ──
       riskyAnswers: true,
       streakBonuses: true,
@@ -1052,10 +1067,10 @@ const SpontixStore = {
       label: 'Venue Pro',
       price: 29.99,
       // ── Events ──
-      eventsPerMonth: Infinity,
-      eventsPerWeek: Infinity,
+      eventsPerMonth: -1,
+      eventsPerWeek: -1,
       maxParticipants: 150,
-      aiPreviewPerEvent: Infinity,       // Pro: unlimited AI questions per event
+      aiPreviewPerEvent: -1,             // Pro: unlimited (-1 = no limit)
       concurrentEvents: 5,
       teamMaxTeams: 12,
       teamMaxPlayers: 6,
@@ -1103,17 +1118,17 @@ const SpontixStore = {
       label: 'Venue Elite',
       price: 79.99,
       // ── Events ──
-      eventsPerMonth: Infinity,
-      eventsPerWeek: Infinity,
+      eventsPerMonth: -1,
+      eventsPerWeek: -1,
       maxParticipants: 500,
-      aiPreviewPerEvent: Infinity,       // Elite: unlimited AI questions per event
-      concurrentEvents: Infinity,
-      teamMaxTeams: Infinity,
-      teamMaxPlayers: Infinity,
+      aiPreviewPerEvent: -1,             // Elite: unlimited (-1 = no limit)
+      concurrentEvents: -1,
+      teamMaxTeams: -1,
+      teamMaxPlayers: -1,
       // ── Question Lanes ──
       liveQuestionsEnabled: true,      // full AI live questions
       realWorldQuestionsEnabled: true, // Real World full + priority
-      realWorldQuestionsPerMonth: Infinity,
+      realWorldQuestionsPerMonth: -1,
       aiQuestionsPerMonth: 1000,
       questionTypes: ['pre-match', 'halftime', 'live', 'prediction', 'news', 'trivia', 'custom', 'sponsored'],
       customQuestionsLive: true,
@@ -1143,12 +1158,12 @@ const SpontixStore = {
       // ── Trophies ──
       trophyPresets: ['venue_event_champion', 'venue_regular', 'trivia_1v1_champion', 'trivia_party_winner', 'trivia_perfect', 'trivia_streak_10', 'br_champion', 'br_flawless'],
       customTrophyCreation: true,
-      customTrophyMax: Infinity,
+      customTrophyMax: -1,
       canAwardTrophies: true,
       // ── Photos ──
       photoCustomUpload: true,
       photoPresetsAllowed: true,
-      photoMaxCustom: Infinity,
+      photoMaxCustom: -1,
     },
   },
 
@@ -2790,7 +2805,7 @@ const SpontixStore = {
     const config = all[venueId] || { photos: [], titlePhotoId: null, useTitlePhoto: false };
 
     const customCount = config.photos.filter(p => !p.isPreset).length;
-    if (limits.photoMaxCustom !== Infinity && customCount >= limits.photoMaxCustom) {
+    if (limits.photoMaxCustom !== -1 && customCount >= limits.photoMaxCustom) {
       return { error: 'limit', max: limits.photoMaxCustom, requiredTier: 'venue-elite' };
     }
 
@@ -3258,10 +3273,10 @@ SpontixStoreAsync.joinLeague = async function (leagueId, password) {
     const l = SpontixStore.joinLeague(leagueId);
     return { ok: true, data: l };
   }
-  // Fetch the league to check type and password
+  // Fetch the league to check type, password, and capacity
   const { data: league, error: fetchErr } = await window.sb
     .from('leagues')
-    .select('type, join_password')
+    .select('type, join_password, max_members')
     .eq('id', leagueId)
     .single();
   if (fetchErr) return { ok: false, error: fetchErr.message };
@@ -3270,6 +3285,29 @@ SpontixStoreAsync.joinLeague = async function (leagueId, password) {
     if (!password) return { ok: false, error: 'wrong-password' };
     if (league.join_password && league.join_password !== password) {
       return { ok: false, error: 'wrong-password' };
+    }
+  }
+  // Check capacity (max_members = 0 means unlimited)
+  if (league.max_members && league.max_members > 0) {
+    const { count, error: countErr } = await window.sb
+      .from('league_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('league_id', leagueId);
+    if (!countErr && count >= league.max_members) {
+      return { ok: false, error: 'league-full' };
+    }
+  }
+  // Check how many leagues this user has already joined (leaguesJoinMax tier limit)
+  const userRow = SpontixStore.getPlayer();
+  const userTier = (userRow && userRow.tier) || 'starter';
+  const tierLimits = SpontixStore.getTierLimits(userTier);
+  if (tierLimits.leaguesJoinMax !== -1) {
+    const { count: joinedCount, error: joinedErr } = await window.sb
+      .from('league_members')
+      .select('*', { count: 'exact', head: true })
+      .eq('user_id', uid);
+    if (!joinedErr && joinedCount >= tierLimits.leaguesJoinMax) {
+      return { ok: false, error: 'join-limit-reached' };
     }
   }
   // Insert into league_members
@@ -4076,7 +4114,7 @@ SpontixStoreAsync.addVenuePhoto = async function (venueId, dataUrl, opts) {
   // Check limit
   var currentConfig = await SpontixStoreAsync.getVenuePhotoConfig(vid);
   var customCount = currentConfig.photos.filter(function (p) { return !p.isPreset; }).length;
-  if (limits.photoMaxCustom !== Infinity && customCount >= limits.photoMaxCustom) {
+  if (limits.photoMaxCustom !== -1 && customCount >= limits.photoMaxCustom) {
     return { error: 'limit', max: limits.photoMaxCustom, requiredTier: 'venue-elite' };
   }
 

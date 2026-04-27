@@ -471,7 +471,7 @@ Rules:
 | Badge system (30 player badges, 16 venue badges) | ✅ Working — backed by Supabase |
 | Venue title photos (premade gallery + custom uploads) | ✅ Working — backed by Supabase (data URLs in DB) |
 | Facility photo upload with tier gating | ✅ Working — backed by Supabase |
-| Tier limits (6 tiers, 3-layer enforcement) | ✅ Working |
+| Tier limits (6 tiers, 3-layer enforcement) | ✅ Working — key limits (`leagueMaxPlayers`, `leaguesJoinMax`, `leaguesCreatePerWeek`, `liveQuestionsPerMatch`) now Supabase-backed; all hardcoded tier string comparisons eliminated |
 | Reservations (player reserves spot at venue event) | ✅ Working — backed by Supabase |
 | Game history (per-user completed game stats) | ✅ Working — backed by Supabase |
 | User profile sync (name, handle → public.users) | ✅ Working — backed by Supabase |
@@ -2742,6 +2742,120 @@ The 3 Rayo vs Espanyol questions (`answer_closes_at = 18:00 UTC 2026-04-23`, `re
   - **My Leagues** — badge shows real league membership count, hidden when 0; sub-text shows "X active leagues" or "Join a league to get started"
   - **Battle Royale** — static (no real-time data to connect)
 - All early-return paths (no leagues, no open questions, all answered) still call `updateNavCards()` with appropriate counts before returning
+
+---
+
+### 2026-04-25 — Tier system v2: limited live for Starter, daily RW cap, -1 unlimited convention
+
+**Goal:** controlled monetization upgrade across 5 tasks — no architecture changes, no gameplay logic changes.
+
+**Task 1 — Starter now has LIMITED live access (not locked out)**
+
+`spontix-store.js` — Starter tier updated:
+- `liveQuestionsEnabled: false` → `true` — Starter users CAN see and answer LIVE questions
+- `liveQuestionsMode: 'limited'` added — new key distinguishing limited (Starter) from full (Pro/Elite)
+- `liveQuestionsPerMatch: 3` unchanged
+- Pro and Elite: `liveQuestionsMode: 'full'` added
+
+`create-league.html` — live mode creation gate updated:
+- Was `!!limits.liveQuestionsEnabled` (now always true → broken)
+- Now `limits.liveQuestionsEnabled && limits.liveQuestionsMode !== 'limited'`
+- Starter still cannot CREATE a live-mode league; they can only participate in one
+
+`league.html` — UI enforcement upgraded:
+- `getLiveQuotaState(q)` — new helper: returns `{ limit, used, exhausted }` for LIVE questions on limited tiers; returns null for non-LIVE or unlimited tiers
+- `renderOptions()` — buttons are now visually disabled (`.disabled-opt`) when live quota is exhausted and user hasn't answered yet; upgrade modal still fires on submit
+- Footer of active LIVE cards shows "Live answers: X / 3" for Starter; turns coral + shows "Upgrade" link when exhausted
+
+**Task 2 — REAL_WORLD daily cap enforced (MVP safety rule)**
+
+`quota-checker.ts` — `checkRealWorldQuota()` updated:
+- New Step 1 (runs before tier check): counts `REAL_WORLD` questions for this league created today (UTC midnight boundary)
+- If count >= 1 → `{ allowed: false, skipReason: 'real_world_daily_cap' }`
+- Applies to ALL tiers including elite — this is the MVP safety rule, not a tier rule
+- Step 2 (tier check) unchanged: starter blocked, pro monthly cap 10, elite unlimited
+- Wiring in `generate-questions/index.ts` unchanged — already calls `checkRealWorldQuota()` and filters accordingly
+
+**Task 3 — Venue Starter AI preview (already implemented, isFinite fixed)**
+
+`venue-live-floor.html` — `isFinite(_aiPreviewLimit)` replaced with `_aiPreviewLimit !== -1` (2 occurrences)
+
+**Task 4 — Lane priority in question feed (already implemented)**
+
+`league.html` — `lanePriority` sort within active questions already enforced LIVE > PREMATCH > REAL_WORLD. No change needed.
+
+**Task 5 — -1 replaces Infinity as the "unlimited" sentinel**
+
+All `Infinity` values in `TIER_LIMITS` replaced with `-1`. All limit checks updated:
+
+| Old pattern | New pattern |
+|---|---|
+| `isFinite(limit)` | `limit !== -1` |
+| `limit !== Infinity` | `limit !== -1` |
+| `limit === Infinity` | `limit === -1` |
+
+Files updated: `spontix-store.js` (TIER_LIMITS + 3 code checks), `league.html`, `create-league.html`, `my-leagues.html`, `venue-create-event.html`, `venue-live-floor.html`, `venue-dashboard.html`, `trivia.html`, `battle-royale.html`
+
+**`docs/TIER_ARCHITECTURE.md` updated:**
+- Feature Gate Matrix: `liveQuestionsMode` row added, `-1` values shown
+- Implementation Notes: new `liveQuestionsEnabled + liveQuestionsMode` section, new `-1 means unlimited` section
+- Enforcement Status: `liveQuestionsPerMatch` entry updated to describe UI disable + indicator
+
+---
+
+### 2026-04-25 — Tier enforcement hardened: all limits now Supabase-backed
+
+**Goal:** eliminate all localStorage-based tier limit bypasses. Every meaningful limit is now checked against live Supabase data before the action is allowed.
+
+**`spontix-store.js` — `SpontixStoreAsync.joinLeague()` rewritten:**
+- Fetches `max_members` from `leagues` alongside `type` and `join_password`
+- Counts current `league_members` from Supabase before inserting → returns `{ ok: false, error: 'league-full' }` if at capacity
+- Counts all `league_members WHERE user_id = uid` from Supabase → returns `{ ok: false, error: 'join-limit-reached' }` if user is at their `leaguesJoinMax` tier limit
+- `TIER_LIMITS` extended: `aiWeeklyQuota` key added to all 3 player tiers (Starter: 2, Pro: 5, Elite: 10) — eliminates hardcoded ternaries in `create-league.html`
+
+**`discover.html` — both join paths handle new error codes:**
+- `league-full` → toast message (both direct join and password modal)
+- `join-limit-reached` → upgrade modal (both direct join and password modal)
+- Neither error falls back to `SpontixStore.joinLeague()` — localStorage bypass removed
+
+**`create-league.html` — `leaguesCreatePerWeek` now Supabase-backed:**
+- `launchLeague()` queries `SELECT count(*) FROM leagues WHERE owner_id = uid AND created_at > 7 days ago` before creating
+- Falls back to localStorage count only when Supabase unavailable (offline)
+
+**`my-leagues.html` — Create button now Supabase-backed:**
+- `applyLeagueTierGating()` converted to `async`
+- Same Supabase count query as `launchLeague()` — button lock and creation gate are now consistent
+
+**`league.html` — `liveQuestionsPerMatch` no longer uses localStorage:**
+- Counter replaced with in-memory count: filters `currentQuestions` (already loaded) to LIVE questions for the current match, checks against `myAnswers` (already loaded) to see how many the user has answered
+- `spontix_live_count_{userId}_{matchRef}` localStorage key removed entirely — not bypassable by clearing storage
+
+**`venue-create-event.html` — event quota fixed:**
+- `eventsPerWeek` (legacy alias) replaced with `eventsPerMonth` (canonical key)
+- Count window changed from rolling 7 days → calendar month start (consistent with the limit semantics)
+
+**`profile.html` — trophy CTA hardcoded check replaced:**
+- `player.tier === 'elite'` replaced with `SpontixStore.getTierLimits(tier).customTrophyCreation`
+
+**`venue-dashboard.html` — tier UI now dynamic:**
+- `applyVenueTierUI()` reads all values via `SpontixStore.getTierLimits(tier)` — no hardcoded tier strings
+- Shows event quota used this month, Analytics "Pro" lock badge, Live Floor "Preview" badge for Venue Starter
+
+**`docs/TIER_ARCHITECTURE.md` updated:**
+- Enforcement Status section reorganised: new "Supabase-backed" category for limits moved off localStorage
+- `aiWeeklyQuota` added to Feature Gate Matrix and documented in Implementation Notes
+- All enforcement statuses reflect current state accurately
+
+**Enforcement status after this change:**
+
+| Limit | Before | After |
+|---|---|---|
+| `leagueMaxPlayers` | Frontend-only (localStorage leagues cache) | ✅ Supabase count in `joinLeague()` |
+| `leaguesJoinMax` | Not enforced (hint text only) | ✅ Supabase count in `joinLeague()` |
+| `leaguesCreatePerWeek` | Frontend-only (localStorage leagues cache) | ✅ Supabase count in `launchLeague()` + `applyLeagueTierGating()` |
+| `liveQuestionsPerMatch` | localStorage counter (clearable) | ✅ In-memory count from `currentQuestions` + `myAnswers` |
+| `eventsPerMonth` | Wrong key (`eventsPerWeek`), 7-day window | ✅ Correct key, calendar-month window |
+| `customTrophyCreation` | `tier === 'elite'` hardcoded | ✅ `getTierLimits().customTrophyCreation` |
 
 ---
 

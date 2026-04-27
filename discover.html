@@ -1184,6 +1184,23 @@
     try {
       const result = await SpontixStoreAsync.joinLeague(leagueId);
       if (result && !result.ok) {
+        if (result.error === 'league-full') {
+          showToast('This league is full — the owner would need to increase the member limit.');
+          return;
+        }
+        if (result.error === 'join-limit-reached') {
+          if (typeof SpontixSidebar !== 'undefined') {
+            SpontixSidebar.showUpgradeModal({
+              feature: 'More Leagues',
+              requiredTier: 'Pro',
+              isVenue: false,
+              icon: '⚽',
+              description: "You've joined the maximum number of leagues on your plan. Upgrade to join more.",
+              benefits: ['Join up to 20 leagues (Pro)', 'Unlimited leagues (Elite)', 'Bigger leagues with more players']
+            });
+          }
+          return;
+        }
         console.warn('[joinLeague] failed:', result.error);
         SpontixStore.joinLeague(leagueId);
       }
@@ -1219,6 +1236,25 @@
         document.getElementById('passwordInput').value = '';
         document.getElementById('passwordInput').focus();
         showToast('Incorrect password — try again.');
+        return;
+      }
+      if (result && result.error === 'league-full') {
+        closePasswordModal();
+        showToast('This league is full — the owner would need to increase the member limit.');
+        return;
+      }
+      if (result && result.error === 'join-limit-reached') {
+        closePasswordModal();
+        if (typeof SpontixSidebar !== 'undefined') {
+          SpontixSidebar.showUpgradeModal({
+            feature: 'More Leagues',
+            requiredTier: 'Pro',
+            isVenue: false,
+            icon: '⚽',
+            description: "You've joined the maximum number of leagues on your plan. Upgrade to join more.",
+            benefits: ['Join up to 20 leagues (Pro)', 'Unlimited leagues (Elite)', 'Bigger leagues with more players']
+          });
+        }
         return;
       }
       if (result && !result.ok) {

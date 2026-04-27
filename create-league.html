@@ -1757,7 +1757,7 @@ function applyMatchNightTierGating() {
   const player = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
   const tier   = player ? (player.tier || 'starter') : 'starter';
   const limits = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(tier) : null;
-  const canLive = limits ? !!limits.liveQuestionsEnabled : false;
+  const canLive = limits ? (limits.liveQuestionsEnabled && limits.liveQuestionsMode !== 'limited') : false;
 
   // Live card — requires liveQuestionsEnabled (Pro+)
   const liveCard  = document.getElementById('qmode-live-card');
@@ -2266,10 +2266,21 @@ async function launchLeague() {
   // Enforce league creation limit
   const player = SpontixStore.getPlayer();
   const limits = SpontixStore.getTierLimits(player.tier);
-  if (limits.leaguesCreatePerWeek !== Infinity) {
-    const leagues = SpontixStore.getLeagues();
-    const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-    const createdThisWeek = leagues.filter(l => l.isOwner && new Date(l.createdAt).getTime() > oneWeekAgo).length;
+  if (limits.leaguesCreatePerWeek !== -1) {
+    const uid = SpontixStore.Session.getCurrentUserId();
+    const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    let createdThisWeek = 0;
+    if (uid && window.sb) {
+      const { count } = await window.sb
+        .from('leagues')
+        .select('*', { count: 'exact', head: true })
+        .eq('owner_id', uid)
+        .gte('created_at', oneWeekAgo);
+      createdThisWeek = count || 0;
+    } else {
+      const leagues = SpontixStore.getLeagues();
+      createdThisWeek = leagues.filter(l => l.isOwner && new Date(l.createdAt).getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000).length;
+    }
     if (createdThisWeek >= limits.leaguesCreatePerWeek) {
       SpontixSidebar.showUpgradeModal({
         feature: 'More Leagues',

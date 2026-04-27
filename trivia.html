@@ -1231,7 +1231,16 @@ function goScreen(id) {
   if (id === 'screen-solo') initPlay('solo');
   if (id === 'screen-duel-play') initPlay('duel');
   if (id === 'screen-party-play') initPlay('party');
-  if (id === 'screen-results') showResults();
+  if (id === 'screen-results') {
+    showResults();
+    // Elite fair-use: reset cooldown to 20s from completion
+    if (typeof SpontixStore !== 'undefined') {
+      const _limits = SpontixStore.getTierLimits(SpontixStore.getPlayer().tier);
+      if (_limits.triviaFairUse) {
+        localStorage.setItem('spontix_trivia_cooldown', (Date.now() + 20000).toString());
+      }
+    }
+  }
 }
 function screenLabel(id) {
   const map = { 'screen-hub':'Hub','screen-setup':'Setup','screen-solo':'Solo Play','screen-duel-lobby':'1v1 Lobby','screen-duel-play':'1v1 Play','screen-party-lobby':'Party Lobby','screen-party-play':'Party Play','screen-results':'Results' };
@@ -1258,8 +1267,8 @@ function selectMode(mode) {
         icon: mode === 'party' ? '🎉' : '⚔️',
         description: 'Upgrade to <strong>' + reqTier + '</strong> to unlock ' + (mode === 'party' ? 'Party Room trivia' : '1v1 Duel mode') + '.',
         benefits: reqTier === 'Elite'
-          ? ['All trivia modes unlocked', 'Unlimited games per day', 'Party Room with friends', 'Custom trivia packs']
-          : ['Solo + 1v1 Duel modes', '15 games per day', 'All question types', 'Ad-free experience']
+          ? ['All trivia modes unlocked', 'Unlimited trivia games', 'Party Room with friends', 'Priority question packs']
+          : ['Solo + 1v1 Duel modes', '100 trivia games per month', 'All question types', 'Ad-free experience']
       });
       return;
     }
@@ -1309,29 +1318,60 @@ function selectRounds(el, n) {
   selectedRounds = n;
 }
 function startGame() {
-  // Tier gate: enforce daily trivia limit
+  // Tier gate: 3-way logic matching BR architecture
   if (typeof SpontixStore !== 'undefined') {
     const player = SpontixStore.getPlayer();
     const limits = SpontixStore.getTierLimits(player.tier);
-    const dailyLimit = limits.triviaGamesPerDay;
-    if (dailyLimit !== Infinity) {
+
+    // Starter: daily cap
+    if (limits.triviaGamesPerDay !== null) {
       const today = new Date().toDateString();
-      const triviaKey = 'spontix_trivia_plays_' + today;
+      const triviaKey = 'spontix_trivia_day_' + today;
       const played = parseInt(localStorage.getItem(triviaKey) || '0');
-      if (played >= dailyLimit) {
+      if (played >= limits.triviaGamesPerDay) {
         SpontixSidebar.showUpgradeModal({
           feature: 'More Trivia Games',
-          requiredTier: dailyLimit <= 3 ? 'Pro' : 'Elite',
+          requiredTier: 'Pro',
           isVenue: false,
           icon: '🧠',
-          description: 'You\'ve played all <strong>' + dailyLimit + ' trivia games</strong> for today. Upgrade for more!',
-          benefits: dailyLimit <= 3
-            ? ['15 trivia games per day', '1v1 Duel mode', 'All question types', 'Ad-free']
-            : ['Unlimited trivia games', 'Party Room mode', 'All modes unlocked']
+          description: 'You used your <strong>' + limits.triviaGamesPerDay + ' trivia games</strong> for today. Remove limits with Pro.',
+          benefits: ['100 trivia games per month', '1v1 Duel mode', 'All question types', 'Ad-free experience']
         });
         return;
       }
       localStorage.setItem(triviaKey, (played + 1).toString());
+
+    // Pro: monthly cap (100/month)
+    } else if (limits.triviaGamesPerMonth !== null && limits.triviaGamesPerMonth !== -1) {
+      const now = new Date();
+      const monthKey = 'spontix_trivia_month_' + now.getFullYear() + '_' + now.getMonth();
+      const played = parseInt(localStorage.getItem(monthKey) || '0');
+      if (played >= limits.triviaGamesPerMonth) {
+        SpontixSidebar.showUpgradeModal({
+          feature: 'More Trivia Games',
+          requiredTier: 'Elite',
+          isVenue: false,
+          icon: '🧠',
+          description: 'You used your <strong>' + limits.triviaGamesPerMonth + ' trivia games</strong> this month. Upgrade to Elite for unlimited play.',
+          benefits: ['Unlimited trivia games', 'Party Room with friends', 'All modes unlocked', 'Priority question packs']
+        });
+        return;
+      }
+      localStorage.setItem(monthKey, (played + 1).toString());
+
+    // Elite: fair-use (one session at a time + cooldown between sessions)
+    } else if (limits.triviaFairUse) {
+      const cooldownUntil = parseInt(localStorage.getItem('spontix_trivia_cooldown') || '0');
+      const remaining = cooldownUntil - Date.now();
+      if (remaining > 0) {
+        const secs = Math.ceil(remaining / 1000);
+        if (typeof showToast === 'function') {
+          showToast('Preparing your next game… ready in ' + secs + 's');
+        }
+        return;
+      }
+      // Set 30s cooldown at game start; resets to 20s on completion
+      localStorage.setItem('spontix_trivia_cooldown', (Date.now() + 30000).toString());
     }
   }
 

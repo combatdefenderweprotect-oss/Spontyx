@@ -233,6 +233,21 @@ export async function checkRealWorldQuota(
   leagueId: string,
   ownerTier: string,
 ): Promise<{ allowed: boolean; skipReason?: string }> {
+  // Step 1: Daily cap — MVP safety rule, applies to ALL tiers including elite.
+  // Max 1 REAL_WORLD question per league per day.
+  const now = new Date();
+  const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
+  const { count: dailyCount, error: dailyErr } = await sb
+    .from('questions')
+    .select('*', { count: 'exact', head: true })
+    .eq('league_id', leagueId)
+    .eq('question_type', 'REAL_WORLD')
+    .gte('created_at', todayStart);
+  if (!dailyErr && (dailyCount ?? 0) >= 1) {
+    return { allowed: false, skipReason: 'real_world_daily_cap' };
+  }
+
+  // Step 2: Tier rule
   if (ownerTier === 'elite') return { allowed: true };
   if (ownerTier !== 'pro') {
     return { allowed: false, skipReason: 'real_world_tier_locked' };

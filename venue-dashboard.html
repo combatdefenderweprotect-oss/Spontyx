@@ -496,7 +496,7 @@
       if (tierBadge) tierBadge.textContent = tierLabels[tier] || 'Venue Starter';
 
       // Show event quota on "Create Event" card for Venue Starter
-      if (isFinite(limits.eventsPerMonth)) {
+      if (limits.eventsPerMonth !== -1) {
         var events = SpontixStore.getVenueEvents();
         var monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
         var usedThisMonth = events.filter(function(e) {

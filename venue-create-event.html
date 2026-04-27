@@ -1320,7 +1320,7 @@
       const limits = SpontixStore.getTierLimits(tier);
 
       // Check events-per-month limit
-      if (limits.eventsPerMonth !== Infinity) {
+      if (limits.eventsPerMonth !== -1) {
         const events = SpontixStore.getVenueEvents();
         const monthStart = new Date(); monthStart.setDate(1); monthStart.setHours(0, 0, 0, 0);
         const thisMonthEvents = events.filter(e => new Date(e.createdAt).getTime() >= monthStart.getTime());

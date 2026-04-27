@@ -1553,7 +1553,16 @@ function renderQuestionCard(q, isPrimary) {
           '<span class="timer-tick" data-closes-at="' + (getAnswerClosesAt(q) ? getAnswerClosesAt(q).getTime() : '') + '">' + formatMsLeft(ms2) + '</span>' +
         '</div>' +
         '<div class="q-point-range">' + getPointRange(q) + '</div>' +
-      '</div>';
+      '</div>' +
+      (function() {
+        var qs2 = getLiveQuotaState(q);
+        if (!qs2) return '';
+        var color = qs2.exhausted ? 'var(--coral)' : 'var(--grey)';
+        return '<div class="live-quota-indicator" style="font-size:0.72rem;color:' + color + ';text-align:center;padding:4px 0 0;">' +
+          'Live answers: ' + qs2.used + ' / ' + qs2.limit +
+          (qs2.exhausted ? ' · <a href="profile.html" style="color:var(--purple);text-decoration:none;font-weight:600;">Upgrade</a>' : '') +
+        '</div>';
+      })();
   } else if (pending) {
     footerHtml = '<div class="q-awaiting">Awaiting match result...</div>';
   } else if (voided) {
@@ -1588,12 +1597,33 @@ function renderMCOptions(q, myAns, open, resolved) {
   return renderOptions(q, q.options, myAns, open, resolved);
 }
 
+function getLiveQuotaState(q) {
+  // Returns { limit, used, exhausted } for LIVE questions on limited tiers.
+  // Returns null for non-LIVE questions or unlimited tiers.
+  if (detectLane(q) !== 'LIVE') return null;
+  var _tp = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
+  var _tn = _tp ? (_tp.tier || 'starter') : 'starter';
+  var _tl = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(_tn) : null;
+  if (!_tl || _tl.liveQuestionsMode !== 'limited') return null;
+  var limit = _tl.liveQuestionsPerMatch;
+  if (limit === -1) return null;
+  var matchRef = q.match_id || currentLeagueId;
+  var used = currentQuestions.filter(function(lq) {
+    return (lq.match_id || currentLeagueId) === matchRef
+      && detectLane(lq) === 'LIVE'
+      && myAnswers[lq.id] && myAnswers[lq.id].answer;
+  }).length;
+  return { limit: limit, used: used, exhausted: used >= limit };
+}
+
 function renderOptions(q, opts, myAns, open, resolved) {
+  var quotaState = open ? getLiveQuotaState(q) : null;
+  var liveExhausted = quotaState && quotaState.exhausted && !myAns;
   var html = '<div class="question-options">';
   opts.forEach(function(opt) {
     var classes = 'question-option';
     var extra   = '';
-    if (!open) {
+    if (!open || liveExhausted) {
       classes += ' disabled-opt';
       extra = ' disabled';
       if (resolved) {
@@ -1632,21 +1662,24 @@ async function handleAnswer(btn, questionId, answer) {
 
   // ── LIVE quota gate for Starter tier ─────────────────────────────────
   // Starter users can answer up to liveQuestionsPerMatch LIVE questions per match.
-  // Tracked in localStorage per (userId, matchId) — cheap, no extra DB round-trip.
+  // Counted from currentQuestions + myAnswers (already in memory — no extra DB call).
   var _lane = detectLane(q);
-  var _liveCountKey = null;
-  var _livePerMatchLimit = Infinity;
+  var _livePerMatchLimit = -1;
   if (_lane === 'LIVE') {
     var _tierPlayer = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
     var _tierName   = _tierPlayer ? (_tierPlayer.tier || 'starter') : 'starter';
     var _tierLimits = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(_tierName) : null;
     _livePerMatchLimit = (_tierLimits && _tierLimits.liveQuestionsPerMatch !== undefined)
       ? _tierLimits.liveQuestionsPerMatch
-      : Infinity;
-    if (isFinite(_livePerMatchLimit)) {
-      var _matchRef   = q.match_id || currentLeagueId;
-      _liveCountKey   = 'spontix_live_count_' + currentUserId + '_' + _matchRef;
-      var _liveUsed   = parseInt(localStorage.getItem(_liveCountKey) || '0', 10);
+      : -1;
+    if (_livePerMatchLimit !== -1) {
+      var _matchRef = q.match_id || currentLeagueId;
+      // Count LIVE answers for this match from already-loaded state
+      var _liveUsed = currentQuestions.filter(function(lq) {
+        return (lq.match_id || currentLeagueId) === _matchRef
+          && detectLane(lq) === 'LIVE'
+          && myAnswers[lq.id] && myAnswers[lq.id].answer;
+      }).length;
       if (_liveUsed >= _livePerMatchLimit) {
         if (typeof SpontixSidebar !== 'undefined') {
           SpontixSidebar.showUpgradeModal({
@@ -1718,11 +1751,6 @@ async function handleAnswer(btn, questionId, answer) {
 
     if (error) throw error;
 
-    // Increment LIVE answer counter for Starter users after confirmed save
-    if (_liveCountKey) {
-      var _prev = parseInt(localStorage.getItem(_liveCountKey) || '0', 10);
-      localStorage.setItem(_liveCountKey, String(_prev + 1));
-    }
   } catch(e) {
     console.warn('[answer] save failed:', e);
     // Postgres constraint violation (23514) = question window just closed

@@ -902,16 +902,27 @@
   /* ── Toast ── */
 
   /* ── Tier Gating for Leagues ── */
-  function applyLeagueTierGating() {
+  async function applyLeagueTierGating() {
     const player = SpontixStore.getPlayer();
     const limits = SpontixStore.getTierLimits(player.tier);
-    const allLeagues = SpontixStore.getLeagues();
-    const oneWeekAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
 
     // Gate "Create New League" button if at limit
     const createBtn = document.querySelector('.create-league-btn');
-    if (createBtn && limits.leaguesCreatePerWeek !== Infinity) {
-      const createdThisWeek = allLeagues.filter(l => l.isOwner && new Date(l.createdAt).getTime() > oneWeekAgo).length;
+    if (createBtn && limits.leaguesCreatePerWeek !== -1) {
+      const uid = SpontixStore.Session.getCurrentUserId();
+      const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+      let createdThisWeek = 0;
+      if (uid && window.sb) {
+        const { count } = await window.sb
+          .from('leagues')
+          .select('*', { count: 'exact', head: true })
+          .eq('owner_id', uid)
+          .gte('created_at', oneWeekAgo);
+        createdThisWeek = count || 0;
+      } else {
+        const allLeagues = SpontixStore.getLeagues();
+        createdThisWeek = allLeagues.filter(l => l.isOwner && new Date(l.createdAt).getTime() > Date.now() - 7 * 24 * 60 * 60 * 1000).length;
+      }
       if (createdThisWeek >= limits.leaguesCreatePerWeek) {
         createBtn.addEventListener('click', function(e) {
           e.preventDefault();
@@ -921,7 +932,7 @@
             isVenue: false,
             icon: '⚽',
             description: 'You\'ve created <strong>' + createdThisWeek + '/' + limits.leaguesCreatePerWeek + '</strong> leagues this week. Upgrade to create more.',
-            benefits: ['Create up to 5 leagues per week', 'Join up to 10 leagues', 'Up to 25 players per league', 'All question types']
+            benefits: ['Create up to 5 leagues per week', 'Join up to 20 leagues', 'Up to 40 players per league', 'All question types']
           });
         });
       }
@@ -929,11 +940,10 @@
 
     // Show tier limit info below stats
     const statsRow = document.querySelector('.stats-row');
-    if (statsRow && limits.leaguesCreatePerWeek !== Infinity) {
-      const joined = allLeagues.filter(l => l.isMember && !l.isOwner && l.status === 'active').length;
+    if (statsRow && limits.leaguesCreatePerWeek !== -1) {
       const hint = document.createElement('div');
       hint.style.cssText = 'font-size:0.72rem;color:#8E8EA0;text-align:center;padding:8px 0 0;';
-      hint.innerHTML = 'Your plan: <strong style="color:#A8E10C">' + limits.leaguesCreatePerWeek + ' league' + (limits.leaguesCreatePerWeek > 1 ? 's' : '') + '/week</strong> · Join up to <strong style="color:#A8E10C">' + limits.leaguesJoinMax + '</strong> leagues · <a href="profile.html" style="color:#7C5CFC;text-decoration:none;font-weight:700;">Upgrade</a>';
+      hint.innerHTML = 'Your plan: <strong style="color:#A8E10C">' + limits.leaguesCreatePerWeek + ' league' + (limits.leaguesCreatePerWeek > 1 ? 's' : '') + '/week</strong> · Join up to <strong style="color:#A8E10C">' + limits.leaguesJoinMax + '</strong> leagues · <a href="profile.html" style="color:#7C5CFC;text-decoration:none;font-weight:777;">Upgrade</a>';
       statsRow.after(hint);
     }
   }
