@@ -219,7 +219,7 @@ const SpontixSidebar = {
       }
     }
 
-    // Async: update My Leagues badge with real count from Supabase
+    // Async: update My Leagues badge with count of active leagues user is currently in
     if (!isVenue) {
       (async function updateLeagueBadge() {
         try {
@@ -227,14 +227,36 @@ const SpontixSidebar = {
           const uid = (typeof SpontixStore !== 'undefined' && SpontixStore.Session)
             ? SpontixStore.Session.getCurrentUserId() : null;
           if (!uid) return;
-          // Count leagues owned + leagues joined (as member)
-          const [ownedRes, memberRes] = await Promise.all([
-            window.sb.from('leagues').select('id', { count: 'exact', head: true }).eq('owner_id', uid),
-            window.sb.from('league_members').select('league_id', { count: 'exact', head: true }).eq('user_id', uid)
-          ]);
-          const total = (ownedRes.count || 0) + (memberRes.count || 0);
+
+          // Step 1: active leagues owned by user
+          const { count: ownedCount } = await window.sb
+            .from('leagues')
+            .select('id', { count: 'exact', head: true })
+            .eq('owner_id', uid)
+            .eq('status', 'active');
+
+          // Step 2: league IDs the user has joined as a member
+          const { data: memberRows } = await window.sb
+            .from('league_members')
+            .select('league_id')
+            .eq('user_id', uid);
+
+          // Step 3: of those joined leagues, count the active ones
+          let joinedActiveCount = 0;
+          if (memberRows && memberRows.length > 0) {
+            const ids = memberRows.map(r => r.league_id);
+            const { count } = await window.sb
+              .from('leagues')
+              .select('id', { count: 'exact', head: true })
+              .in('id', ids)
+              .eq('status', 'active');
+            joinedActiveCount = count || 0;
+          }
+
+          const total = (ownedCount || 0) + joinedActiveCount;
           if (total === 0) return;
-          // Find the My Leagues link and inject/update badge
+
+          // Inject/update badge on the My Leagues link
           const leagueLink = document.querySelector('a[href="my-leagues.html"]');
           if (!leagueLink) return;
           let badge = leagueLink.querySelector('.badge');
