@@ -3399,3 +3399,92 @@ Replaced the 7-line PREMATCH prompt section with an 8-rule structured ruleset. N
 - OpenAI instructed to internally verify each question against all rules before returning
 - Replace any failing question before output
 - Checks: type diversity, team coverage, player gate, obviousness, resolvability, team balance, heavy-favourite handling
+
+---
+
+### Prematch Quality Filter — Post-Deployment Validation
+
+#### 1. Purpose
+
+`lib/prematch-quality-filter.ts` was introduced as a lightweight code-level quality gate for `CORE_MATCH_PREMATCH` questions. It addresses issues that prompt rules alone cannot reliably prevent:
+- obvious winner questions in heavy-favourite matches
+- near-duplicate questions within the same batch or across retry rounds
+- player-specific question overuse (max 2 per batch)
+- poor team balance (all questions about one team)
+- generic/vague questions with no editorial value
+
+#### 2. Implementation detail
+
+The filter runs **after** `generateQuestions()` (OpenAI Call 1) and **before** `convertToPredicate()` (OpenAI Call 2). Rejected questions never reach predicate conversion or the 5-stage validator. This reduces token usage and keeps low-quality questions out of the pool entirely.
+
+It stacks with the existing validator — it does not replace it.
+
+#### 3. Known behaviour
+
+**Quality scoring** — start at 100, subtract:
+
+| Penalty | Amount | Condition |
+|---|---|---|
+| Obvious winner, heavy favourite | −35 | `outcome_state` winner + `standingGap ≥ 5` |
+| Winner with no standings | −20 | `outcome_state` winner + `standingGap = null` |
+| Near-duplicate (batch) | −40 | Jaccard word-overlap ≥ 0.65 vs accepted question |
+| Near-duplicate (prior round) | −40 | Same check vs `validatedQuestions` from prior retries |
+| Same player repeated | −30 | Same `player_id` already in batch or prior round |
+| Over-represented category | −20 | ≥ 2 questions of same `question_category` already accepted |
+| Poor team balance | −15 | All accepted questions about same team, this one too |
+| Generic/short text | −25 | Question text ≤ 7 words |
+| Weak resolvability hint | −20 | `predicate_hint` lacks any stat or outcome reference |
+
+**Thresholds:**
+- Score < 60 → rejected
+- Score 60–74 → kept only if quota is not yet met (marginal)
+- Score ≥ 75 → accepted
+
+**Player cap:** max 2 `player_specific` questions per batch (accepted + prior rounds). Hard gate — runs before scoring.
+
+**Team balance:** soft penalty only (−15). Not a hard rejection. A mildly imbalanced batch still passes if it scores ≥ 75 overall.
+
+#### 4. Required testing after deployment
+
+Run a manual generation trigger and check the Supabase Edge Function logs. Validate:
+
+- [ ] Obvious winner questions are reduced — e.g. "Will Barcelona win?" should not appear when the opponent is 7+ table positions below
+- [ ] No two questions in the same batch are near-duplicates (same question framed differently)
+- [ ] Maximum 2 player-specific questions per batch — never 3 or more for the same match
+- [ ] Both teams are represented in most batches — at least one question should reference the away team or underdog
+- [ ] Question types are varied — not all `match_outcome`, not all `player_specific`
+- [ ] `generation_run_leagues.rejection_log` contains `stage: 'prematch_quality'` entries with recognisable reasons:
+  - `too_many_player_specific`
+  - `obvious_winner_heavy_favourite`
+  - `near_duplicate_in_batch`
+  - `duplicate_player`
+  - `poor_team_balance`
+  - `low_quality_score`
+  - `marginal_not_needed`
+- [ ] Enough questions still pass the filter to fill the prematch quota — if a 4-question batch is consistently producing only 1–2 passing questions, the retry loop should compensate but this warrants investigation
+
+**SQL to check recent rejection reasons:**
+```sql
+select league_id, rejection_log
+from generation_run_leagues
+where rejection_log is not null
+  and created_at > now() - interval '24 hours'
+order by created_at desc
+limit 10;
+```
+
+#### 5. Monitoring
+
+- Check how many questions fall into the 60–74 score band (logged as `marginal_not_needed` when quota is already met, or kept silently when quota is short)
+- If a high proportion of accepted questions are scoring 60–74 (visible from rejection_log patterns), the filter is passing borderline questions because the model is consistently generating mediocre quality
+- Action threshold: if more than 30% of accepted questions in a run are marginal, investigate whether prompt v2.1 is working correctly
+
+#### 6. Future improvement
+
+> If production logs show a persistent pattern of 60–74 score questions being used to fill quota, consider adding a stricter rule: **only allow marginal (60–74) questions if no ≥75 question is available after all MAX_RETRIES are exhausted.**
+
+This would require tracking per-batch quality scores across retry rounds and doing a final promotion/rejection pass after the while loop, rather than the current per-round decision. Not needed at launch — implement post-launch if logs indicate the problem is real.
+
+#### 7. Status
+
+**This is not a launch blocker.** The current implementation is acceptable for MVP. Prematch quality is materially better than pre-filter behaviour. Production log validation should happen in the first 2–3 generation runs after launch to confirm the filter is working as expected.
