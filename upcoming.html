@@ -145,6 +145,73 @@
     }
     .schedule-empty a:hover { opacity: 0.85; }
 
+    /* ── Invite button ── */
+    .invite-btn {
+      padding: 8px 14px; border-radius: var(--radius-pill);
+      border: 1px solid rgba(168,225,12,0.3); background: rgba(168,225,12,0.06);
+      color: var(--lime); font-size: 0.75rem; font-weight: 700;
+      font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 5px;
+      white-space: nowrap; transition: all 0.2s; flex-shrink: 0;
+    }
+    .invite-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .invite-btn:hover { background: rgba(168,225,12,0.14); border-color: var(--lime); }
+
+    /* ── Invite modal ── */
+    .invite-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 500;
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.2s;
+    }
+    .invite-overlay.open { opacity: 1; pointer-events: all; }
+    .invite-modal {
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: var(--radius-xl); padding: 28px; width: 100%; max-width: 420px;
+      margin: 16px; transform: translateY(16px); transition: transform 0.2s;
+    }
+    .invite-overlay.open .invite-modal { transform: translateY(0); }
+    .invite-modal-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 20px; }
+    .invite-modal-title { font-size: 1rem; font-weight: 800; }
+    .invite-modal-sub { font-size: 0.75rem; color: var(--grey); margin-top: 3px; }
+    .invite-close-btn {
+      width: 30px; height: 30px; border-radius: 50%; border: none; background: rgba(255,255,255,0.06);
+      color: var(--grey); cursor: pointer; font-size: 1rem; line-height: 1;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .invite-close-btn:hover { background: rgba(255,255,255,0.1); }
+    .invite-match-pill {
+      background: var(--navy-light); border-radius: var(--radius-lg); padding: 14px 16px;
+      margin-bottom: 20px;
+    }
+    .invite-match-teams { font-size: 0.92rem; font-weight: 700; margin-bottom: 4px; }
+    .invite-match-meta { font-size: 0.72rem; color: var(--grey); display: flex; align-items: center; gap: 10px; }
+    .invite-match-meta svg { width: 11px; height: 11px; stroke: var(--grey-dark); fill: none; stroke-width: 2; }
+    .invite-link-box {
+      display: flex; gap: 8px; align-items: center; margin-bottom: 12px;
+    }
+    .invite-link-input {
+      flex: 1; padding: 10px 12px; background: var(--navy-light);
+      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-md);
+      color: var(--grey); font-size: 0.72rem; font-family: inherit; outline: none;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .invite-copy-btn {
+      padding: 10px 16px; border-radius: var(--radius-md); border: none;
+      background: var(--lime); color: var(--navy); font-size: 0.75rem; font-weight: 700;
+      font-family: inherit; cursor: pointer; white-space: nowrap; transition: opacity 0.15s;
+      flex-shrink: 0;
+    }
+    .invite-copy-btn:hover { opacity: 0.85; }
+    .invite-copy-btn.copied { background: var(--teal); }
+    .invite-share-btn {
+      width: 100%; padding: 11px; border-radius: var(--radius-pill);
+      border: 1px solid rgba(255,255,255,0.1); background: none;
+      color: var(--off-white); font-size: 0.8rem; font-weight: 600;
+      font-family: inherit; cursor: pointer; display: flex; align-items: center;
+      justify-content: center; gap: 8px; transition: all 0.2s;
+    }
+    .invite-share-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .invite-share-btn:hover { border-color: rgba(255,255,255,0.25); background: rgba(255,255,255,0.04); }
+
     /* ── Saved badge (for personally-saved matches not tied to a league) ── */
     .match-saved-badge {
       display: flex; align-items: center; gap: 4px; padding: 5px 12px;
@@ -207,6 +274,31 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- Invite Modal -->
+<div class="invite-overlay" id="invite-overlay" onclick="closeInviteOnBg(event)">
+  <div class="invite-modal" id="invite-modal">
+    <div class="invite-modal-header">
+      <div>
+        <div class="invite-modal-title" id="invite-title">Invite Friends</div>
+        <div class="invite-modal-sub" id="invite-sub"></div>
+      </div>
+      <button class="invite-close-btn" onclick="closeInvite()">✕</button>
+    </div>
+    <div class="invite-match-pill">
+      <div class="invite-match-teams" id="invite-teams"></div>
+      <div class="invite-match-meta" id="invite-meta"></div>
+    </div>
+    <div class="invite-link-box">
+      <input class="invite-link-input" id="invite-link-input" readonly />
+      <button class="invite-copy-btn" id="invite-copy-btn" onclick="copyInviteLink()">Copy</button>
+    </div>
+    <button class="invite-share-btn" id="invite-share-btn" onclick="nativeShare()">
+      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Share with friends
+    </button>
+  </div>
+</div>
+
 <script src="utils.js"></script>
 
 
@@ -218,6 +310,7 @@
 <script>
   let activeFilter = 'all';
   let allMatchItems = [];   // flat array of rendered match data for filter/search
+  const _inviteStore = {};  // key → match data, used by invite modal
 
   /* ── Filter ── */
   function setFilter(chip, leagueId) {
@@ -346,6 +439,8 @@
         <div class="match-list">`;
 
       items.forEach(m => {
+        // Store match data for the invite modal
+        _inviteStore[m.key] = m;
         const isSoon = isToday;
         const timeDay = isSoon ? 'Today' : m.kickoff.toLocaleDateString('en-GB', { weekday: 'short' });
         const timeHour = m.kickoff.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -397,6 +492,10 @@
               </div>
             </div>
             ${badgeHtml}
+            <button class="invite-btn" data-invite-key="${esc(m.key)}" onclick="event.stopPropagation();openInviteByKey(this.dataset.inviteKey)">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+              Invite
+            </button>
             <button class="match-notify-btn" onclick="event.stopPropagation();toggleNotify(this)">
               ${bellSvg()} Notify
             </button>
@@ -607,6 +706,105 @@
 
     renderSchedule(allMatches);
   }
+
+  /* ── Invite modal ── */
+  let _currentInvite = null;
+
+  function openInviteByKey(key) {
+    const data = _inviteStore[key];
+    if (!data) return;
+    openInvite(data);
+  }
+
+  function openInvite(data) {
+    _currentInvite = data;
+
+    const origin = window.location.origin;
+    const link = data.leagueId
+      ? origin + '/league.html?id=' + encodeURIComponent(data.leagueId)
+      : origin + '/matches.html';
+
+    // Build readable date
+    const kickoff = data.kickoff ? new Date(data.kickoff) : null;
+    const dateStr = kickoff
+      ? kickoff.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+        + ' · ' + kickoff.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+      : '';
+
+    document.getElementById('invite-title').textContent = data.leagueId ? 'Invite to ' + data.leagueName : 'Share This Match';
+    document.getElementById('invite-sub').textContent = data.leagueId
+      ? 'Send your league link so friends can join and play along'
+      : 'Share this match — friends can save it and create a league together';
+    document.getElementById('invite-teams').textContent = data.home + ' vs ' + data.away;
+
+    const metaEl = document.getElementById('invite-meta');
+    let metaParts = [];
+    if (dateStr) metaParts.push('<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>' + dateStr);
+    if (data.leagueId) metaParts.push('<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>' + data.leagueName);
+    else if (data.competitionName) metaParts.push('<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>' + data.competitionName);
+    metaEl.innerHTML = metaParts.map(p => '<span style="display:flex;align-items:center;gap:4px;">' + p + '</span>').join('');
+
+    const inputEl = document.getElementById('invite-link-input');
+    inputEl.value = link;
+    inputEl.title = link;
+
+    const copyBtn = document.getElementById('invite-copy-btn');
+    copyBtn.textContent = 'Copy';
+    copyBtn.classList.remove('copied');
+
+    // Hide native share btn if not supported
+    document.getElementById('invite-share-btn').style.display =
+      (typeof navigator.share === 'function') ? 'flex' : 'none';
+
+    document.getElementById('invite-overlay').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeInvite() {
+    document.getElementById('invite-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+    _currentInvite = null;
+  }
+
+  function closeInviteOnBg(e) {
+    if (e.target === document.getElementById('invite-overlay')) closeInvite();
+  }
+
+  function copyInviteLink() {
+    const input = document.getElementById('invite-link-input');
+    const btn   = document.getElementById('invite-copy-btn');
+    navigator.clipboard.writeText(input.value).then(function() {
+      btn.textContent = 'Copied ✓';
+      btn.classList.add('copied');
+      setTimeout(function() {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+      }, 2500);
+    }).catch(function() {
+      // Fallback for older browsers
+      input.select();
+      document.execCommand('copy');
+      btn.textContent = 'Copied ✓';
+      btn.classList.add('copied');
+      setTimeout(function() { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 2500);
+    });
+  }
+
+  function nativeShare() {
+    if (!_currentInvite) return;
+    const link = document.getElementById('invite-link-input').value;
+    const matchStr = _currentInvite.home + ' vs ' + _currentInvite.away;
+    const msg = _currentInvite.leagueId
+      ? 'Join me in ' + _currentInvite.leagueName + ' on Spontyx for ' + matchStr + '!'
+      : 'Watch ' + matchStr + ' with me on Spontyx!';
+    navigator.share({ title: 'Spontyx — ' + matchStr, text: msg, url: link })
+      .catch(function() {}); // ignore AbortError if user cancels
+  }
+
+  // Close on Escape key
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeInvite();
+  });
 
   function esc(s) {
     return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
