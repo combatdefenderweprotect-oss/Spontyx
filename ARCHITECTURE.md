@@ -240,3 +240,76 @@ flags into the new `ownerId`/`memberUserIds` model on first read.
 - Client-trusted tier checks (bypassable via DevTools — fine for prototype, not production)
 - Live games are single-player simulations; no real multi-user state sync
 - No audit log for authorization decisions
+
+---
+
+> **Note — sections 1–11 above describe the original localStorage prototype.**
+> The project has since migrated to a full Supabase backend. The sections below
+> document significant DB-level architecture decisions made post-migration.
+
+---
+
+## 12. Foreign Key Cascade — questions and league_members (migration 019)
+
+Both `questions.league_id` and `league_members.league_id` carry `ON DELETE CASCADE`
+FK constraints pointing at `leagues.id`.
+
+**Why:** deleting a league row previously left orphaned `questions` rows with
+`resolution_status = 'pending'`. The `live-stats-poller` Edge Function (fires every
+minute) discovers pending questions via `match_id` and keeps polling API-Sports for
+the associated fixture indefinitely — even after the league no longer exists. This
+caused unexpected API quota consumption on every delete.
+
+**Two-layer enforcement (defense in depth):**
+
+1. **DB cascade** — `ON DELETE CASCADE` means the Postgres engine removes all
+   dependent questions and league_members rows atomically when a league is deleted,
+   regardless of how the delete is triggered (SQL editor, admin tools, RLS-permitted
+   client call).
+
+2. **JS cascade in `deleteLeague()`** — `SpontixStoreAsync.deleteLeague()` explicitly
+   cascades before deleting the leagues row:
+   1. Void pending questions (`resolution_status = 'voided'`)
+   2. Delete `player_answers` for all question IDs in the league
+   3. Delete all `questions` rows for the league
+   4. Delete all `league_members` rows for the league
+   5. Delete the `leagues` row
+
+   The JS layer ensures correct cleanup order (player_answers before questions,
+   questions before leagues) and gives the application layer an explicit audit trail.
+   The DB cascade is the safety net for any path that bypasses the JS layer.
+
+**Migration 019** also ran a one-time cleanup of existing orphans before adding the
+cascade constraints.
+
+---
+
+## 13. Pre-match scheduling columns on leagues (migration 018)
+
+Two new columns on the `leagues` table control when pre-match questions become
+visible to players:
+
+| Column | Type | Default | Check |
+|---|---|---|---|
+| `prematch_generation_mode` | `TEXT NOT NULL` | `'automatic'` | `IN ('automatic', 'manual')` |
+| `prematch_publish_offset_hours` | `INTEGER NOT NULL` | `24` | `IN (48, 24, 12, 6)` |
+
+**Automatic mode** (default): the Edge Function generates pre-match questions at any
+point within 48 hours of kickoff. `visible_from` is set to the current timestamp —
+questions appear immediately after generation.
+
+**Manual mode** (tier-gated): questions are only generated once `now >= kickoff −
+offset_hours`. `visible_from` is set to `kickoff − offset_hours` so questions appear
+at exactly that offset before the match starts regardless of when generation actually
+ran.
+
+**Pool reuse consideration:** multiple leagues can share a canonical question pool for
+the same match. When attaching pool questions to a league, `pool-manager.ts` calls
+`computeLeagueVisibleFrom(league, kickoff)` per-league so each league's scheduling
+mode gets the correct `visible_from` — two leagues sharing a pool can have different
+publish times if they have different scheduling modes.
+
+**Tier gating** (enforced in `TIER_LIMITS` in `spontix-store.js`):
+- Starter: automatic only
+- Pro: automatic + manual (24h, 12h offsets)
+- Elite: automatic + manual (48h, 24h, 12h, 6h offsets)

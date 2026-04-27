@@ -12,16 +12,25 @@
 
 In the Supabase SQL Editor (https://supabase.com/dashboard/project/hdulhffpmuqepoqstsor/sql/new):
 
-1. Run `backend/migrations/002_ai_questions.sql`  
-   Creates: `sports_competitions`, `sports_teams`, new `leagues` columns, `generation_runs`, `generation_run_leagues`, `questions` tables + RLS policies.
+Run in order. All migrations are idempotent (safe to re-run).
 
-2. Run `backend/migrations/003_cron_schedule.sql`  
-   **Before running**, replace `<<YOUR_CRON_SECRET>>` with a random string (e.g. `openssl rand -hex 32`).  
-   Enables `pg_cron` + `pg_net`, schedules the generator function every 6 hours.
-
-3. Run `backend/migrations/004_player_answers.sql`  
-   **Before running**, replace `<<YOUR_CRON_SECRET>>` with the **same secret** as step 2.  
-   Creates `player_answers` table + RLS + schedules the resolver function every hour.
+1. `001_initial_schema.sql` — base tables, RLS policies, seed data
+2. `002_ai_questions.sql` — `sports_competitions`, `sports_teams`, `questions`, `generation_runs`, `generation_run_leagues` + new `leagues` columns
+3. `003_cron_schedule.sql` — **replace `<<YOUR_CRON_SECRET>>`** before running. Enables `pg_cron` + `pg_net`, schedules generator every 6h
+4. `004_player_answers.sql` — **replace `<<YOUR_CRON_SECRET>>`** with the same secret. Creates `player_answers` table + RLS + resolver cron job
+5. `005_notifications.sql` — `notifications` table + 5 Postgres SECURITY DEFINER triggers
+6. `006_scoring_columns.sql` — adds `visible_from`, `answer_closes_at`, `base_value`, `difficulty_multiplier`, `match_minute_at_generation` to `questions`; adds `streak_at_answer`, `leader_gap_at_answer`, `clutch_multiplier_at_answer`, `multiplier_breakdown` to `player_answers`; updates RLS
+7. `007_match_question_pool.sql` — `match_question_pool` + `match_pool_questions` tables; adds `pool_question_id` + `reuse_scope` to `questions`
+8. `008_pool_generation_profile.sql` — adds `scope` + `scoped_team_id` to `match_question_pool`; drops old UNIQUE constraint; creates two partial UNIQUE indexes
+9. `009_saved_matches.sql` — `saved_matches` table + RLS + indexes
+10. `010_question_type_column.sql` — adds `question_type TEXT CHECK IN ('CORE_MATCH_PREMATCH','CORE_MATCH_LIVE','REAL_WORLD')` to `questions`; backfills existing rows; adds index
+11. `011_username_constraints.sql` — case-insensitive unique index on `lower(handle)`; updates `handle_new_user` trigger to read first/last name + username from signup metadata
+12. `014_user_photos_bucket.sql` — creates `user-photos` Storage bucket for profile photos
+13. `015_live_match_stats.sql` — `live_match_stats` table; `fixture_id` column on `leagues`; pg_cron job 8 template (every minute → live-stats-poller)
+14. `016_live_match_stats_additions.sql` — additional columns/indexes for live_match_stats
+15. `017_question_intensity.sql` — question intensity tracking additions
+16. `018_prematch_schedule.sql` — adds `prematch_generation_mode` + `prematch_publish_offset_hours` to `leagues`; index on scheduling mode for AI-enabled leagues
+17. `019_cascade_delete_questions.sql` — cleans up orphaned questions; adds `ON DELETE CASCADE` to `questions.league_id` and `league_members.league_id` FKs
 
 ---
 
@@ -111,20 +120,29 @@ In the league creation wizard (create-league.html):
 1. Pick a sport and competition
 2. Set a start and end date
 3. Toggle on "AI Real World Questions" in Step 3
-4. Complete the wizard — the league is created with `ai_questions_enabled = true`
+4. (Optional) Set Pre-Match Scheduling mode — Automatic (default) or Manual with an offset (Pro: 24h/12h, Elite: 48h/24h/12h/6h)
+5. Complete the wizard — the league is created with `ai_questions_enabled = true`
 
 Or directly via SQL for an existing league:
 ```sql
 update leagues set
-  ai_questions_enabled = true,
-  ai_weekly_quota      = 10,
-  ai_total_quota       = 40,
-  api_sports_league_id = 39,      -- Premier League
-  api_sports_season    = 2024,
-  league_start_date    = '2025-01-01',
-  league_end_date      = '2025-05-31'
+  ai_questions_enabled          = true,
+  ai_weekly_quota               = 10,
+  ai_total_quota                = 40,
+  api_sports_league_id          = 39,      -- Premier League
+  api_sports_season             = 2025,
+  league_start_date             = '2025-01-01',
+  league_end_date               = '2025-05-31',
+  prematch_generation_mode      = 'automatic',   -- or 'manual'
+  prematch_publish_offset_hours = 24             -- ignored when mode = 'automatic'
 where id = '<league_uuid>';
 ```
+
+**Pre-match scheduling modes:**
+- `automatic` (default) — questions generated any time within 48h of kickoff; `visible_from` = generation time
+- `manual` — questions only generated once `now >= kickoff − offset_hours`; `visible_from` = `kickoff − offset_hours`
+
+**Tier gating for manual mode:** Starter = automatic only. Pro = manual with 24h or 12h offset. Elite = manual with 48h, 24h, 12h, or 6h offset.
 
 ---
 
