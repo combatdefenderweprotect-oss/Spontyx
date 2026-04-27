@@ -228,32 +228,35 @@ const SpontixSidebar = {
             ? SpontixStore.Session.getCurrentUserId() : null;
           if (!uid) return;
 
-          // Step 1: active leagues owned by user
-          const { count: ownedCount } = await window.sb
+          // Get all active league IDs the user owns
+          const { data: ownedRows } = await window.sb
             .from('leagues')
-            .select('id', { count: 'exact', head: true })
+            .select('id')
             .eq('owner_id', uid)
             .eq('status', 'active');
+          const ownedIds = new Set((ownedRows || []).map(r => r.id));
 
-          // Step 2: league IDs the user has joined as a member
+          // Get all league IDs the user is a member of (excluding ones already counted as owned)
           const { data: memberRows } = await window.sb
             .from('league_members')
             .select('league_id')
             .eq('user_id', uid);
+          const joinedOnlyIds = (memberRows || [])
+            .map(r => r.league_id)
+            .filter(id => !ownedIds.has(id));
 
-          // Step 3: of those joined leagues, count the active ones
+          // Count active joined-only leagues
           let joinedActiveCount = 0;
-          if (memberRows && memberRows.length > 0) {
-            const ids = memberRows.map(r => r.league_id);
+          if (joinedOnlyIds.length > 0) {
             const { count } = await window.sb
               .from('leagues')
               .select('id', { count: 'exact', head: true })
-              .in('id', ids)
+              .in('id', joinedOnlyIds)
               .eq('status', 'active');
             joinedActiveCount = count || 0;
           }
 
-          const total = (ownedCount || 0) + joinedActiveCount;
+          const total = ownedIds.size + joinedActiveCount;
           if (total === 0) return;
 
           // Inject/update badge on the My Leagues link
