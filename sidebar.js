@@ -11,7 +11,7 @@ const SpontixSidebar = {
   playerNav: [
     { section: 'Main' },
     { label: 'Home', href: 'dashboard.html', icon: '<path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/>' },
-    { label: 'My Leagues', href: 'my-leagues.html', icon: '<circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>', badge: '3', badgeClass: 'lime' },
+    { label: 'My Leagues', href: 'my-leagues.html', icon: '<circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/>' },
     { label: 'Discover', href: 'discover.html', icon: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>' },
     { label: 'Create League', href: 'create-league.html', icon: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>' },
 
@@ -217,6 +217,35 @@ const SpontixSidebar = {
           if (upg) upg.style.display = 'none';
         }
       }
+    }
+
+    // Async: update My Leagues badge with real count from Supabase
+    if (!isVenue) {
+      (async function updateLeagueBadge() {
+        try {
+          if (typeof window === 'undefined' || !window.sb) return;
+          const uid = (typeof SpontixStore !== 'undefined' && SpontixStore.Session)
+            ? SpontixStore.Session.getCurrentUserId() : null;
+          if (!uid) return;
+          // Count leagues owned + leagues joined (as member)
+          const [ownedRes, memberRes] = await Promise.all([
+            window.sb.from('leagues').select('id', { count: 'exact', head: true }).eq('owner_id', uid),
+            window.sb.from('league_members').select('league_id', { count: 'exact', head: true }).eq('user_id', uid)
+          ]);
+          const total = (ownedRes.count || 0) + (memberRes.count || 0);
+          if (total === 0) return;
+          // Find the My Leagues link and inject/update badge
+          const leagueLink = document.querySelector('a[href="my-leagues.html"]');
+          if (!leagueLink) return;
+          let badge = leagueLink.querySelector('.badge');
+          if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'badge lime';
+            leagueLink.appendChild(badge);
+          }
+          badge.textContent = String(total);
+        } catch (e) { /* silent — badge stays hidden if query fails */ }
+      })();
     }
 
     // Inject upgrade modal CSS + HTML once
