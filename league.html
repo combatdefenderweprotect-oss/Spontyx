@@ -1120,7 +1120,7 @@ async function hydrateLeaguePage() {
     if (league.ai_questions_enabled) {
       tags.push('<span class="league-tag" style="background:rgba(168,225,12,0.15);color:var(--lime);border:1px solid rgba(168,225,12,0.25);">Real World</span>');
     }
-    if (league.isOwner || (currentUserId && league.owner_id === currentUserId)) {
+    if (league.isOwner || (currentUserId && league.ownerId === currentUserId)) {
       tags.push('<span class="league-tag" style="background:rgba(124,92,252,0.15);color:var(--purple);">Owner</span>');
     }
     metaEl.innerHTML = tags.join('');
@@ -1139,7 +1139,7 @@ async function hydrateLeaguePage() {
   // Danger zone — show Delete button for owner, Leave button for members
   var dangerEl = document.getElementById('danger-zone-btns');
   if (dangerEl) {
-    var isOwner = currentUserId && league.owner_id === currentUserId;
+    var isOwner = league.isOwner || (currentUserId && league.ownerId === currentUserId);
     var btnHtml = '';
     if (isOwner) {
       btnHtml += '<button onclick="confirmDeleteLeague()" style="padding:8px 16px;background:rgba(255,107,107,0.12);border:1px solid rgba(255,107,107,0.35);color:var(--coral);border-radius:var(--radius-sm);font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;">🗑 Delete League</button>';
