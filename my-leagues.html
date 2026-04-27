@@ -50,6 +50,7 @@
     .page-header-left h1 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
     .page-header-left h1 span { color: var(--lime); }
     .page-header-left p { color: var(--grey); font-size: 0.88rem; }
+    .header-btns { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
     .create-league-btn {
       display: flex; align-items: center; gap: 8px; padding: 12px 24px;
       background: var(--lime); color: var(--navy); border: none; border-radius: var(--radius-pill);
@@ -58,6 +59,14 @@
     }
     .create-league-btn:hover { opacity: 0.85; }
     .create-league-btn svg { width: 18px; height: 18px; stroke: var(--navy); fill: none; stroke-width: 2.5; }
+    .join-league-btn {
+      display: flex; align-items: center; gap: 8px; padding: 12px 24px;
+      background: var(--purple); color: #fff; border: none; border-radius: var(--radius-pill);
+      font-size: 0.88rem; font-weight: 700; font-family: inherit; cursor: pointer;
+      transition: opacity 0.2s; text-decoration: none;
+    }
+    .join-league-btn:hover { opacity: 0.85; }
+    .join-league-btn svg { width: 18px; height: 18px; stroke: #fff; fill: none; stroke-width: 2.5; }
 
     /* ── Stats Row ── */
     .stats-row { display: flex; gap: 16px; margin-bottom: 28px; flex-wrap: wrap; }
@@ -241,10 +250,16 @@
         <h1>My <span>Leagues</span></h1>
         <p>Manage leagues you've created, leagues you've joined, and view your history.</p>
       </div>
-      <a href="create-league.html" class="create-league-btn">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        Create New League
-      </a>
+      <div class="header-btns">
+        <a href="discover.html" class="join-league-btn">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+          Join a League
+        </a>
+        <a href="create-league.html" class="create-league-btn">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          Create New League
+        </a>
+      </div>
     </div>
 
     <!-- Stats Row -->
