@@ -273,7 +273,7 @@ const SpontixSidebar = {
       })();
     }
 
-    // Async: update Your Games badge with count of unanswered open questions
+    // Async: update Your Games with two badges — red (live matches) + orange (unanswered questions)
     if (!isVenue) {
       (async function updateGamesBadge() {
         try {
@@ -295,10 +295,10 @@ const SpontixSidebar = {
           ])];
           if (!leagueIds.length) return;
 
-          // Open questions in those leagues (live or pre-match, window still open)
+          // Open questions — fetch type + match data so we can split live vs unanswered
           const { data: openQs } = await window.sb
             .from('questions')
-            .select('id')
+            .select('id, question_type, match_minute_at_generation, match_id, league_id')
             .in('league_id', leagueIds)
             .neq('resolution_status', 'resolved')
             .neq('resolution_status', 'voided')
@@ -313,19 +313,41 @@ const SpontixSidebar = {
             .in('question_id', openQs.map(q => q.id));
           const answeredIds = new Set((answered || []).map(a => a.question_id));
 
-          const unanswered = openQs.filter(q => !answeredIds.has(q.id)).length;
-          if (unanswered === 0) return;
+          // RED badge: count of distinct live matches (matches with CORE_MATCH_LIVE questions open)
+          const liveMatchKeys = new Set();
+          openQs.forEach(q => {
+            const isLive = q.question_type === 'CORE_MATCH_LIVE' || q.match_minute_at_generation != null;
+            if (isLive) liveMatchKeys.add(q.match_id || `league_${q.league_id}`);
+          });
+          const liveMatchCount = liveMatchKeys.size;
 
-          // Inject/update badge on the Your Games link
+          // ORANGE badge: total unanswered open questions (all types)
+          const unansweredCount = openQs.filter(q => !answeredIds.has(q.id)).length;
+
+          if (liveMatchCount === 0 && unansweredCount === 0) return;
+
           const gamesLink = document.querySelector('a[href="activity.html"]');
           if (!gamesLink) return;
-          let badge = gamesLink.querySelector('.badge');
-          if (!badge) {
-            badge = document.createElement('span');
-            badge.className = 'badge coral';
-            gamesLink.appendChild(badge);
+
+          // Clear any existing badges before injecting fresh ones
+          gamesLink.querySelectorAll('.badge').forEach(b => b.remove());
+
+          // Red badge — live matches happening right now
+          if (liveMatchCount > 0) {
+            const redBadge = document.createElement('span');
+            redBadge.className = 'badge coral';
+            redBadge.textContent = String(liveMatchCount);
+            gamesLink.appendChild(redBadge);
           }
-          badge.textContent = String(unanswered);
+
+          // Orange badge — unanswered questions waiting
+          if (unansweredCount > 0) {
+            const orangeBadge = document.createElement('span');
+            orangeBadge.className = 'badge';
+            orangeBadge.style.cssText = 'background:#FF9F43;color:#1A1A2E;';
+            orangeBadge.textContent = String(unansweredCount);
+            gamesLink.appendChild(orangeBadge);
+          }
         } catch (e) { /* silent */ }
       })();
     }
