@@ -472,15 +472,37 @@
     .plan-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-top: 20px; }
     .plan-card {
       background: var(--navy-light); border-radius: var(--radius-lg); padding: 20px;
-      border: 2px solid rgba(255,255,255,0.06); text-align: center; cursor: pointer;
-      transition: all 0.2s;
+      border: 2px solid rgba(255,255,255,0.06); text-align: left; cursor: pointer;
+      transition: all 0.2s; display: flex; flex-direction: column;
     }
     .plan-card:hover { border-color: rgba(168,225,12,0.2); transform: translateY(-2px); }
-    .plan-card.current { border-color: var(--lime); background: var(--lime-dim); }
+    .plan-card.current { border-color: var(--lime); background: var(--lime-dim); cursor: default; }
+    .plan-card.current:hover { transform: none; }
     .plan-card-name { font-size: 0.9rem; font-weight: 800; margin-bottom: 4px; }
     .plan-card-price { font-size: 1.2rem; font-weight: 900; color: var(--lime); margin-bottom: 2px; }
     .plan-card-price span { font-size: 0.7rem; font-weight: 500; color: var(--grey); }
-    .plan-card-current { font-size: 0.65rem; font-weight: 700; color: var(--lime); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 6px; }
+    .plan-card-current { font-size: 0.65rem; font-weight: 700; color: var(--lime); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+    /* Plan card feature list */
+    .plan-card-divider { height: 1px; background: rgba(255,255,255,0.07); margin: 14px 0; }
+    .plan-features { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+    .plan-feat { font-size: 0.78rem; display: flex; align-items: flex-start; gap: 8px; line-height: 1.4; color: var(--off-white); }
+    .plan-feat.off { color: #6a6a88; }
+    .plan-feat.partial { color: #b0b0c8; }
+    .pf-icon {
+      width: 16px; height: 16px; border-radius: 50%; display: inline-flex; align-items: center;
+      justify-content: center; font-size: 0.6rem; font-weight: 900; flex-shrink: 0; margin-top: 1px;
+      line-height: 1;
+    }
+    .plan-feat.on .pf-icon { background: rgba(168,225,12,0.2); color: var(--lime); }
+    .plan-feat.off .pf-icon { background: rgba(255,255,255,0.07); color: #6a6a88; }
+    .plan-feat.partial .pf-icon { background: rgba(255,159,67,0.18); color: #FF9F43; }
+    .plan-cta {
+      margin-top: 16px; width: 100%; padding: 9px; border-radius: var(--radius-pill);
+      font-size: 0.72rem; font-weight: 700; cursor: pointer; font-family: inherit;
+      transition: all 0.15s; border: 1px solid rgba(255,255,255,0.12); background: none; color: var(--grey);
+    }
+    .plan-cta:hover { border-color: var(--lime); color: var(--lime); }
+    .plan-card.current .plan-cta { display: none; }
 
     /* Billing history */
     .billing-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
@@ -559,7 +581,7 @@
     /* Toast */
 
     /* ══ RESPONSIVE ══ */
-    
+    @media (max-width: 900px) {
       .plan-cards { grid-template-columns: 1fr; }
       .profile-header { flex-direction: column; text-align: center; }
       .profile-header-meta { justify-content: center; }
@@ -938,20 +960,71 @@
         <div class="sub-card-header">
           <div class="sub-plan-name">Switch Plan</div>
         </div>
-        <div class="plan-cards">
-          <div class="plan-card">
+        <div class="plan-cards" id="plan-cards-grid">
+
+          <!-- Starter -->
+          <div class="plan-card" id="plan-card-starter" onclick="handlePlanSelect('starter')">
             <div class="plan-card-name">Starter</div>
-            <div class="plan-card-price">$0 <span>/ forever</span></div>
+            <div class="plan-card-price">€0 <span>/ forever</span></div>
+            <div class="plan-card-current" id="plan-current-starter" style="display:none;">✓ Current Plan</div>
+            <div class="plan-card-divider"></div>
+            <ul class="plan-features">
+              <li class="plan-feat on"><span class="pf-icon">✓</span>Pre-match questions</li>
+              <li class="plan-feat partial"><span class="pf-icon">~</span>Live questions (3 per match)</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>Join up to 3 leagues</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>Create 1 league / week</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>3 Battle Royale per day</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>Solo trivia mode</li>
+              <li class="plan-feat off"><span class="pf-icon">–</span>Real World intelligence</li>
+              <li class="plan-feat off"><span class="pf-icon">–</span>Streak bonuses &amp; Risky answers</li>
+              <li class="plan-feat off"><span class="pf-icon">–</span>Ad-free experience</li>
+              <li class="plan-feat off"><span class="pf-icon">–</span>Custom photo &amp; league themes</li>
+            </ul>
+            <button class="plan-cta">Select Starter</button>
           </div>
-          <div class="plan-card current">
+
+          <!-- Pro -->
+          <div class="plan-card" id="plan-card-pro" onclick="handlePlanSelect('pro')">
             <div class="plan-card-name">Pro</div>
-            <div class="plan-card-price">$5.99 <span>/ mo</span></div>
-            <div class="plan-card-current">Current Plan</div>
+            <div class="plan-card-price">€7.99 <span>/ mo</span></div>
+            <div class="plan-card-current" id="plan-current-pro" style="display:none;">✓ Current Plan</div>
+            <div class="plan-card-divider"></div>
+            <ul class="plan-features">
+              <li class="plan-feat on"><span class="pf-icon">✓</span>Pre-match questions</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>Unlimited live answers</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>Join up to 20 leagues</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>Create 5 leagues / week (40 players)</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>Unlimited Battle Royale</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>Solo + 1v1 trivia</li>
+              <li class="plan-feat partial"><span class="pf-icon">~</span>Real World intelligence (10 / mo)</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>Streak bonuses &amp; Risky answers</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>Ad-free experience</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>Custom photo &amp; league themes</li>
+            </ul>
+            <button class="plan-cta">Switch to Pro</button>
           </div>
-          <div class="plan-card" onclick="showToast('Upgrading to Elite...')">
+
+          <!-- Elite -->
+          <div class="plan-card" id="plan-card-elite" onclick="handlePlanSelect('elite')">
             <div class="plan-card-name">Elite</div>
-            <div class="plan-card-price">$14.99 <span>/ mo</span></div>
+            <div class="plan-card-price">€19.99 <span>/ mo</span></div>
+            <div class="plan-card-current" id="plan-current-elite" style="display:none;">✓ Current Plan</div>
+            <div class="plan-card-divider"></div>
+            <ul class="plan-features">
+              <li class="plan-feat on"><span class="pf-icon">✓</span>All question types (unlimited)</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>Unlimited leagues (100 players)</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>Real World intelligence (unlimited)</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>All trivia modes incl. Party Room</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>Live stats &amp; advanced analytics</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>Custom trophy creation</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>Prediction history export</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>All mechanics (streak, risky, live stats)</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>Ad-free + custom photo &amp; themes</li>
+              <li class="plan-feat on"><span class="pf-icon">✓</span>Early access to new features</li>
+            </ul>
+            <button class="plan-cta">Switch to Elite</button>
           </div>
+
         </div>
       </div>
 
@@ -1264,6 +1337,9 @@ function hydrateProfile() {
     row.querySelector('.accuracy-pct').style.color = colors[idx];
   });
 
+  // ── Plan Cards (subscription tab) ──
+  renderPlanCards();
+
   // ── Recent Match History ──
   const historyList = document.querySelector('.history-list');
   historyList.innerHTML = '';
@@ -1384,6 +1460,36 @@ function filterTrophies(filter, btn) {
   document.querySelectorAll('.trophy-filter').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   hydrateTrophies(filter);
+}
+
+// ══ PLAN CARDS ══
+function renderPlanCards() {
+  if (isPublicView) return; // don't show plan cards on public profiles
+  var player = SpontixStore.getPlayer();
+  var tier = (player && player.tier) ? player.tier : 'starter';
+  // Normalise: venue tiers don't apply here
+  var playerTier = ['starter', 'pro', 'elite'].includes(tier) ? tier : 'starter';
+
+  ['starter', 'pro', 'elite'].forEach(function(t) {
+    var card = document.getElementById('plan-card-' + t);
+    var badge = document.getElementById('plan-current-' + t);
+    if (!card || !badge) return;
+    if (t === playerTier) {
+      card.classList.add('current');
+      badge.style.display = 'block';
+    } else {
+      card.classList.remove('current');
+      badge.style.display = 'none';
+    }
+  });
+}
+
+function handlePlanSelect(tier) {
+  var player = SpontixStore.getPlayer();
+  var currentTier = (player && player.tier) ? player.tier : 'starter';
+  var normCurrent = ['starter', 'pro', 'elite'].includes(currentTier) ? currentTier : 'starter';
+  if (tier === normCurrent) return; // already on this plan
+  showToast('Subscription changes will be available at launch. You\'re on Elite during Beta!');
 }
 
 // NOTE: Self-award of trophies has been removed. Trophies are earned by winning
