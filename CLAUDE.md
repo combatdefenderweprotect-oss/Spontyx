@@ -1,6 +1,6 @@
 # Spontix — Project State & Developer Handoff
 
-Last updated 2026-04-27 — Match Live quick-create button live on matches.html and upcoming.html: one click from any fixture card navigates directly to create-league.html with sport, competition, and match pre-filled from the database (no API calls in the browser). Tier system v2 complete: BR and trivia 3-way gate (Starter daily / Pro monthly / Elite fair-use cooldown), all tier limits Supabase-backed (no localStorage bypass), -1 replaces Infinity as unlimited sentinel. Player availability filtering live. Auth gate hardened: getUser() server-side validation prevents deleted accounts from remaining logged in indefinitely. Live & Activity page fully dynamic (real Supabase data, styled empty states). Dashboard alert + nav cards connected to real data (unanswered questions, league count, saved schedule). Username system live. Beta access flow live. Full end-to-end simulation verified (all 10 checkpoints passed). Football only. Max 2 active questions. Scoring simplified to base × time_pressure × streak (difficulty/comeback/clutch bypassed to 1.0 via MVP_BYPASS). Three-lane question architecture locked: CORE_MATCH_PREMATCH, CORE_MATCH_LIVE, REAL_WORLD. Save Match feature fully implemented. league.html UI/UX upgrade complete. Pre-launch alignment complete and DEPLOYED: migration 010 run in Supabase. All advanced systems preserved intact for post-launch activation.
+Last updated 2026-04-27 — Discover leagues now fetches from Supabase directly (newly created leagues appear immediately for all users). League owner can delete their league; members can leave — both via confirmation modal in Settings tab. Join a League button added to My Leagues header. Tier badge no longer shows price. Match Live quick-create button live. Tier system v2 complete. Player availability filtering live. Auth gate hardened. Live & Activity page fully dynamic. Username system live. Beta access flow live. Full end-to-end simulation verified. Football only. Max 2 active questions. Three-lane question architecture locked. All advanced systems preserved intact for post-launch activation.
 
 ---
 
@@ -1669,6 +1669,10 @@ These are **safe to commit and ship to the browser**. Security comes from RLS po
 - **Battle Royale tier gate** — 3-way gate: Starter daily counter (`spontix_br_day_*`), Pro monthly counter (`spontix_br_month_*`), Elite fair-use cooldown (`spontix_br_cooldown`). Cooldown resets to 20s on victory (was 30s at game start).
 - **Trivia tier gate** — same 3-way pattern: Starter daily, Pro monthly (100/month), Elite fair-use. Cooldown resets on results screen.
 - **Match Live quick-create** — `matches.html` and `upcoming.html` both have a coral "Match Live" button on every fixture card. Clicking it navigates to `create-league.html?league_type=match&...` with home, away, kickoff, match_id, api_league_id, and comp_name all in the URL. `create-league.html` `readPrefill()` constructs `selectedCompetition` and `selectedMatch` directly from URL params — no DB queries. The browser never calls any external API; all fixture data was already loaded from `api_football_fixtures` (Supabase) on the source page.
+- **Discover leagues** — `hydrateDiscover()` is now async and calls `SpontixStoreAsync.getDiscoverLeagues()` which hits Supabase directly on page load. Newly created leagues by any user appear immediately without waiting for cache warming. Shows loading state while fetching, and empty state if no leagues exist.
+- **Delete / Leave league** — `league.html` Settings tab Danger Zone shows a **Delete League** button for the owner and a **Leave League** button for members. Both open a confirmation modal (league name + warning text + Cancel / Confirm). On confirm, calls `SpontixStoreAsync.deleteLeague()` or `leaveLeague()` and redirects to My Leagues. RLS on the DB enforces owner-only delete independently.
+- **My Leagues — Join a League button** — purple pill button added to the My Leagues header alongside the lime Create New League button. Links to `discover.html`.
+- **Tier badge — name only** — `getTierLabel()` in `spontix-store.js` now returns `'Starter'`, `'Pro'`, `'Elite'` without price strings. Prices remain only in upgrade modal CTAs where they are appropriate.
 - **Cache warming** — all domains auto-refresh 1.5s after page load.
 - **All UI screens** — every `.html` file renders correctly. `profile.html` and `leaderboard.html` use full-width layout.
 
@@ -1838,7 +1842,7 @@ See `supabase/functions/generate-questions/DEPLOY.md` for the full checklist inc
 **Arena venue owned by:** `f901f211-738e-4409-abfd-8e1a9fb4bffb` (utis.richard@gmail.com)
 
 **Resume prompt for a fresh Claude session:**
-> "Continue Spontix development. Read `CLAUDE.md` for full context. Also read `SESSION_CONTINUATION_DESIGN.txt` before working on anything related to live questions, notifications, or the league question feed. Last completed: Match Live quick-create button live on matches.html and upcoming.html — one click from any fixture prefills create-league.html with competition + match from the database with no API calls. Tier system v2 complete: BR/trivia 3-way gate (Starter daily / Pro monthly / Elite fair-use), all limits Supabase-backed. Next priorities: (1) Realtime subscription replacing polling in league.html — biggest single retention feature; (2) Stripe subscriptions replacing forced Elite tier; (3) GNews API key to activate news context in generation."
+> "Continue Spontix development. Read `CLAUDE.md` for full context. Also read `SESSION_CONTINUATION_DESIGN.txt` before working on anything related to live questions, notifications, or the league question feed. Last completed: Discover leagues now fetches from Supabase directly so new leagues appear immediately. League owners can delete their league; members can leave — both via confirmation modal. Join a League button added to My Leagues. Tier badge no longer shows price. Next priorities: (1) Realtime subscription replacing polling in league.html — biggest single retention feature; (2) Stripe subscriptions replacing forced Elite tier; (3) GNews API key to activate news context in generation."
 
 ---
 
@@ -2958,6 +2962,56 @@ Files updated: `spontix-store.js` (TIER_LIMITS + 3 code checks), `league.html`, 
 
 **`-1 replaces Infinity` — files updated:**
 `spontix-store.js`, `league.html`, `create-league.html`, `my-leagues.html`, `venue-create-event.html`, `venue-live-floor.html`, `venue-dashboard.html`, `trivia.html`, `battle-royale.html`
+
+---
+
+### 2026-04-27 — Discover leagues fetches from Supabase directly
+
+**Problem:** `hydrateDiscover()` called `SpontixStore.getDiscoverLeagues()` — the sync localStorage version. Leagues created by other users wouldn't appear until the background cache refresh fired (~1.5s). On a cold load with no cache, the grid would be empty.
+
+**`discover.html`:**
+- `hydrateDiscover()` converted to `async` — now calls `SpontixStoreAsync.getDiscoverLeagues()` which hits Supabase directly
+- Extracted `renderDiscoverLeagues(leagues)` as a pure render function called by both initial load and the `spontix-leagues-refreshed` background refresh
+- Added "Loading leagues..." placeholder while fetching
+- Added empty state message ("No leagues to discover yet — be the first to create one!") when Supabase returns zero results
+- Promoted grid now filters to public leagues only
+- `filterLeagues()` called automatically after render so active filters apply immediately
+
+**Result:** any league created by any user appears in Discover the moment the page loads, with no cache dependency.
+
+---
+
+### 2026-04-27 — Delete league (owner) + Leave league (members)
+
+**`league.html` — Settings tab Danger Zone:**
+- Static "Archive League" / "Leave League" buttons replaced with dynamic buttons injected by `hydrateLeaguePage()` based on `owner_id === currentUserId`
+- **Owner** sees: 🗑 Delete League (coral, bordered)
+- **Member** sees: Leave League (grey, bordered)
+- Neither button is shown until `hydrateLeaguePage()` runs and the ownership check resolves
+
+**Confirmation modal added:**
+- `<div id="danger-overlay">` — full-screen dark overlay with a centred card
+- `openDangerModal(icon, title, body, onConfirm)` — reusable for both actions
+- `closeDangerModal()` — dismisses; clicking outside the modal also dismisses
+- `confirmDeleteLeague()` — shows league name + permanent warning → calls `SpontixStoreAsync.deleteLeague(currentLeagueId)` → toast + redirect to `my-leagues.html`
+- `confirmLeaveLeague()` — shows league name + progress loss warning → calls `SpontixStoreAsync.leaveLeague(currentLeagueId)` → toast + redirect
+- DB-level protection: RLS on `leagues` table enforces owner-only delete independently of the UI
+
+---
+
+### 2026-04-27 — My Leagues: Join a League button + tier badge price removed
+
+**`my-leagues.html`:**
+- Added `.header-btns` flex wrapper around the existing Create New League button
+- Added purple **Join a League** pill button linking to `discover.html` (with person-plus SVG icon)
+- Added `.join-league-btn` CSS class (purple background, white text, same pill shape as create button)
+
+**`spontix-store.js` — `getTierLabel()`:**
+- `'starter'` → `'Starter'` (was `'Starter (Free)'`)
+- `'pro'` → `'Pro'` (was `'Pro ($5.99/mo)'`)
+- `'elite'` → `'Elite'` (was `'Elite ($14.99/mo)'`)
+- Venue tier labels unchanged (never had prices)
+- Prices retained only in `sidebar.js` upgrade modal CTAs where they serve as conversion prompts
 
 ---
 
