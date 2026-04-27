@@ -997,10 +997,6 @@
           <span class="lock-badge">Pro</span>
           <div class="option-chip-label">News & Rumours</div>
         </div>
-        <div class="option-chip" onclick="toggleChip(this)" data-min-tier="pro" data-feature="History & Trivia questions">
-          <span class="lock-badge">Pro</span>
-          <div class="option-chip-label">History & Trivia</div>
-        </div>
         <div class="option-chip" onclick="toggleChip(this)" data-min-tier="elite" data-feature="Custom Questions">
           <span class="lock-badge">Elite</span>
           <div class="option-chip-label">Custom Questions</div>
@@ -2552,7 +2548,6 @@ const aiConversation = [
     suggestions: [
       { label: "Live predictions", value: "live" },
       { label: "Pre-match picks", value: "prematch" },
-      { label: "Trivia & history", value: "trivia" },
       { label: "Mix of everything", value: "mix" }
     ],
     key: 'questionTypes'
@@ -2697,7 +2692,7 @@ function buildConfigFromAnswers(answers) {
   config.push({ label: 'Schedule', value: scheduleMap[answers.schedule] || answers.schedule || 'Match Days' });
 
   // Question types
-  const qMap = { live: 'Live Predictions', prematch: 'Pre-match Picks', trivia: 'Trivia & History', mix: 'Live Predictions, Pre-match, Trivia' };
+  const qMap = { live: 'Live Predictions', prematch: 'Pre-match Picks', mix: 'Live Predictions & Pre-match' };
   config.push({ label: 'Question Types', value: qMap[answers.questionTypes] || answers.questionTypes || 'Live Predictions' });
 
   // Size
