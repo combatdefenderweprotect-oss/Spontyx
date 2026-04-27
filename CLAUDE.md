@@ -1,6 +1,6 @@
 # Spontix — Project State & Developer Handoff
 
-Last updated 2026-04-28 — Pre-Match Scheduling system live (migration 018 ✅): automatic/manual modes, tier-gated offset pills in create-league.html, per-league visible_from in pool reuse. Cascade delete for leagues (migration 019 ✅): ON DELETE CASCADE on questions + league_members FKs, orphan cleanup SQL, deleteLeague() rewritten to cascade. Pre-match lifecycle UX: status strips (🔒 active, ⏳ closed), answer-change hint, "Your current pick" label, contextual toasts, result timing messaging. All migrations 001–019 run. Sidebar badges fully live. Discover filters DB-driven. Match Live quick-create live. Tier system v2 complete. Auth gate hardened. All advanced systems preserved intact for post-launch activation.
+Last updated 2026-04-28 — Pre-Match Scheduling system live (migration 018 ✅): automatic/manual modes, tier-gated offset pills in create-league.html, per-league visible_from in pool reuse. Cascade delete for leagues (migration 019 ✅): ON DELETE CASCADE on questions + league_members FKs, orphan cleanup SQL, deleteLeague() rewritten to cascade. Pre-match lifecycle UX: status strips (🔒 active, ⏳ closed), answer-change hint, "Your current pick" label, contextual toasts, result timing messaging. Pre-match generation fixes (v2.1 prompt): tighter automatic window (24h–48h band), DISTANT skip, PER_RUN_CAP bypassed for prematch, lineup filtered at >6h, full prematch question ruleset (8 rules: distribution, quality, context adaptation, team balance, player gate, resolvability, diversity, self-check). All migrations 001–019 run. Sidebar badges fully live. Discover filters DB-driven. Match Live quick-create live. Tier system v2 complete. Auth gate hardened. All advanced systems preserved intact for post-launch activation.
 
 ---
 
@@ -3334,3 +3334,68 @@ Files updated: `spontix-store.js` (TIER_LIMITS + 3 code checks), `league.html`, 
 | `voided` | any | `This question was voided and did not count.` (unchanged) |
 
 **No backend changes.** No DB schema modifications. No pipeline or resolver changes.
+
+---
+
+### 2026-04-28 — Pre-match generation fixes (v2.0) + prematch question ruleset (v2.1)
+
+**Goal 1 — Align prematch generation with intensity architecture (PROMPT_VERSION v2.0).**
+
+5 targeted fixes, no pipeline refactor:
+
+1. **`isMatchEligibleForPrematch()` — automatic window tightened**: was `≤48h`, now `24h–48h` band only. Late-creation fallback: if league was created after the normal window opened (within 24h of kickoff), allow generation immediately.
+2. **Hardcoded "exactly 5 questions" removed**: OpenAI prompt now reads `max_questions_allowed` from context. Default fallback = 4.
+3. **PER_RUN_CAP bypassed for prematch**: `checkQuota()` takes `isPrematch = false` parameter. When `isPrematch = true` (prematch call site), cap = `Infinity` — real cap is `min(weeklyRemaining, totalRemaining, prematch_question_budget)`. PER_RUN_CAP (3) unchanged for LIVE.
+4. **Lineup data filtered at 6h**: `context-builder.ts` now excludes confirmed starters/bench when `hoursUntilKickoff > 6`. Injuries/suspensions always included. Prevents OpenAI shying away from player questions when lineups aren't released yet.
+5. **DISTANT skip explicit**: index.ts hard-skips `classification === 'DISTANT'` with `skipReason: 'match_too_distant'` before quota check. Was previously only implicitly handled by the publish window filter.
+
+Also: `created_at` added to `LeagueWithConfig` and SELECT query (used by late-creation fallback).
+
+---
+
+**Goal 2 — Full prematch question ruleset (PROMPT_VERSION v2.1).**
+
+Replaced the 7-line PREMATCH prompt section with an 8-rule structured ruleset. No pipeline changes — prompt only.
+
+**Rule 1 — Question type distribution:**
+- 3 questions: outcome/state + match stat + player/team
+- 4 questions: outcome/state + goals/BTTS/clean sheet + player-specific + context-driven
+- 5+ questions: max 2 player-specific, max 2 outcome/state, ≥1 stat, ≥1 underdog/away angle
+- Never all same predicate type
+
+**Rule 2 — Quality filters:**
+- DO NOT: "Will there be a goal?", obvious winner when dominant favourite, unavailable player, >80% likely outcomes, subjective questions
+- DO prefer: over/under, BTTS, clean sheet, underdog resistance, H2H-informed, form-streak angles
+
+**Rule 3 — Match context adaptation:**
+- Close match → winner/draw/BTTS valid, difficulty 1.2×
+- Heavy favourite → no simple winner, ask "win by 2+?" / "underdog score?" / "clean sheet?", difficulty 1.5× for underdog angles
+- Rivalry/derby → cards, BTTS, both-teams-scoring, avoid clean sheet
+- Low-scoring teams → under 2.5, clean sheet, low totals
+- High-scoring teams → BTTS, over 2.5, player goals
+- Key player absent → team-impact question instead
+
+**Rule 4 — Team balance:**
+- ≥1 question covering the underdog or away team per set
+- Player questions not all from same team (unless team-scoped league)
+
+**Rule 5 — Player question gate:**
+- Only allowed when: player in context, not unavailable, not doubtful, stat is resolvable
+- Allowed stats: goals, assists, shots, cards, clean_sheet (GK only)
+- Forbidden for prematch: pass%, xG, distance, dribbles/tackles (rarely meaningful to fans)
+- Hard max: 2 player questions per set
+
+**Rule 6 — Resolvability gate:**
+- Every question must resolve from: final score, team match stats, player match stats, or official outcome
+- Forbidden: human judgment, betting settlement, post-kickoff news, unsupported stats, time-windowed player stats
+
+**Rule 7 — Diversity:**
+- No same predicate type more than twice in a set
+- No same player twice
+- No same stat focus twice
+- If 3+ questions would be obvious binary — make ≥1 multiple_choice
+
+**Rule 8 — Self-check before output:**
+- OpenAI instructed to internally verify each question against all rules before returning
+- Replace any failing question before output
+- Checks: type diversity, team coverage, player gate, obviousness, resolvability, team balance, heavy-favourite handling
