@@ -1,6 +1,6 @@
 # Spontix — Project State & Developer Handoff
 
-Last updated 2026-04-27 — Discover leagues now fetches from Supabase directly (newly created leagues appear immediately for all users). League owner can delete their league; members can leave — both via confirmation modal in Settings tab. Join a League button added to My Leagues header. Tier badge no longer shows price. Match Live quick-create button live. Tier system v2 complete. Player availability filtering live. Auth gate hardened. Live & Activity page fully dynamic. Username system live. Beta access flow live. Full end-to-end simulation verified. Football only. Max 2 active questions. Three-lane question architecture locked. All advanced systems preserved intact for post-launch activation.
+Last updated 2026-04-27 — Sidebar badges fully live: My Leagues shows real active league count; Your Games shows two badges (red = live matches happening now, orange = unanswered questions). Discover filters now DB-driven (Sport/Competition/Team from real Supabase data); all fake static browse cards removed. Discover leagues now fetches from Supabase directly (newly created leagues appear immediately for all users). League owner can delete their league; members can leave — both via confirmation modal in Settings tab. Join a League button added to My Leagues header. Tier badge no longer shows price. Match Live quick-create button live. Tier system v2 complete. Auth gate hardened. Live & Activity page fully dynamic. Username system live. Beta access flow live. Full end-to-end simulation verified. Football only. Max 2 active questions. Three-lane question architecture locked. All advanced systems preserved intact for post-launch activation.
 
 ---
 
@@ -1842,7 +1842,7 @@ See `supabase/functions/generate-questions/DEPLOY.md` for the full checklist inc
 **Arena venue owned by:** `f901f211-738e-4409-abfd-8e1a9fb4bffb` (utis.richard@gmail.com)
 
 **Resume prompt for a fresh Claude session:**
-> "Continue Spontix development. Read `CLAUDE.md` for full context. Also read `SESSION_CONTINUATION_DESIGN.txt` before working on anything related to live questions, notifications, or the league question feed. Last completed: Discover leagues now fetches from Supabase directly so new leagues appear immediately. League owners can delete their league; members can leave — both via confirmation modal. Join a League button added to My Leagues. Tier badge no longer shows price. Next priorities: (1) Realtime subscription replacing polling in league.html — biggest single retention feature; (2) Stripe subscriptions replacing forced Elite tier; (3) GNews API key to activate news context in generation."
+> "Continue Spontix development. Read `CLAUDE.md` for full context. Also read `SESSION_CONTINUATION_DESIGN.txt` before working on anything related to live questions, notifications, or the league question feed. Last completed: Sidebar badges fully live — My Leagues shows real active league count, Your Games shows two badges (red for live matches, orange for unanswered questions). Discover filters now DB-driven from Supabase; all fake static cards removed. Next priorities: (1) Realtime subscription replacing polling in league.html — biggest single retention feature; (2) Stripe subscriptions replacing forced Elite tier; (3) GNews API key to activate news context in generation."
 
 ---
 
@@ -3045,3 +3045,74 @@ Files updated: `spontix-store.js` (TIER_LIMITS + 3 code checks), `league.html`, 
 - Added `<style>html{background:#1A1A2E;margin:0;padding:0}</style>` inline in `<head>` of all app pages — fires before Google Fonts and `styles.css`, guaranteeing the dark background is painted on frame zero with no white/black gap between page navigations.
 - Added `<meta name="view-transition" content="same-origin">` to all pages — enables native browser cross-fade between same-origin pages in Chrome/Safari with no JavaScript required.
 - Added `animation: page-enter 120ms ease` to `body` in `styles.css` for a smooth fade-in on every page load.
+
+---
+
+### 2026-04-27 — Discover filters: DB-driven Sport/Competition/Team + fake cards removed
+
+**Problem:** All 3 filter dropdowns in `discover.html` referenced data that didn't exist in the DB (Region: Europe/NA/etc.; Sport: basketball/tennis/F1/rugby; Team: Real Madrid/Lakers). Every league defaulted to `region = 'Europe'` so the Region filter showed all leagues regardless. 12 static browse cards and 2 promoted cards showed fake non-existent leagues.
+
+**`discover.html` — filter bar rewritten:**
+- **Sport dropdown** — populated from `sports_competitions.sport` (distinct values, deduplicated)
+- **Competition dropdown** — populated from `api_sports_league_id` values on real leagues, joined to `sports_competitions` for names; hidden if no competition data exists
+- **Team dropdown** — populated from `scoped_team_name` values on real team-scoped leagues; hidden if no team-scoped leagues exist
+- Old **Region** dropdown removed entirely (no DB backing; was broken)
+- New `populateFilters(leagues, competitions)` function builds `window._compMap` (`api_league_id → {name, sport}`) and fills all three dropdowns in one pass
+- `hydrateDiscover()` now fetches `sports_competitions` in parallel with `getDiscoverLeagues()` via `Promise.all`
+
+**`discover.html` — filter logic updated:**
+- `filterLeagues()` replaces `data-region` check with `data-competition` check
+- `createLeagueCard()` sets `div.dataset.competition = league.apiSportsLeagueId` and `div.dataset.team = league.scopedTeamName.toLowerCase()`
+- Competition name tag on each card now reads from `_compMap` instead of hardcoded strings
+- `scopedTeamName` used (correct DB column) instead of old `league.team` (legacy/empty)
+
+**Static content removed:**
+- All 12 hardcoded browse cards (`browseGrid`) removed — `<!-- populated dynamically -->`
+- Both promoted cards (`promotedGrid`) removed — `<!-- populated dynamically -->`
+- Result count initial value changed from `"12"` to `"0"` (reflects real loaded count)
+
+---
+
+### 2026-04-27 — Sidebar: My Leagues badge live (real active league count)
+
+**`sidebar.js` — `playerNav` My Leagues item:**
+- Removed `badge: '3', badgeClass: 'lime'` (hardcoded)
+- New `updateLeagueBadge()` async IIFE runs after `init()` renders the sidebar
+
+**Badge logic:**
+- Fetches all active leagues owned by the user (`leagues WHERE owner_id = uid AND status = 'active'`) → `ownedIds` Set
+- Fetches all `league_members` rows for the user → filters out owned IDs → `joinedOnlyIds`
+- Counts active joined-only leagues from Supabase (separate query with `.in()` filter)
+- Total = `ownedIds.size + joinedActiveCount`
+- Badge hidden when total = 0; shows lime badge otherwise
+
+**Bug fixed (owner double-counting):** when a user creates a league they are added to both `leagues.owner_id` AND `league_members`. Naive count of member rows double-counted owned leagues. Fix: filter `league_members` rows against `ownedIds` Set before counting joined leagues.
+
+---
+
+### 2026-04-27 — Sidebar: Your Games badge live (unanswered questions count)
+
+**`sidebar.js` — `playerNav` Your Games item:**
+- Removed `badge: '2'` (hardcoded)
+- New `updateGamesBadge()` async IIFE runs after `init()`
+
+**Badge logic (initial version — single coral badge):**
+- Collects all league IDs the user is in (member + owned, deduplicated)
+- Queries open questions in those leagues (answer window still open, not resolved/voided)
+- Queries `player_answers` to find which questions the user has already answered
+- Counts unanswered = open questions minus answered ones
+- Badge hidden when count = 0; shows coral badge with count otherwise
+
+---
+
+### 2026-04-27 — Sidebar: Your Games split into two badges (red + orange)
+
+**Problem:** A single coral badge couldn't communicate the difference between "a match is live RIGHT NOW" and "you have pre-match questions to answer" — two distinct urgency levels that match the two sections on `activity.html`.
+
+**`sidebar.js` — `updateGamesBadge()` rewritten:**
+- Query expanded: open questions now also fetch `question_type`, `match_minute_at_generation`, `match_id`, `league_id`
+- **Red badge (`badge coral`)** — counts distinct live matches: groups open questions by `match_id` (or `league_id` fallback) where `question_type = 'CORE_MATCH_LIVE'` or `match_minute_at_generation != null`. Each unique match key = 1. Matches the "Live Now" section on `activity.html`.
+- **Orange badge (inline style `#FF9F43`)** — counts total unanswered open questions across all types (all questions not in `answeredIds`). Matches the "Unanswered Questions" section on `activity.html`.
+- Both badges cleared and re-injected on every page load (no stale state)
+- Either badge hidden if its count is 0; both can appear simultaneously
+- Badges stack next to each other on the nav item (right-aligned after label text)
