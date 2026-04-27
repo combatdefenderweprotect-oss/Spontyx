@@ -16,7 +16,7 @@ const SpontixSidebar = {
     { label: 'Create League', href: 'create-league.html', icon: '<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>' },
 
     { section: 'Live' },
-    { label: 'Your Games', href: 'activity.html', icon: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>', badge: '2' },
+    { label: 'Your Games', href: 'activity.html', icon: '<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>' },
     { label: 'Schedule', href: 'upcoming.html', icon: '<rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>' },
     { label: 'Browse Matches', href: 'matches.html', icon: '<rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/><line x1="12" y1="12" x2="12" y2="12.01"/>' },
     { label: 'Venues & Bars', href: 'venues.html', icon: '<path d="M3 21h18"/><path d="M5 21V7l8-4 8 4v14"/><path d="M9 21v-4h6v4"/><rect x="9" y="9" width="2" height="2"/><rect x="13" y="9" width="2" height="2"/><rect x="9" y="13" width="2" height="2"/><rect x="13" y="13" width="2" height="2"/>' },
@@ -270,6 +270,63 @@ const SpontixSidebar = {
           }
           badge.textContent = String(total);
         } catch (e) { /* silent — badge stays hidden if query fails */ }
+      })();
+    }
+
+    // Async: update Your Games badge with count of unanswered open questions
+    if (!isVenue) {
+      (async function updateGamesBadge() {
+        try {
+          if (typeof window === 'undefined' || !window.sb) return;
+          const uid = (typeof SpontixStore !== 'undefined' && SpontixStore.Session)
+            ? SpontixStore.Session.getCurrentUserId() : null;
+          if (!uid) return;
+
+          const now = new Date().toISOString();
+
+          // All league IDs the user is in (member + owned, deduplicated)
+          const [{ data: memberRows }, { data: ownedRows }] = await Promise.all([
+            window.sb.from('league_members').select('league_id').eq('user_id', uid),
+            window.sb.from('leagues').select('id').eq('owner_id', uid).eq('status', 'active')
+          ]);
+          const leagueIds = [...new Set([
+            ...(memberRows || []).map(r => r.league_id),
+            ...(ownedRows  || []).map(r => r.id)
+          ])];
+          if (!leagueIds.length) return;
+
+          // Open questions in those leagues (live or pre-match, window still open)
+          const { data: openQs } = await window.sb
+            .from('questions')
+            .select('id')
+            .in('league_id', leagueIds)
+            .neq('resolution_status', 'resolved')
+            .neq('resolution_status', 'voided')
+            .or(`answer_closes_at.gt.${now},deadline.gt.${now}`);
+          if (!openQs || openQs.length === 0) return;
+
+          // Which of those has the user already answered?
+          const { data: answered } = await window.sb
+            .from('player_answers')
+            .select('question_id')
+            .eq('user_id', uid)
+            .in('question_id', openQs.map(q => q.id));
+          const answeredIds = new Set((answered || []).map(a => a.question_id));
+
+          const unanswered = openQs.filter(q => !answeredIds.has(q.id)).length;
+          if (unanswered === 0) return;
+
+          // Inject/update badge on the Your Games link
+          const gamesLink = document.querySelector('a[href="activity.html"]');
+          if (!gamesLink) return;
+          let badge = gamesLink.querySelector('.badge');
+          if (!badge) {
+            badge = document.createElement('span');
+            badge.className = 'badge coral';
+            gamesLink.appendChild(badge);
+          }
+          badge.textContent = String(unanswered);
+        } catch (e) { /* silent */ }
       })();
     }
 
