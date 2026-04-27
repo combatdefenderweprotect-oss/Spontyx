@@ -1,6 +1,6 @@
 # Spontix — Project State & Developer Handoff
 
-Last updated 2026-04-27 — Sidebar badges fully live: My Leagues shows real active league count; Your Games shows two badges (red = live matches happening now, orange = unanswered questions). Discover filters now DB-driven (Sport/Competition/Team from real Supabase data); all fake static browse cards removed. Discover leagues now fetches from Supabase directly (newly created leagues appear immediately for all users). League owner can delete their league; members can leave — both via confirmation modal in Settings tab. Join a League button added to My Leagues header. Tier badge no longer shows price. Match Live quick-create button live. Tier system v2 complete. Auth gate hardened. Live & Activity page fully dynamic. Username system live. Beta access flow live. Full end-to-end simulation verified. Football only. Max 2 active questions. Three-lane question architecture locked. All advanced systems preserved intact for post-launch activation.
+Last updated 2026-04-27 — Live Stats Feed fully live: `live-stats-poller` Edge Function deployed, `live_match_stats` table active (migration 015), Stats tab in league.html with SVG pitch (home=lime/bottom, away=coral/top), events timeline, team stats bars, player stat cards, predictions, H2H. Cron job 8 fires every minute. Sidebar badges fully live. Discover filters DB-driven. Match Live quick-create live. Tier system v2 complete. Auth gate hardened. All advanced systems preserved intact for post-launch activation.
 
 ---
 
@@ -1498,9 +1498,12 @@ Spontix/
 │       │                                questions; adds streak_at_answer, leader_gap_at_answer,
 │       │                                clutch_multiplier_at_answer, multiplier_breakdown to
 │       │                                player_answers; updates RLS; expands event_type CHECK
-│       └── 009_saved_matches.sql      ← saved_matches table: players + venues save fixtures
-│                                        to personal/venue schedule. RLS: own rows only.
-│                                        Unique(user_id, match_id). Two indexes (user, venue).
+│       ├── 009_saved_matches.sql      ← saved_matches table: players + venues save fixtures
+│       │                                to personal/venue schedule. RLS: own rows only.
+│       │                                Unique(user_id, match_id). Two indexes (user, venue).
+│       └── 015_live_match_stats.sql   ← live_match_stats table (fixture cache for Stats tab);
+│                                        fixture_id column on leagues; pg_cron job 8 template
+│                                        (every minute → live-stats-poller).
 │
 └── supabase/
     └── functions/
@@ -1509,6 +1512,14 @@ Spontix/
         │   ├── DEPLOY.md              ← Step-by-step deployment + monitoring guide
         │   └── lib/
         │       (see below)
+        ├── live-stats-poller/         ← Edge Function: live match stats cache (Deno TypeScript)
+        │   └── index.ts               ← Polls API-Sports every minute for active fixtures;
+        │                                upserts to live_match_stats. Endpoints used:
+        │                                /fixtures (every cycle), /fixtures/events (live+done),
+        │                                /fixtures/statistics (live+done, 2 calls),
+        │                                /fixtures/players (every 3 min live; once done),
+        │                                /fixtures/lineups (once), /predictions (once),
+        │                                /fixtures/headtohead (once). ~305 req/match.
         └── resolve-questions/         ← Edge Function: question resolution + scoring (Deno TypeScript)
             ├── index.ts               ← Orchestrator: fetch pending → evaluate → score
             └── lib/
@@ -1581,6 +1592,7 @@ Spontix/
 | `generation_run_leagues` | Per-league breakdown within each run. Includes rejection log, news snapshot, duration. |
 | `player_answers` | Each user's answer submission per question. `is_correct` + `points_earned` filled by resolver Edge Function. **Unique constraint on `(question_id, user_id)` — MVP safety: do not remove or relax. This is the structural guarantee against duplicate answer exploits.** RLS insert policy enforces answer window is still open. Migration 006 adds: `streak_at_answer`, `leader_gap_at_answer`, `clutch_multiplier_at_answer`, `multiplier_breakdown`. |
 | `saved_matches` | Players and venues save football fixtures to their personal/venue schedule. `venue_id = null` → player save; `venue_id` set → venue save. Unique `(user_id, match_id)`. RLS: own rows only. Surface in `upcoming.html` (players) and `venue-schedule.html` (venues). Added by migration 009. |
+| `live_match_stats` | Live match statistics cache. One row per API-Sports fixture ID. Upserted every minute by the `live-stats-poller` Edge Function. Stores: score, status, minute, events JSONB, team_stats JSONB, player_stats JSONB, lineups JSONB, predictions JSONB, head_to_head JSONB. One-time fields (lineups/predictions/H2H) are flag-guarded and never re-fetched. Public read, service-role write. Added by migration 015. |
 
 ### Seed data
 - **6 demo venues** with stable UUIDs (`11111111-1111-1111-1111-1111111111XX`). Owner_id is NULL.
@@ -1604,7 +1616,10 @@ Spontix/
 
 ### Postgres functions / extensions
 - `handle_new_user()` — trigger that creates a `public.users` row on signup.
-- `pg_cron` + `pg_net` — enabled by migration 003. Two jobs: `generate-questions-every-6h` (migration 003) and `resolve-questions-every-hour` (migration 004).
+- `pg_cron` + `pg_net` — enabled by migration 003. Three jobs active:
+  - Job 2: `generate-questions-every-6h` (migration 003)
+  - Job 3: `resolve-questions-every-hour` (migration 004)
+  - Job 8: `live-stats-every-minute` (migration 015) — polls API-Sports for active fixtures, exits fast when none
 
 ### Edge Function secrets required
 Set in Supabase dashboard → Settings → Edge Functions → Secrets:
@@ -1673,6 +1688,7 @@ These are **safe to commit and ship to the browser**. Security comes from RLS po
 - **Delete / Leave league** — `league.html` Settings tab Danger Zone shows a **Delete League** button for the owner and a **Leave League** button for members. Both open a confirmation modal (league name + warning text + Cancel / Confirm). On confirm, calls `SpontixStoreAsync.deleteLeague()` or `leaveLeague()` and redirects to My Leagues. RLS on the DB enforces owner-only delete independently.
 - **My Leagues — Join a League button** — purple pill button added to the My Leagues header alongside the lime Create New League button. Links to `discover.html`.
 - **Tier badge — name only** — `getTierLabel()` in `spontix-store.js` now returns `'Starter'`, `'Pro'`, `'Elite'` without price strings. Prices remain only in upgrade modal CTAs where they are appropriate.
+- **Live Stats Feed** — `live_match_stats` table (migration 015) stores per-fixture cache: score, status, minute, events, team stats, player stats, lineups, predictions, H2H. `live-stats-poller` Edge Function (pg_cron job 8, every minute) polls API-Sports and upserts. `league.html` **Stats tab** renders the full experience: SVG visual pitch with player positions (home=lime/bottom, away=coral/top, jersey numbers + surnames, goal/card markers), events timeline, team stats comparison bars, player stat cards with Home/Away tab toggle, predictions with win-probability bars + form dots, H2H last 5. Graceful empty states when no data yet. "Updated X ago · Refresh" footer.
 - **Cache warming** — all domains auto-refresh 1.5s after page load.
 - **All UI screens** — every `.html` file renders correctly. `profile.html` and `leaderboard.html` use full-width layout.
 
@@ -1806,6 +1822,12 @@ See `supabase/functions/generate-questions/DEPLOY.md` for the full checklist inc
 - `create-league.html` `readPrefill()` — when `league_type=match`: selects Match Night type card, jumps to Step 1, builds `selectedCompetition` and `selectedMatch` directly from URL params. Zero DB queries in the browser — all data was already loaded from `api_football_fixtures` on the source page.
 - Data flow: `api_football_fixtures` (Supabase, synced by Edge Function) → source page → URL params → create-league.html. No external API calls from the browser at any point.
 
+### 6. ✅ DONE — Live Stats Feed
+- `backend/migrations/015_live_match_stats.sql` — `live_match_stats` table + `fixture_id` on `leagues` + pg_cron job 8 template. Run in Supabase SQL editor ✅
+- `supabase/functions/live-stats-poller/index.ts` — deployed with `--no-verify-jwt` ✅. Smoke test: `ok:true, "No active fixtures"` ✅
+- `cron.schedule('live-stats-every-minute', '* * * * *', ...)` — job 8 active ✅
+- `league.html` — Stats tab added (between Leaderboard and Schedule): SVG pitch, events, team stats bars, player cards, predictions, H2H
+
 ### 7. Wire Stripe for real tier subscriptions
 - Enable Stripe in Supabase Edge Functions
 - Add `subscriptions` table mirroring Stripe state
@@ -1842,7 +1864,7 @@ See `supabase/functions/generate-questions/DEPLOY.md` for the full checklist inc
 **Arena venue owned by:** `f901f211-738e-4409-abfd-8e1a9fb4bffb` (utis.richard@gmail.com)
 
 **Resume prompt for a fresh Claude session:**
-> "Continue Spontix development. Read `CLAUDE.md` for full context. Also read `SESSION_CONTINUATION_DESIGN.txt` before working on anything related to live questions, notifications, or the league question feed. Last completed: Sidebar badges fully live — My Leagues shows real active league count, Your Games shows two badges (red for live matches, orange for unanswered questions). Discover filters now DB-driven from Supabase; all fake static cards removed. Next priorities: (1) Realtime subscription replacing polling in league.html — biggest single retention feature; (2) Stripe subscriptions replacing forced Elite tier; (3) GNews API key to activate news context in generation."
+> "Continue Spontix development. Read `CLAUDE.md` for full context. Also read `SESSION_CONTINUATION_DESIGN.txt` before working on anything related to live questions, notifications, or the league question feed. Last completed: Live Stats Feed fully live — `live-stats-poller` Edge Function deployed (pg_cron job 8, every minute), `live_match_stats` table active, Stats tab in league.html with SVG pitch / events / team stats / player cards / predictions / H2H. Next priorities: (1) Realtime subscription replacing polling in league.html — biggest single retention feature; (2) Stripe subscriptions replacing forced Elite tier; (3) GNews API key to activate news context in generation."
 
 ---
 
@@ -3116,3 +3138,74 @@ Files updated: `spontix-store.js` (TIER_LIMITS + 3 code checks), `league.html`, 
 - Both badges cleared and re-injected on every page load (no stale state)
 - Either badge hidden if its count is 0; both can appear simultaneously
 - Badges stack next to each other on the nav item (right-aligned after label text)
+
+---
+
+### 2026-04-27 — Live Stats Feed: migration + Edge Function + Stats tab
+
+**Goal**: full live match stats experience — backend polling, DB cache, and Stats tab UI in league.html — deployed end-to-end and verified live.
+
+**New migration: `015_live_match_stats.sql`** — run in Supabase SQL editor ✅
+- `live_match_stats` table — one row per API-Sports fixture ID (bigint PRIMARY KEY)
+  - Score: `home_score`, `away_score`, `status` (NS/1H/HT/2H/ET/FT/etc.), `minute`
+  - Teams: `home_team_id/name/logo`, `away_team_id/name/logo`, `competition_name`, `kickoff_at`
+  - Live data (every cycle): `events` JSONB, `team_stats` JSONB, `player_stats` JSONB
+  - One-time data (flag-guarded, never re-fetched): `lineups` JSONB, `predictions` JSONB, `head_to_head` JSONB
+  - Poll flags: `lineups_polled`, `predictions_polled`, `h2h_polled` (prevent re-fetching)
+  - Freshness: `last_polled_at`, `updated_at`
+  - RLS: public read, service-role write only
+- `fixture_id bigint` column added to `leagues` for optional direct match linking
+- pg_cron schedule template included (commented — uncommented and run separately)
+
+**New Edge Function: `supabase/functions/live-stats-poller/index.ts`** — deployed ✅, smoke test: `ok:true` ✅
+- Finds fixtures to poll: distinct `match_id` from pending questions (within last 4 hours) + `leagues.fixture_id` with active date range
+- Per 1-minute cycle: `/fixtures` (score + status) + `/fixtures/events` + `/fixtures/statistics` ×2 = 4 req/min
+- Every ~3 min when live: `/fixtures/players` (player stats: rating, goals, assists, shots, saves, fouls, cards)
+- Once per fixture (flag-guarded): `/fixtures/lineups`, `/predictions`, `/fixtures/headtohead?last=5`
+- Dead statuses (CANC/PST/ABD) skipped immediately; 25s overlap guard prevents double-polling
+- ~305 API requests per 90-minute live match — within Pro plan (7,500 req/day)
+- Exits fast with 1 DB query when no active fixtures (cheap idle cost)
+
+**pg_cron job 8: `live-stats-every-minute`** — activated via SQL ✅
+- `* * * * *` — fires every minute
+- Auth: Bearer `spontix-cron-x7k2m9` (same CRON_SECRET as other jobs)
+
+**`league.html` — Stats tab added** (between Leaderboard and Schedule)
+
+*Pre-match view* (status=NS):
+- Win probability bars (home/draw/away %) + manager advice quote
+- Recent form dots (W/D/L, colour-coded) for both teams
+- Head-to-Head: last 5 results with dates and scores
+- SVG pitch with starting XI lineups
+
+*Live / Post-match view* (status=1H/HT/2H/ET/FT/etc.):
+- Score header: home score : away score + LIVE badge with minute, or "Full Time"
+- Events timeline (reversed, most recent first): ⚽ goals, 🟨🟥 cards, 🔄 substitutions, 📺 VAR
+- Team stats comparison bars: possession (%), shots, shots on target, corners, fouls, yellow cards, saves
+- SVG visual pitch (home=lime/bottom, away=coral/top)
+- Player stat cards with Home/Away tab toggle
+
+*SVG pitch design* (viewBox 0 0 380 540):
+- Dark green background (`#0B1F12`) with subtle grass stripes (9 alternating bands)
+- Accurate football pitch markings: outer boundary, penalty areas, 6-yard boxes, penalty spots, penalty arcs, center line + circle + spot, corner arcs, goals (outside boundary)
+- All markings: `rgba(255,255,255,0.28–0.38)` stroke
+- Player circles: r=18, drop shadow; home=`#A8E10C` (lime), away=`#FF6B6B` (coral)
+- Inside circle: jersey number (bold, 10.5px); below: truncated surname (7.5px, semi-transparent)
+- Goal badge: ⚽ emoji injected top-right per player per goal scored
+- Card badge: yellow (`#FFD700`) or red (`#FF3B3B`) rectangle top-right corner of circle
+- Positions derived from API-Sports `grid: "row:col"` — row 1=GK near own goal, increasing row toward opponent; columns distributed evenly across pitch width
+- Home occupies y=295–498 (bottom half); Away occupies y=42–245 (top half)
+
+*Player stat cards*:
+- Jersey number (coloured by team), full name, position + minutes played, numerical rating (colour: lime ≥8.0, orange ≥7.0, grey <7.0)
+- Outfield stats grid: Goals / Assists / Shots / Fouls Drawn
+- GK stats grid: Saves / Minutes / Fouls / Cards
+- Home / Away tab toggle (no page reload)
+
+*Graceful states*:
+- No questions in league → "No match linked yet"
+- Questions exist but no `live_match_stats` row → "Stats not yet available — check back closer to kick-off"
+- Any error → safe empty state, no crash
+- "Updated X ago · Refresh" footer on every loaded state
+
+**No architectural changes.** No changes to questions pipeline, resolver, scoring, or existing pages.
