@@ -1,6 +1,6 @@
 # Spontix — Project State & Developer Handoff
 
-Last updated 2026-04-27 — Live Stats Feed fully live: `live-stats-poller` Edge Function deployed, `live_match_stats` table active (migration 015), Stats tab in league.html with SVG pitch (home=lime/bottom, away=coral/top), events timeline, team stats bars, player stat cards, predictions, H2H. Cron job 8 fires every minute. Sidebar badges fully live. Discover filters DB-driven. Match Live quick-create live. Tier system v2 complete. Auth gate hardened. All advanced systems preserved intact for post-launch activation.
+Last updated 2026-04-28 — Pre-Match Scheduling system live (migration 018 ✅): automatic/manual modes, tier-gated offset pills in create-league.html, per-league visible_from in pool reuse. Cascade delete for leagues (migration 019 ✅): ON DELETE CASCADE on questions + league_members FKs, orphan cleanup SQL, deleteLeague() rewritten to cascade. Pre-match lifecycle UX: status strips (🔒 active, ⏳ closed), answer-change hint, "Your current pick" label, contextual toasts, result timing messaging. All migrations 001–019 run. Sidebar badges fully live. Discover filters DB-driven. Match Live quick-create live. Tier system v2 complete. Auth gate hardened. All advanced systems preserved intact for post-launch activation.
 
 ---
 
@@ -482,6 +482,9 @@ Rules:
 | AI Real World Questions (generation pipeline) | ✅ Live — fires every 6h via pg_cron. `OPENAI_API_KEY` + `API_SPORTS_KEY` active. First run generated 6 real questions from live fixtures. |
 | AI question resolver (auto-scoring pipeline) | ✅ Deployed + verified — fires every hour via pg_cron. Returns `ok:true`. Scores `player_answers` when questions resolve. |
 | league.html — dynamic question feed + leaderboard | ✅ Fully Supabase-backed — questions, members, answers, lazy leaderboard |
+| Pre-match scheduling (migration 018) | ✅ Live — automatic/manual modes; tier-gated offset pills (Pro: 24h/12h, Elite: 48h/24h/12h/6h); Edge Function respects publish window; pool reuse recomputes per-league visible_from |
+| League cascade delete (migration 019) | ✅ Live — ON DELETE CASCADE on questions + league_members FKs; orphan questions cleaned up; deleteLeague() cascades at JS layer too |
+| Pre-match question lifecycle UX | ✅ Live — status strips (🔒 active / ⏳ closed), answer-change hint, "Your current pick" label, contextual toasts, result timing messaging in league.html |
 
 ---
 
@@ -1864,7 +1867,7 @@ See `supabase/functions/generate-questions/DEPLOY.md` for the full checklist inc
 **Arena venue owned by:** `f901f211-738e-4409-abfd-8e1a9fb4bffb` (utis.richard@gmail.com)
 
 **Resume prompt for a fresh Claude session:**
-> "Continue Spontix development. Read `CLAUDE.md` for full context. Also read `SESSION_CONTINUATION_DESIGN.txt` before working on anything related to live questions, notifications, or the league question feed. Last completed: Live Stats Feed fully live — `live-stats-poller` Edge Function deployed (pg_cron job 8, every minute), `live_match_stats` table active, Stats tab in league.html with SVG pitch / events / team stats / player cards / predictions / H2H. Next priorities: (1) Realtime subscription replacing polling in league.html — biggest single retention feature; (2) Stripe subscriptions replacing forced Elite tier; (3) GNews API key to activate news context in generation."
+> "Continue Spontix development. Read `CLAUDE.md` for full context. Also read `SESSION_CONTINUATION_DESIGN.txt` before working on anything related to live questions, notifications, or the league question feed. Last completed: Pre-match scheduling system live (migration 018 ✅) — automatic/manual modes, tier-gated offset pills, per-league visible_from in pool reuse. Cascade delete for leagues (migration 019 ✅) — ON DELETE CASCADE on questions + league_members, orphan cleanup, deleteLeague() rewritten. Pre-match lifecycle UX in league.html — status strips, answer-change hint, current pick label, contextual toasts, result timing messaging. All migrations 001–019 run. Next priorities: (1) Realtime subscription replacing polling in league.html — biggest single retention feature; (2) Stripe subscriptions replacing forced Elite tier; (3) GNews API key to activate news context in generation."
 
 ---
 
@@ -3184,9 +3187,9 @@ Files updated: `spontix-store.js` (TIER_LIMITS + 3 code checks), `league.html`, 
 **`docs/TIER_ARCHITECTURE.md`:** new `## Pre-Match Scheduling System (migration 018)` section + enforcement status entries
 
 **Post-implementation checklist:**
-1. Run `018_prematch_schedule.sql` in Supabase SQL editor
-2. Deploy Edge Function: `supabase functions deploy generate-questions --no-verify-jwt`
-3. Verify with smoke test: `curl -X GET .../functions/v1/generate-questions -H "Authorization: Bearer spontix-cron-x7k2m9"` → `ok:true`
+1. ✅ Run `018_prematch_schedule.sql` in Supabase SQL editor — done 2026-04-28
+2. ✅ Deploy Edge Function: `supabase functions deploy generate-questions --no-verify-jwt` — deployed
+3. ✅ Verify with smoke test — `ok:true` confirmed
 
 ---
 
@@ -3258,3 +3261,76 @@ Files updated: `spontix-store.js` (TIER_LIMITS + 3 code checks), `league.html`, 
 - "Updated X ago · Refresh" footer on every loaded state
 
 **No architectural changes.** No changes to questions pipeline, resolver, scoring, or existing pages.
+
+---
+
+### 2026-04-28 — Cascade delete for leagues (migration 019)
+
+**Problem:** `deleteLeague()` only deleted the `leagues` row. Questions tied to that league remained with `resolution_status = 'pending'`, causing the `live-stats-poller` Edge Function to keep hitting API-Sports every minute for fixtures belonging to deleted leagues. Identified when fixture 1391132 (Espanyol vs Levante) was still being polled after its league was deleted via the Settings → Danger Zone UI.
+
+**Root cause:** no FK cascade on `questions.league_id` or `league_members.league_id`.
+
+**`backend/migrations/019_cascade_delete_questions.sql`** — run ✅:
+- `UPDATE questions SET resolution_status = 'voided' WHERE resolution_status = 'pending' AND league_id NOT IN (SELECT id FROM leagues)` — void orphaned pending questions
+- `DELETE FROM player_answers WHERE question_id IN (SELECT id FROM questions WHERE league_id NOT IN ...)` — clean orphaned answers
+- `DELETE FROM questions WHERE league_id NOT IN (SELECT id FROM leagues)` — remove orphaned questions
+- Drops and re-adds `questions_league_id_fkey` WITH `ON DELETE CASCADE`
+- Drops and re-adds `league_members_league_id_fkey` WITH `ON DELETE CASCADE`
+
+**`spontix-store.js` — `deleteLeague()` rewritten:**
+- Now explicitly cascades in JS before the leagues row delete (defense in depth alongside DB cascade):
+  1. Void pending questions for the league
+  2. Delete `player_answers` for all question IDs in the league
+  3. Delete all questions for the league
+  4. Delete all `league_members` rows for the league
+  5. Delete the `leagues` row
+- Previously: only step 5 existed
+
+**Why both layers:** DB cascade handles any future deletion path (direct SQL, admin tools, future code). JS cascade ensures proper cleanup order and audit trail in the application layer.
+
+---
+
+### 2026-04-28 — Pre-match question lifecycle UX (league.html)
+
+**Goal:** make the pre-match question experience self-explanatory. Users needed to understand: when they can answer, that they can change answers, when answering locks, and when results appear. No logic changes — CSS and rendering only.
+
+**New CSS (before RIGHT COLUMN section):**
+- `.pm-status-strip` — base strip with flex + border-radius; two variants: `.pm-active` (lime tint) and `.pm-closed` (grey tint)
+- `.current-pick-label` — small grey hint below option buttons
+
+**`renderQuestionCard()` additions:**
+
+*Pre-match status strip (`pmStatusHtml`):*
+- `lane === 'PREMATCH'` + `state === 'active'` → lime strip: `🔒 Answers lock at kickoff · You can change your answer until then`
+- `lane === 'PREMATCH'` + `state === 'closed'` → grey strip: `⏳ Answering closed · Results after the match ends (~2–3h after kickoff)`
+- Injected between `rwSource` and `question-text` so it's the first thing read after the type badge
+
+*Current pick label (`currentPickHtml`):*
+- Shown when: PREMATCH + active + user has already submitted an answer
+- Text: `Your current pick — tap any option to change`
+- Injected between `bodyHtml` (options) and `multHtml`
+
+*Footer for PREMATCH closed state:*
+- Was: `Awaiting match result...`
+- Now: `Match in progress · results will appear once the match ends (~2–3h after kickoff)`
+- LIVE/REAL_WORLD closed state unchanged
+
+**`handleAnswer()` additions:**
+- `hadPreviousAnswer` captured before the local cache is updated (before upsert)
+- After successful upsert:
+  - Changed answer → toast: `Answer updated ✓`
+  - First PREMATCH answer → toast: `Answer saved · you can change it any time before kickoff`
+  - First LIVE answer → no toast (optimistic button highlight is sufficient for fast-moving live questions)
+
+**State → UI mapping (complete):**
+
+| State | Lane | What user sees |
+|---|---|---|
+| `active` | PREMATCH | Lime strip "Answers lock at kickoff" + timer + "Your current pick" if answered |
+| `active` | LIVE | Engagement badges (HIGH VALUE / CLUTCH / FAST) + timer bar — no lifecycle strip |
+| `closed` | PREMATCH | Grey strip "Answering closed · Results after match ends" + footer timing message |
+| `closed` | LIVE/RW | `Awaiting match result...` (unchanged) |
+| `resolved` | any | ✅/❌ + points + multiplier breakdown (unchanged) |
+| `voided` | any | `This question was voided and did not count.` (unchanged) |
+
+**No backend changes.** No DB schema modifications. No pipeline or resolver changes.
