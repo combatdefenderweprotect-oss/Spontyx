@@ -706,9 +706,8 @@
             <div style="margin-top:32px;padding-top:20px;border-top:1px solid rgba(255,255,255,0.06);">
               <h4 style="font-size:0.85rem;font-weight:700;color:var(--coral);margin-bottom:8px;">Danger Zone</h4>
               <p style="font-size:0.75rem;color:var(--grey);margin-bottom:12px;">These actions are permanent and cannot be undone.</p>
-              <div style="display:flex;gap:8px;">
-                <button style="padding:8px 16px;background:rgba(255,107,107,0.1);border:1px solid rgba(255,107,107,0.3);color:var(--coral);border-radius:var(--radius-sm);font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;">Archive League</button>
-                <button style="padding:8px 16px;background:none;border:1px solid rgba(255,255,255,0.1);color:var(--grey);border-radius:var(--radius-sm);font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;">Leave League</button>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;" id="danger-zone-btns">
+                <!-- Buttons injected by hydrateLeaguePage() based on ownership -->
               </div>
             </div>
           </div>
@@ -814,6 +813,19 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- Delete / Leave Confirmation Modal -->
+<div id="danger-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
+  <div style="background:var(--navy-card);border:1px solid rgba(255,107,107,0.3);border-radius:var(--radius-xl);padding:32px;max-width:400px;width:90%;margin:auto;">
+    <div style="font-size:2rem;margin-bottom:12px;" id="danger-icon">⚠️</div>
+    <h3 style="font-size:1.1rem;font-weight:800;margin-bottom:8px;" id="danger-title">Delete League?</h3>
+    <p style="font-size:0.85rem;color:var(--grey);margin-bottom:24px;line-height:1.5;" id="danger-body">This action is permanent and cannot be undone.</p>
+    <div style="display:flex;gap:10px;">
+      <button onclick="closeDangerModal()" style="flex:1;padding:12px;background:none;border:1px solid rgba(255,255,255,0.1);color:var(--grey);border-radius:var(--radius-md);font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;">Cancel</button>
+      <button id="danger-confirm-btn" style="flex:1;padding:12px;background:var(--coral);border:none;color:#fff;border-radius:var(--radius-md);font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;">Confirm</button>
+    </div>
+  </div>
+</div>
+
 <script src="utils.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="supabase-client.js"></script>
@@ -868,6 +880,59 @@ function copyInviteCode() {
   var code = document.getElementById('invite-code-display').textContent;
   if (!code || code === '—') return;
   navigator.clipboard.writeText(code).then(function() { showToast('Code copied!'); });
+}
+
+// ── Danger zone — delete / leave ─────────────────────
+function openDangerModal(icon, title, body, onConfirm) {
+  document.getElementById('danger-icon').textContent  = icon;
+  document.getElementById('danger-title').textContent = title;
+  document.getElementById('danger-body').textContent  = body;
+  var btn = document.getElementById('danger-confirm-btn');
+  btn.onclick = function() { closeDangerModal(); onConfirm(); };
+  var overlay = document.getElementById('danger-overlay');
+  overlay.style.display = 'flex';
+  overlay.onclick = function(e) { if (e.target === overlay) closeDangerModal(); };
+}
+function closeDangerModal() {
+  document.getElementById('danger-overlay').style.display = 'none';
+}
+
+function confirmDeleteLeague() {
+  if (!currentLeague) return;
+  openDangerModal(
+    '🗑️',
+    'Delete "' + (currentLeague.name || 'this league') + '"?',
+    'All questions, answers, and leaderboard data will be permanently deleted. This cannot be undone.',
+    async function() {
+      var btn = document.getElementById('danger-confirm-btn');
+      if (btn) { btn.textContent = 'Deleting…'; btn.disabled = true; }
+      var result = await SpontixStoreAsync.deleteLeague(currentLeagueId);
+      if (result.ok) {
+        showToast('League deleted');
+        setTimeout(function() { window.location = 'my-leagues.html'; }, 900);
+      } else {
+        showToast('Could not delete league: ' + (result.error || 'unknown error'));
+      }
+    }
+  );
+}
+
+function confirmLeaveLeague() {
+  if (!currentLeague) return;
+  openDangerModal(
+    '👋',
+    'Leave "' + (currentLeague.name || 'this league') + '"?',
+    'You will lose your progress and leaderboard position. You can rejoin later if the league is public.',
+    async function() {
+      var result = await SpontixStoreAsync.leaveLeague(currentLeagueId);
+      if (result && result.ok !== false) {
+        showToast('You left the league');
+        setTimeout(function() { window.location = 'my-leagues.html'; }, 900);
+      } else {
+        showToast('Could not leave league');
+      }
+    }
+  );
 }
 
 // ── Avatar helpers ────────────────────────────────────
@@ -1070,6 +1135,19 @@ async function hydrateLeaguePage() {
   // Invite card
   var codeEl = document.getElementById('invite-code-display');
   if (codeEl) codeEl.textContent = league.joinPassword || league.join_password || (league.type === 'public' ? 'Public' : '—');
+
+  // Danger zone — show Delete button for owner, Leave button for members
+  var dangerEl = document.getElementById('danger-zone-btns');
+  if (dangerEl) {
+    var isOwner = currentUserId && league.owner_id === currentUserId;
+    var btnHtml = '';
+    if (isOwner) {
+      btnHtml += '<button onclick="confirmDeleteLeague()" style="padding:8px 16px;background:rgba(255,107,107,0.12);border:1px solid rgba(255,107,107,0.35);color:var(--coral);border-radius:var(--radius-sm);font-size:0.75rem;font-weight:700;cursor:pointer;font-family:inherit;">🗑 Delete League</button>';
+    } else {
+      btnHtml += '<button onclick="confirmLeaveLeague()" style="padding:8px 16px;background:none;border:1px solid rgba(255,255,255,0.1);color:var(--grey);border-radius:var(--radius-sm);font-size:0.75rem;font-weight:600;cursor:pointer;font-family:inherit;">Leave League</button>';
+    }
+    dangerEl.innerHTML = btnHtml;
+  }
 
   await Promise.all([
     loadAndRenderQuestions(false),
