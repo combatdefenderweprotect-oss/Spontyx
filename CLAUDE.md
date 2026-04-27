@@ -1,6 +1,6 @@
 # Spontix — Project State & Developer Handoff
 
-Last updated 2026-04-24 — Player availability filtering live: generation pipeline now fetches fixture-specific injuries + lineups and blocks questions about unavailable players. Auth gate hardened: getUser() server-side validation prevents deleted accounts from remaining logged in indefinitely. Live & Activity page fully dynamic (real Supabase data, styled empty states). Dashboard alert + nav cards connected to real data (unanswered questions, league count, saved schedule). Username system live. Beta access flow live. Full end-to-end simulation verified (all 10 checkpoints passed). Football only. Max 2 active questions. Scoring simplified to base × time_pressure × streak (difficulty/comeback/clutch bypassed to 1.0 via MVP_BYPASS). Three-lane question architecture locked: CORE_MATCH_PREMATCH, CORE_MATCH_LIVE, REAL_WORLD. Save Match feature fully implemented (migration 009, store methods, matches.html, upcoming.html, venue-schedule.html, create-league.html prefill). league.html UI/UX upgrade complete: 3-lane type badges, timer progress bar, primary card hierarchy, Real World purple styling, leaderboard float notification, match context strip, multiplier breakdown display, glow/shake micro-animations. Pre-launch alignment complete and DEPLOYED: migration 010 run in Supabase — question_type column live, existing rows backfilled, index active. detectLane() now reads DB column directly for all questions; heuristic fallback is dead code. source_badge computed from lane on all new generation. All advanced systems preserved intact for post-launch activation.
+Last updated 2026-04-27 — Match Live quick-create button live on matches.html and upcoming.html: one click from any fixture card navigates directly to create-league.html with sport, competition, and match pre-filled from the database (no API calls in the browser). Tier system v2 complete: BR and trivia 3-way gate (Starter daily / Pro monthly / Elite fair-use cooldown), all tier limits Supabase-backed (no localStorage bypass), -1 replaces Infinity as unlimited sentinel. Player availability filtering live. Auth gate hardened: getUser() server-side validation prevents deleted accounts from remaining logged in indefinitely. Live & Activity page fully dynamic (real Supabase data, styled empty states). Dashboard alert + nav cards connected to real data (unanswered questions, league count, saved schedule). Username system live. Beta access flow live. Full end-to-end simulation verified (all 10 checkpoints passed). Football only. Max 2 active questions. Scoring simplified to base × time_pressure × streak (difficulty/comeback/clutch bypassed to 1.0 via MVP_BYPASS). Three-lane question architecture locked: CORE_MATCH_PREMATCH, CORE_MATCH_LIVE, REAL_WORLD. Save Match feature fully implemented. league.html UI/UX upgrade complete. Pre-launch alignment complete and DEPLOYED: migration 010 run in Supabase. All advanced systems preserved intact for post-launch activation.
 
 ---
 
@@ -1661,10 +1661,14 @@ These are **safe to commit and ship to the browser**. Security comes from RLS po
 - **AI question generation pipeline** — deployed, firing every 6h via pg_cron. Football only (MVP guard). Pool system active.
 - **AI question resolver pipeline** — deployed, firing every hour. Full scoring formula with MVP bypasses.
 - **league.html — live engine v2** — correct question state machine (visible_from / answer_closes_at / resolves_after with legacy deadline fallback), 5-second polling while active / 15-second idle, holding card when no active question, engagement badges (HIGH VALUE / CLUTCH / FAST), point range display per question, answer window enforcement client + server side, scoring multiplier capture (clutch, streak) at submission time, dynamic league activity card replacing static live match card.
-- **matches.html — Browse Matches** — real football fixtures from API-Sports via `questions` table; functional filters (competition, date); Save button (bookmark icon) on every card; post-save inline CTA ("Invite players" for players, "Create event" for venues); pre-loads saved state on page init.
-- **upcoming.html — Upcoming Matches** — player schedule from league membership + saved fixtures merged; deduplicates (league entry takes precedence); "⭐ Saved" filter chip; early-exit paths (no memberships, no football leagues, no questions) all show saved matches instead of empty state.
+- **matches.html — Browse Matches** — real football fixtures loaded directly from `api_football_fixtures` table (synced from API-Sports by Edge Function); functional filters (competition, date); Save button (bookmark icon) on every card; post-save inline CTA ("Invite players" / "Create event"); **Match Live button** — one click navigates to create-league.html with competition and fixture pre-filled from page data (zero extra DB queries); pre-loads saved state on page init.
+- **upcoming.html — Upcoming Matches** — player schedule from league membership + saved fixtures merged; deduplicates (league entry takes precedence); "⭐ Saved" filter chip; **Match Live button** on every fixture card; early-exit paths (no memberships, no football leagues, no questions) all show saved matches instead of empty state.
 - **venue-schedule.html** — week grid includes saved venue fixtures as lime-bordered "Match" cards alongside regular events; loaded async via `getSavedMatches({ venueId })`.
 - **Save Match feature (migration 009)** — `saved_matches` table + RLS; `SpontixStoreAsync.saveMatch`, `unsaveMatch`, `getSavedMatches` with localStorage fallback. Run `009_saved_matches.sql` in Supabase SQL editor to activate.
+- **Tier system v2** — Starter gets limited live access (3 LIVE answers per match, not locked out); Pro gets monthly caps (50 BR / 100 trivia); Elite gets fair-use cooldown model. All meaningful limits (leagueMaxPlayers, leaguesJoinMax, leaguesCreatePerWeek, liveQuestionsPerMatch, eventsPerMonth) now enforced via Supabase counts — not bypassable via localStorage. `-1` is the universal "unlimited" sentinel replacing `Infinity`.
+- **Battle Royale tier gate** — 3-way gate: Starter daily counter (`spontix_br_day_*`), Pro monthly counter (`spontix_br_month_*`), Elite fair-use cooldown (`spontix_br_cooldown`). Cooldown resets to 20s on victory (was 30s at game start).
+- **Trivia tier gate** — same 3-way pattern: Starter daily, Pro monthly (100/month), Elite fair-use. Cooldown resets on results screen.
+- **Match Live quick-create** — `matches.html` and `upcoming.html` both have a coral "Match Live" button on every fixture card. Clicking it navigates to `create-league.html?league_type=match&...` with home, away, kickoff, match_id, api_league_id, and comp_name all in the URL. `create-league.html` `readPrefill()` constructs `selectedCompetition` and `selectedMatch` directly from URL params — no DB queries. The browser never calls any external API; all fixture data was already loaded from `api_football_fixtures` (Supabase) on the source page.
 - **Cache warming** — all domains auto-refresh 1.5s after page load.
 - **All UI screens** — every `.html` file renders correctly. `profile.html` and `leaderboard.html` use full-width layout.
 
@@ -1703,7 +1707,7 @@ Full spec in `SESSION_CONTINUATION_DESIGN.txt`. Items not yet implemented:
 ### Known minor issues
 - `ARCHITECTURE.md` section 6 lists old short venue IDs (`ven_arena`); actual IDs are now UUIDs. Doc refresh needed.
 - `IMPLEMENTATION_NOTES.txt` is a stale design doc; can be deleted.
-- Edge Function not yet deployed — migrations 002 and 003 also need to be run in the Supabase SQL editor before AI questions go live.
+- `api_football_fixtures` table is populated by the `generate-questions` Edge Function as a side effect of each generation cycle. If the table is empty (e.g. fresh project), matches.html will show "No upcoming fixtures" until the first generation run completes.
 
 ---
 
@@ -1782,18 +1786,32 @@ See `supabase/functions/generate-questions/DEPLOY.md` for the full checklist inc
 - `upcoming.html` — saved matches merged into schedule; early-exit paths show saved matches; "⭐ Saved" filter chip
 - `venue-schedule.html` — saved venue fixtures injected as lime-bordered Match cards in week grid
 - `create-league.html` — `readPrefill()` reads URL params and pre-populates league name, dates, competition
-- **One step remaining:** run `009_saved_matches.sql` in Supabase SQL editor
 
-### 4. Wire Stripe for real tier subscriptions
+### 4. ✅ DONE — Tier system v2 + BR/trivia gate upgrade
+- **Starter limited live access** — `liveQuestionsEnabled: true` + `liveQuestionsMode: 'limited'` (3 answers per match, not locked out). Pro/Elite: `liveQuestionsMode: 'full'`.
+- **3-way gate pattern** — Starter daily counter / Pro monthly counter / Elite fair-use cooldown. Implemented on both `battle-royale.html` and `trivia.html`. Pro monthly caps: 50 BR, 100 trivia.
+- **Elite fair-use cooldown** — localStorage timestamps (`spontix_br_cooldown`, `spontix_trivia_cooldown`). 30s at game start, reset to 20s on victory/results. Neutral toast: "Preparing your next match… ready in Xs".
+- **`-1` replaces `Infinity`** as the universal unlimited sentinel across all of `TIER_LIMITS` and all limit checks in 9 files.
+- **All limits Supabase-backed** — `joinLeague()`, `leaguesCreatePerWeek`, `liveQuestionsPerMatch`, `eventsPerMonth`, `customTrophyCreation` all now check live DB counts, not localStorage. Bypass by clearing storage no longer works.
+- **`docs/TIER_ARCHITECTURE.md` updated to v3** — Pro monthly caps, Elite fair-use model, 3-way gate code pattern, localStorage key reference table, updated Feature Gate Matrix.
+- **`profile.html` Pro plan card** updated: "50 Battle Royale / month" and "100 trivia games / month".
+
+### 5. ✅ DONE — Match Live quick-create button
+- `matches.html` and `upcoming.html` — coral "Match Live" button on every fixture card. Uses `_matchStore` / `_inviteStore` data-store pattern (no JSON in onclick attributes).
+- URL params passed: `league_type=match`, `home`, `away`, `kickoff`, `match_id`, `api_league_id`, `comp_name`.
+- `create-league.html` `readPrefill()` — when `league_type=match`: selects Match Night type card, jumps to Step 1, builds `selectedCompetition` and `selectedMatch` directly from URL params. Zero DB queries in the browser — all data was already loaded from `api_football_fixtures` on the source page.
+- Data flow: `api_football_fixtures` (Supabase, synced by Edge Function) → source page → URL params → create-league.html. No external API calls from the browser at any point.
+
+### 7. Wire Stripe for real tier subscriptions
 - Enable Stripe in Supabase Edge Functions
 - Add `subscriptions` table mirroring Stripe state
 - Add webhook handler that updates `users.tier`
 - Replace `authGate()` Elite tier forcing with real tier reads
 
-### 5. Make remaining static pages dynamic
+### 8. Make remaining static pages dynamic
 - **venue-tonights-events.html** — render from `getVenueEvents()` (league.html is now fully dynamic ✅)
 
-### 6. Photo CDN migration
+### 9. Photo CDN migration
 - Create a `venue-photos` Storage bucket
 - Replace data URL uploads with `supabase.storage.from('venue-photos').upload()`
 
@@ -1820,7 +1838,7 @@ See `supabase/functions/generate-questions/DEPLOY.md` for the full checklist inc
 **Arena venue owned by:** `f901f211-738e-4409-abfd-8e1a9fb4bffb` (utis.richard@gmail.com)
 
 **Resume prompt for a fresh Claude session:**
-> "Continue Spontix development. Read `CLAUDE.md` for full context. Also read `SESSION_CONTINUATION_DESIGN.txt` before working on anything related to live questions, notifications, or the league question feed. Last completed: Beta access flow — index.html replaced with waitlist/beta-access page (password: spontyx15), login.html guarded with beta flag check. All 10 migrations deployed. Next priorities: (1) Realtime subscription replacing polling in league.html — biggest single retention feature; (2) Stripe subscriptions replacing forced Elite tier; (3) GNews API key to activate news context in generation."
+> "Continue Spontix development. Read `CLAUDE.md` for full context. Also read `SESSION_CONTINUATION_DESIGN.txt` before working on anything related to live questions, notifications, or the league question feed. Last completed: Match Live quick-create button live on matches.html and upcoming.html — one click from any fixture prefills create-league.html with competition + match from the database with no API calls. Tier system v2 complete: BR/trivia 3-way gate (Starter daily / Pro monthly / Elite fair-use), all limits Supabase-backed. Next priorities: (1) Realtime subscription replacing polling in league.html — biggest single retention feature; (2) Stripe subscriptions replacing forced Elite tier; (3) GNews API key to activate news context in generation."
 
 ---
 
@@ -2856,6 +2874,90 @@ Files updated: `spontix-store.js` (TIER_LIMITS + 3 code checks), `league.html`, 
 | `liveQuestionsPerMatch` | localStorage counter (clearable) | ✅ In-memory count from `currentQuestions` + `myAnswers` |
 | `eventsPerMonth` | Wrong key (`eventsPerWeek`), 7-day window | ✅ Correct key, calendar-month window |
 | `customTrophyCreation` | `tier === 'elite'` hardcoded | ✅ `getTierLimits().customTrophyCreation` |
+
+---
+
+### 2026-04-27 — Match Live quick-create button
+
+**Goal:** one-click path from any fixture card in Browse Matches or My Schedule directly into the Match Night league creation wizard with sport, competition, and match auto-filled.
+
+**`matches.html`:**
+- Added coral "Match Live" button to every fixture card alongside the existing Save and Invite buttons
+- Uses `_matchStore` data-store pattern: `_matchStore[m.matchId] = m` during render; button uses `data-match-key="${matchId}"` in onclick — avoids JSON in HTML attributes (which breaks on double quotes in team names)
+- `createMatchLive(key)` builds URL params: `league_type=match`, `home`, `away`, `kickoff`, `api_league_id` (= `m.compId`), `comp_name` (= `m.compName`), `match_id`
+- Added `.btn-match-live` CSS (coral pill)
+
+**`upcoming.html`:**
+- Same "Match Live" button added to every match card (both league matches and saved-only matches)
+- Uses `_inviteStore` data-store pattern (already existed)
+- `createMatchLive(key)` same URL params: `comp_name` comes from `m.competitionName`
+- For league matches: `apiLeagueId` comes from `leagueMap[q.league_id].api_sports_league_id` — may be empty for older leagues (handled in create-league.html)
+- For saved matches: `apiLeagueId` comes from `s.api_league_id` stored at save time
+
+**`create-league.html` — `readPrefill()` rewritten for `league_type=match`:**
+- Reads `home`, `away`, `kickoff`, `match_id`, `api_league_id`, `comp_name` from URL params
+- Selects Match Night type card programmatically
+- Jumps to Step 1, fills league name: `"Home vs Away — Match Night"`
+- **Constructs `selectedCompetition` directly from URL params** (no DB query):
+  `{ api_league_id: parseInt(apiLeagueId), name: compName, sport: 'football', season: kickoffYear }`
+- **Constructs `selectedMatch` directly from URL params** (no DB query):
+  `{ match_id, homeTeamName: home, awayTeamName: away, visible_from: kickoff }`
+- Populates competition and match dropdowns with single pre-selected options built from URL data
+- User only needs to pick a question mode (Prematch / Live / Hybrid) before clicking Next
+
+**Architecture principle confirmed:**
+- Browser never calls external APIs (API-Sports, OpenAI, GNews) — all API keys are Edge Function secrets only
+- Fixture data flow: API-Sports → `generate-questions` Edge Function → `api_football_fixtures` (Supabase DB) → matches.html / upcoming.html → URL params → create-league.html
+- `create-league.html` reads only from Supabase (competitions, fixtures tables) in the normal wizard path. In the Match Live path, it reads zero DB tables — all data travels via URL
+
+---
+
+### 2026-04-27 — Tier system v2: BR/trivia 3-way gate + all limits Supabase-backed
+
+**`battle-royale.html` — Elite fair-use cooldown:**
+- Added cooldown reset to victory screen handler: when `id === 'victory'` and `limits.battleRoyaleFairUse` is true, sets `spontix_br_cooldown` localStorage key to `Date.now() + 20000` (20s cooldown after completing a game, vs 30s set at game start)
+
+**`trivia.html` — full 3-way tier gate:**
+- Replaced single daily-check `startGame()` with 3-way logic:
+  - Starter: daily counter keyed `spontix_trivia_day_YYYY-MM-DD`
+  - Pro: monthly counter keyed `spontix_trivia_month_YYYY-MM`
+  - Elite: fair-use cooldown via `spontix_trivia_cooldown` timestamp
+- Added cooldown reset to `goScreen('screen-results')`: sets `spontix_trivia_cooldown` to `Date.now() + 20000`
+- Updated upgrade modal benefits text: "100 trivia games per month" for Pro
+- Monthly cap: 100 games/month for Pro (matches `TIER_LIMITS.triaMonthlyLimit`)
+
+**`docs/TIER_ARCHITECTURE.md` — full rewrite to v3:**
+- Pro monthly caps documented: 50 BR/month, 100 trivia/month (was listed as "unlimited" — corrected)
+- Elite fair-use model documented with mandatory UX wording rules (neutral language: "Preparing your next match…")
+- 3-way gate code pattern documented with exact localStorage key names
+- `-1 = unlimited` sentinel convention documented (replaces `Infinity`)
+- Feature Gate Matrix updated with `liveQuestionsMode`, `aiWeeklyQuota` rows
+- Enforcement Status section reorganised: Supabase-backed vs localStorage-backed limits clearly separated
+
+**`profile.html` — Pro plan card updated:**
+- "Unlimited BR games" → "50 Battle Royale / month"
+- "Unlimited trivia" → "100 trivia games / month · Solo + 1v1"
+- Elite card: "Unlimited BR & trivia · all modes incl. Party"
+
+**`spontix-store.js` — `joinLeague()` fully Supabase-backed:**
+- Fetches `max_members` from `leagues` table before inserting
+- Counts current `league_members` from Supabase → `{ error: 'league-full' }` if at capacity
+- Counts all leagues the user belongs to from Supabase → `{ error: 'join-limit-reached' }` if at `leaguesJoinMax` tier limit
+- `TIER_LIMITS` extended: `aiWeeklyQuota` added to all 3 player tiers (Starter: 2, Pro: 5, Elite: 10)
+
+**`create-league.html` — `leaguesCreatePerWeek` Supabase-backed:**
+- `launchLeague()` queries `leagues WHERE owner_id = uid AND created_at > 7 days ago` before creating
+- Falls back to localStorage count only when Supabase unavailable
+
+**`my-leagues.html` — Create button Supabase-backed:**
+- `applyLeagueTierGating()` converted to async with same Supabase count query
+
+**`league.html` — `liveQuestionsPerMatch` localStorage bypass removed:**
+- Counter replaced with in-memory count from `currentQuestions` + `myAnswers` (already loaded)
+- `spontix_live_count_{userId}_{matchRef}` localStorage key eliminated
+
+**`-1 replaces Infinity` — files updated:**
+`spontix-store.js`, `league.html`, `create-league.html`, `my-leagues.html`, `venue-create-event.html`, `venue-live-floor.html`, `venue-dashboard.html`, `trivia.html`, `battle-royale.html`
 
 ---
 
