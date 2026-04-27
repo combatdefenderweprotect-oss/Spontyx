@@ -325,45 +325,25 @@
 
     <!-- Filter Bar -->
     <div class="filter-bar">
-      <div class="filter-group">
+      <div class="filter-group" id="filterSportGroup">
         <span class="filter-label">Sport</span>
         <select class="filter-select" id="filterSport" onchange="filterLeagues()">
           <option value="all">All Sports</option>
-          <option value="football">Football</option>
-          <option value="basketball">Basketball</option>
-          <option value="tennis">Tennis</option>
-          <option value="cricket">Cricket</option>
-          <option value="baseball">Baseball</option>
-          <option value="hockey">Hockey</option>
-          <option value="mma">MMA / UFC</option>
-          <option value="rugby">Rugby</option>
-          <option value="f1">Formula 1</option>
+          <!-- populated dynamically from sports_competitions -->
         </select>
       </div>
-      <div class="filter-group">
-        <span class="filter-label">Region</span>
-        <select class="filter-select" id="filterRegion" onchange="filterLeagues()">
-          <option value="all">Worldwide</option>
-          <option value="europe">Europe</option>
-          <option value="north-america">North America</option>
-          <option value="south-america">South America</option>
-          <option value="asia">Asia</option>
-          <option value="africa">Africa</option>
-          <option value="oceania">Oceania</option>
+      <div class="filter-group" id="filterCompetitionGroup" style="display:none;">
+        <span class="filter-label">Competition</span>
+        <select class="filter-select" id="filterCompetition" onchange="filterLeagues()">
+          <option value="all">All Competitions</option>
+          <!-- populated dynamically from leagues in DB -->
         </select>
       </div>
-      <div class="filter-group">
+      <div class="filter-group" id="filterTeamGroup" style="display:none;">
         <span class="filter-label">Team</span>
         <select class="filter-select" id="filterTeam" onchange="filterLeagues()">
           <option value="all">Any Team</option>
-          <option value="real-madrid">Real Madrid</option>
-          <option value="barcelona">FC Barcelona</option>
-          <option value="man-city">Manchester City</option>
-          <option value="liverpool">Liverpool</option>
-          <option value="bayern">Bayern Munich</option>
-          <option value="psg">PSG</option>
-          <option value="lakers">LA Lakers</option>
-          <option value="warriors">Golden State</option>
+          <!-- populated dynamically from scoped_team_name in leagues -->
         </select>
       </div>
 
@@ -400,94 +380,12 @@
       </h2>
     </div>
     <div class="promoted-grid" id="promotedGrid">
-      <!-- Promoted Card 1 -->
-      <div class="league-card promoted" data-sport="football" data-region="europe" data-team="real-madrid" data-type="public">
-        <div class="promoted-badge">
-          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          Promoted
-        </div>
-        <div class="league-card-header">
-          <div class="league-card-icon gold">RM</div>
-          <div class="league-card-info">
-            <div class="league-card-name">Hala Madrid Global</div>
-            <div class="league-card-meta">by @madridista_99 · Created Mar 2026</div>
-          </div>
-        </div>
-        <div class="league-card-body">
-          <div class="league-card-desc">The ultimate league for Real Madrid fans worldwide. Predict La Liga, Champions League, and every El Clasico moment.</div>
-          <div class="league-card-tags">
-            <span class="league-tag sport">Football</span>
-            <span class="league-tag region">Europe</span>
-            <span class="league-tag">Real Madrid</span>
-            <span class="league-tag">La Liga</span>
-          </div>
-        </div>
-        <div class="league-card-footer">
-          <div class="league-card-stats">
-            <div class="league-stat">
-              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-              <span class="count">342</span>/500
-            </div>
-            <div class="league-stat">
-              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              Active
-            </div>
-          </div>
-          <div class="league-access public">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-            Public
-          </div>
-        </div>
-        <button class="league-card-join" onclick="joinLeague('Hala Madrid Global')">Join League</button>
-      </div>
-
-      <!-- Promoted Card 2 -->
-      <div class="league-card promoted" data-sport="basketball" data-region="north-america" data-team="lakers" data-type="public" data-mode="team">
-        <div class="promoted-badge">
-          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-          Promoted
-        </div>
-        <div class="league-card-header">
-          <div class="league-card-icon purple">LA</div>
-          <div class="league-card-info">
-            <div class="league-card-name">Lakers Nation Predictions</div>
-            <div class="league-card-meta">by @showtime_fan · Created Feb 2026</div>
-          </div>
-        </div>
-        <div class="league-card-body">
-          <div class="league-card-desc">NBA predictions from die-hard Lakers fans. Predict games, player stats, playoff outcomes, and more throughout the season.</div>
-          <div style="font-size: 0.72rem; color: var(--grey); margin-top: 8px; margin-bottom: 8px;">6 teams × 5 players</div>
-          <div class="league-card-tags">
-            <span class="league-tag sport">Basketball</span>
-            <span class="league-tag region">N. America</span>
-            <span class="league-tag mode-team">Team Mode</span>
-            <span class="league-tag">Lakers</span>
-            <span class="league-tag">NBA</span>
-          </div>
-        </div>
-        <div class="league-card-footer">
-          <div class="league-card-stats">
-            <div class="league-stat">
-              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
-              <span class="count">189</span>/300
-            </div>
-            <div class="league-stat">
-              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              Active
-            </div>
-          </div>
-          <div class="league-access public">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-            Public
-          </div>
-        </div>
-        <button class="league-card-join" onclick="joinLeague('Lakers Nation Predictions')">Join League</button>
-      </div>
+      <!-- populated dynamically -->
     </div>
 
     <!-- Browse All Leagues -->
     <div class="results-info">
-      <div class="results-count">Showing <span id="resultCount">12</span> leagues</div>
+      <div class="results-count">Showing <span id="resultCount">0</span> leagues</div>
       <select class="sort-select" id="sortSelect" onchange="filterLeagues()">
         <option value="popular">Most Popular</option>
         <option value="newest">Newest First</option>
@@ -497,394 +395,7 @@
     </div>
 
     <div class="browse-grid" id="browseGrid">
-      <!-- Card 1 -->
-      <div class="league-card" data-sport="football" data-region="europe" data-team="barcelona" data-type="public" data-name="La Liga Fanatics" data-mode="individual">
-        <div class="league-card-header">
-          <div class="league-card-icon coral">LF</div>
-          <div class="league-card-info">
-            <div class="league-card-name">La Liga Fanatics</div>
-            <div class="league-card-meta">by @futbol_guru · 890 members</div>
-          </div>
-        </div>
-        <div class="league-card-body">
-          <div class="league-card-desc">Covering every La Liga matchday with predictions, scorelines, and player performance questions.</div>
-          <div class="league-card-tags">
-            <span class="league-tag sport">Football</span>
-            <span class="league-tag region">Europe</span>
-            <span class="league-tag">La Liga</span>
-          </div>
-        </div>
-        <div class="league-card-footer">
-          <div class="league-card-stats">
-            <div class="league-stat">
-              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
-              <span class="count">890</span>/1000
-            </div>
-          </div>
-          <div class="league-access public">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-            Public
-          </div>
-        </div>
-        <button class="league-card-join" onclick="joinLeague('La Liga Fanatics')">Join League</button>
-      </div>
-
-      <!-- Card 2 -->
-      <div class="league-card" data-sport="football" data-region="europe" data-team="man-city" data-type="private" data-name="Citizens Inner Circle" data-mode="team">
-        <div class="league-card-header">
-          <div class="league-card-icon teal">CI</div>
-          <div class="league-card-info">
-            <div class="league-card-name">Citizens Inner Circle</div>
-            <div class="league-card-meta">by @mcfc_die_hard · 45 members</div>
-          </div>
-        </div>
-        <div class="league-card-body">
-          <div class="league-card-desc">Exclusive Man City league for real fans only. Deep-dive predictions on PL, UCL, and transfer windows.</div>
-          <div style="font-size: 0.72rem; color: var(--grey); margin-top: 8px; margin-bottom: 8px;">3 teams × 3 players</div>
-          <div class="league-card-tags">
-            <span class="league-tag sport">Football</span>
-            <span class="league-tag region">Europe</span>
-            <span class="league-tag mode-team">Team Mode</span>
-            <span class="league-tag">Man City</span>
-          </div>
-        </div>
-        <div class="league-card-footer">
-          <div class="league-card-stats">
-            <div class="league-stat">
-              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
-              <span class="count">9</span>/9
-            </div>
-          </div>
-          <div class="league-access private">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-            Private
-          </div>
-        </div>
-        <button class="league-card-join private-join" onclick="openPasswordModal('Citizens Inner Circle')">Enter Password</button>
-      </div>
-
-      <!-- Card 3 -->
-      <div class="league-card" data-sport="basketball" data-region="north-america" data-team="warriors" data-type="public" data-name="Dub Nation Picks" data-mode="individual">
-        <div class="league-card-header">
-          <div class="league-card-icon lime">DN</div>
-          <div class="league-card-info">
-            <div class="league-card-name">Dub Nation Picks</div>
-            <div class="league-card-meta">by @bay_area_hoops · 567 members</div>
-          </div>
-        </div>
-        <div class="league-card-body">
-          <div class="league-card-desc">Warriors fans predicting every game, trade deadline move, and playoff moment. Let's go Dubs!</div>
-          <div class="league-card-tags">
-            <span class="league-tag sport">Basketball</span>
-            <span class="league-tag region">N. America</span>
-            <span class="league-tag">Warriors</span>
-          </div>
-        </div>
-        <div class="league-card-footer">
-          <div class="league-card-stats">
-            <div class="league-stat">
-              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
-              <span class="count">567</span>/750
-            </div>
-          </div>
-          <div class="league-access public">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-            Public
-          </div>
-        </div>
-        <button class="league-card-join" onclick="joinLeague('Dub Nation Picks')">Join League</button>
-      </div>
-
-      <!-- Card 4 -->
-      <div class="league-card" data-sport="tennis" data-region="europe" data-team="all" data-type="public" data-name="Grand Slam Guessers" data-mode="individual">
-        <div class="league-card-header">
-          <div class="league-card-icon purple">GS</div>
-          <div class="league-card-info">
-            <div class="league-card-name">Grand Slam Guessers</div>
-            <div class="league-card-meta">by @ace_predictor · 234 members</div>
-          </div>
-        </div>
-        <div class="league-card-body">
-          <div class="league-card-desc">Predict every Grand Slam match, ATP/WTA outcomes. From seeds to upsets — who will you call?</div>
-          <div class="league-card-tags">
-            <span class="league-tag sport">Tennis</span>
-            <span class="league-tag region">Europe</span>
-            <span class="league-tag">Grand Slams</span>
-          </div>
-        </div>
-        <div class="league-card-footer">
-          <div class="league-card-stats">
-            <div class="league-stat">
-              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
-              <span class="count">234</span>/500
-            </div>
-          </div>
-          <div class="league-access public">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-            Public
-          </div>
-        </div>
-        <button class="league-card-join" onclick="joinLeague('Grand Slam Guessers')">Join League</button>
-      </div>
-
-      <!-- Card 5 -->
-      <div class="league-card" data-sport="cricket" data-region="asia" data-team="all" data-type="public" data-name="IPL Prediction Kings" data-mode="individual">
-        <div class="league-card-header">
-          <div class="league-card-icon coral">IP</div>
-          <div class="league-card-info">
-            <div class="league-card-name">IPL Prediction Kings</div>
-            <div class="league-card-meta">by @cricket_oracle · 1,204 members</div>
-          </div>
-        </div>
-        <div class="league-card-body">
-          <div class="league-card-desc">The biggest IPL prediction league on Spontyx. Match winners, top scorers, wicket tallies — all season long.</div>
-          <div class="league-card-tags">
-            <span class="league-tag sport">Cricket</span>
-            <span class="league-tag region">Asia</span>
-            <span class="league-tag">IPL</span>
-          </div>
-        </div>
-        <div class="league-card-footer">
-          <div class="league-card-stats">
-            <div class="league-stat">
-              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
-              <span class="count">1,204</span>/2000
-            </div>
-          </div>
-          <div class="league-access public">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-            Public
-          </div>
-        </div>
-        <button class="league-card-join" onclick="joinLeague('IPL Prediction Kings')">Join League</button>
-      </div>
-
-      <!-- Card 6 -->
-      <div class="league-card" data-sport="f1" data-region="europe" data-team="all" data-type="private" data-name="Paddock Club VIP" data-mode="team">
-        <div class="league-card-header">
-          <div class="league-card-icon lime">F1</div>
-          <div class="league-card-info">
-            <div class="league-card-name">Paddock Club VIP</div>
-            <div class="league-card-meta">by @formula_fanatic · 78 members</div>
-          </div>
-        </div>
-        <div class="league-card-body">
-          <div class="league-card-desc">Private F1 league for die-hards. Predict race winners, qualifying, fastest laps, and strategy calls every race weekend.</div>
-          <div style="font-size: 0.72rem; color: var(--grey); margin-top: 8px; margin-bottom: 8px;">4 teams × 4 players</div>
-          <div class="league-card-tags">
-            <span class="league-tag sport">Formula 1</span>
-            <span class="league-tag region">Europe</span>
-            <span class="league-tag mode-team">Team Mode</span>
-            <span class="league-tag">F1</span>
-          </div>
-        </div>
-        <div class="league-card-footer">
-          <div class="league-card-stats">
-            <div class="league-stat">
-              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
-              <span class="count">16</span>/16
-            </div>
-          </div>
-          <div class="league-access private">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-            Private
-          </div>
-        </div>
-        <button class="league-card-join private-join" onclick="openPasswordModal('Paddock Club VIP')">Enter Password</button>
-      </div>
-
-      <!-- Card 7 -->
-      <div class="league-card" data-sport="football" data-region="europe" data-team="liverpool" data-type="public" data-name="The Kop Predictors" data-mode="individual">
-        <div class="league-card-header">
-          <div class="league-card-icon coral">TK</div>
-          <div class="league-card-info">
-            <div class="league-card-name">The Kop Predictors</div>
-            <div class="league-card-meta">by @ynwa_forever · 621 members</div>
-          </div>
-        </div>
-        <div class="league-card-body">
-          <div class="league-card-desc">Liverpool supporters predicting PL, UCL, and derby results. You'll Never Walk Alone — or predict alone.</div>
-          <div class="league-card-tags">
-            <span class="league-tag sport">Football</span>
-            <span class="league-tag region">Europe</span>
-            <span class="league-tag">Liverpool</span>
-          </div>
-        </div>
-        <div class="league-card-footer">
-          <div class="league-card-stats">
-            <div class="league-stat">
-              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
-              <span class="count">621</span>/750
-            </div>
-          </div>
-          <div class="league-access public">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-            Public
-          </div>
-        </div>
-        <button class="league-card-join" onclick="joinLeague('The Kop Predictors')">Join League</button>
-      </div>
-
-      <!-- Card 8 -->
-      <div class="league-card" data-sport="mma" data-region="north-america" data-team="all" data-type="public" data-name="UFC Fight Night Preds" data-mode="individual">
-        <div class="league-card-header">
-          <div class="league-card-icon teal">UF</div>
-          <div class="league-card-info">
-            <div class="league-card-name">UFC Fight Night Preds</div>
-            <div class="league-card-meta">by @octagon_oracle · 412 members</div>
-          </div>
-        </div>
-        <div class="league-card-body">
-          <div class="league-card-desc">Predict every UFC fight card — winners, methods, rounds. From PPV main events to prelims.</div>
-          <div class="league-card-tags">
-            <span class="league-tag sport">MMA / UFC</span>
-            <span class="league-tag region">N. America</span>
-          </div>
-        </div>
-        <div class="league-card-footer">
-          <div class="league-card-stats">
-            <div class="league-stat">
-              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
-              <span class="count">412</span>/500
-            </div>
-          </div>
-          <div class="league-access public">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-            Public
-          </div>
-        </div>
-        <button class="league-card-join" onclick="joinLeague('UFC Fight Night Preds')">Join League</button>
-      </div>
-
-      <!-- Card 9 -->
-      <div class="league-card" data-sport="football" data-region="europe" data-team="bayern" data-type="private" data-name="Mia San Mia Elite" data-mode="team">
-        <div class="league-card-header">
-          <div class="league-card-icon coral">MS</div>
-          <div class="league-card-info">
-            <div class="league-card-name">Mia San Mia Elite</div>
-            <div class="league-card-meta">by @fcb_munchen · 32 members</div>
-          </div>
-        </div>
-        <div class="league-card-body">
-          <div class="league-card-desc">Bayern Munich private predictions league. Bundesliga, DFB-Pokal, and UCL — only for real Bayern fans.</div>
-          <div style="font-size: 0.72rem; color: var(--grey); margin-top: 8px; margin-bottom: 8px;">2 teams × 5 players</div>
-          <div class="league-card-tags">
-            <span class="league-tag sport">Football</span>
-            <span class="league-tag region">Europe</span>
-            <span class="league-tag mode-team">Team Mode</span>
-            <span class="league-tag">Bayern</span>
-          </div>
-        </div>
-        <div class="league-card-footer">
-          <div class="league-card-stats">
-            <div class="league-stat">
-              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
-              <span class="count">10</span>/10
-            </div>
-          </div>
-          <div class="league-access private">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
-            Private
-          </div>
-        </div>
-        <button class="league-card-join private-join" onclick="openPasswordModal('Mia San Mia Elite')">Enter Password</button>
-      </div>
-
-      <!-- Card 10 -->
-      <div class="league-card" data-sport="football" data-region="europe" data-team="psg" data-type="public" data-name="Parc des Princes Picks" data-mode="individual">
-        <div class="league-card-header">
-          <div class="league-card-icon purple">PP</div>
-          <div class="league-card-info">
-            <div class="league-card-name">Parc des Princes Picks</div>
-            <div class="league-card-meta">by @allez_paris · 289 members</div>
-          </div>
-        </div>
-        <div class="league-card-body">
-          <div class="league-card-desc">PSG fans unite! Predict Ligue 1, Champions League, and every Parisian derby with fellow supporters.</div>
-          <div class="league-card-tags">
-            <span class="league-tag sport">Football</span>
-            <span class="league-tag region">Europe</span>
-            <span class="league-tag">PSG</span>
-          </div>
-        </div>
-        <div class="league-card-footer">
-          <div class="league-card-stats">
-            <div class="league-stat">
-              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
-              <span class="count">289</span>/500
-            </div>
-          </div>
-          <div class="league-access public">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-            Public
-          </div>
-        </div>
-        <button class="league-card-join" onclick="joinLeague('Parc des Princes Picks')">Join League</button>
-      </div>
-
-      <!-- Card 11 -->
-      <div class="league-card" data-sport="baseball" data-region="north-america" data-team="all" data-type="public" data-name="MLB Diamond Picks" data-mode="individual">
-        <div class="league-card-header">
-          <div class="league-card-icon teal">ML</div>
-          <div class="league-card-info">
-            <div class="league-card-name">MLB Diamond Picks</div>
-            <div class="league-card-meta">by @diamond_data · 156 members</div>
-          </div>
-        </div>
-        <div class="league-card-body">
-          <div class="league-card-desc">America's pastime meets prediction games. Call home runs, pitching duels, and World Series winners.</div>
-          <div class="league-card-tags">
-            <span class="league-tag sport">Baseball</span>
-            <span class="league-tag region">N. America</span>
-            <span class="league-tag">MLB</span>
-          </div>
-        </div>
-        <div class="league-card-footer">
-          <div class="league-card-stats">
-            <div class="league-stat">
-              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
-              <span class="count">156</span>/300
-            </div>
-          </div>
-          <div class="league-access public">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-            Public
-          </div>
-        </div>
-        <button class="league-card-join" onclick="joinLeague('MLB Diamond Picks')">Join League</button>
-      </div>
-
-      <!-- Card 12 -->
-      <div class="league-card" data-sport="rugby" data-region="oceania" data-team="all" data-type="public" data-name="All Blacks Predictions" data-mode="individual">
-        <div class="league-card-header">
-          <div class="league-card-icon lime">AB</div>
-          <div class="league-card-info">
-            <div class="league-card-name">All Blacks Predictions</div>
-            <div class="league-card-meta">by @haka_nation · 198 members</div>
-          </div>
-        </div>
-        <div class="league-card-body">
-          <div class="league-card-desc">Rugby union predictions from New Zealand and beyond. Super Rugby, test matches, and World Cup build-up.</div>
-          <div class="league-card-tags">
-            <span class="league-tag sport">Rugby</span>
-            <span class="league-tag region">Oceania</span>
-            <span class="league-tag">All Blacks</span>
-          </div>
-        </div>
-        <div class="league-card-footer">
-          <div class="league-card-stats">
-            <div class="league-stat">
-              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
-              <span class="count">198</span>/250
-            </div>
-          </div>
-          <div class="league-access public">
-            <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-            Public
-          </div>
-        </div>
-        <button class="league-card-join" onclick="joinLeague('All Blacks Predictions')">Join League</button>
-      </div>
+      <!-- populated dynamically by hydrateDiscover() -->
     </div>
 
     <div class="load-more">
@@ -1003,23 +514,24 @@
   }
 
   function filterLeagues() {
-    const sport = document.getElementById('filterSport').value;
-    const region = document.getElementById('filterRegion').value;
-    const team = document.getElementById('filterTeam').value;
-    const search = document.getElementById('searchInput').value.toLowerCase();
-    const cards = document.querySelectorAll('#browseGrid .league-card');
+    const sport       = document.getElementById('filterSport').value;
+    const competition = document.getElementById('filterCompetition').value;
+    const teamEl      = document.getElementById('filterTeam');
+    const team        = teamEl ? teamEl.value : 'all';
+    const search      = document.getElementById('searchInput').value.toLowerCase();
+    const cards       = document.querySelectorAll('#browseGrid .league-card');
     let visible = 0;
 
     cards.forEach(card => {
-      const matchSport = sport === 'all' || card.dataset.sport === sport;
-      const matchRegion = region === 'all' || card.dataset.region === region;
-      const matchTeam = team === 'all' || card.dataset.team === team;
-      const matchType = currentType === 'all' || card.dataset.type === currentType;
-      const matchMode = currentMode === 'all' || card.dataset.mode === currentMode;
-      const name = (card.dataset.name || '').toLowerCase();
-      const matchSearch = !search || name.includes(search) || card.textContent.toLowerCase().includes(search);
+      const matchSport       = sport === 'all' || card.dataset.sport === sport;
+      const matchCompetition = competition === 'all' || card.dataset.competition === competition;
+      const matchTeam        = team === 'all' || card.dataset.team === team;
+      const matchType        = currentType === 'all' || card.dataset.type === currentType;
+      const matchMode        = currentMode === 'all' || card.dataset.mode === currentMode;
+      const name             = (card.dataset.name || '').toLowerCase();
+      const matchSearch      = !search || name.includes(search) || card.textContent.toLowerCase().includes(search);
 
-      if (matchSport && matchRegion && matchTeam && matchType && matchMode && matchSearch) {
+      if (matchSport && matchCompetition && matchTeam && matchType && matchMode && matchSearch) {
         card.style.display = '';
         visible++;
       } else {
@@ -1060,21 +572,94 @@
     const browseGrid = document.getElementById('browseGrid');
     if (browseGrid) browseGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--grey);font-size:0.9rem;">Loading leagues...</div>';
 
-    // Fetch fresh from Supabase so newly created leagues appear immediately
-    const discoverLeagues = await SpontixStoreAsync.getDiscoverLeagues();
+    // Fetch leagues + competitions in parallel
+    const [discoverLeagues, compResult] = await Promise.all([
+      SpontixStoreAsync.getDiscoverLeagues(),
+      window.sb
+        ? window.sb.from('sports_competitions').select('api_league_id, name, sport').order('display_order', { ascending: true })
+        : Promise.resolve({ data: [], error: null })
+    ]);
+    const competitions = (compResult && compResult.data) ? compResult.data : [];
+
+    populateFilters(discoverLeagues, competitions);
     renderDiscoverLeagues(discoverLeagues);
+  }
+
+  /* ── Populate filter dropdowns from real DB data ── */
+  function populateFilters(leagues, competitions) {
+    // Build global competition map: api_league_id → { name, sport }
+    window._compMap = {};
+    competitions.forEach(c => { window._compMap[c.api_league_id] = c; });
+
+    // Sport dropdown: distinct sports from sports_competitions
+    const sportSel = document.getElementById('filterSport');
+    if (sportSel) {
+      const distinctSports = [...new Set(competitions.map(c => (c.sport || '').toLowerCase()))].filter(Boolean).sort();
+      sportSel.innerHTML = '<option value="all">All Sports</option>';
+      distinctSports.forEach(sport => {
+        const opt = document.createElement('option');
+        opt.value = sport;
+        opt.textContent = sport.charAt(0).toUpperCase() + sport.slice(1);
+        sportSel.appendChild(opt);
+      });
+    }
+
+    // Competition dropdown: only competitions that are actually used by existing leagues
+    const compSel = document.getElementById('filterCompetition');
+    const compGroup = document.getElementById('filterCompetitionGroup');
+    if (compSel && compGroup) {
+      const usedIds = [...new Set(
+        leagues.filter(l => l.apiSportsLeagueId).map(l => l.apiSportsLeagueId)
+      )];
+      compSel.innerHTML = '<option value="all">All Competitions</option>';
+      if (usedIds.length > 0) {
+        usedIds.forEach(id => {
+          const comp = window._compMap[id];
+          if (comp) {
+            const opt = document.createElement('option');
+            opt.value = String(id);
+            opt.textContent = comp.name;
+            compSel.appendChild(opt);
+          }
+        });
+        compGroup.style.display = '';
+      } else {
+        compGroup.style.display = 'none';
+      }
+    }
+
+    // Team dropdown: distinct scoped_team_name values from actual leagues
+    const teamSel = document.getElementById('filterTeam');
+    const teamGroup = document.getElementById('filterTeamGroup');
+    if (teamSel && teamGroup) {
+      const teams = [...new Set(
+        leagues.filter(l => l.scopedTeamName).map(l => l.scopedTeamName)
+      )].sort();
+      teamSel.innerHTML = '<option value="all">Any Team</option>';
+      if (teams.length > 0) {
+        teams.forEach(team => {
+          const opt = document.createElement('option');
+          opt.value = team.toLowerCase();
+          opt.textContent = team;
+          teamSel.appendChild(opt);
+        });
+        teamGroup.style.display = '';
+      } else {
+        teamGroup.style.display = 'none';
+      }
+    }
   }
 
   /* ── Create League Card from Data ── */
   function createLeagueCard(league, isPromoted) {
     const div = document.createElement('div');
     div.className = 'league-card' + (isPromoted ? ' promoted' : '');
-    div.dataset.sport = league.sport.toLowerCase();
-    div.dataset.region = league.region.toLowerCase();
-    div.dataset.team = league.team ? league.team.toLowerCase() : 'all';
-    div.dataset.type = league.type;
-    div.dataset.name = league.name;
-    div.dataset.mode = league.mode;
+    div.dataset.sport       = (league.sport || 'football').toLowerCase();
+    div.dataset.competition = league.apiSportsLeagueId ? String(league.apiSportsLeagueId) : 'all';
+    div.dataset.team        = league.scopedTeamName ? league.scopedTeamName.toLowerCase() : 'all';
+    div.dataset.type        = league.type;
+    div.dataset.name        = league.name;
+    div.dataset.mode        = league.mode;
 
     const initials = league.name.split(' ').map(w => w[0]).join('').substring(0, 2).toUpperCase();
     const iconColor = getIconColor(league.name);
@@ -1084,7 +669,8 @@
     const isTeamMode = league.mode === 'team';
     const teamInfo = isTeamMode && league.teamName ? `<div style="font-size: 0.72rem; color: var(--grey); margin-top: 8px; margin-bottom: 8px;">${league.teamName || 'Team League'}</div>` : '';
 
-    const createdByText = `by ${league.createdBy} · ${isTeamMode ? league.members + ' members' : monthYear}`;
+    const createdByLabel = league.createdBy ? `by ${league.createdBy} · ` : '';
+    const createdByText = `${createdByLabel}${isTeamMode ? league.members + ' members' : monthYear}`;
 
     let statsHtml = `
       <div class="league-stat">
@@ -1114,27 +700,18 @@
       </div>
     ` : '';
 
-    const sportLabel = league.sport === 'football' ? 'Football' :
-                      league.sport === 'basketball' ? 'Basketball' :
-                      league.sport === 'tennis' ? 'Tennis' :
-                      league.sport === 'cricket' ? 'Cricket' :
-                      league.sport === 'baseball' ? 'Baseball' :
-                      league.sport === 'f1' ? 'Formula 1' :
-                      league.sport === 'mma' ? 'MMA / UFC' :
-                      league.sport === 'rugby' ? 'Rugby' : league.sport;
+    const sportLabel = (league.sport || 'football').charAt(0).toUpperCase() + (league.sport || 'football').slice(1);
 
-    const regionLabel = league.region === 'north-america' ? 'N. America' :
-                       league.region === 'south-america' ? 'S. America' :
-                       league.region === 'europe' ? 'Europe' :
-                       league.region === 'asia' ? 'Asia' :
-                       league.region === 'africa' ? 'Africa' :
-                       league.region === 'oceania' ? 'Oceania' : league.region;
+    // Competition name from the global map (populated by populateFilters)
+    const compMap = window._compMap || {};
+    const compEntry = league.apiSportsLeagueId ? compMap[league.apiSportsLeagueId] : null;
+    const compLabel = compEntry ? compEntry.name : null;
 
     const tags = [
-      `<span class="league-tag sport">${sportLabel}</span>`,
-      `<span class="league-tag region">${regionLabel}</span>`,
+      `<span class="league-tag sport">${escapeHtml(sportLabel)}</span>`,
+      compLabel ? `<span class="league-tag">${escapeHtml(compLabel)}</span>` : '',
       league.mode === 'team' ? `<span class="league-tag mode-team">Team Mode</span>` : '',
-      league.team ? `<span class="league-tag">${league.team}</span>` : '',
+      league.scopedTeamName ? `<span class="league-tag">${escapeHtml(league.scopedTeamName)}</span>` : '',
     ].filter(t => t).join('\n');
 
     div.innerHTML = `
