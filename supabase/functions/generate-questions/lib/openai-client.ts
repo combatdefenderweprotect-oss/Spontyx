@@ -3,7 +3,7 @@ import type { RawGeneratedQuestion, ResolutionPredicate } from './types.ts';
 const OPENAI_BASE      = 'https://api.openai.com/v1/chat/completions';
 const MODEL_GENERATION = 'gpt-4o-mini';  // creative call — upgrade to gpt-4o if quality drops
 const MODEL_PREDICATE  = 'gpt-4o-mini';  // mechanical JSON conversion — mini is sufficient
-export const PROMPT_VERSION = 'v1.9';
+export const PROMPT_VERSION = 'v2.0';
 
 // ── System prompt for Call 1 (question generation) ───────────────────
 
@@ -269,8 +269,9 @@ GENERATION MODES
 ==================================================
 
 PREMATCH:
-- exactly 5 questions
-- winner, goals, BTTS, player
+- generate exactly max_questions_allowed questions (read from MATCH CONTEXT below)
+- if max_questions_allowed is 0 or not present, default to 4
+- question types: winner, goals, BTTS, player, clean sheet
 - visible_from = now_timestamp + 30s
 - answer_closes_at = match kickoff time
 - resolves_after = kickoff + sport buffer

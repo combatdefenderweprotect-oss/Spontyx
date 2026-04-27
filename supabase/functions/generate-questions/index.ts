@@ -104,7 +104,8 @@ Deno.serve(async (req: Request) => {
         ai_weekly_quota, ai_total_quota,
         league_start_date, league_end_date, owner_id,
         prematch_question_budget, live_question_budget,
-        prematch_generation_mode, prematch_publish_offset_hours
+        prematch_generation_mode, prematch_publish_offset_hours,
+        created_at
       `)
       .eq('ai_questions_enabled', true)
       .not('api_sports_league_id', 'is', null);
@@ -189,10 +190,21 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
+      // Fix 5: Skip DISTANT — match is 3–7 days away; prematch questions must not
+      // be generated this far out. Automatic window opens at 48h; manual window
+      // opens at kickoff − offset_hours (max 48h). Neither applies at 3-7 days.
+      if (cls.classification === 'DISTANT') {
+        result.skipped    = true;
+        result.skipReason = 'match_too_distant';
+        runStats.leaguesSkipped++;
+        await writeLeagueResult(sb, runId, result);
+        continue;
+      }
+
       // Quota check
       let quota;
       try {
-        quota = await checkQuota(sb, league);
+        quota = await checkQuota(sb, league, /* isPrematch */ true);
       } catch (err) {
         console.warn(`[quota] failed for league ${league.id}:`, err);
         result.skipped    = true;
@@ -715,7 +727,10 @@ async function writeLeagueResult(sb: any, runId: string, r: LeagueRunResult) {
 // Returns true if a prematch question SHOULD be generated for this match
 // right now, given the league's scheduling mode.
 //
-// automatic: eligible when match is ≤ 48h away (consistent with IMMINENT/UPCOMING)
+// automatic: normal window is kickoff-48h → kickoff-24h (questions published at
+//            the 48h mark). Late-creation fallback: if the league was created
+//            AFTER the normal window opened (i.e. created within 24h of kickoff),
+//            allow generation immediately so new leagues don't miss prematch.
 // manual:    eligible when now >= kickoff − offset_hours (publish window has opened)
 //
 // Both modes: reject if kickoff is already in the past.
@@ -738,9 +753,21 @@ function isMatchEligibleForPrematch(
     return nowMs >= publishWindowStartMs;
   }
 
-  // Automatic: generate within 48h of kickoff
+  // Automatic: normal window is 24h–48h before kickoff
   const hoursUntilKickoff = (kickoffMs - nowMs) / (1000 * 3600);
-  return hoursUntilKickoff <= 48;
+  if (hoursUntilKickoff >= 24 && hoursUntilKickoff <= 48) return true;
+
+  // Late-creation fallback: league was created after the normal window opened
+  // (i.e. league.created_at is within the last 24h AND match is <24h away).
+  // This ensures a league created hours before kickoff still gets prematch questions.
+  if (hoursUntilKickoff > 0 && hoursUntilKickoff < 24) {
+    const leagueCreatedMs = new Date(league.created_at ?? 0).getTime();
+    const normalWindowOpenMs = kickoffMs - 48 * 3600 * 1000; // 48h before kickoff
+    // If league was created after the normal window opened, allow generation now
+    if (leagueCreatedMs > normalWindowOpenMs) return true;
+  }
+
+  return false;
 }
 
 // ── Per-league visible_from computation ───────────────────────────────

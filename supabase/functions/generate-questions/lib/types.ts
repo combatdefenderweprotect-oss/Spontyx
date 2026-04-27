@@ -113,6 +113,7 @@ export interface LeagueWithConfig {
   // null/undefined means the league was created before migration 018 → treat as 'automatic'.
   prematch_generation_mode: 'automatic' | 'manual' | null;
   prematch_publish_offset_hours: number | null;  // manual mode: hours before kickoff (48/24/12/6)
+  created_at?: string | null;  // used by isMatchEligibleForPrematch late-creation fallback
 }
 
 export interface LeagueClassification {

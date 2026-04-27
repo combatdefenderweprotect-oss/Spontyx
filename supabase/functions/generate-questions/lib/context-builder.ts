@@ -157,7 +157,14 @@ export function buildContextPacket(params: {
       }
     }
 
-    if (starters.length > 0) {
+    // Only include confirmed lineup data when the match is ≤6h away.
+    // For prematch questions generated 24–48h before kickoff, lineup data is
+    // rarely available and including it makes prematch question quality worse —
+    // OpenAI avoids player questions when starters are not confirmed yet.
+    // Injuries/suspensions (unavailable/doubtful above) are always included.
+    const includeLineup = hoursUntilKickoff !== null && hoursUntilKickoff <= 6;
+
+    if (includeLineup && starters.length > 0) {
       hasContent = true;
       paLines.push('CONFIRMED STARTERS (lineup released — do NOT ask "Will X start?"):');
       for (const p of starters) {
@@ -165,7 +172,7 @@ export function buildContextPacket(params: {
       }
     }
 
-    if (substitutes.length > 0) {
+    if (includeLineup && substitutes.length > 0) {
       hasContent = true;
       paLines.push('CONFIRMED BENCH (lineup released — player is named substitute, NOT starting — do NOT ask "Will X start?"):');
       for (const p of substitutes) {

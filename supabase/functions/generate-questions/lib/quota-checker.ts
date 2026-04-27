@@ -8,7 +8,9 @@ import type {
 } from './types.ts';
 import type { SportMatch } from './types.ts';
 
-// Max questions to attempt per league per run (prevents flooding a league)
+// Max LIVE questions to attempt per league per run (prevents flooding a league mid-match).
+// This cap applies to CORE_MATCH_LIVE only. CORE_MATCH_PREMATCH uses the league's
+// prematch_question_budget instead — set isPrematch=true to bypass this cap.
 const PER_RUN_CAP = 3;
 
 // ── Classify a league by imminence of next match ──────────────────────
@@ -86,6 +88,7 @@ export function sortLeaguesByPriority(
 export async function checkQuota(
   sb: SupabaseClient,
   league: LeagueWithConfig,
+  isPrematch = false,
 ): Promise<QuotaCheck> {
   const now = new Date();
   const today = now.toISOString().split('T')[0];
@@ -175,7 +178,10 @@ export async function checkQuota(
   const weeklyRemaining = league.ai_weekly_quota - quotaUsedThisWeek;
   const totalRemaining = league.ai_total_quota - quotaUsedTotal;
 
-  const questionsToGenerate = Math.min(weeklyRemaining, totalRemaining, PER_RUN_CAP);
+  // For prematch, bypass PER_RUN_CAP — the effective cap is prematch_question_budget
+  // applied in index.ts (leagueQuotaCap). For live, PER_RUN_CAP prevents flooding.
+  const cap = isPrematch ? Infinity : PER_RUN_CAP;
+  const questionsToGenerate = Math.min(weeklyRemaining, totalRemaining, cap);
 
   return {
     quotaTotal: league.ai_total_quota,
