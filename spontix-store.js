@@ -537,9 +537,9 @@ const SpontixStore = {
 
   getTierLabel(tier) {
     const labels = {
-      'starter': 'Starter (Free)',
-      'pro': 'Pro ($5.99/mo)',
-      'elite': 'Elite ($14.99/mo)',
+      'starter': 'Starter',
+      'pro': 'Pro',
+      'elite': 'Elite',
       'venue-starter': 'Venue Starter',
       'venue-pro': 'Venue Pro',
       'venue-elite': 'Venue Elite',
