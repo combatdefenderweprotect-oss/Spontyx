@@ -156,6 +156,17 @@
     .invite-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; }
     .invite-btn:hover { background: rgba(168,225,12,0.14); border-color: var(--lime); }
 
+    /* ── Match Live button ── */
+    .match-live-btn {
+      padding: 8px 14px; border-radius: var(--radius-pill);
+      border: 1px solid rgba(255,107,107,0.35); background: rgba(255,107,107,0.07);
+      color: var(--coral); font-size: 0.75rem; font-weight: 700;
+      font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 5px;
+      white-space: nowrap; transition: all 0.2s; flex-shrink: 0;
+    }
+    .match-live-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .match-live-btn:hover { background: rgba(255,107,107,0.15); border-color: var(--coral); }
+
     /* ── Invite modal ── */
     .invite-overlay {
       position: fixed; inset: 0; background: rgba(0,0,0,0.55); z-index: 500;
@@ -492,6 +503,10 @@
               </div>
             </div>
             ${badgeHtml}
+            <button class="match-live-btn" data-invite-key="${esc(m.key)}" onclick="event.stopPropagation();createMatchLive(this.dataset.inviteKey)">
+              <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+              Match Live
+            </button>
             <button class="invite-btn" data-invite-key="${esc(m.key)}" onclick="event.stopPropagation();openInviteByKey(this.dataset.inviteKey)">
               <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
               Invite
@@ -714,6 +729,20 @@
     const data = _inviteStore[key];
     if (!data) return;
     openInvite(data);
+  }
+
+  function createMatchLive(key) {
+    const m = _inviteStore[key];
+    if (!m) return;
+    const p = new URLSearchParams({
+      prefill_match: '1',
+      league_type: 'match',
+      home: m.home || '',
+      away: m.away || '',
+      kickoff: m.kickoff instanceof Date ? m.kickoff.toISOString() : (m.kickoff || ''),
+      api_league_id: m.apiLeagueId || m.competitionId || ''
+    });
+    window.location = 'create-league.html?' + p.toString();
   }
 
   function openInvite(data) {

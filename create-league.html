@@ -1457,6 +1457,22 @@ function readPrefill() {
   const away        = params.get('away') || '';
   const apiLeagueId = params.get('api_league_id');
   const kickoff     = params.get('kickoff');
+  const urlType     = params.get('league_type'); // 'match' from Match Live button
+
+  // If league_type=match is in the URL, auto-select Match Night and jump to Step 1
+  if (urlType === 'match') {
+    // Programmatically select the Match Night type card
+    const matchCard = Array.from(document.querySelectorAll('.type-card')).find(c =>
+      (c.getAttribute('onclick') || '').includes("'match'")
+    );
+    if (matchCard) {
+      selectType(matchCard, 'match');
+    }
+    // Jump straight to Step 1 — the match details step
+    currentStep = 1;
+    initStep1();
+    updateProgress();
+  }
 
   // League name
   const nameEl = document.getElementById('league-name');
