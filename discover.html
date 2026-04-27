@@ -1031,36 +1031,38 @@
   }
 
   /* ── Hydrate Discover from Store ── */
-  function hydrateDiscover() {
-    // Get leagues user has NOT joined
-    const discoverLeagues = SpontixStore.getDiscoverLeagues();
+  function renderDiscoverLeagues(discoverLeagues) {
     allDiscoverLeagues = discoverLeagues;
 
-    // Populate featured/promoted leagues (first 2 from discover list that should be featured)
     const promotedGrid = document.getElementById('promotedGrid');
     if (promotedGrid) {
-      const featured = discoverLeagues.slice(0, 2);
+      const featured = discoverLeagues.filter(l => l.type === 'public').slice(0, 2);
       promotedGrid.innerHTML = '';
-
-      featured.forEach(league => {
-        const card = createLeagueCard(league, true);
-        promotedGrid.appendChild(card);
-      });
+      featured.forEach(league => promotedGrid.appendChild(createLeagueCard(league, true)));
     }
 
-    // Populate browse grid with all discover leagues
     const browseGrid = document.getElementById('browseGrid');
     if (browseGrid) {
       browseGrid.innerHTML = '';
-
-      discoverLeagues.forEach(league => {
-        const card = createLeagueCard(league, false);
-        browseGrid.appendChild(card);
-      });
+      if (discoverLeagues.length === 0) {
+        browseGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--grey);font-size:0.9rem;">No leagues to discover yet — be the first to create one!</div>';
+      } else {
+        discoverLeagues.forEach(league => browseGrid.appendChild(createLeagueCard(league, false)));
+      }
     }
 
-    // Update result count
     document.getElementById('resultCount').textContent = discoverLeagues.length;
+    filterLeagues();
+  }
+
+  async function hydrateDiscover() {
+    // Show loading state
+    const browseGrid = document.getElementById('browseGrid');
+    if (browseGrid) browseGrid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--grey);font-size:0.9rem;">Loading leagues...</div>';
+
+    // Fetch fresh from Supabase so newly created leagues appear immediately
+    const discoverLeagues = await SpontixStoreAsync.getDiscoverLeagues();
+    renderDiscoverLeagues(discoverLeagues);
   }
 
   /* ── Create League Card from Data ── */
@@ -1298,10 +1300,9 @@
   document.addEventListener('DOMContentLoaded', () => {
     hydrateDiscover();
 
-    // Re-render when leagues cache is refreshed from Supabase
+    // Re-render if cache refreshes in the background (e.g. after joining a league)
     window.addEventListener('spontix-leagues-refreshed', () => {
       hydrateDiscover();
-      filterLeagues();
     });
   });
 </script>
