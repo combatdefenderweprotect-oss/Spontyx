@@ -249,6 +249,29 @@
     .question-risky:hover { background: rgba(255,107,107,0.15); border-color: var(--coral); }
     .question-risky.active { background: var(--coral); color: #fff; border-color: var(--coral); }
 
+    /* ── Pre-match lifecycle messaging ────────────────── */
+    .pm-status-strip {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 0.72rem; padding: 7px 10px;
+      border-radius: 6px; margin-bottom: 10px;
+      border: 1px solid transparent; line-height: 1.4;
+    }
+    .pm-status-strip.pm-active {
+      background: rgba(168,225,12,0.06);
+      border-color: rgba(168,225,12,0.15);
+      color: rgba(168,225,12,0.85);
+    }
+    .pm-status-strip.pm-closed {
+      background: rgba(255,255,255,0.03);
+      border-color: rgba(255,255,255,0.06);
+      color: var(--grey-dark);
+    }
+    .current-pick-label {
+      font-size: 0.65rem; color: var(--grey-dark);
+      text-align: center; padding: 5px 0 2px;
+      letter-spacing: 0.01em;
+    }
+
     /* ══════════════════════════════════════ */
     /*  RIGHT COLUMN                         */
     /* ══════════════════════════════════════ */
@@ -1669,6 +1692,31 @@ function renderQuestionCard(q, isPrimary) {
   // Timer bar (active questions only)
   var timerBar = open ? renderTimerBar(q) : '';
 
+  // ── Pre-match lifecycle strip ──────────────────────────────────────────
+  var isPrematch = lane === 'PREMATCH';
+  var pmStatusHtml = '';
+  if (isPrematch) {
+    if (open) {
+      pmStatusHtml =
+        '<div class="pm-status-strip pm-active">' +
+          '<span>🔒</span>' +
+          '<span><strong>Answers lock at kickoff</strong> · You can change your answer until then</span>' +
+        '</div>';
+    } else if (state === 'closed') {
+      pmStatusHtml =
+        '<div class="pm-status-strip pm-closed">' +
+          '<span>⏳</span>' +
+          '<span>Answering closed · <strong>Results after the match ends</strong> (~2–3h after kickoff)</span>' +
+        '</div>';
+    }
+  }
+
+  // ── Current pick label (pre-match + has existing answer) ───────────────
+  var currentPickHtml = '';
+  if (isPrematch && open && myAns && myAns.answer) {
+    currentPickHtml = '<div class="current-pick-label">Your current pick — tap any option to change</div>';
+  }
+
   // Options
   var bodyHtml = '';
   if (q.type === 'binary') {
@@ -1717,7 +1765,9 @@ function renderQuestionCard(q, isPrimary) {
         '</div>';
       })();
   } else if (pending) {
-    footerHtml = '<div class="q-awaiting">Awaiting match result...</div>';
+    footerHtml = isPrematch
+      ? '<div class="q-awaiting">Match in progress · results will appear once the match ends (~2–3h after kickoff)</div>'
+      : '<div class="q-awaiting">Awaiting match result...</div>';
   } else if (voided) {
     footerHtml = '<div class="q-voided">This question was voided and did not count.</div>';
   } else if (resolved && myAns) {
@@ -1735,9 +1785,10 @@ function renderQuestionCard(q, isPrimary) {
   return '<div class="' + cardClass + '" style="' + borderStyle + '" data-qid="' + q.id + '">' +
     '<div class="question-card-header">' + typeBadge + engBadges + timeLabel + '</div>' +
     rwSource +
+    pmStatusHtml +
     '<div class="question-text">' + escHtml(q.question_text) + '</div>' +
     timerBar +
-    bodyHtml + multHtml + footerHtml +
+    bodyHtml + currentPickHtml + multHtml + footerHtml +
     '</div>';
 }
 
@@ -1876,6 +1927,9 @@ async function handleAnswer(btn, questionId, answer) {
   var streak    = scoringContext[0];
   var leaderGap = scoringContext[1];
 
+  // Capture whether user already had an answer before this submission
+  var hadPreviousAnswer = !!(myAnswers[questionId] && myAnswers[questionId].answer);
+
   // Update local answer cache
   myAnswers[questionId] = myAnswers[questionId] || {};
   myAnswers[questionId].answer = answer;
@@ -1903,6 +1957,14 @@ async function handleAnswer(btn, questionId, answer) {
       .upsert(payload, { onConflict: 'question_id,user_id' });
 
     if (error) throw error;
+
+    // Contextual success feedback
+    if (hadPreviousAnswer) {
+      showToast('Answer updated ✓');
+    } else if (detectLane(q) === 'PREMATCH') {
+      showToast('Answer saved · you can change it any time before kickoff');
+    }
+    // LIVE questions: optimistic button highlight is sufficient — no toast needed
 
   } catch(e) {
     console.warn('[answer] save failed:', e);

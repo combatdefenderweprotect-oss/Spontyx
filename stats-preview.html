@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stats Tab Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1A1A2E; color: #fff; font-family: 'Inter', sans-serif; padding: 24px; min-height: 100vh; }
+  h1 { color: #A8E10C; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 16px; opacity: .7; }
+
+  /* ── Stats tab CSS (copied from league.html) ── */
+  .stats-score-card { background: #12122a; border: 1px solid #2a2a4a; border-radius: 14px; padding: 20px 24px; margin-bottom: 16px; text-align: center; }
+  .stats-score-row { display: flex; align-items: center; justify-content: center; gap: 20px; }
+  .stats-team-name { font-size: 16px; font-weight: 700; flex: 1; }
+  .stats-team-name.home { text-align: right; }
+  .stats-team-name.away { text-align: left; }
+  .stats-score-nums { font-size: 42px; font-weight: 900; letter-spacing: -.02em; color: #fff; white-space: nowrap; }
+  .stats-live-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(255,100,100,.15); border: 1px solid rgba(255,100,100,.35); border-radius: 20px; padding: 4px 12px; font-size: 12px; font-weight: 700; color: #ff6b6b; margin-top: 10px; }
+  .stats-live-dot { width: 7px; height: 7px; border-radius: 50%; background: #ff6b6b; animation: blink 1.1s ease infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+  .stats-comp { font-size: 12px; color: #888; margin-top: 6px; }
+
+  .stats-section { background: #12122a; border: 1px solid #2a2a4a; border-radius: 14px; padding: 20px; margin-bottom: 14px; }
+  .stats-section h3 { font-size: 12px; font-weight: 700; letter-spacing: .07em; text-transform: uppercase; color: #888; margin-bottom: 16px; }
+
+  /* Events */
+  .event-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #1e1e3a; font-size: 13px; }
+  .event-row:last-child { border-bottom: none; }
+  .event-min { color: #A8E10C; font-weight: 700; font-size: 12px; min-width: 32px; }
+  .event-icon { font-size: 16px; }
+  .event-desc { flex: 1; color: #ccc; }
+  .event-team-home { color: #A8E10C; font-size: 11px; font-weight: 600; }
+  .event-team-away { color: #FF6B6B; font-size: 11px; font-weight: 600; }
+
+  /* Team stat bars */
+  .stat-bar-row { margin-bottom: 14px; }
+  .stat-bar-labels { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px; }
+  .stat-bar-home-val { color: #A8E10C; font-weight: 700; }
+  .stat-bar-away-val { color: #FF6B6B; font-weight: 700; }
+  .stat-bar-name { color: #aaa; font-size: 11px; }
+  .stat-bar-track { height: 6px; background: #1e1e3a; border-radius: 3px; display: flex; gap: 2px; }
+  .stat-bar-home { height: 6px; background: #A8E10C; border-radius: 3px; }
+  .stat-bar-away { height: 6px; background: #FF6B6B; border-radius: 3px; }
+
+  /* SVG pitch */
+  .pitch-svg { width: 100%; max-width: 380px; display: block; margin: 0 auto; border-radius: 12px; overflow: hidden; }
+  .pitch-legend { display: flex; justify-content: center; gap: 24px; margin-top: 10px; font-size: 11px; color: #aaa; }
+  .pitch-legend span { display: flex; align-items: center; gap: 5px; }
+  .leg-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  /* Player cards */
+  .player-tab-bar { display: flex; gap: 8px; margin-bottom: 14px; }
+  .player-tab-btn { padding: 6px 18px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid #2a2a4a; background: transparent; color: #aaa; cursor: pointer; transition: .15s; }
+  .player-tab-btn.active { background: #A8E10C; color: #000; border-color: #A8E10C; }
+  .player-tab-btn.active.away { background: #FF6B6B; border-color: #FF6B6B; }
+  .player-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+  .player-card { background: #1a1a3a; border: 1px solid #2a2a4a; border-radius: 10px; padding: 12px; }
+  .player-card-top { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .player-num { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #000; }
+  .player-card-name { font-size: 12px; font-weight: 700; line-height: 1.3; }
+  .player-card-pos { font-size: 10px; color: #888; }
+  .player-rating { font-size: 18px; font-weight: 900; color: #A8E10C; margin-bottom: 6px; }
+  .player-rating.mid { color: #FF9F43; }
+  .player-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+  .pstat { font-size: 10px; color: #888; }
+  .pstat strong { color: #ddd; display: block; font-size: 13px; }
+
+  /* Predictions */
+  .pred-teams-row { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+  .pred-bar-wrap { display: flex; height: 28px; border-radius: 6px; overflow: hidden; margin-bottom: 4px; }
+  .pred-win-home { background: linear-gradient(90deg,#A8E10C,#7ab008); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #000; }
+  .pred-win-draw { background: #2a2a4a; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #aaa; }
+  .pred-win-away { background: linear-gradient(90deg,#c04020,#FF6B6B); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #fff; }
+  .pred-form-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 12px; }
+  .form-dot { width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: #000; }
+  .form-W { background: #A8E10C; }
+  .form-D { background: #888; color: #fff; }
+  .form-L { background: #FF6B6B; color: #fff; }
+  .pred-advice { font-size: 12px; color: #aaa; font-style: italic; margin-top: 10px; padding: 10px; background: #1e1e3a; border-radius: 8px; }
+
+  /* H2H */
+  .h2h-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #1e1e3a; font-size: 12px; }
+  .h2h-row:last-child { border-bottom: none; }
+  .h2h-date { color: #888; min-width: 60px; }
+  .h2h-teams { flex: 1; }
+  .h2h-score { font-weight: 700; font-size: 14px; min-width: 40px; text-align: center; }
+  .h2h-winner { color: #A8E10C; font-size: 10px; }
+
+  .stats-footer { text-align: center; font-size: 11px; color: #666; margin-top: 16px; }
+  .stats-footer a { color: #A8E10C; cursor: pointer; }
+
+  .page-wrap { max-width: 860px; margin: 0 auto; }
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media(max-width:640px){.two-col{grid-template-columns:1fr;}}
+</style>
+</head>
+<body>
+<div class="page-wrap">
+  <h1>Stats Tab — Live Preview (Mock Data)</h1>
+
+  <!-- Score Header -->
+  <div class="stats-score-card">
+    <div class="stats-score-row">
+      <div class="stats-team-name home">Real Madrid</div>
+      <div class="stats-score-nums">2 : 1</div>
+      <div class="stats-team-name away">FC Barcelona</div>
+    </div>
+    <div class="stats-live-badge">
+      <span class="stats-live-dot"></span>
+      LIVE · 67'
+    </div>
+    <div class="stats-comp">La Liga · Matchday 32</div>
+  </div>
+
+  <div class="two-col">
+    <!-- Events Timeline -->
+    <div class="stats-section">
+      <h3>Match Events</h3>
+      <div class="event-row">
+        <span class="event-min">67'</span>
+        <span class="event-icon">🟨</span>
+        <div class="event-desc"><span class="event-team-away">Barcelona</span><br>Pedri — Yellow Card</div>
+      </div>
+      <div class="event-row">
+        <span class="event-min">54'</span>
+        <span class="event-icon">⚽</span>
+        <div class="event-desc"><span class="event-team-away">Barcelona</span><br>Lewandowski <small style="color:#888">(assist Yamal)</small></div>
+      </div>
+      <div class="event-row">
+        <span class="event-min">38'</span>
+        <span class="event-icon">⚽</span>
+        <div class="event-desc"><span class="event-team-home">Real Madrid</span><br>Vinicius Jr <small style="color:#888">(assist Bellingham)</small></div>
+      </div>
+      <div class="event-row">
+        <span class="event-min">12'</span>
+        <span class="event-icon">⚽</span>
+        <div class="event-desc"><span class="event-team-home">Real Madrid</span><br>Mbappé <small style="color:#888">(assist Valverde)</small></div>
+      </div>
+    </div>
+
+    <!-- Team Stats Bars -->
+    <div class="stats-section">
+      <h3>Team Stats</h3>
+      <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;margin-bottom:12px;">
+        <span style="color:#A8E10C">Real Madrid</span>
+        <span style="color:#FF6B6B">Barcelona</span>
+      </div>
+      <div class="stat-bar-row">
+        <div class="stat-bar-labels">
+          <span class="stat-bar-home-val">58%</span>
+          <span class="stat-bar-name">Possession</span>
+          <span class="stat-bar-away-val">42%</span>
+        </div>
+        <div class="stat-bar-track">
+          <div class="stat-bar-home" style="width:58%"></div>
+          <div class="stat-bar-away" style="width:42%"></div>
+        </div>
+      </div>
+      <div class="stat-bar-row">
+        <div class="stat-bar-labels">
+          <span class="stat-bar-home-val">14</span>
+          <span class="stat-bar-name">Total Shots</span>
+          <span class="stat-bar-away-val">9</span>
+        </div>
+        <div class="stat-bar-track">
+          <div class="stat-bar-home" style="width:61%"></div>
+          <div class="stat-bar-away" style="width:39%"></div>
+        </div>
+      </div>
+      <div class="stat-bar-row">
+        <div class="stat-bar-labels">
+          <span class="stat-bar-home-val">6</span>
+          <span class="stat-bar-name">Shots on Target</span>
+          <span class="stat-bar-away-val">3</span>
+        </div>
+        <div class="stat-bar-track">
+          <div class="stat-bar-home" style="width:67%"></div>
+          <div class="stat-bar-away" style="width:33%"></div>
+        </div>
+      </div>
+      <div class="stat-bar-row">
+        <div class="stat-bar-labels">
+          <span class="stat-bar-home-val">5</span>
+          <span class="stat-bar-name">Corners</span>
+          <span class="stat-bar-away-val">3</span>
+        </div>
+        <div class="stat-bar-track">
+          <div class="stat-bar-home" style="width:62%"></div>
+          <div class="stat-bar-away" style="width:38%"></div>
+        </div>
+      </div>
+      <div class="stat-bar-row">
+        <div class="stat-bar-labels">
+          <span class="stat-bar-home-val">2</span>
+          <span class="stat-bar-name">Yellow Cards</span>
+          <span class="stat-bar-away-val">3</span>
+        </div>
+        <div class="stat-bar-track">
+          <div class="stat-bar-home" style="width:40%"></div>
+          <div class="stat-bar-away" style="width:60%"></div>
+        </div>
+      </div>
+      <div class="stat-bar-row">
+        <div class="stat-bar-labels">
+          <span class="stat-bar-home-val">11</span>
+          <span class="stat-bar-name">Fouls</span>
+          <span class="stat-bar-away-val">14</span>
+        </div>
+        <div class="stat-bar-track">
+          <div class="stat-bar-home" style="width:44%"></div>
+          <div class="stat-bar-away" style="width:56%"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SVG Pitch -->
+  <div class="stats-section" style="margin-bottom:14px;">
+    <h3>Lineups</h3>
+    <svg class="pitch-svg" viewBox="0 0 380 540" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="drop"><feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity=".4"/></filter>
+      </defs>
+      <!-- Background -->
+      <rect width="380" height="540" fill="#0B1F12"/>
+      <!-- Grass stripes -->
+      <rect x="0" y="0" width="380" height="60" fill="rgba(255,255,255,.02)"/>
+      <rect x="0" y="120" width="380" height="60" fill="rgba(255,255,255,.02)"/>
+      <rect x="0" y="240" width="380" height="60" fill="rgba(255,255,255,.02)"/>
+      <rect x="0" y="360" width="380" height="60" fill="rgba(255,255,255,.02)"/>
+      <rect x="0" y="480" width="380" height="60" fill="rgba(255,255,255,.02)"/>
+      <!-- Pitch markings -->
+      <rect x="14" y="14" width="352" height="512" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="2"/>
+      <!-- Top penalty area -->
+      <rect x="85" y="14" width="210" height="80" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1.5"/>
+      <rect x="142" y="14" width="96" height="27" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1.5"/>
+      <circle cx="190" cy="68" r="3" fill="rgba(255,255,255,.4)"/>
+      <path d="M153,94 A45,45 0 0,0 227,94" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1.5"/>
+      <!-- Bottom penalty area -->
+      <rect x="85" y="446" width="210" height="80" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1.5"/>
+      <rect x="142" y="499" width="96" height="27" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1.5"/>
+      <circle cx="190" cy="472" r="3" fill="rgba(255,255,255,.4)"/>
+      <path d="M153,446 A45,45 0 0,1 227,446" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1.5"/>
+      <!-- Center -->
+      <line x1="14" y1="270" x2="366" y2="270" stroke="rgba(255,255,255,.28)" stroke-width="1.5"/>
+      <circle cx="190" cy="270" r="45" fill="none" stroke="rgba(255,255,255,.28)" stroke-width="1.5"/>
+      <circle cx="190" cy="270" r="3" fill="rgba(255,255,255,.4)"/>
+      <!-- Goals -->
+      <rect x="152" y="4" width="76" height="12" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1.5"/>
+      <rect x="152" y="524" width="76" height="12" fill="none" stroke="rgba(255,255,255,.3)" stroke-width="1.5"/>
+      <!-- Corners -->
+      <path d="M14,24 A10,10 0 0,1 24,14" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1.2"/>
+      <path d="M356,14 A10,10 0 0,1 366,24" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1.2"/>
+      <path d="M14,516 A10,10 0 0,0 24,526" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1.2"/>
+      <path d="M356,526 A10,10 0 0,0 366,516" fill="none" stroke="rgba(255,255,255,.25)" stroke-width="1.2"/>
+
+      <!-- AWAY TEAM: Barcelona (coral, top half) -->
+      <!-- GK: Ter Stegen -->
+      <g filter="url(#drop)">
+        <circle cx="190" cy="45" r="18" fill="#FF6B6B"/>
+        <text x="190" y="49" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">1</text>
+        <text x="190" y="72" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Ter Stegen</text>
+      </g>
+      <!-- DEF row: 4 players -->
+      <g filter="url(#drop)"><circle cx="68" cy="140" r="18" fill="#FF6B6B"/><text x="68" y="144" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">23</text><text x="68" y="167" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Koundé</text></g>
+      <g filter="url(#drop)"><circle cx="143" cy="140" r="18" fill="#FF6B6B"/><text x="143" y="144" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">3</text><text x="143" y="167" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Balde</text></g>
+      <g filter="url(#drop)"><circle cx="237" cy="140" r="18" fill="#FF6B6B"/><text x="237" y="144" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">15</text><text x="237" y="167" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Iñigo</text></g>
+      <g filter="url(#drop)"><circle cx="312" cy="140" r="18" fill="#FF6B6B"/><text x="312" y="144" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">2</text><text x="312" y="167" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Araujo</text></g>
+      <!-- MID row: 3 players -->
+      <g filter="url(#drop)"><circle cx="100" cy="215" r="18" fill="#FF6B6B"/><text x="100" y="219" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">8</text><text x="100" y="242" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Pedri</text>
+        <!-- Yellow card badge -->
+        <rect x="110" y="27" width="9" height="12" rx="1" fill="#FFD700"/>
+      </g>
+      <g filter="url(#drop)"><circle cx="190" cy="215" r="18" fill="#FF6B6B"/><text x="190" y="219" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">5</text><text x="190" y="242" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Gavi</text></g>
+      <g filter="url(#drop)"><circle cx="280" cy="215" r="18" fill="#FF6B6B"/><text x="280" y="219" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">21</text><text x="280" y="242" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">de Jong</text></g>
+      <!-- ATT row: 3 players -->
+      <g filter="url(#drop)"><circle cx="80" cy="245" r="18" fill="#FF6B6B"/><text x="80" y="249" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">11</text><text x="80" y="272" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Yamal</text></g>
+      <g filter="url(#drop)"><circle cx="190" cy="245" r="18" fill="#FF6B6B"/><text x="190" y="249" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">9</text><text x="190" y="272" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Lewandowski</text>
+        <!-- Goal badge -->
+        <text x="200" y="230" font-size="11">⚽</text>
+      </g>
+      <g filter="url(#drop)"><circle cx="300" cy="245" r="18" fill="#FF6B6B"/><text x="300" y="249" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">7</text><text x="300" y="272" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Torres</text></g>
+
+      <!-- DIVIDER LABEL -->
+      <text x="30" y="275" font-family="Inter" font-size="9" fill="rgba(255,255,255,.35)" font-weight="600">BARCELONA</text>
+      <text x="260" y="275" font-family="Inter" font-size="9" fill="rgba(255,255,255,.35)" font-weight="600">REAL MADRID</text>
+
+      <!-- HOME TEAM: Real Madrid (lime, bottom half) -->
+      <!-- ATT row -->
+      <g filter="url(#drop)"><circle cx="80" cy="295" r="18" fill="#A8E10C"/><text x="80" y="299" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">11</text><text x="80" y="322" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Vinicius</text>
+        <text x="90" y="280" font-size="11">⚽</text>
+      </g>
+      <g filter="url(#drop)"><circle cx="190" cy="295" r="18" fill="#A8E10C"/><text x="190" y="299" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">9</text><text x="190" y="322" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Mbappé</text>
+        <text x="200" y="280" font-size="11">⚽</text>
+      </g>
+      <g filter="url(#drop)"><circle cx="300" cy="295" r="18" fill="#A8E10C"/><text x="300" y="299" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">5</text><text x="300" y="322" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Bellingham</text></g>
+      <!-- MID row -->
+      <g filter="url(#drop)"><circle cx="100" cy="370" r="18" fill="#A8E10C"/><text x="100" y="374" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">15</text><text x="100" y="397" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Valverde</text></g>
+      <g filter="url(#drop)"><circle cx="190" cy="370" r="18" fill="#A8E10C"/><text x="190" y="374" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">10</text><text x="190" y="397" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Modric</text></g>
+      <g filter="url(#drop)"><circle cx="280" cy="370" r="18" fill="#A8E10C"/><text x="280" y="374" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">6</text><text x="280" y="397" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Tchouaméni</text></g>
+      <!-- DEF row -->
+      <g filter="url(#drop)"><circle cx="68" cy="445" r="18" fill="#A8E10C"/><text x="68" y="449" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">2</text><text x="68" y="472" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Carvajal</text></g>
+      <g filter="url(#drop)"><circle cx="143" cy="445" r="18" fill="#A8E10C"/><text x="143" y="449" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">22</text><text x="143" y="472" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Militão</text></g>
+      <g filter="url(#drop)"><circle cx="237" cy="445" r="18" fill="#A8E10C"/><text x="237" y="449" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">3</text><text x="237" y="472" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Alaba</text></g>
+      <g filter="url(#drop)"><circle cx="312" cy="445" r="18" fill="#A8E10C"/><text x="312" y="449" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">23</text><text x="312" y="472" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Ferland</text></g>
+      <!-- GK -->
+      <g filter="url(#drop)"><circle cx="190" cy="495" r="18" fill="#A8E10C"/><text x="190" y="499" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">13</text><text x="190" y="522" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Lunin</text></g>
+    </svg>
+    <div class="pitch-legend">
+      <span><span class="leg-dot" style="background:#A8E10C"></span>Real Madrid (home)</span>
+      <span><span class="leg-dot" style="background:#FF6B6B"></span>Barcelona (away)</span>
+    </div>
+  </div>
+
+  <!-- Player Stats -->
+  <div class="stats-section" style="margin-bottom:14px;">
+    <h3>Player Stats</h3>
+    <div class="player-tab-bar">
+      <button class="player-tab-btn active" onclick="switchTab('home',this)">Real Madrid</button>
+      <button class="player-tab-btn away" onclick="switchTab('away',this)">Barcelona</button>
+    </div>
+    <div id="home-players" class="player-cards-grid">
+      <div class="player-card">
+        <div class="player-card-top">
+          <div class="player-num" style="background:#A8E10C">9</div>
+          <div><div class="player-card-name">Kylian Mbappé</div><div class="player-card-pos">FW · 67 min</div></div>
+        </div>
+        <div class="player-rating">8.4</div>
+        <div class="player-stats-grid">
+          <div class="pstat"><strong>1</strong>Goals</div>
+          <div class="pstat"><strong>0</strong>Assists</div>
+          <div class="pstat"><strong>4</strong>Shots</div>
+          <div class="pstat"><strong>0</strong>Fouls</div>
+        </div>
+      </div>
+      <div class="player-card">
+        <div class="player-card-top">
+          <div class="player-num" style="background:#A8E10C">11</div>
+          <div><div class="player-card-name">Vinicius Jr</div><div class="player-card-pos">FW · 67 min</div></div>
+        </div>
+        <div class="player-rating">8.1</div>
+        <div class="player-stats-grid">
+          <div class="pstat"><strong>1</strong>Goals</div>
+          <div class="pstat"><strong>0</strong>Assists</div>
+          <div class="pstat"><strong>3</strong>Shots</div>
+          <div class="pstat"><strong>1</strong>Fouls</div>
+        </div>
+      </div>
+      <div class="player-card">
+        <div class="player-card-top">
+          <div class="player-num" style="background:#A8E10C">5</div>
+          <div><div class="player-card-name">Jude Bellingham</div><div class="player-card-pos">MF · 67 min</div></div>
+        </div>
+        <div class="player-rating mid">7.6</div>
+        <div class="player-stats-grid">
+          <div class="pstat"><strong>0</strong>Goals</div>
+          <div class="pstat"><strong>1</strong>Assists</div>
+          <div class="pstat"><strong>2</strong>Shots</div>
+          <div class="pstat"><strong>2</strong>Fouls</div>
+        </div>
+      </div>
+      <div class="player-card">
+        <div class="player-card-top">
+          <div class="player-num" style="background:#A8E10C">13</div>
+          <div><div class="player-card-name">Andriy Lunin</div><div class="player-card-pos">GK · 67 min</div></div>
+        </div>
+        <div class="player-rating mid">7.2</div>
+        <div class="player-stats-grid">
+          <div class="pstat"><strong>2</strong>Saves</div>
+          <div class="pstat"><strong>67</strong>Minutes</div>
+          <div class="pstat"><strong>0</strong>Fouls</div>
+          <div class="pstat"><strong>0</strong>Cards</div>
+        </div>
+      </div>
+    </div>
+    <div id="away-players" class="player-cards-grid" style="display:none">
+      <div class="player-card">
+        <div class="player-card-top">
+          <div class="player-num" style="background:#FF6B6B">9</div>
+          <div><div class="player-card-name">Robert Lewandowski</div><div class="player-card-pos">FW · 67 min</div></div>
+        </div>
+        <div class="player-rating">7.9</div>
+        <div class="player-stats-grid">
+          <div class="pstat"><strong>1</strong>Goals</div>
+          <div class="pstat"><strong>0</strong>Assists</div>
+          <div class="pstat"><strong>3</strong>Shots</div>
+          <div class="pstat"><strong>1</strong>Fouls</div>
+        </div>
+      </div>
+      <div class="player-card">
+        <div class="player-card-top">
+          <div class="player-num" style="background:#FF6B6B">11</div>
+          <div><div class="player-card-name">Lamine Yamal</div><div class="player-card-pos">FW · 67 min</div></div>
+        </div>
+        <div class="player-rating">8.2</div>
+        <div class="player-stats-grid">
+          <div class="pstat"><strong>0</strong>Goals</div>
+          <div class="pstat"><strong>1</strong>Assists</div>
+          <div class="pstat"><strong>2</strong>Shots</div>
+          <div class="pstat"><strong>0</strong>Fouls</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Predictions + H2H -->
+  <div class="two-col">
+    <div class="stats-section">
+      <h3>Pre-Match Predictions</h3>
+      <div class="pred-teams-row">
+        <span>Real Madrid</span>
+        <span>Barcelona</span>
+      </div>
+      <div class="pred-bar-wrap">
+        <div class="pred-win-home" style="flex:52">52%</div>
+        <div class="pred-win-draw" style="flex:22">22%</div>
+        <div class="pred-win-away" style="flex:26">26%</div>
+      </div>
+      <div class="pred-form-row">
+        <span style="font-size:11px;color:#888;min-width:80px">Madrid form</span>
+        <span class="form-dot form-W">W</span>
+        <span class="form-dot form-W">W</span>
+        <span class="form-dot form-D">D</span>
+        <span class="form-dot form-W">W</span>
+        <span class="form-dot form-L">L</span>
+      </div>
+      <div class="pred-form-row">
+        <span style="font-size:11px;color:#888;min-width:80px">Barça form</span>
+        <span class="form-dot form-W">W</span>
+        <span class="form-dot form-D">D</span>
+        <span class="form-dot form-W">W</span>
+        <span class="form-dot form-W">W</span>
+        <span class="form-dot form-W">W</span>
+      </div>
+      <div class="pred-advice">"Real Madrid are expected to win but Barcelona's recent form makes this a closely contested El Clásico."</div>
+    </div>
+
+    <div class="stats-section">
+      <h3>Head-to-Head · Last 5</h3>
+      <div class="h2h-row">
+        <span class="h2h-date">Jan 2025</span>
+        <div class="h2h-teams">Real Madrid <small style="color:#888">vs</small> Barcelona</div>
+        <span class="h2h-score">2 – 1</span>
+        <span class="h2h-winner">Madrid ✓</span>
+      </div>
+      <div class="h2h-row">
+        <span class="h2h-date">Oct 2024</span>
+        <div class="h2h-teams">Barcelona <small style="color:#888">vs</small> Real Madrid</div>
+        <span class="h2h-score">4 – 0</span>
+        <span class="h2h-winner" style="color:#FF6B6B">Barça ✓</span>
+      </div>
+      <div class="h2h-row">
+        <span class="h2h-date">Apr 2024</span>
+        <div class="h2h-teams">Real Madrid <small style="color:#888">vs</small> Barcelona</div>
+        <span class="h2h-score">3 – 2</span>
+        <span class="h2h-winner">Madrid ✓</span>
+      </div>
+      <div class="h2h-row">
+        <span class="h2h-date">Jan 2024</span>
+        <div class="h2h-teams">Barcelona <small style="color:#888">vs</small> Real Madrid</div>
+        <span class="h2h-score">1 – 1</span>
+        <span class="h2h-winner" style="color:#888">Draw</span>
+      </div>
+      <div class="h2h-row">
+        <span class="h2h-date">Oct 2023</span>
+        <div class="h2h-teams">Barcelona <small style="color:#888">vs</small> Real Madrid</div>
+        <span class="h2h-score">2 – 1</span>
+        <span class="h2h-winner" style="color:#FF6B6B">Barça ✓</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="stats-footer">Updated 12s ago · <a>Refresh</a></div>
+</div>
+
+<script>
+function switchTab(team, btn) {
+  document.getElementById('home-players').style.display = team === 'home' ? 'grid' : 'none';
+  document.getElementById('away-players').style.display = team === 'away' ? 'grid' : 'none';
+  document.querySelectorAll('.player-tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+</script>
+</body>
+</html>

@@ -3141,6 +3141,55 @@ Files updated: `spontix-store.js` (TIER_LIMITS + 3 code checks), `league.html`, 
 
 ---
 
+### 2026-04-27 — Pre-Match Scheduling system (migration 018)
+
+**Goal**: give league owners control over WHEN pre-match questions appear in the feed before kickoff. Two modes: automatic (default, 24–48h before kickoff) and manual (publish at kickoff − N hours). Tier-gated.
+
+**New migration: `018_prematch_schedule.sql`** — run in Supabase SQL editor before deploying Edge Function
+- Adds `prematch_generation_mode TEXT NOT NULL DEFAULT 'automatic' CHECK IN ('automatic','manual')` to `leagues`
+- Adds `prematch_publish_offset_hours INTEGER NOT NULL DEFAULT 24 CHECK IN (48,24,12,6)` to `leagues`
+- Index on `(prematch_generation_mode) WHERE ai_questions_enabled = true`
+
+**`supabase/functions/generate-questions/lib/types.ts`:**
+- `LeagueWithConfig` extended: `prematch_generation_mode: 'automatic' | 'manual' | null` + `prematch_publish_offset_hours: number | null`
+
+**`supabase/functions/generate-questions/index.ts`:**
+- SELECT query now includes both new columns
+- New publish window filter (Step 3b) after `recentQuestions` fetch: calls `isMatchEligibleForPrematch()` per match; leagues with no eligible matches are skipped with `no_matches_in_publish_window`
+- Phase A and B now operate on `filteredSportsCtxBySchedule` (schedule-filtered matches only)
+- `visible_from` computation replaced: automatic → now; manual → `kickoff − offset_hours` (clamped to now)
+- New helper `isMatchEligibleForPrematch(kickoff, league, nowMs)` — automatic: ≤48h from kickoff; manual: `now >= kickoff − offset_hours`; both: reject after kickoff
+- New exported helper `computeVisibleFrom(league, kickoff)` — same logic, used at generation time
+
+**`supabase/functions/generate-questions/lib/pool-manager.ts`:**
+- New internal helper `computeLeagueVisibleFrom(league, kickoff)` — recomputes visible_from per-league so pool-reused questions get the correct publish time for each league's scheduling mode
+- `attachPoolQuestionsToLeague`: `visible_from` and `opens_at` now use `computeLeagueVisibleFrom(league, pq.deadline)` instead of the pool's canonical `pq.opensAt`
+
+**`spontix-store.js`:**
+- All 6 tiers: `prematchSchedulingEnabled` + `allowedPrematchOffsets` added under `// ── Pre-Match Scheduling ──` section
+  - Starter/Venue Starter: `enabled: false, offsets: []`
+  - Pro/Venue Pro: `enabled: true, offsets: [24, 12]`
+  - Elite/Venue Elite: `enabled: true, offsets: [48, 24, 12, 6]`
+- `_mapLeagueToDb`: two new explicit guards — `prematchGenerationMode` → `prematch_generation_mode`, `prematchPublishOffsetHours` → `prematch_publish_offset_hours`
+- `SpontixStoreAsync.createLeague`: passes both fields through from `data.*`
+
+**`create-league.html`:**
+- CSS: `.timing-card`, `.timing-mode-cards`, `.timing-card-label`, `.timing-card-hint`, `.timing-lock-badge`, `.timing-offset-grid`, `.timing-offset-pill` (locked state: dashed border + 🔒 suffix)
+- HTML: `#prematch-timing-section` with Automatic/Manual cards + offset pills (48h/24h/12h/6h); hidden by default; shown when prematch questions are relevant
+- JS state: `prematchScheduleMode = 'automatic'`, `prematchPublishOffset = 24`
+- JS functions: `selectPrematchMode()`, `selectPrematchModeGated()`, `selectPrematchOffset()`, `renderPrematchTimingTierLocks()`, `updatePrematchTimingVisibility()`
+- `selectQuestionMode()` + `toggleAIQuestions()` each call `updatePrematchTimingVisibility()` — section appears/disappears as mode changes
+- `launchLeague()`: `prematch_generation_mode` + `prematch_publish_offset_hours` added to `leagueData`
+
+**`docs/TIER_ARCHITECTURE.md`:** new `## Pre-Match Scheduling System (migration 018)` section + enforcement status entries
+
+**Post-implementation checklist:**
+1. Run `018_prematch_schedule.sql` in Supabase SQL editor
+2. Deploy Edge Function: `supabase functions deploy generate-questions --no-verify-jwt`
+3. Verify with smoke test: `curl -X GET .../functions/v1/generate-questions -H "Authorization: Bearer spontix-cron-x7k2m9"` → `ok:true`
+
+---
+
 ### 2026-04-27 — Live Stats Feed: migration + Edge Function + Stats tab
 
 **Goal**: full live match stats experience — backend polling, DB cache, and Stats tab UI in league.html — deployed end-to-end and verified live.

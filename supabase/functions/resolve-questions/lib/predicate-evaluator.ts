@@ -29,13 +29,22 @@ export interface TeamStatBlock {
 }
 
 export interface PlayerStatBlock {
-  goals:          number;
-  assists:        number;
-  shots:          number;
-  yellow_cards:   number;
-  red_cards:      number;
-  minutes_played: number;
-  clean_sheet:    boolean;
+  goals:               number;
+  assists:             number;
+  shots:               number;
+  yellow_cards:        number;
+  red_cards:           number;
+  minutes_played:      number;
+  clean_sheet:         boolean;
+  // Extended stats
+  passes_total:        number | null;
+  passes_key:          number | null;
+  dribbles_attempts:   number | null;
+  dribbles_success:    number | null;
+  tackles:             number | null;
+  interceptions:       number | null;
+  duels_total:         number | null;
+  duels_won:           number | null;
 }
 
 export interface EvalResult {
@@ -195,13 +204,22 @@ function getMatchStatValue(field: string, stats: MatchStats): number | null {
 
 function getPlayerStatValue(field: string, p: PlayerStatBlock): number | boolean | null {
   switch (field) {
-    case 'goals':          return p.goals;
-    case 'assists':        return p.assists;
-    case 'shots':          return p.shots;
-    case 'cards':          return p.yellow_cards + p.red_cards;
-    case 'minutes_played': return p.minutes_played;
-    case 'clean_sheet':    return p.clean_sheet;
-    default:               return null;
+    case 'goals':               return p.goals;
+    case 'assists':             return p.assists;
+    case 'shots':               return p.shots;
+    case 'cards':               return p.yellow_cards + p.red_cards;
+    case 'minutes_played':      return p.minutes_played;
+    case 'clean_sheet':         return p.clean_sheet;
+    // Extended stats
+    case 'passes_total':        return p.passes_total;
+    case 'passes_key':          return p.passes_key;
+    case 'dribbles_attempts':   return p.dribbles_attempts;
+    case 'dribbles_success':    return p.dribbles_success;
+    case 'tackles':             return p.tackles;
+    case 'interceptions':       return p.interceptions;
+    case 'duels_total':         return p.duels_total;
+    case 'duels_won':           return p.duels_won;
+    default:                    return null;
   }
 }
 

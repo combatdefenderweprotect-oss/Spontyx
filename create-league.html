@@ -613,6 +613,44 @@
       .option-grid { grid-template-columns: 1fr; }
       .scope-toggle { flex-direction: column; }
     }
+
+    /* ── Pre-Match Question Timing ── */
+    .timing-mode-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+    .timing-card {
+      border: 1.5px solid rgba(255,255,255,0.12);
+      border-radius: 10px;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .timing-card:hover { border-color: rgba(168,225,12,0.3); }
+    .timing-card.selected { border-color: var(--lime); background: rgba(168,225,12,0.07); }
+    .timing-card.locked { opacity: 0.6; cursor: default; }
+    .timing-card.locked:hover { border-color: rgba(255,255,255,0.12); }
+    .timing-card-label {
+      font-size: 0.82rem; font-weight: 700; color: var(--text);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .timing-card-hint { font-size: 0.72rem; color: var(--grey); margin-top: 3px; }
+    .timing-lock-badge {
+      font-size: 0.6rem; background: rgba(255,107,107,0.15); color: #FF6B6B;
+      padding: 1px 6px; border-radius: 100px; font-weight: 800;
+    }
+    .timing-offset-grid { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+    .timing-offset-pill {
+      font-size: 0.78rem; font-weight: 600; padding: 5px 14px;
+      border-radius: 100px; border: 1.5px solid rgba(255,255,255,0.15);
+      cursor: pointer; transition: all 0.15s; color: var(--grey);
+    }
+    .timing-offset-pill:not(.locked):hover { border-color: rgba(168,225,12,0.3); color: var(--text); }
+    .timing-offset-pill.selected { border-color: var(--lime); color: var(--lime); background: rgba(168,225,12,0.08); }
+    .timing-offset-pill.locked {
+      opacity: 0.45; cursor: default; border-style: dashed;
+      position: relative;
+    }
+    .timing-offset-pill.locked::after {
+      content: ' 🔒'; font-size: 0.6rem;
+    }
   </style>
 </head>
 <body>
@@ -1161,6 +1199,36 @@
       </div>
     </div>
 
+    <!-- ── Pre-Match Question Timing ── -->
+    <div class="form-group" id="prematch-timing-section" style="margin-top:20px;display:none;">
+      <div style="font-size:0.8rem;font-weight:700;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Pre-Match Question Timing
+      </div>
+      <div class="form-hint" style="margin-bottom:10px;">Control when pre-match questions appear in the league feed before kickoff.</div>
+
+      <div class="timing-mode-cards">
+        <div class="timing-card selected" id="timing-auto" onclick="selectPrematchMode('automatic', this)">
+          <div class="timing-card-label">Automatic</div>
+          <div class="timing-card-hint">24–48h before kickoff</div>
+        </div>
+        <div class="timing-card" id="timing-manual" onclick="selectPrematchModeGated(this)">
+          <div class="timing-card-label">
+            Manual
+            <span class="timing-lock-badge" id="timing-manual-lock" style="display:none;">Pro+</span>
+          </div>
+          <div class="timing-card-hint">Choose your timing</div>
+        </div>
+      </div>
+
+      <div class="timing-offset-grid" id="timing-offset-grid" style="display:none;">
+        <div class="timing-offset-pill" id="offset-48" onclick="selectPrematchOffset(48, this)">48h before</div>
+        <div class="timing-offset-pill selected" id="offset-24" onclick="selectPrematchOffset(24, this)">24h before</div>
+        <div class="timing-offset-pill" id="offset-12" onclick="selectPrematchOffset(12, this)">12h before</div>
+        <div class="timing-offset-pill" id="offset-6" onclick="selectPrematchOffset(6, this)">6h before</div>
+      </div>
+    </div>
+
     </div><!-- end rules-manual -->
 
     <!-- AI SETUP PANEL -->
@@ -1363,6 +1431,9 @@ let selectedCompetition = null;
 let selectedScopedTeam = null;
 // Match Night specific state
 let matchNightMode = ''; // 'prematch' | 'live' | 'hybrid'
+// Pre-match scheduling
+let prematchScheduleMode = 'automatic'; // 'automatic' | 'manual'
+let prematchPublishOffset = 24;         // hours before kickoff (manual mode only)
 let selectedMatch = null; // { match_id, team_ids, visible_from, homeTeamName, awayTeamName }
 // La Liga (140) and Premier League (39) — only competitions available for Match Night MVP
 const MATCH_NIGHT_API_LEAGUE_IDS = [39, 140];
@@ -1979,6 +2050,7 @@ function selectQuestionMode(mode, el) {
   matchNightMode = mode;
   document.querySelectorAll('.qmode-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
+  updatePrematchTimingVisibility();
   validateStep1();
 }
 
@@ -2003,6 +2075,111 @@ function selectQuestionModeGated(mode, el, minTier, featureName) {
   selectQuestionMode(mode, el);
 }
 
+// ── Pre-match question timing ──
+
+function selectPrematchMode(mode, el) {
+  prematchScheduleMode = mode;
+  document.querySelectorAll('.timing-card').forEach(c => c.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+  const offsetGrid = document.getElementById('timing-offset-grid');
+  if (offsetGrid) offsetGrid.style.display = mode === 'manual' ? 'flex' : 'none';
+}
+
+function selectPrematchModeGated(el) {
+  if (el && el.classList.contains('locked')) {
+    SpontixSidebar.showUpgradeModal({
+      feature: 'Pre-Match Scheduling',
+      requiredTier: 'Pro',
+      isVenue: false,
+      icon: '⏰',
+      description: 'Upgrade to <strong>Pro</strong> to control exactly when pre-match questions go live.',
+      benefits: [
+        'Choose when questions appear: 12h or 24h before kickoff',
+        'Elite: unlock 6h and 48h windows',
+        'Build anticipation before the match',
+        'Full access to all pre-match features'
+      ]
+    });
+    return;
+  }
+  selectPrematchMode('manual', el);
+}
+
+function selectPrematchOffset(hours, el) {
+  if (el && el.classList.contains('locked')) {
+    SpontixSidebar.showUpgradeModal({
+      feature: 'Extended Pre-Match Window',
+      requiredTier: 'Elite',
+      isVenue: false,
+      icon: '⏰',
+      description: 'Upgrade to <strong>Elite</strong> to unlock 6h and 48h pre-match question windows.',
+      benefits: [
+        '48h early — build hype well before kickoff',
+        '6h before — maximum match-day intensity',
+        'All 4 timing windows unlocked',
+        'Unlimited leagues and players'
+      ]
+    });
+    return;
+  }
+  prematchPublishOffset = hours;
+  document.querySelectorAll('.timing-offset-pill').forEach(p => p.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+}
+
+function renderPrematchTimingTierLocks() {
+  const player = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
+  const tier   = player ? (player.tier || 'starter') : 'starter';
+  const limits = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(tier) : null;
+  const schedulingEnabled = limits ? !!limits.prematchSchedulingEnabled : false;
+  const allowed           = limits ? (limits.allowedPrematchOffsets || []) : [];
+
+  // Manual card lock
+  const manualCard = document.getElementById('timing-manual');
+  const manualLock = document.getElementById('timing-manual-lock');
+  if (manualCard) {
+    manualCard.classList.toggle('locked', !schedulingEnabled);
+    if (manualLock) manualLock.style.display = schedulingEnabled ? 'none' : 'inline';
+  }
+
+  // Offset pills: lock tiers that don't include this offset
+  [48, 24, 12, 6].forEach(function(h) {
+    var pill = document.getElementById('offset-' + h);
+    if (!pill) return;
+    var locked = !allowed.includes(h);
+    pill.classList.toggle('locked', locked);
+  });
+
+  // If manual is not allowed for this tier, force back to automatic
+  if (!schedulingEnabled && prematchScheduleMode === 'manual') {
+    var autoCard = document.getElementById('timing-auto');
+    selectPrematchMode('automatic', autoCard);
+  }
+
+  // If current offset is not allowed, reset to highest allowed (or 24 default)
+  if (prematchScheduleMode === 'manual' && allowed.length > 0 && !allowed.includes(prematchPublishOffset)) {
+    var bestOffset = allowed[0];
+    var bestPill   = document.getElementById('offset-' + bestOffset);
+    selectPrematchOffset(bestOffset, bestPill);
+  }
+}
+
+function updatePrematchTimingVisibility() {
+  var section = document.getElementById('prematch-timing-section');
+  if (!section) return;
+  // Show when prematch questions are relevant:
+  //   Match Night: mode = prematch or hybrid
+  //   Season league: AI questions enabled (always includes prematch)
+  var shouldShow = false;
+  if (leagueType === 'match') {
+    shouldShow = (matchNightMode === 'prematch' || matchNightMode === 'hybrid');
+  } else {
+    shouldShow = aiQuestionsEnabled;
+  }
+  section.style.display = shouldShow ? 'block' : 'none';
+  if (shouldShow) renderPrematchTimingTierLocks();
+}
+
 // ── Scope selection ──
 function selectScope(scope) {
   leagueScope = scope;
@@ -2019,6 +2196,7 @@ function toggleAIQuestions() {
   document.getElementById('ai-toggle').classList.toggle('on', aiQuestionsEnabled);
   document.getElementById('ai-questions-config').classList.toggle('visible', aiQuestionsEnabled);
   if (aiQuestionsEnabled) updateAIQuotaDisplay();
+  updatePrematchTimingVisibility();
 }
 
 // ── AI quota display ──
@@ -2412,6 +2590,9 @@ async function launchLeague() {
     ai_questions_enabled: leagueType === 'match' ? !!selectedCompetition : (aiQuestionsEnabled && !!selectedCompetition),
     ai_weekly_quota:      leagueType === 'match' ? weekly : (aiQuestionsEnabled ? weekly : null),
     ai_total_quota:       leagueType === 'match' ? weekly : (aiQuestionsEnabled ? weekly * weeks : null),
+    // Pre-match scheduling (migration 018)
+    prematch_generation_mode:      prematchScheduleMode,
+    prematch_publish_offset_hours: prematchPublishOffset,
   };
 
   var newLeagueId = null;

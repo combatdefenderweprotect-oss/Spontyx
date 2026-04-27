@@ -103,6 +103,16 @@ export interface LeagueWithConfig {
   league_start_date: string | null;
   league_end_date: string | null;
   owner_id: string | null;       // used for Real World quota tier lookup
+  // ── Intensity budget (migration 017) ──────────────────────────────────
+  // Target question counts per match — set from INTENSITY_PRESETS at creation.
+  // null/undefined means the league was created before migration 017 → use defaults.
+  prematch_question_budget: number | null;   // default 4 (STANDARD)
+  live_question_budget: number | null;       // default 8 (STANDARD)
+  // ── Pre-match scheduling (migration 018) ─────────────────────────────
+  // Controls when prematch questions become visible relative to kickoff.
+  // null/undefined means the league was created before migration 018 → treat as 'automatic'.
+  prematch_generation_mode: 'automatic' | 'manual' | null;
+  prematch_publish_offset_hours: number | null;  // manual mode: hours before kickoff (48/24/12/6)
 }
 
 export interface LeagueClassification {

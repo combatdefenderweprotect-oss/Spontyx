@@ -856,6 +856,10 @@ const SpontixStore = {
     'starter': {
       label: 'Starter',
       price: 0,
+      // ── Question Intensity ──
+      intensityConfigurable: false,         // cannot change preset after creation
+      defaultIntensityPreset: 'standard',
+      allowedIntensityPresets: ['casual', 'standard'],  // no HARDCORE (too many AI calls)
       // ── Leagues ──
       leaguesCreatePerWeek: 1,
       leaguesJoinMax: 3,
@@ -870,6 +874,9 @@ const SpontixStore = {
       realWorldQuestionsPerMonth: 0,
       aiQuestionsPerMonth: 30,
       aiWeeklyQuota: 2,              // per-league weekly AI question budget (matches Edge Function)
+      // ── Pre-Match Scheduling ──
+      prematchSchedulingEnabled: false,    // Starter: automatic only
+      allowedPrematchOffsets: [],          // no manual offsets for Starter
       questionTypes: ['pre-match', 'halftime'], // legacy compat
       // ── Game Modes ──
       battleRoyalePerDay: 3,          // Starter: daily cap
@@ -908,6 +915,10 @@ const SpontixStore = {
     'pro': {
       label: 'Pro',
       price: 7.99,
+      // ── Question Intensity ──
+      intensityConfigurable: true,
+      defaultIntensityPreset: 'standard',
+      allowedIntensityPresets: ['casual', 'standard', 'hardcore'],
       // ── Leagues ──
       leaguesCreatePerWeek: 5,
       leaguesJoinMax: 20,
@@ -922,6 +933,9 @@ const SpontixStore = {
       realWorldQuestionsPerMonth: 10,
       aiQuestionsPerMonth: 400,
       aiWeeklyQuota: 5,
+      // ── Pre-Match Scheduling ──
+      prematchSchedulingEnabled: true,     // Pro: manual scheduling unlocked
+      allowedPrematchOffsets: [24, 12],    // Pro: 24h and 12h before kickoff
       questionTypes: ['pre-match', 'halftime', 'live', 'prediction', 'news', 'history'],
       // ── Game Modes ──
       battleRoyalePerDay: null,       // Pro: no daily cap — uses monthly
@@ -960,6 +974,10 @@ const SpontixStore = {
     'elite': {
       label: 'Elite',
       price: 19.99,
+      // ── Question Intensity ──
+      intensityConfigurable: true,
+      defaultIntensityPreset: 'standard',
+      allowedIntensityPresets: ['casual', 'standard', 'hardcore'],
       // ── Leagues ──
       leaguesCreatePerWeek: -1,
       leaguesJoinMax: -1,
@@ -974,6 +992,9 @@ const SpontixStore = {
       realWorldQuestionsPerMonth: -1,
       aiQuestionsPerMonth: 1500,
       aiWeeklyQuota: 10,
+      // ── Pre-Match Scheduling ──
+      prematchSchedulingEnabled: true,         // Elite: manual scheduling unlocked
+      allowedPrematchOffsets: [48, 24, 12, 6], // Elite: all 4 windows
       questionTypes: ['pre-match', 'halftime', 'live', 'prediction', 'news', 'history', 'custom'],
       // ── Game Modes ──
       battleRoyalePerDay: null,       // Elite: no daily cap — unlimited with fair-use
@@ -1015,6 +1036,11 @@ const SpontixStore = {
     'venue-starter': {
       label: 'Venue Starter',
       price: 0,
+      // ── Question Intensity ──
+      // Venue Starter is gated to CASUAL only — aligns with aiPreviewPerEvent: 3 (casual prematch budget)
+      intensityConfigurable: false,
+      defaultIntensityPreset: 'casual',
+      allowedIntensityPresets: ['casual'],
       // ── Events ──
       eventsPerMonth: 2,
       eventsPerWeek: 1,           // legacy compat key
@@ -1028,6 +1054,9 @@ const SpontixStore = {
       realWorldQuestionsPerMonth: 0,
       aiQuestionsPerMonth: 0,            // no AI on free — pre-made bank only
       aiPreviewPerEvent: 3,              // 3 AI-style preview questions per event
+      // ── Pre-Match Scheduling ──
+      prematchSchedulingEnabled: false,    // Venue Starter: automatic only
+      allowedPrematchOffsets: [],
       questionTypes: ['pre-match', 'halftime'],
       customQuestionsLive: false,
       questionBank: false,               // pre-made question bank locked
@@ -1066,6 +1095,10 @@ const SpontixStore = {
     'venue-pro': {
       label: 'Venue Pro',
       price: 29.99,
+      // ── Question Intensity ──
+      intensityConfigurable: true,
+      defaultIntensityPreset: 'standard',
+      allowedIntensityPresets: ['casual', 'standard'],
       // ── Events ──
       eventsPerMonth: -1,
       eventsPerWeek: -1,
@@ -1074,6 +1107,9 @@ const SpontixStore = {
       concurrentEvents: 5,
       teamMaxTeams: 12,
       teamMaxPlayers: 6,
+      // ── Pre-Match Scheduling ──
+      prematchSchedulingEnabled: true,     // Venue Pro: manual scheduling unlocked
+      allowedPrematchOffsets: [24, 12],    // Pro: 24h and 12h before kickoff
       // ── Question Lanes ──
       liveQuestionsEnabled: true,           // AI live questions enabled
       realWorldQuestionsEnabled: 'limited', // Real World: limited quota
@@ -1117,6 +1153,10 @@ const SpontixStore = {
     'venue-elite': {
       label: 'Venue Elite',
       price: 79.99,
+      // ── Question Intensity ──
+      intensityConfigurable: true,
+      defaultIntensityPreset: 'standard',
+      allowedIntensityPresets: ['casual', 'standard', 'hardcore'],
       // ── Events ──
       eventsPerMonth: -1,
       eventsPerWeek: -1,
@@ -1125,6 +1165,9 @@ const SpontixStore = {
       concurrentEvents: -1,
       teamMaxTeams: -1,
       teamMaxPlayers: -1,
+      // ── Pre-Match Scheduling ──
+      prematchSchedulingEnabled: true,         // Venue Elite: manual scheduling unlocked
+      allowedPrematchOffsets: [48, 24, 12, 6], // Elite: all 4 windows
       // ── Question Lanes ──
       liveQuestionsEnabled: true,      // full AI live questions
       realWorldQuestionsEnabled: true, // Real World full + priority
@@ -1165,6 +1208,52 @@ const SpontixStore = {
       photoPresetsAllowed: true,
       photoMaxCustom: -1,
     },
+  },
+
+  // ── Question intensity presets ─────────────────────────────────────────
+  // Single source of truth for question budget targets per preset.
+  // prematch = target questions before kick-off (CORE_MATCH_PREMATCH)
+  // live     = target questions during the match   (CORE_MATCH_LIVE)
+  // These are TARGETS, not hard caps — actual volume is also constrained by
+  // the AI weekly quota and pool size for that match.
+  INTENSITY_PRESETS: {
+    casual:   { prematch: 3, live: 5  },
+    standard: { prematch: 4, live: 8  },
+    hardcore: { prematch: 6, live: 12 },
+  },
+
+  // Validate a requested preset against the user's tier and return the
+  // correct budget values.
+  //
+  // Returns: { ok: true, preset, prematch, live }
+  //       or { ok: false, error: 'preset_not_allowed', allowed: [...] }
+  //
+  // Rules:
+  //   - If the requested preset is not in allowedIntensityPresets → reject with error
+  //   - If the requested preset IS allowed → return its budget values
+  //   - Caller is responsible for saving these values to prematch_question_budget
+  //     and live_question_budget on the league/event row.
+  clampIntensity(requestedPreset, tier) {
+    const limits = this.getTierLimits(tier);
+    const allowed = limits.allowedIntensityPresets || ['standard'];
+
+    if (!allowed.includes(requestedPreset)) {
+      return {
+        ok: false,
+        error: 'preset_not_allowed',
+        allowed,
+        // Suggest the closest allowed preset as a fallback
+        fallback: allowed.includes('standard') ? 'standard' : allowed[allowed.length - 1],
+      };
+    }
+
+    const budgets = this.INTENSITY_PRESETS[requestedPreset] || this.INTENSITY_PRESETS['standard'];
+    return {
+      ok: true,
+      preset:   requestedPreset,
+      prematch: budgets.prematch,
+      live:     budgets.live,
+    };
   },
 
   // Get limits for the current user's tier
@@ -3165,6 +3254,8 @@ SpontixStore._mapLeagueToDb = function (l) {
   if (l.aiQuestionsEnabled !== undefined)  out.ai_questions_enabled = l.aiQuestionsEnabled;
   if (l.aiWeeklyQuota !== undefined)       out.ai_weekly_quota      = l.aiWeeklyQuota;
   if (l.aiTotalQuota !== undefined)        out.ai_total_quota       = l.aiTotalQuota;
+  if (l.prematchGenerationMode !== undefined)     out.prematch_generation_mode      = l.prematchGenerationMode;
+  if (l.prematchPublishOffsetHours !== undefined) out.prematch_publish_offset_hours = l.prematchPublishOffsetHours;
   return out;
 };
 
@@ -3252,6 +3343,8 @@ SpontixStoreAsync.createLeague = async function (data) {
     aiQuestionsEnabled:  data.ai_questions_enabled || false,
     aiWeeklyQuota:       data.ai_weekly_quota     || null,
     aiTotalQuota:        data.ai_total_quota      || null,
+    prematchGenerationMode:     data.prematch_generation_mode     || 'automatic',
+    prematchPublishOffsetHours: data.prematch_publish_offset_hours != null ? data.prematch_publish_offset_hours : 24,
   });
   const { data: inserted, error } = await window.sb
     .from('leagues')
@@ -3351,12 +3444,43 @@ SpontixStoreAsync.deleteLeague = async function (leagueId) {
     if (idx >= 0) { leagues.splice(idx, 1); SpontixStore.saveLeagues(leagues); }
     return { ok: true };
   }
-  // RLS: only owner can delete
+
+  // ── Cascade cleanup before deleting the league ────────────────────────
+  // 1. Void all pending questions so the live-stats-poller stops tracking them.
+  //    Setting resolution_status = 'voided' is safer than hard-delete because
+  //    it preserves audit history and won't re-trigger if the poller runs mid-delete.
+  await window.sb
+    .from('questions')
+    .update({ resolution_status: 'voided' })
+    .eq('league_id', leagueId)
+    .eq('resolution_status', 'pending');
+
+  // 2. Delete player_answers for this league's questions
+  //    (need question IDs first since player_answers has no direct league_id column)
+  const { data: qIds } = await window.sb
+    .from('questions')
+    .select('id')
+    .eq('league_id', leagueId);
+  if (qIds && qIds.length > 0) {
+    await window.sb
+      .from('player_answers')
+      .delete()
+      .in('question_id', qIds.map(function (q) { return q.id; }));
+  }
+
+  // 3. Delete questions for this league
+  await window.sb.from('questions').delete().eq('league_id', leagueId);
+
+  // 4. Delete league_members
+  await window.sb.from('league_members').delete().eq('league_id', leagueId);
+
+  // 5. Delete the league itself (RLS: only owner can delete)
   const { error } = await window.sb
     .from('leagues')
     .delete()
     .eq('id', leagueId);
   if (error) return { ok: false, error: error.message };
+
   await SpontixStoreAsync.getLeagues();
   return { ok: true };
 };

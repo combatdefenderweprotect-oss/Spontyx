@@ -18,17 +18,20 @@
  *    - /fixtures/events   — every cycle when live or finished
  *    - /fixtures/statistics — every cycle when live or finished (two calls: one per team)
  *    - /fixtures/players  — every ~3 min when live; once when finished
- *    - /fixtures/lineups  — once per fixture (lineups_polled flag)
- *    - /predictions       — once per fixture (predictions_polled flag)
+ *    - /fixtures/lineups    — once per fixture (lineups_polled flag)
+ *    - /predictions         — once per fixture (predictions_polled flag)
  *    - /fixtures/headtohead — once per fixture (h2h_polled flag)
+ *    - /injuries            — once per fixture (injuries_polled flag)
+ *    - /odds                — once per fixture (odds_polled flag)
+ *    - /sidelined           — once per fixture, per injured player up to 5 (sidelined_polled flag)
  * 4. Upsert to live_match_stats.
  *
  * API cost per live match
  * ───────────────────────
  * Per 1-minute cycle: fixtures(1) + events(1) + stats(2) = 4 reqs
  * Player stats every 3 min: 1 req per 3 cycles
- * One-time: lineups(1) + predictions(1) + h2h(1) = 3 reqs
- * 90-minute match total: ~369 requests  (well within Pro plan 7,500/day)
+ * One-time: lineups(1) + predictions(1) + h2h(1) + injuries(1) + odds(1) + sidelined(up to 5) = 9–10 reqs
+ * 90-minute match total: ~375 requests  (well within Pro plan 7,500/day)
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -117,7 +120,7 @@ Deno.serve(async (req: Request) => {
       // Check existing row — skip if polled within 25s (prevents cron overlap double-poll)
       const { data: existing } = await sb
         .from('live_match_stats')
-        .select('status, lineups_polled, predictions_polled, h2h_polled, home_team_id, away_team_id, last_polled_at')
+        .select('status, lineups_polled, predictions_polled, h2h_polled, injuries_polled, odds_polled, sidelined_polled, home_team_id, away_team_id, last_polled_at')
         .eq('fixture_id', fixtureId)
         .maybeSingle()
 
@@ -238,6 +241,15 @@ Deno.serve(async (req: Request) => {
               penalties_scored:    s.penalty?.scored  ?? null,
               penalties_missed:    s.penalty?.missed  ?? null,
               penalties_saved:     s.penalty?.saved   ?? null,
+              // Extended stats
+              passes_total:        s.passes?.total      ?? null,
+              passes_key:          s.passes?.key        ?? null,
+              dribbles_attempts:   s.dribbles?.attempts ?? null,
+              dribbles_success:    s.dribbles?.success  ?? null,
+              tackles:             s.tackles?.total     ?? null,
+              interceptions:       s.tackles?.interceptions ?? null,
+              duels_total:         s.duels?.total       ?? null,
+              duels_won:           s.duels?.won         ?? null,
             }
           })
           update.player_stats = {
@@ -247,7 +259,69 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // ── 2d. Lineups — fetch once ─────────────────────────────────────────
+      // ── 2d. Injuries — fetch once ────────────────────────────────────────
+      if (!existing?.injuries_polled) {
+        const injuriesRes = await apiGet(`/injuries?fixture=${fixtureId}`).catch(() => [])
+        if (injuriesRes.length) {
+          update.injuries = injuriesRes.map((i: any) => ({
+            player_id:   i.player?.id    ?? null,
+            player_name: i.player?.name  ?? null,
+            team_id:     i.team?.id      ?? null,
+            team_name:   i.team?.name    ?? null,
+            reason:      i.player?.reason ?? null,
+            type:        i.player?.type   ?? null,
+          }))
+          update.injuries_polled = true
+
+          // ── 2d-ii. Sidelined — fetch once for each injured player (cap 5) ──
+          if (!existing?.sidelined_polled) {
+            const injuredIds: number[] = (update.injuries as any[])
+              .filter((i: any) => i.player_id)
+              .map((i: any) => i.player_id)
+              .slice(0, 5)
+
+            if (injuredIds.length) {
+              const sidelinedData: Record<number, any[]> = {}
+              await Promise.allSettled(
+                injuredIds.map(async (playerId: number) => {
+                  const res = await apiGet(`/sidelined?player=${playerId}`).catch(() => [])
+                  if (res.length) {
+                    sidelinedData[playerId] = res.map((s: any) => ({
+                      reason: s.fixture?.reason ?? null,
+                      start:  s.fixture?.date   ?? null,
+                      end:    s.fixture?.end     ?? null,
+                    }))
+                  }
+                })
+              )
+              if (Object.keys(sidelinedData).length > 0) {
+                update.sidelined         = sidelinedData
+                update.sidelined_polled  = true
+              }
+            }
+          }
+        }
+      }
+
+      // ── 2e. Odds — fetch once ─────────────────────────────────────────────
+      if (!existing?.odds_polled) {
+        const oddsRes = await apiGet(`/odds?fixture=${fixtureId}`).catch(() => [])
+        if (oddsRes.length) {
+          const bookmaker = oddsRes[0]?.bookmakers?.[0]
+          const bets      = bookmaker?.bets ?? []
+          const findBet   = (name: string) => bets.find((b: any) => b.name === name)
+
+          update.odds = {
+            bookmaker:        bookmaker?.name ?? null,
+            match_winner:     findBet('Match Winner')?.values     ?? null,
+            over_under:       findBet('Goals Over/Under')?.values ?? null,
+            both_teams_score: findBet('Both Teams Score')?.values ?? null,
+          }
+          update.odds_polled = true
+        }
+      }
+
+      // ── 2g. Lineups — fetch once ─────────────────────────────────────────
       if (!existing?.lineups_polled) {
         const lineupsRes = await apiGet(`/fixtures/lineups?fixture=${fixtureId}`).catch(() => [])
         if (lineupsRes.length >= 2) {
@@ -273,7 +347,7 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // ── 2e. Predictions — fetch once ─────────────────────────────────────
+      // ── 2h. Predictions — fetch once ─────────────────────────────────────
       if (!existing?.predictions_polled) {
         const predRes = await apiGet(`/predictions?fixture=${fixtureId}`).catch(() => [])
         if (predRes.length) {
@@ -299,7 +373,7 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // ── 2f. Head-to-head — fetch once ────────────────────────────────────
+      // ── 2i. Head-to-head — fetch once ────────────────────────────────────
       if (!existing?.h2h_polled && homeId && awayId) {
         const h2hRes = await apiGet(`/fixtures/headtohead?h2h=${homeId}-${awayId}&last=5`).catch(() => [])
         if (h2hRes.length) {

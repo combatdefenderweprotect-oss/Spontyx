@@ -481,6 +481,142 @@ For game mode limits, `null` signals that this counter type is not applicable fo
 
 ---
 
+## Question Intensity System (migration 017)
+
+Added 2026-04-27. Defines how many questions are targeted per match, controlled by a preset selected at league/event creation.
+
+### Intensity presets
+
+| Preset | Prematch budget | Live budget | Access |
+|---|---|---|---|
+| `casual` | 3 | 5 | All tiers |
+| `standard` | 4 | 8 | All tiers (default) |
+| `hardcore` | 6 | 12 | Pro+ player / Venue Pro+ |
+
+Prematch budget = target number of `CORE_MATCH_PREMATCH` questions generated before kick-off.  
+Live budget = target number of `CORE_MATCH_LIVE` questions generated during the match.
+
+These are targets, not hard caps — actual volume is further constrained by the AI weekly quota per league and pool availability.
+
+### Tier access to presets
+
+**Statement 1: Tier gates which presets are selectable.**
+
+| Tier | `allowedIntensityPresets` | `intensityConfigurable` |
+|---|---|---|
+| Starter | `['casual', 'standard']` | `false` — fixed at `standard` |
+| Pro | `['casual', 'standard', 'hardcore']` | `true` |
+| Elite | `['casual', 'standard', 'hardcore']` | `true` |
+| Venue Starter | `['casual']` | `false` — fixed at `casual` |
+| Venue Pro | `['casual', 'standard']` | `true` |
+| Venue Elite | `['casual', 'standard', 'hardcore']` | `true` |
+
+`intensityConfigurable: false` means the UI should not show a preset picker — the league/event is locked to the `defaultIntensityPreset` for that tier.
+
+### clampIntensity() — enforcement function
+
+**Statement 2: `clampIntensity(requestedPreset, tier)` is the single gate for preset validation.**
+
+Defined in `spontix-store.js` alongside `TIER_LIMITS`. Call this before saving a league or event to the DB.
+
+```js
+// Returns: { ok: true, preset, prematch, live }
+// Or:      { ok: false, error: 'preset_not_allowed', allowed: [...], fallback: '...' }
+const result = SpontixStore.clampIntensity('hardcore', 'starter');
+// → { ok: false, error: 'preset_not_allowed', allowed: ['casual','standard'], fallback: 'standard' }
+
+const result = SpontixStore.clampIntensity('standard', 'pro');
+// → { ok: true, preset: 'standard', prematch: 4, live: 8 }
+```
+
+If `ok: false`, show an upgrade prompt and use `result.fallback` as the saved preset.
+
+Save `result.prematch` → `leagues.prematch_question_budget`, `result.live` → `leagues.live_question_budget`.
+
+### Pool generation target
+
+**Statement 3: The pool is generated to satisfy the HIGHEST-budget co-profile league, not the generating league's own budget.**
+
+When the generation pipeline generates a canonical question pool for a match, multiple leagues may share that same pool. They share it only if they have an identical generation profile (all 8 PoolCacheKey fields: match_id, sport, league_type, phase_scope, mode, scope, scoped_team_id, prompt_version).
+
+The pool is generated at `poolGenerationTarget = max(prematch_question_budget)` across all co-profile leagues in the current run batch, with a fallback of 8.
+
+Each league then gets its own slice capped at `min(quota.questionsToGenerate, league.prematch_question_budget)`.
+
+This means: if League A has CASUAL (prematch=3) and League B has HARDCORE (prematch=6) and they share the same profile, one OpenAI call produces 6 canonical questions. League A gets 3, League B gets 6.
+
+### Venue Starter AI preview (aiPreviewPerEvent)
+
+`aiPreviewPerEvent: 3` on `venue-starter` limits each venue event to 3 total AI questions. Venue events map to their own `league_id` in the generation pipeline — the league_id is the correct unit for this cap (not event_id, which does not appear in the `questions` table).
+
+Enforcement is in `generate-questions/index.ts`: before Phase A, if the owner tier is `venue-starter`, the pipeline counts `questions WHERE league_id = league.id AND source = 'ai_generated'`. If the count is ≥ 3, the league is skipped with `skipReason: 'venue_ai_preview_cap'`.
+
+### DB columns (migration 017)
+
+| Table | Column | Type | Default | Notes |
+|---|---|---|---|---|
+| `leagues` | `question_intensity_preset` | `TEXT` CHECK | `'standard'` | |
+| `leagues` | `prematch_question_budget` | `INTEGER` | `4` | STANDARD default |
+| `leagues` | `live_question_budget` | `INTEGER` | `8` | STANDARD default |
+| `venue_events` | `question_intensity_preset` | `TEXT` CHECK | `'standard'` | |
+| `venue_events` | `prematch_question_budget` | `INTEGER` | `4` | |
+| `venue_events` | `live_question_budget` | `INTEGER` | `8` | |
+
+---
+
+## Pre-Match Scheduling System (migration 018)
+
+Added 2026-04-27. Gives league owners control over WHEN pre-match questions become visible in the feed before kickoff.
+
+### Two modes
+
+| Mode | Behaviour | Tier |
+|---|---|---|
+| `automatic` | Questions appear as soon as they are generated (within 24–48h of kickoff). Default for all tiers. | All |
+| `manual` | Questions appear exactly at `kickoff − offset_hours`. Tier-gated. | Pro+ |
+
+### Allowed publish offsets (manual mode)
+
+| Offset | Meaning | Tier |
+|---|---|---|
+| `48h` | Questions visible 48 hours before kickoff | Elite only |
+| `24h` | Questions visible 24 hours before kickoff | Pro, Elite |
+| `12h` | Questions visible 12 hours before kickoff | Pro, Elite |
+| `6h` | Questions visible 6 hours before kickoff — maximum match-day intensity | Elite only |
+
+### `TIER_LIMITS` keys
+
+| Key | Type | Starter | Pro | Elite |
+|---|---|---|---|---|
+| `prematchSchedulingEnabled` | `boolean` | `false` | `true` | `true` |
+| `allowedPrematchOffsets` | `number[]` | `[]` | `[24, 12]` | `[48, 24, 12, 6]` |
+
+### Generation logic (Edge Function)
+
+- **Automatic**: match is eligible when kickoff is ≤ 48h away. `visible_from = now`.
+- **Manual**: match is eligible when `now >= kickoff − offset_hours`. `visible_from = kickoff − offset_hours` (clamped to now if the publish window is already past — handles late-creation edge case).
+- **Both modes**: never generate after kickoff. `kickoff <= now` → ineligible.
+- If no matches are in the publish window, the league is skipped with `skipReason: 'no_matches_in_publish_window'`.
+
+### Pool reuse
+
+Pool questions store the canonical `opens_at` from the first league that triggered generation. When a second league reuses the pool (via `attachPoolQuestionsToLeague`), `visible_from` and `opens_at` are recomputed per-league using `computeLeagueVisibleFrom(league, kickoff)`. This means two leagues watching the same match but with different scheduling modes each get the correct publish time. `deadline` (= kickoff) is shared across leagues — it does not change.
+
+### DB columns (migration 018)
+
+| Table | Column | Type | Default | Notes |
+|---|---|---|---|---|
+| `leagues` | `prematch_generation_mode` | `TEXT` CHECK | `'automatic'` | `'automatic'` or `'manual'` |
+| `leagues` | `prematch_publish_offset_hours` | `INTEGER` CHECK | `24` | Allowed: 48/24/12/6 |
+
+### Enforcement
+
+- **Frontend UI** (`create-league.html`): timing section shown only when prematch questions are relevant (Match Night prematch/hybrid, or season league with AI enabled). Manual card and individual offset pills visually locked for ineligible tiers. `renderPrematchTimingTierLocks()` re-evaluates on every view.
+- **Frontend handler** (`launchLeague`): `prematch_generation_mode` and `prematch_publish_offset_hours` sent to `SpontixStoreAsync.createLeague` → persisted to DB.
+- **Edge Function** (`generate-questions`): `isMatchEligibleForPrematch()` filters matches before pool operations. `computeVisibleFrom()` sets the correct `visible_from` at generation time.
+
+---
+
 ## Enforcement Status
 
 ### Currently enforced (frontend UI + handler)
@@ -490,6 +626,7 @@ For game mode limits, `null` signals that this counter type is not applicable fo
 - Season-long league locked in `create-league.html` (Step 0 type selector — "Elite" badge)
 - Upgrade modal pricing uses correct €7.99 / €19.99 / €29.99 / €79.99 values
 - No hardcoded `tier === 'elite'` comparisons remain — all checks use `SpontixStore.getTierLimits(tier)` boolean keys
+- **Pre-Match Scheduling** — `create-league.html`: timing section hidden unless prematch questions are relevant; Manual card locked for Starter; offset pills 48h/6h locked for Pro; `renderPrematchTimingTierLocks()` called on every show. `launchLeague()` persists `prematch_generation_mode` + `prematch_publish_offset_hours` to DB.
 - **BR tier gate** — `battle-royale.html:joinGame()` enforces 3-way logic: Starter daily (`spontix_br_day_*`), Pro monthly (`spontix_br_month_*`), Elite fair-use (`spontix_br_cooldown`). Victory screen resets Elite cooldown to 20s on completion.
 - **Trivia tier gate** — `trivia.html:startGame()` enforces same 3-way logic: Starter daily (`spontix_trivia_day_*`), Pro monthly (`spontix_trivia_month_*`), Elite fair-use (`spontix_trivia_cooldown`). Results screen resets Elite cooldown to 20s on completion.
 
@@ -507,8 +644,11 @@ These limits are now read from Supabase on every check — not from localStorage
 - `realWorldQuestionsPerMonth` — enforced in `generate-questions` Edge Function via `checkRealWorldQuota()` in `lib/quota-checker.ts`. Two sequential checks: (1) **daily cap** — max 1 REAL_WORLD question per league per UTC day, applies to ALL tiers including Elite (`real_world_daily_cap`); (2) **tier rule** — Starter: fully blocked (`real_world_tier_locked`), Pro: 10/month per league (`real_world_quota_reached` when limit hit), Elite: unlimited beyond the daily cap. Quota checked against `questions` table count. Owner tier resolved from `users.tier` via `owner_id` on `leagues`.
 - `aiWeeklyQuota` — `leagues.ai_weekly_quota` column is set at creation time from `TIER_LIMITS.aiWeeklyQuota` (Starter: 2, Pro: 5, Elite: 10). The generation Edge Function reads this column directly — it is not re-derived from the owner's live tier.
 
+### Currently enforced (Edge Function — server-side, added 2026-04-27)
+- **Pre-Match Scheduling publish window** — `generate-questions` Edge Function: `isMatchEligibleForPrematch()` filters each match before pool operations using `league.prematch_generation_mode` and `league.prematch_publish_offset_hours`. Automatic: match must be ≤ 48h away. Manual: `now >= kickoff − offset_hours`. After kickoff: always ineligible. Leagues with no eligible matches are skipped with `no_matches_in_publish_window`. `computeVisibleFrom()` sets `visible_from` at generation time; `computeLeagueVisibleFrom()` in `pool-manager.ts` overrides `visible_from` per-league for pool-reused questions.
+- `aiPreviewPerEvent` — Venue Starter capped at 3 total AI questions per league_id in `generate-questions` Edge Function. Before Phase A, counts `questions WHERE league_id = league.id AND source = 'ai_generated'`. If count ≥ 3, skips with `skipReason: 'venue_ai_preview_cap'`. Each venue event maps to its own `league_id` — enforcing by `league_id` is the correct mechanism. UI-only gate in `venue-live-floor.html` is retained for real-time feedback.
+
 ### Frontend handler only — backend RLS enforcement needed post-launch
-- `aiPreviewPerEvent` — Venue Starter limited to 3 AI question pushes per event in `venue-live-floor.html`. Tracked per-event in handler; no DB enforcement.
 - `aiQuestionsPerMonth` — generation pipeline uses `leagues.ai_weekly_quota` (set at creation), not a live tier check.
 - BR and Trivia game counters (`battleRoyalePerDay`, `battleRoyalePerMonth`, `triviaGamesPerDay`, `triviaGamesPerMonth`) — localStorage only. Clearable by the user. Post-launch: move to Supabase-backed counters.
 

@@ -77,12 +77,34 @@ export interface PoolQuestionInput {
   resolution_predicate:  any;
   base_value?:           number;
   difficulty_multiplier?: number;
-  match_minute_at_generation?: number;
+  match_minute_at_generation?: number | null;
   opens_at?:             string;
   deadline?:             string;
   resolves_after?:       string;
 }
 
+
+// ── Per-league visible_from for pool-reused questions ────────────────
+// Recomputes visible_from for each league that attaches from the pool.
+// Pool questions store the canonical timing from the first league that
+// triggered generation, but different leagues may have different scheduling
+// modes — so we always recompute rather than reuse the pool's opens_at.
+//
+// automatic: visible_from = now (question appears immediately after attach)
+// manual:    visible_from = kickoff − offset_hours (clamped to now if past)
+//            kickoff is pq.deadline (set to match kickoff at generation time)
+
+function computeLeagueVisibleFrom(league: LeagueWithConfig, kickoff: string | null): string {
+  const now = new Date();
+  if (!kickoff) return now.toISOString();
+  const mode = league.prematch_generation_mode ?? 'automatic';
+  if (mode === 'manual') {
+    const offset = league.prematch_publish_offset_hours ?? 24;
+    const visMs = new Date(kickoff).getTime() - offset * 3600 * 1000;
+    return new Date(Math.max(visMs, now.getTime())).toISOString();
+  }
+  return now.toISOString();
+}
 
 // ── Lane helpers (mirrors detectLane() in league.html) ───────────────
 
@@ -456,9 +478,14 @@ export async function getPoolQuestions(
 // ── Attach pool questions to a league ────────────────────────────────
 // Creates league-specific question instances from canonical pool questions.
 // Enforces per-league constraints before each attach:
-//   - quota limit
+//   - leagueCap: min(weekly quota, prematch_question_budget) — computed by caller
 //   - timing validity (deadline must be in the future)
 //   - text-based dedup against recent questions for this league
+//
+// leagueCap is the PER-LEAGUE effective ceiling. It must be computed by the caller
+// as: Math.min(quota.questionsToGenerate, league.prematch_question_budget ?? 4)
+// This separates the pool generation size (which may be larger, serving the
+// highest-budget co-profile league) from each individual league's own slice.
 //
 // Each inserted row has its own unique ID — answering is fully independent
 // across leagues even when questions share the same pool source.
@@ -471,7 +498,7 @@ export async function attachPoolQuestionsToLeague(
   promptVersion: string,
   recentQuestionTexts: string[],
   alreadyAttachedThisRun: number,
-  quota: number,
+  leagueCap: number,   // renamed from 'quota' — this is the per-league effective ceiling
 ): Promise<number> {
   if (!poolQuestions.length) return 0;
 
@@ -480,7 +507,7 @@ export async function attachPoolQuestionsToLeague(
   const toInsert = [];
 
   for (const pq of poolQuestions) {
-    if (alreadyAttachedThisRun + toInsert.length >= quota) break;
+    if (alreadyAttachedThisRun + toInsert.length >= leagueCap) break;
 
     // Timing validity: skip questions whose answer window has already closed
     if (pq.deadline && new Date(pq.deadline) <= now) {
@@ -509,7 +536,7 @@ export async function attachPoolQuestionsToLeague(
       player_ids:            pq.playerIds,
       event_type:            pq.eventType,
       narrative_context:     pq.narrativeContext,
-      opens_at:              pq.opensAt,
+      opens_at:              computeLeagueVisibleFrom(league, pq.deadline),  // = visible_from
       deadline:              pq.deadline,
       resolves_after:        pq.resolvesAfter,
       resolution_rule_text:  pq.resolutionRuleText,
@@ -522,8 +549,10 @@ export async function attachPoolQuestionsToLeague(
       source_badge:          LANE_SOURCE_BADGE[computeLane(pq.matchMinuteAtGeneration, pq.matchId)],
       base_value:            pq.baseValue,
       difficulty_multiplier: pq.difficultyMultiplier,
-      // opens_at = visible_from and deadline = answer_closes_at at generation time
-      visible_from:          pq.opensAt,
+      // visible_from is league-specific: recomputed from the league's scheduling mode
+      // so different leagues reusing the same pool can have different publish times.
+      // deadline (= kickoff) is the authoritative answer close time — shared across leagues.
+      visible_from:          computeLeagueVisibleFrom(league, pq.deadline),
       answer_closes_at:      pq.deadline,
     });
   }

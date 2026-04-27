@@ -3,7 +3,7 @@ import type { RawGeneratedQuestion, ResolutionPredicate } from './types.ts';
 const OPENAI_BASE      = 'https://api.openai.com/v1/chat/completions';
 const MODEL_GENERATION = 'gpt-4o-mini';  // creative call — upgrade to gpt-4o if quality drops
 const MODEL_PREDICATE  = 'gpt-4o-mini';  // mechanical JSON conversion — mini is sufficient
-export const PROMPT_VERSION = 'v1.8';
+export const PROMPT_VERSION = 'v1.9';
 
 // ── System prompt for Call 1 (question generation) ───────────────────
 
@@ -71,6 +71,57 @@ CONFIRMED STARTERS (when lineup section is present):
 
 If no PLAYER AVAILABILITY section is present:
 → Proceed normally, but avoid players flagged as injured in KEY PLAYERS
+
+==================================================
+PLAYER STATS — WHAT IS RESOLVABLE (READ CAREFULLY)
+==================================================
+
+All player stats are CUMULATIVE MATCH TOTALS only.
+There are NO per-minute or time-window breakdowns for individual players.
+
+AVAILABLE player_stat fields (use these exact names in predicate_hint):
+
+  ALWAYS AVAILABLE:
+  - goals              → total goals scored
+  - assists            → total assists
+  - shots              → total shots (on + off target)
+  - cards              → yellow + red combined
+  - minutes_played     → minutes on pitch
+  - clean_sheet        → boolean (GK only, min 60 min played, 0 goals against)
+
+  AVAILABLE when API returns data (may be null for some players):
+  - passes_total       → total passes attempted
+  - passes_key         → key passes (leading directly to a shot)
+  - dribbles_attempts  → dribble attempts
+  - dribbles_success   → successful dribbles
+  - tackles            → total tackles
+  - interceptions      → total interceptions
+  - duels_total        → total duels contested
+  - duels_won          → duels won
+
+HARD LIMITS — NEVER violate these:
+  ✗ DO NOT ask "will player X have Y passes in minutes 15–20" — time windows for player stats are impossible to resolve
+  ✗ DO NOT ask about passes/tackles/dribbles in a specific half — only full-match totals are available
+  ✗ DO NOT use player stats for hockey questions — not available in free tier, will be voided
+  ✗ DO NOT ask about xG, expected goals, progressive passes — not in API response
+  ✗ DO NOT ask about distance covered, sprint speed, heat maps — not in API response
+
+GOOD question examples (full match total):
+  ✓ "Will [Player] complete 40+ passes in the match?"
+  ✓ "Will [Player] make 3+ key passes?"
+  ✓ "Will [Player] attempt 5+ dribbles?"
+  ✓ "Will [Player] win 6+ duels?"
+  ✓ "Will [Player] make 2+ tackles?"
+
+BAD question examples (impossible to resolve):
+  ✗ "Will [Player] make 3 passes in the first 20 minutes?"
+  ✗ "Will [Player] have more passes in the first half?"
+  ✗ "Will [Player] complete 80% of his passes?" — accuracy% not a stat field
+
+predicate_hint format for extended player stats:
+  "player_stat: passes_total gte 40 for player_id 123"
+  "player_stat: tackles gte 3 for player_id 456"
+  "player_stat: dribbles_success gte 2 for player_id 789"
 
 ==================================================
 CORE RULES

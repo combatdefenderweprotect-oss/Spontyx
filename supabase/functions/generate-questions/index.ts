@@ -102,7 +102,9 @@ Deno.serve(async (req: Request) => {
         scoped_team_id, scoped_team_name,
         api_sports_league_id, api_sports_team_id, api_sports_season,
         ai_weekly_quota, ai_total_quota,
-        league_start_date, league_end_date, owner_id
+        league_start_date, league_end_date, owner_id,
+        prematch_question_budget, live_question_budget,
+        prematch_generation_mode, prematch_publish_offset_hours
       `)
       .eq('ai_questions_enabled', true)
       .not('api_sports_league_id', 'is', null);
@@ -212,12 +214,36 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
+      // ── Venue Starter AI preview cap ─────────────────────────────────
+      // Venue Starter: aiPreviewPerEvent = 3 total AI questions per event.
+      // Each venue event maps to its own league_id in the generation pipeline,
+      // so enforcing by league_id count is the correct mechanism.
+      // We check the owner's tier for the venue-starter limit; non-venue owners skip.
+      const ownerTierForCap = ownerTierMap.get(league.owner_id ?? '') ?? 'starter';
+      if (ownerTierForCap === 'venue-starter') {
+        const AI_PREVIEW_CAP = 3; // matches aiPreviewPerEvent in TIER_LIMITS
+        const { count: existingAiCount, error: capErr } = await sb
+          .from('questions')
+          .select('id', { count: 'exact', head: true })
+          .eq('league_id', league.id)
+          .eq('source', 'ai_generated');
+
+        if (!capErr && (existingAiCount ?? 0) >= AI_PREVIEW_CAP) {
+          result.skipped    = true;
+          result.skipReason = 'venue_ai_preview_cap';
+          console.log(`[venue-starter] league ${league.id} hit aiPreviewPerEvent cap (${existingAiCount}/${AI_PREVIEW_CAP})`);
+          runStats.leaguesSkipped++;
+          await writeLeagueResult(sb, runId, result);
+          continue;
+        }
+      }
+
       runStats.leaguesProcessed++;
 
       // Step 1: Fetch sports context
       let sportsCtx;
       try {
-        sportsCtx = await fetchSportsContext(league, API_SPORTS_KEY);
+        sportsCtx = await fetchSportsContext(league, API_SPORTS_KEY, sb);
       } catch (err) {
         console.warn(`[sports] failed for league ${league.id}:`, err);
         result.skipped    = true;
@@ -244,6 +270,26 @@ Deno.serve(async (req: Request) => {
       // Step 3: Fetch recent questions for dedup
       const recentQuestions = await getRecentQuestionTexts(sb, league.id);
 
+      // Step 3b: Filter matches by pre-match publish window.
+      // automatic: within 48h of kickoff; manual: now >= kickoff − offset_hours.
+      // Never generate after kickoff (handled inside isMatchEligibleForPrematch).
+      const nowMs = Date.now();
+      const eligibleMatches = sportsCtx.upcomingMatches.filter(
+        (m) => isMatchEligibleForPrematch(m.kickoff, league, nowMs),
+      );
+
+      if (!eligibleMatches.length) {
+        result.skipped    = true;
+        result.skipReason = 'no_matches_in_publish_window';
+        runStats.leaguesSkipped++;
+        console.log(`[schedule] league ${league.id} — no matches in publish window (mode=${league.prematch_generation_mode ?? 'automatic'})`);
+        await writeLeagueResult(sb, runId, result);
+        continue;
+      }
+
+      // Replace sportsCtx with publish-window-filtered variant for all phases below.
+      const filteredSportsCtxBySchedule = { ...sportsCtx, upcomingMatches: eligibleMatches };
+
       // Steps 4–6: Pool-aware generation
       //
       // Phase A — Reuse: find ready pools for upcoming matches and attach directly.
@@ -255,7 +301,13 @@ Deno.serve(async (req: Request) => {
       // Phase C — Attach: for each newly generated pool, create league-specific
       //           question rows in the questions table with timing + dedup checks.
 
-      const upcomingMatchIds = sportsCtx.upcomingMatches.map((m) => m.id).filter(Boolean);
+      const upcomingMatchIds = filteredSportsCtxBySchedule.upcomingMatches.map((m) => m.id).filter(Boolean);
+
+      // Per-league prematch budget: use the DB value, fall back to STANDARD (4)
+      const leaguePrematchBudget = league.prematch_question_budget ?? 4;
+
+      // Effective per-league cap: respect both the weekly quota and the intensity budget
+      const leagueQuotaCap = Math.min(quota.questionsToGenerate, leaguePrematchBudget);
 
       const baseKey = {
         sport:         league.sport,
@@ -263,9 +315,11 @@ Deno.serve(async (req: Request) => {
         phaseScope:    getPhaseScope(league),
         mode:          getMode(league),
         promptVersion: PROMPT_VERSION,
+        scope:         (league.scope ?? 'full_league') as 'full_league' | 'team_specific',
+        scopedTeamId:  league.scoped_team_id ?? null,
       };
 
-      // Phase A: reuse existing ready pools
+      // Phase A: reuse existing ready pools (operating on schedule-filtered matches)
       const existingPools = await findReadyPools(sb, upcomingMatchIds, baseKey);
       let totalAttached = 0;
 
@@ -273,14 +327,14 @@ Deno.serve(async (req: Request) => {
       const rwQuota = await checkRealWorldQuota(sb, league.id, ownerTier);
 
       for (const [matchId, pool] of existingPools) {
-        if (totalAttached >= quota.questionsToGenerate) break;
+        if (totalAttached >= leagueQuotaCap) break;
         let poolQs = await getPoolQuestions(sb, pool.id, baseKey.mode);
         if (!rwQuota.allowed) {
           poolQs = poolQs.filter((pq) => computeLane(pq.matchMinuteAtGeneration, pq.matchId) !== 'REAL_WORLD');
         }
         const attached = await attachPoolQuestionsToLeague(
           sb, poolQs, league, runId, PROMPT_VERSION,
-          recentQuestions, totalAttached, quota.questionsToGenerate,
+          recentQuestions, totalAttached, leagueQuotaCap,
         );
         if (attached > 0) {
           console.log(`[pool] reused ${attached} questions for league ${league.id} from match ${matchId}`);
@@ -288,13 +342,13 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // Phase B: generate for uncovered matches
+      // Phase B: generate for uncovered matches (only schedule-eligible matches)
       const coveredIds = new Set(existingPools.keys());
-      const uncoveredMatches = sportsCtx.upcomingMatches.filter(
+      const uncoveredMatches = filteredSportsCtxBySchedule.upcomingMatches.filter(
         (m) => m.id && !coveredIds.has(m.id),
       );
 
-      if (uncoveredMatches.length > 0 && totalAttached < quota.questionsToGenerate) {
+      if (uncoveredMatches.length > 0 && totalAttached < leagueQuotaCap) {
         // Race-safe pool claim: whichever process inserts first owns generation
         const claimedPools = new Map<string, MatchPool>();
         for (const match of uncoveredMatches) {
@@ -311,6 +365,22 @@ Deno.serve(async (req: Request) => {
             upcomingMatches: uncoveredMatches.filter((m) => claimedPools.has(m.id)),
           };
 
+          // ── Pool generation target (Fix 2 — corrected patch) ──────────
+          // The pool must be large enough to satisfy ANY league that shares the
+          // EXACT same generation profile (all 8 PoolCacheKey fields).
+          // We find all co-profile leagues among the current run batch and take
+          // the maximum prematch budget, falling back to 8 (STANDARD live budget).
+          //
+          // Only leagues with identical: sport, leagueType, phaseScope, mode,
+          // scope, scopedTeamId, promptVersion qualify as co-profile.
+          // matchId is already fixed per uncoveredMatch — so the profile check
+          // implicitly covers all 8 key fields.
+          const poolGenerationTarget = computePoolGenerationTarget(
+            filteredCtx.upcomingMatches.map((m) => m.id),
+            league,
+            leagues as LeagueWithConfig[],
+          );
+
           // Derive diversity signals from recent question texts (best-effort heuristics)
           const recentCategories = deriveRecentCategories(recentQuestions);
           const recentStatFocus  = deriveRecentStatFocus(recentQuestions);
@@ -321,7 +391,9 @@ Deno.serve(async (req: Request) => {
             sportsCtx:             filteredCtx,
             newsItems,
             recentQuestions,
-            questionsToGenerate:   quota.questionsToGenerate - totalAttached,
+            // Use poolGenerationTarget — not the per-league quota — so the pool
+            // is large enough to serve the highest-budget co-profile league.
+            questionsToGenerate:   poolGenerationTarget - totalAttached,
             existingQuestionCount: totalAttached,
             recentCategories,
             recentStatFocus,
@@ -331,7 +403,7 @@ Deno.serve(async (req: Request) => {
           const validatedQuestions: ValidatedQuestion[] = [];
           let attempt = 0;
           while (
-            validatedQuestions.length < (quota.questionsToGenerate - totalAttached) &&
+            validatedQuestions.length < (poolGenerationTarget - totalAttached) &&
             attempt < MAX_RETRIES
           ) {
             attempt++;
@@ -346,7 +418,7 @@ Deno.serve(async (req: Request) => {
             }
 
             for (const raw of rawQuestions) {
-              if (validatedQuestions.length >= (quota.questionsToGenerate - totalAttached)) break;
+              if (validatedQuestions.length >= (poolGenerationTarget - totalAttached)) break;
 
               // ── Fill system-computed fields ────────────────────────────
               raw.event_type         = CATEGORY_EVENT_TYPE[raw.question_category] ?? 'time_window';
@@ -359,13 +431,12 @@ Deno.serve(async (req: Request) => {
               const firstMatch = filteredCtx.upcomingMatches[0];
               const kickoff = firstMatch?.kickoff ?? now;
 
-              // opens_at / visible_from — use OpenAI value if reasonable, else now
-              const aiVisibleFrom = raw.visible_from ? new Date(raw.visible_from).getTime() : 0;
-              const nowMs = Date.now();
-              raw.visible_from = (aiVisibleFrom > nowMs && aiVisibleFrom < nowMs + 120_000)
-                ? raw.visible_from  // within 2 min — accept OpenAI's value
-                : now;              // else: open immediately
-              raw.opens_at = raw.visible_from;
+              // opens_at / visible_from — determined by league's scheduling mode:
+              //   automatic: publish immediately (now)
+              //   manual:    publish at kickoff − offset_hours (clamped to now if past)
+              const computedVisibleFrom = computeVisibleFrom(league, kickoff);
+              raw.visible_from = computedVisibleFrom;
+              raw.opens_at = computedVisibleFrom;
 
               // answer_closes_at / deadline — for prematch: kickoff is the hard close
               raw.answer_closes_at = kickoff;
@@ -497,11 +568,12 @@ Deno.serve(async (req: Request) => {
 
             if (stored.length > 0) {
               await markPoolReady(sb, pool.id, stored.length);
-              // Attach from pool to this league with per-league constraint checks
+              // Attach from pool to this league with per-league constraint checks.
+              // Cap = leagueQuotaCap (respects both intensity budget and weekly quota).
               const poolQs = await getPoolQuestions(sb, pool.id, baseKey.mode);
               const attached = await attachPoolQuestionsToLeague(
                 sb, poolQs, league, runId, PROMPT_VERSION,
-                recentQuestions, totalAttached, quota.questionsToGenerate,
+                recentQuestions, totalAttached, leagueQuotaCap,
               );
               totalAttached += attached;
             } else {
@@ -541,6 +613,43 @@ Deno.serve(async (req: Request) => {
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────
+
+// Compute the pool generation target for a set of match IDs being claimed this cycle.
+//
+// The pool must be large enough to serve the HIGHEST-budget league among all leagues
+// that share the EXACT same PoolCacheKey generation profile.
+//
+// Eligibility: a league is co-profile with the current league if it has identical:
+//   sport, leagueType (type1/type2), phaseScope, mode, scope, scopedTeamId, promptVersion
+//   AND covers at least one of the uncoveredMatchIds.
+//
+// Returns max(prematch_question_budget) across eligible leagues, floored at 8.
+// The fallback of 8 matches the STANDARD live budget — safe default if no budget data.
+function computePoolGenerationTarget(
+  _uncoveredMatchIds: (string | undefined)[],  // reserved for future per-match scoping
+  currentLeague: LeagueWithConfig,
+  allLeagues: LeagueWithConfig[],
+): number {
+  const FALLBACK = 8;
+
+  const coProfileBudgets = allLeagues
+    .filter((l) => {
+      // Must share all profile fields except matchId
+      if (l.sport         !== currentLeague.sport)         return false;
+      if (getLeagueType(l) !== getLeagueType(currentLeague)) return false;
+      if (getPhaseScope(l) !== getPhaseScope(currentLeague)) return false;
+      if (getMode(l)       !== getMode(currentLeague))       return false;
+      if (l.scope          !== currentLeague.scope)          return false;
+      if ((l.scoped_team_id ?? null) !== (currentLeague.scoped_team_id ?? null)) return false;
+      // Must be watching at least one of the uncovered matches
+      // (league is included; exact matchId is fixed per pool claim so this is sufficient)
+      return true;
+    })
+    .map((l) => l.prematch_question_budget ?? FALLBACK)
+    .filter((b) => b > 0);
+
+  return coProfileBudgets.length ? Math.max(...coProfileBudgets) : FALLBACK;
+}
 
 // Heuristic: infer category labels from recent question texts for diversity hints.
 // Not perfect — avoids needing to store category per question in the DB for now.
@@ -599,6 +708,62 @@ async function writeLeagueResult(sb: any, runId: string, r: LeagueRunResult) {
     duration_ms:              r.durationMs,
   });
   if (error) console.warn('[writeLeagueResult] insert error:', error);
+}
+
+// ── Pre-match publish window check ───────────────────────────────────
+//
+// Returns true if a prematch question SHOULD be generated for this match
+// right now, given the league's scheduling mode.
+//
+// automatic: eligible when match is ≤ 48h away (consistent with IMMINENT/UPCOMING)
+// manual:    eligible when now >= kickoff − offset_hours (publish window has opened)
+//
+// Both modes: reject if kickoff is already in the past.
+
+function isMatchEligibleForPrematch(
+  kickoff: string,
+  league: LeagueWithConfig,
+  nowMs: number,
+): boolean {
+  const kickoffMs = new Date(kickoff).getTime();
+  if (isNaN(kickoffMs)) return false;
+  // Never generate after kickoff
+  if (kickoffMs <= nowMs) return false;
+
+  const mode = league.prematch_generation_mode ?? 'automatic';
+
+  if (mode === 'manual') {
+    const offset = league.prematch_publish_offset_hours ?? 24;
+    const publishWindowStartMs = kickoffMs - offset * 3600 * 1000;
+    return nowMs >= publishWindowStartMs;
+  }
+
+  // Automatic: generate within 48h of kickoff
+  const hoursUntilKickoff = (kickoffMs - nowMs) / (1000 * 3600);
+  return hoursUntilKickoff <= 48;
+}
+
+// ── Per-league visible_from computation ───────────────────────────────
+//
+// For pool-reused questions, visible_from must be recomputed per league
+// because different leagues may have different scheduling modes — even
+// when they share the same canonical pool question.
+//
+// automatic: visible_from = now (question appears immediately after attach)
+// manual:    visible_from = kickoff − offset_hours (clamped to now if past)
+//
+// kickoff = the question's deadline (= kickoff stored on the pool question).
+
+export function computeVisibleFrom(league: LeagueWithConfig, kickoff: string): string {
+  const now = new Date();
+  const mode = league.prematch_generation_mode ?? 'automatic';
+  if (mode === 'manual') {
+    const offset = league.prematch_publish_offset_hours ?? 24;
+    const visMs = new Date(kickoff).getTime() - offset * 3600 * 1000;
+    // Clamp: never set visible_from in the past
+    return new Date(Math.max(visMs, now.getTime())).toISOString();
+  }
+  return now.toISOString();
 }
 
 async function finaliseRun(sb: any, runId: string, stats: any, status: string) {

@@ -120,13 +120,22 @@ export async function fetchFootballMatchStats(
           const cleanSheet    = isGK && minutesPlayed >= 60 && oppScore === 0;
 
           playerStats[playerId] = {
-            goals:          stat.goals?.total    ?? 0,
-            assists:        stat.goals?.assists  ?? 0,
-            shots:          stat.shots?.total    ?? 0,
-            yellow_cards:   stat.cards?.yellow   ?? 0,
-            red_cards:      stat.cards?.red      ?? 0,
-            minutes_played: minutesPlayed,
-            clean_sheet:    cleanSheet,
+            goals:               stat.goals?.total         ?? 0,
+            assists:             stat.goals?.assists       ?? 0,
+            shots:               stat.shots?.total         ?? 0,
+            yellow_cards:        stat.cards?.yellow        ?? 0,
+            red_cards:           stat.cards?.red           ?? 0,
+            minutes_played:      minutesPlayed,
+            clean_sheet:         cleanSheet,
+            // Extended stats
+            passes_total:        stat.passes?.total        ?? null,
+            passes_key:          stat.passes?.key          ?? null,
+            dribbles_attempts:   stat.dribbles?.attempts   ?? null,
+            dribbles_success:    stat.dribbles?.success    ?? null,
+            tackles:             stat.tackles?.total       ?? null,
+            interceptions:       stat.tackles?.interceptions ?? null,
+            duels_total:         stat.duels?.total         ?? null,
+            duels_won:           stat.duels?.won           ?? null,
           };
         }
       }

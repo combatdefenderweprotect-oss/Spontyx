@@ -253,7 +253,6 @@ export async function checkRealWorldQuota(
     return { allowed: false, skipReason: 'real_world_tier_locked' };
   }
   // Pro: check monthly usage for this league
-  const now = new Date();
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
   const { count, error } = await sb
     .from('questions')
