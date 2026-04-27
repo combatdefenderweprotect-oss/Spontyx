@@ -1477,13 +1477,25 @@ async function readPrefill() {
     const nameEl = document.getElementById('league-name');
     if (nameEl && home && away) nameEl.value = `${home} vs ${away} — Match Night`;
 
-    if (apiLeagueId && window.sb) {
+    // 4a. Fallback: if api_league_id is missing (league's api_sports_league_id was null),
+    //     recover it from the fixture record using match_id.
+    let resolvedApiLeagueId = apiLeagueId;
+    if (!resolvedApiLeagueId && matchId && window.sb) {
+      const { data: fix } = await window.sb
+        .from('api_football_fixtures')
+        .select('league_id')
+        .eq('fixture_id', matchId)
+        .single();
+      if (fix && fix.league_id) resolvedApiLeagueId = String(fix.league_id);
+    }
+
+    if (resolvedApiLeagueId && window.sb) {
       // 4. Fetch THIS specific competition directly — bypasses MATCH_NIGHT_API_LEAGUE_IDS filter.
       //    The user already chose the match so we know exactly which competition it belongs to.
       const { data: compRows } = await window.sb
         .from('sports_competitions')
         .select('*')
-        .eq('api_league_id', parseInt(apiLeagueId))
+        .eq('api_league_id', parseInt(resolvedApiLeagueId))
         .eq('sport', 'football')
         .limit(1);
 
@@ -1513,7 +1525,7 @@ async function readPrefill() {
 
         // Select the competition that matches this match
         const compOpt = Array.from(compEl.options).find(o => {
-          try { return String(JSON.parse(o.dataset.row || '{}').api_league_id) === String(apiLeagueId); }
+          try { return String(JSON.parse(o.dataset.row || '{}').api_league_id) === String(resolvedApiLeagueId); }
           catch (e) { return false; }
         });
 
@@ -1525,7 +1537,7 @@ async function readPrefill() {
           const matchEl = document.getElementById('league-match');
           matchEl.innerHTML = '<option value="">Loading matches...</option>';
 
-          const fixtures = await loadMatchesForCompetition(parseInt(apiLeagueId));
+          const fixtures = await loadMatchesForCompetition(parseInt(resolvedApiLeagueId));
           matchEl.innerHTML = '<option value="">Select a match...</option>';
           fixtures.forEach(m => {
             const opt = document.createElement('option');
