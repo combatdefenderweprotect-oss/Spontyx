@@ -303,6 +303,7 @@
   let activeBucket = 'all';
   let activeComp   = '';
   let searchVal    = '';
+  const _matchStore = {};       // keyed by matchId — stores full match object for Match Live button
 
   /* palette for competition colour dots */
   const PALETTE = ['var(--lime)','var(--purple)','var(--coral)','var(--teal)','var(--orange)','#60a5fa','#f9a8d4','#86efac'];
@@ -483,14 +484,16 @@
   }
 
   /* ─── Match Live quick-create ─── */
-  function createMatchLive(m) {
+  function createMatchLive(key) {
+    const m = _matchStore[key];
+    if (!m) return;
     const p = new URLSearchParams({
       prefill_match:  '1',
       league_type:    'match',
       home:           m.home || '',
       away:           m.away || '',
       kickoff:        m.kickoff instanceof Date ? m.kickoff.toISOString() : (m.kickoff || ''),
-      api_league_id:  m.apiLeagueId || '',
+      api_league_id:  m.compId || '',
       match_id:       m.matchId || ''
     });
     window.location = 'create-league.html?' + p.toString();
@@ -540,6 +543,7 @@
     matches.forEach(m => {
       if (!byComp[m.compId]) byComp[m.compId] = { name: m.compName, items: [] };
       byComp[m.compId].items.push(m);
+      _matchStore[m.matchId] = m; // store for Match Live button lookup
     });
 
     let html = '';
@@ -593,7 +597,8 @@
                 ${qBadge}
                 <div class="match-card-actions">
                   <button class="btn-match-live"
-                          onclick="event.stopPropagation();createMatchLive(${JSON.stringify({home:m.home,away:m.away,kickoff:m.kickoff instanceof Date ? m.kickoff.toISOString() : m.kickoff,apiLeagueId:m.compId,matchId:m.matchId})})">
+                          data-match-key="${esc(m.matchId)}"
+                          onclick="event.stopPropagation();createMatchLive(this.dataset.matchKey)">
                     <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
                     Match Live
                   </button>
