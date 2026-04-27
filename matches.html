@@ -485,12 +485,13 @@
   /* ─── Match Live quick-create ─── */
   function createMatchLive(m) {
     const p = new URLSearchParams({
-      prefill_match: '1',
-      league_type:   'match',
-      home:          m.home || '',
-      away:          m.away || '',
-      kickoff:       m.kickoff || '',
-      api_league_id: m.apiLeagueId || ''
+      prefill_match:  '1',
+      league_type:    'match',
+      home:           m.home || '',
+      away:           m.away || '',
+      kickoff:        m.kickoff instanceof Date ? m.kickoff.toISOString() : (m.kickoff || ''),
+      api_league_id:  m.apiLeagueId || '',
+      match_id:       m.matchId || ''
     });
     window.location = 'create-league.html?' + p.toString();
   }
@@ -592,7 +593,7 @@
                 ${qBadge}
                 <div class="match-card-actions">
                   <button class="btn-match-live"
-                          onclick="event.stopPropagation();createMatchLive(${JSON.stringify({home:m.home,away:m.away,kickoff:m.kickoff,apiLeagueId:m.apiLeagueId})})">
+                          onclick="event.stopPropagation();createMatchLive(${JSON.stringify({home:m.home,away:m.away,kickoff:m.kickoff instanceof Date ? m.kickoff.toISOString() : m.kickoff,apiLeagueId:m.compId,matchId:m.matchId})})">
                     <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
                     Match Live
                   </button>

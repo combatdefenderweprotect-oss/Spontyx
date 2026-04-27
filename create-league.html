@@ -1449,30 +1449,69 @@ function showTrophyPreview(trophy) {
 }
 
 // ── Prefill wizard from URL params (e.g. from Browse Matches "Invite players") ──
-function readPrefill() {
+async function readPrefill() {
   const params = new URLSearchParams(window.location.search);
   if (params.get('prefill_match') !== '1') return;
 
   const home        = params.get('home') || '';
   const away        = params.get('away') || '';
-  const apiLeagueId = params.get('api_league_id');
-  const kickoff     = params.get('kickoff');
-  const urlType     = params.get('league_type'); // 'match' from Match Live button
+  const apiLeagueId = params.get('api_league_id') || '';
+  const kickoff     = params.get('kickoff') || '';
+  const matchId     = params.get('match_id') || '';
+  const urlType     = params.get('league_type');
 
-  // If league_type=match is in the URL, auto-select Match Night and jump to Step 1
+  // ── Match Night quick-create path (from Match Live button) ──
   if (urlType === 'match') {
-    // Programmatically select the Match Night type card
+    // 1. Select the Match Night type card
     const matchCard = Array.from(document.querySelectorAll('.type-card')).find(c =>
       (c.getAttribute('onclick') || '').includes("'match'")
     );
-    if (matchCard) {
-      selectType(matchCard, 'match');
-    }
-    // Jump straight to Step 1 — the match details step
+    if (matchCard) selectType(matchCard, 'match');
+
+    // 2. Jump to Step 1, render Match Night UI without auto-loading competitions
+    //    (we'll load them ourselves below so we can await them)
     currentStep = 1;
-    initStep1();
+    initMatchNightStep(false); // false = skip the internal loadMatchNightCompetitions()
     updateProgress();
+
+    // 3. Pre-fill league name immediately (visible while competitions load)
+    const nameEl = document.getElementById('league-name');
+    if (nameEl && home && away) nameEl.value = `${home} vs ${away} — Match Night`;
+
+    // 4. Load competitions and select the right one
+    await loadMatchNightCompetitions();
+
+    if (apiLeagueId) {
+      const compEl = document.getElementById('league-comp');
+      const compOpt = Array.from(compEl.options).find(o => {
+        try { return String(JSON.parse(o.dataset.row || '{}').api_league_id) === String(apiLeagueId); }
+        catch (e) { return false; }
+      });
+      if (compOpt) {
+        compEl.value = compOpt.value;
+
+        // 5. Load matches for this competition and select the specific fixture
+        await onMatchNightCompChange();
+
+        if (matchId) {
+          const matchEl  = document.getElementById('league-match');
+          const matchOpt = Array.from(matchEl.options).find(o => {
+            try { return String(JSON.parse(o.dataset.row || '{}').match_id) === String(matchId); }
+            catch (e) { return false; }
+          });
+          if (matchOpt) {
+            matchEl.value = matchOpt.value;
+            onMatchSelect(); // update selectedMatch global
+          }
+        }
+      }
+    }
+
+    validateStep1();
+    return;
   }
+
+  // ── Standard prefill path (Invite Players / non-match-live flows) ──
 
   // League name
   const nameEl = document.getElementById('league-name');
@@ -1515,7 +1554,7 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   // Load competitions first, then apply any URL prefill
   await onSportChange();
-  readPrefill();
+  await readPrefill();
 
   // Wire date inputs to quota display
   document.getElementById('league-start-date').addEventListener('change', updateAIQuotaDisplay);

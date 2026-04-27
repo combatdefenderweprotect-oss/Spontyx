@@ -652,6 +652,9 @@
           competitionName: leagueMap[q.league_id]
             ? (competitionMap[parseInt(leagueMap[q.league_id].api_sports_league_id)] || '')
             : '',
+          apiLeagueId: leagueMap[q.league_id]
+            ? String(leagueMap[q.league_id].api_sports_league_id || '')
+            : '',
           home: teamNameMap[homeId] || 'Home Team',
           away: teamNameMap[awayId] || 'Away Team',
           kickoff: null,
@@ -694,6 +697,7 @@
         leagueId:        null,
         leagueName:      s.competition || 'Football',
         competitionName: s.competition || '',
+        apiLeagueId:     s.api_league_id ? String(s.api_league_id) : '',
         home:            s.home_team,
         away:            s.away_team,
         kickoff:         s.kickoff_at ? new Date(s.kickoff_at) : new Date(Date.now() + 86400000),
@@ -735,12 +739,13 @@
     const m = _inviteStore[key];
     if (!m) return;
     const p = new URLSearchParams({
-      prefill_match: '1',
-      league_type: 'match',
-      home: m.home || '',
-      away: m.away || '',
-      kickoff: m.kickoff instanceof Date ? m.kickoff.toISOString() : (m.kickoff || ''),
-      api_league_id: m.apiLeagueId || m.competitionId || ''
+      prefill_match:  '1',
+      league_type:    'match',
+      home:           m.home || '',
+      away:           m.away || '',
+      kickoff:        m.kickoff instanceof Date ? m.kickoff.toISOString() : (m.kickoff || ''),
+      api_league_id:  m.apiLeagueId || '',
+      match_id:       m.matchId || ''
     });
     window.location = 'create-league.html?' + p.toString();
   }
