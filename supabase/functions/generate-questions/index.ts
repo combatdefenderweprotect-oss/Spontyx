@@ -13,6 +13,10 @@ import {
   attachPoolQuestionsToLeague,
   type MatchPool,
 } from './lib/pool-manager.ts';
+import {
+  filterPrematchBatch, computeStandingGap,
+  type PrematchBatchContext, type PriorQuestionInfo,
+} from './lib/prematch-quality-filter.ts';
 
 const MAX_RETRIES = 3;
 
@@ -377,6 +381,20 @@ Deno.serve(async (req: Request) => {
             upcomingMatches: uncoveredMatches.filter((m) => claimedPools.has(m.id)),
           };
 
+          // Build prematch quality batch context from the first match.
+          // Used by the post-generation quality filter (filterPrematchBatch).
+          // null = no match available, filter will pass all questions through.
+          const firstMatchForQuality = filteredCtx.upcomingMatches[0];
+          const prematchBatchCtx: PrematchBatchContext | null = firstMatchForQuality ? {
+            homeTeamId:    firstMatchForQuality.homeTeam.id,
+            homeTeamName:  firstMatchForQuality.homeTeam.name,
+            awayTeamId:    firstMatchForQuality.awayTeam.id,
+            awayTeamName:  firstMatchForQuality.awayTeam.name,
+            standingGap:   computeStandingGap(sportsCtx.standings, firstMatchForQuality),
+            scopedTeamId:  league.scoped_team_id ?? null,
+            scopedTeamName: league.scoped_team_name ?? null,
+          } : null;
+
           // ── Pool generation target (Fix 2 — corrected patch) ──────────
           // The pool must be large enough to satisfy ANY league that shares the
           // EXACT same generation profile (all 8 PoolCacheKey fields).
@@ -427,6 +445,39 @@ Deno.serve(async (req: Request) => {
               result.rejectionLog.push({ attempt, stage: 'question_generation', error: String(err) });
               result.questionsRejected++;
               continue;
+            }
+
+            // ── Prematch quality pre-filter ──────────────────────────
+            // Runs before predicate conversion (Call 2) to avoid spending
+            // tokens on low-quality questions. Only filters prematch_only
+            // questions; live/REAL_WORLD pass through unchanged.
+            if (prematchBatchCtx) {
+              const quotaRemaining = (poolGenerationTarget - totalAttached) - validatedQuestions.length;
+              const priorInfo: PriorQuestionInfo[] = validatedQuestions.map((vq) => ({
+                question_text: vq.question_text,
+                player_id:     vq.player_ids?.[0] ?? undefined,
+              }));
+              const filterResult = filterPrematchBatch(
+                rawQuestions, prematchBatchCtx, priorInfo, Math.max(1, quotaRemaining),
+              );
+              for (const r of filterResult.rejected) {
+                console.log(
+                  `[prematch_quality] rejected "${r.question_text.slice(0, 70)}" ` +
+                  `— ${r.reason} (score=${r.score})`,
+                );
+                result.rejectionLog.push({
+                  attempt,
+                  stage:         'prematch_quality',
+                  question_text: r.question_text,
+                  error:         `${r.reason} (score=${r.score})`,
+                });
+                result.questionsRejected++;
+              }
+              rawQuestions = filterResult.accepted;
+              if (rawQuestions.length === 0) {
+                console.log(`[prematch_quality] all questions rejected in attempt ${attempt}, retrying`);
+                continue; // trigger next while-loop iteration
+              }
             }
 
             for (const raw of rawQuestions) {

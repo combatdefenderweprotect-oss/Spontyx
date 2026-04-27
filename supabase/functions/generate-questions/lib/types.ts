@@ -265,7 +265,7 @@ export interface ValidatedQuestion {
 
 export interface RejectionLogEntry {
   attempt: number;
-  stage: 'question_generation' | 'predicate_parse' | 'schema_validation' | 'entity_validation' | 'temporal_validation' | 'logic_validation' | 'availability_validation';
+  stage: 'question_generation' | 'predicate_parse' | 'schema_validation' | 'entity_validation' | 'temporal_validation' | 'logic_validation' | 'availability_validation' | 'prematch_quality';
   question_text?: string;
   error: string;
 }
