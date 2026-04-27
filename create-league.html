@@ -1461,104 +1461,70 @@ async function readPrefill() {
   const urlType     = params.get('league_type');
 
   // ── Match Night quick-create path (from Match Live button) ──
+  // All data comes directly from the URL — no DB queries needed.
+  // matches.html and upcoming.html already have this data loaded from api_football_fixtures.
   if (urlType === 'match') {
+    const compName = params.get('comp_name') || '';
+
     // 1. Select the Match Night type card
     const matchCard = Array.from(document.querySelectorAll('.type-card')).find(c =>
       (c.getAttribute('onclick') || '').includes("'match'")
     );
     if (matchCard) selectType(matchCard, 'match');
 
-    // 2. Jump to Step 1 with Match Night UI (skip internal comp load — we do it below)
+    // 2. Jump to Step 1
     currentStep = 1;
     initMatchNightStep(false);
     updateProgress();
 
-    // 3. Fill league name immediately
+    // 3. Fill league name
     const nameEl = document.getElementById('league-name');
     if (nameEl && home && away) nameEl.value = `${home} vs ${away} — Match Night`;
 
-    // 4a. Fallback: if api_league_id is missing (league's api_sports_league_id was null),
-    //     recover it from the fixture record using match_id.
-    let resolvedApiLeagueId = apiLeagueId;
-    if (!resolvedApiLeagueId && matchId && window.sb) {
-      const { data: fix } = await window.sb
-        .from('api_football_fixtures')
-        .select('league_id')
-        .eq('fixture_id', matchId)
-        .single();
-      if (fix && fix.league_id) resolvedApiLeagueId = String(fix.league_id);
-    }
+    // 4. Build selectedCompetition directly from URL params — no DB query.
+    //    api_league_id comes from f.league_id in api_football_fixtures (already synced).
+    if (apiLeagueId && compName) {
+      const kickoffDate = kickoff ? new Date(kickoff) : new Date();
+      const season      = kickoffDate.getFullYear();
 
-    if (resolvedApiLeagueId && window.sb) {
-      // 4. Fetch THIS specific competition directly — bypasses MATCH_NIGHT_API_LEAGUE_IDS filter.
-      //    The user already chose the match so we know exactly which competition it belongs to.
-      const { data: compRows } = await window.sb
-        .from('sports_competitions')
-        .select('*')
-        .eq('api_league_id', parseInt(resolvedApiLeagueId))
-        .eq('sport', 'football')
-        .limit(1);
+      selectedCompetition = {
+        api_league_id: parseInt(apiLeagueId),
+        name:          compName,
+        sport:         'football',
+        season
+      };
 
-      const compData = compRows && compRows[0];
-      const compEl   = document.getElementById('league-comp');
+      // Populate competition dropdown with a single option representing this competition
+      const compEl = document.getElementById('league-comp');
+      compEl.innerHTML = '';
+      const compOpt = document.createElement('option');
+      compOpt.value       = apiLeagueId;
+      compOpt.textContent = compName;
+      compOpt.dataset.row = JSON.stringify(selectedCompetition);
+      compOpt.selected    = true;
+      compEl.appendChild(compOpt);
 
-      if (compData) {
-        // Populate dropdown with this competition (plus any MATCH_NIGHT standard ones)
-        // so the user could still change it if they want.
-        // First load the standard list, then ensure our comp is in it.
-        compEl.innerHTML = '<option value="">Loading...</option>';
-        const { data: stdComps } = await window.sb
-          .from('sports_competitions')
-          .select('*')
-          .eq('sport', 'football')
-          .eq('is_active', true)
-          .order('display_order');
+      // 5. Build selectedMatch directly from URL params — no DB query.
+      if (matchId && home && away) {
+        const kickoffIso = kickoff || new Date().toISOString();
+        const matchRow   = {
+          match_id:      matchId,
+          homeTeamName:  home,
+          awayTeamName:  away,
+          visible_from:  kickoffIso,
+          kickoff_at:    kickoffIso
+        };
+        selectedMatch = matchRow;
 
-        compEl.innerHTML = '<option value="">Select competition...</option>';
-        (stdComps || []).forEach(c => {
-          const opt = document.createElement('option');
-          opt.value       = c.id;
-          opt.textContent = c.name;
-          opt.dataset.row = JSON.stringify(c);
-          compEl.appendChild(opt);
-        });
-
-        // Select the competition that matches this match
-        const compOpt = Array.from(compEl.options).find(o => {
-          try { return String(JSON.parse(o.dataset.row || '{}').api_league_id) === String(resolvedApiLeagueId); }
-          catch (e) { return false; }
-        });
-
-        if (compOpt) {
-          compEl.value        = compOpt.value;
-          selectedCompetition = JSON.parse(compOpt.dataset.row);
-
-          // 5. Load fixtures for this competition
-          const matchEl = document.getElementById('league-match');
-          matchEl.innerHTML = '<option value="">Loading matches...</option>';
-
-          const fixtures = await loadMatchesForCompetition(parseInt(resolvedApiLeagueId));
-          matchEl.innerHTML = '<option value="">Select a match...</option>';
-          fixtures.forEach(m => {
-            const opt = document.createElement('option');
-            opt.value       = m.match_id;
-            opt.textContent = formatMatchOption(m);
-            opt.dataset.row = JSON.stringify(m);
-            matchEl.appendChild(opt);
-          });
-
-          // 6. Select the specific fixture by match_id
-          if (matchId) {
-            const matchOpt = Array.from(matchEl.options).find(o => {
-              try { return String(JSON.parse(o.dataset.row || '{}').match_id) === String(matchId); }
-              catch (e) { return false; }
-            });
-            if (matchOpt) {
-              matchEl.value = matchOpt.value;
-              onMatchSelect();
-            }
-          }
-        }
+        // Populate match dropdown with a single option for this fixture
+        const matchEl = document.getElementById('league-match');
+        matchEl.innerHTML = '';
+        const matchOpt = document.createElement('option');
+        matchOpt.value       = matchId;
+        matchOpt.textContent = `${home} vs ${away}${kickoff ? ' · ' + new Date(kickoff).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}`;
+        matchOpt.dataset.row = JSON.stringify(matchRow);
+        matchOpt.selected    = true;
+        matchEl.appendChild(matchOpt);
       }
     }
 

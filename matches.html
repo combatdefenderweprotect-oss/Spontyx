@@ -494,6 +494,7 @@
       away:           m.away || '',
       kickoff:        m.kickoff instanceof Date ? m.kickoff.toISOString() : (m.kickoff || ''),
       api_league_id:  m.compId || '',
+      comp_name:      m.compName || '',
       match_id:       m.matchId || ''
     });
     window.location = 'create-league.html?' + p.toString();
