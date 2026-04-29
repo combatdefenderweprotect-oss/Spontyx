@@ -52,7 +52,7 @@
 
     /* ── Action Cards Grid ── */
     .action-cards-grid {
-      display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; margin-bottom: 28px;
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 28px;
     }
     .action-card {
       background: var(--navy-card); border-radius: var(--radius-lg); padding: 18px 20px; border: 2px solid rgba(255,255,255,0.06);
@@ -62,7 +62,7 @@
     }
     .action-card:hover { transform: translateY(-2px); }
 
-    /* Create League — LIME (main brand) */
+    /* Solo — LIME (main brand) */
     .action-card.lime-accent {
       background: var(--lime);
       border-color: var(--lime);
@@ -73,6 +73,18 @@
     .action-card.lime-accent:hover {
       background: #b8f01c;
       border-color: #b8f01c;
+    }
+
+    /* Multiplayer — dark card with lime border */
+    .action-card.multi-accent {
+      background: var(--navy-card);
+      border-color: var(--lime);
+      color: var(--off-white);
+    }
+    .action-card.multi-accent .action-card-title { color: var(--lime); }
+    .action-card.multi-accent .action-card-desc { color: rgba(255,255,255,0.6); }
+    .action-card.multi-accent:hover {
+      background: rgba(168,225,12,0.07);
     }
 
     /* Join League — PURPLE (secondary) */
@@ -93,9 +105,9 @@
       display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0;
     }
     .action-card.lime-accent .action-card-icon { background: rgba(26,26,46,0.15); color: var(--navy); }
+    .action-card.multi-accent .action-card-icon { background: rgba(168,225,12,0.12); color: var(--lime); }
     .action-card.purple-accent .action-card-icon { background: rgba(255,255,255,0.2); color: #fff; }
 
-    .action-card-
     .action-card-title { font-size: 0.95rem; font-weight: 700; }
     .action-card-desc { font-size: 0.75rem; line-height: 1.4; margin-top: 2px; }
 
@@ -342,21 +354,36 @@
 
     <!-- Quick Action Cards -->
     <div class="action-cards-grid">
-      <!-- Create League Card -->
-      <a href="create-league.html" class="action-card lime-accent" style="text-decoration:none;color:inherit;">
-        <div class="action-card-icon">+</div>
+      <!-- Solo Play -->
+      <a href="create-league.html?play_mode=singleplayer" class="action-card lime-accent" style="text-decoration:none;color:inherit;">
+        <div class="action-card-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        </div>
         <div class="action-card-body">
-          <div class="action-card-title">Create League</div>
-          <div class="action-card-desc">Start a new season-long league or single-match game</div>
+          <div class="action-card-title">Solo</div>
+          <div class="action-card-desc">Just you vs the match</div>
+        </div>
+      </a>
+
+      <!-- Multiplayer -->
+      <a href="create-league.html?play_mode=multiplayer" class="action-card multi-accent" style="text-decoration:none;color:inherit;">
+        <div class="action-card-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        </div>
+        <div class="action-card-body">
+          <div class="action-card-title">Multiplayer</div>
+          <div class="action-card-desc">Compete with friends</div>
         </div>
       </a>
 
       <!-- Join League Card -->
       <a href="discover.html" class="action-card purple-accent" style="text-decoration:none;color:inherit;">
-        <div class="action-card-icon">👥</div>
+        <div class="action-card-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+        </div>
         <div class="action-card-body">
           <div class="action-card-title">Join a League</div>
-          <div class="action-card-desc">Browse public leagues or enter an invite code</div>
+          <div class="action-card-desc">Browse public leagues</div>
         </div>
       </a>
     </div>
