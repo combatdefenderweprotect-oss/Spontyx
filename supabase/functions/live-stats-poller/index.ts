@@ -344,6 +344,62 @@ Deno.serve(async (req: Request) => {
           })
           update.lineups         = { home: mapLineup(lineupsRes[0]), away: mapLineup(lineupsRes[1]) }
           update.lineups_polled  = true
+
+          // ── Sync team_players from lineups (once per fixture) ─────────────
+          // Upserts teams, players, and team_players (starters +10, subs +4).
+          // Uses GREATEST() so existing relevance_scores are never downgraded.
+          const homeTeam = lineupsRes[0]
+          const awayTeam = lineupsRes[1]
+          const lineupPlayers = [
+            ...(homeTeam.startXI ?? []).map((p: any) => ({
+              player_id:   String(p.player.id),
+              player_name: p.player.name ?? '',
+              team_id:     String(homeId),
+              pos:         p.player.pos  ?? null,
+              number:      p.player.number ?? null,
+              is_starter:  true,
+            })),
+            ...(homeTeam.substitutes ?? []).map((p: any) => ({
+              player_id:   String(p.player.id),
+              player_name: p.player.name ?? '',
+              team_id:     String(homeId),
+              pos:         p.player.pos  ?? null,
+              number:      p.player.number ?? null,
+              is_starter:  false,
+            })),
+            ...(awayTeam.startXI ?? []).map((p: any) => ({
+              player_id:   String(p.player.id),
+              player_name: p.player.name ?? '',
+              team_id:     String(awayId),
+              pos:         p.player.pos  ?? null,
+              number:      p.player.number ?? null,
+              is_starter:  true,
+            })),
+            ...(awayTeam.substitutes ?? []).map((p: any) => ({
+              player_id:   String(p.player.id),
+              player_name: p.player.name ?? '',
+              team_id:     String(awayId),
+              pos:         p.player.pos  ?? null,
+              number:      p.player.number ?? null,
+              is_starter:  false,
+            })),
+          ].filter((p) => p.player_id && p.player_id !== 'null')
+
+          if (lineupPlayers.length > 0) {
+            const { error: rpcErr } = await sb.rpc('sync_lineup_players', {
+              p_sport:     'football',
+              p_home_id:   String(homeId),
+              p_home_name: String(update.home_team_name ?? ''),
+              p_away_id:   String(awayId),
+              p_away_name: String(update.away_team_name ?? ''),
+              p_players:   lineupPlayers,
+            })
+            if (rpcErr) {
+              console.warn('[live-stats-poller] sync_lineup_players failed:', rpcErr.message)
+            } else {
+              console.log(`[live-stats-poller] synced ${lineupPlayers.length} lineup players for fixture ${fixtureId}`)
+            }
+          }
         }
       }
 
@@ -400,6 +456,44 @@ Deno.serve(async (req: Request) => {
         stats.errors++
       } else {
         stats.polled++
+      }
+
+      // ── 4. Sync team_players from events (once, when match is done) ───────
+      // Bumps relevance scores: goal scorer +8, assist +6, card +5.
+      // Capped at 100. Guarded by events_synced flag to prevent re-incrementing.
+      if (isDone && !existing?.events_synced && update.events) {
+        const rawEvents = update.events as any[]
+        const eventPayload = rawEvents
+          .filter((e) => e.player_id && e.team_id)
+          .map((e) => ({
+            player_id:      String(e.player_id),
+            team_id:        String(e.team_id),
+            event_type:     e.type ?? '',
+            assist_id:      e.assist_id ? String(e.assist_id) : null,
+            assist_team_id: e.assist_id ? String(e.team_id)   : null, // assist is always same team for now
+          }))
+          .filter((e) => e.event_type === 'Goal' || e.event_type === 'Card')
+
+        if (eventPayload.length > 0) {
+          const { error: evtErr } = await sb.rpc('sync_match_events', {
+            p_sport:   'football',
+            p_events:  eventPayload,
+          })
+          if (evtErr) {
+            console.warn(`[live-stats-poller] sync_match_events failed fixture=${fixtureId}:`, evtErr.message)
+          } else {
+            // Mark events synced so we don't re-increment on next poll
+            await sb.from('live_match_stats')
+              .update({ events_synced: true })
+              .eq('fixture_id', fixtureId)
+            console.log(`[live-stats-poller] synced ${eventPayload.length} events for fixture ${fixtureId}`)
+          }
+        } else {
+          // No scorable events — mark synced anyway to skip future attempts
+          await sb.from('live_match_stats')
+            .update({ events_synced: true })
+            .eq('fixture_id', fixtureId)
+        }
       }
 
     } catch (err) {

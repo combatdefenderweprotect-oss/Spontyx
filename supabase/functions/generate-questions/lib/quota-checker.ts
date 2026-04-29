@@ -245,11 +245,14 @@ export async function checkRealWorldQuota(
   const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
   const { count: dailyCount, error: dailyErr } = await sb
     .from('questions')
-    .select('*', { count: 'exact', head: true })
+    .select('id', { count: 'exact', head: true })
     .eq('league_id', leagueId)
     .eq('question_type', 'REAL_WORLD')
     .gte('created_at', todayStart);
-  if (!dailyErr && (dailyCount ?? 0) >= 1) {
+  // Fail-safe: if the DB query errors, block generation rather than silently
+  // allowing a second REAL_WORLD question (fail-closed on quota check errors).
+  if (dailyErr) return { allowed: false, skipReason: 'real_world_quota_check_failed' };
+  if ((dailyCount ?? 0) >= 1) {
     return { allowed: false, skipReason: 'real_world_daily_cap' };
   }
 
@@ -258,11 +261,11 @@ export async function checkRealWorldQuota(
   if (ownerTier !== 'pro') {
     return { allowed: false, skipReason: 'real_world_tier_locked' };
   }
-  // Pro: check monthly usage for this league
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+  // Pro: check monthly usage for this league (UTC boundary — consistent with daily cap)
+  const monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
   const { count, error } = await sb
     .from('questions')
-    .select('*', { count: 'exact', head: true })
+    .select('id', { count: 'exact', head: true })
     .eq('league_id', leagueId)
     .eq('question_type', 'REAL_WORLD')
     .gte('created_at', monthStart);

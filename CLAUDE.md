@@ -1,216 +1,125 @@
 # Spontix — Project State & Developer Handoff
 
-Last updated 2026-04-28 — Pre-Match Scheduling system live (migration 018 ✅): automatic/manual modes, tier-gated offset pills in create-league.html, per-league visible_from in pool reuse. Cascade delete for leagues (migration 019 ✅): ON DELETE CASCADE on questions + league_members FKs, orphan cleanup SQL, deleteLeague() rewritten to cascade. Pre-match lifecycle UX: status strips (🔒 active, ⏳ closed), answer-change hint, "Your current pick" label, contextual toasts, result timing messaging. Pre-match generation fixes (v2.1 prompt): tighter automatic window (24h–48h band), DISTANT skip, PER_RUN_CAP bypassed for prematch, lineup filtered at >6h, full prematch question ruleset (8 rules: distribution, quality, context adaptation, team balance, player gate, resolvability, diversity, self-check). All migrations 001–019 run. Sidebar badges fully live. Discover filters DB-driven. Match Live quick-create live. Tier system v2 complete. Auth gate hardened. All advanced systems preserved intact for post-launch activation.
+Last updated 2026-04-29 — play_mode (singleplayer / multiplayer) added to leagues: migration 029 adds `play_mode TEXT NOT NULL DEFAULT 'multiplayer' CHECK (play_mode IN ('singleplayer', 'multiplayer'))` to `leagues`. play_mode is INDEPENDENT of subscription tier — all TIER_LIMITS (liveQuestionsPerMatch, realWorldQuestionsEnabled, leaguesCreatePerWeek, etc.) apply identically in both modes. `spontix-store.js`: `_mapLeagueFromDb` maps `play_mode → playMode`, `_mapLeagueToDb` maps back. `create-league.html`: new Play Experience selector (Multiplayer / Solo cards) with `selectSessionType()` function — Solo locks player slider to 1, hides Team Mode section, enforces `max_members=1` in `launchLeague()`. `applyRealWorldTierGating()` shows Pro+ badge and blocks AI Real World toggle for Starter in both modes. `applySingleplayerLiveCapNotice()` shows coral cap notice when Solo + live/hybrid + Starter. Review step shows "Solo (1 player)" or "Multiplayer". `league.html`: `hydrateLeaguePage()` detects `isSolo`, sets `statMode` to 'Solo', adds Solo tag to meta strip, hides invite card for singleplayer leagues. `docs/TIER_ARCHITECTURE.md` updated to v7 with full "Play Mode vs Subscription Tier" section. Migrations 028 (Realtime publication) and 029 (play_mode column) both applied ✅.
+
+Last updated 2026-04-29 — Realtime subscription replacing polling in league.html: Supabase Realtime channel (`league-{id}`) subscribes to `questions` INSERT/UPDATE/DELETE and `player_answers` UPDATE for the current league. New questions appear instantly (sub-second) instead of waiting up to 15s. Resolved cards flip in real-time when the resolver awards points. Polling downgraded to 30s heartbeat when Realtime is connected (catches reconnect gaps). Falls back to 5s/15s polling if channel errors. Tab visibility handling: pauses channel when hidden, resumes + refreshes on return. `beforeunload` cleanup. Migration 028 enables Realtime publication for both tables — **run `028_enable_realtime.sql` in Supabase SQL editor**.
+
+Last updated 2026-04-29 — Scraper enrichment integrated into REAL_WORLD pipeline: new `enrichArticlesWithScraper()` in generate-questions index.ts calls the Railway scraper service on up to 5 top-ranked candidate articles per league before Call 1. Attaches `extracted_context` (800 chars of full article body) to each enriched NewsItem. `EnrichedNewsItem` type added to types.ts. `generateRealWorldQuestion()` signature updated to accept EnrichedNewsItem[]; Call 1 prompt STEP 0 updated to prefer extracted_context over RSS summary. Falls back gracefully when scraper is unconfigured or fails. 4 log events. Env vars: SCRAPER_API_URL + SCRAPER_API_KEY (add to Supabase Edge Function secrets). `docs/REAL_WORLD_QUESTION_SYSTEM.md` updated with Article Enrichment Layer section. generate-questions redeployed.
+
+Last updated 2026-04-29 — spontix-scraper-service: lightweight Node.js 20 + Express + Playwright Chromium + Mozilla Readability microservice built and deployed to Railway. Accepts a URL via POST /scrape, renders the page headlessly, and returns clean article content (title, source, published_at, extracted_text up to 3,000 chars). Auth via x-scraper-key header. Rate limited to 20 req/min. Docker non-root pattern (PLAYWRIGHT_BROWSERS_PATH=/ms-playwright + chmod -R o+rx + appuser). GitHub repo: combatdefenderweprotect-oss/spontyx-scraper-service. Railway URL: https://spontyx-scraper-service-production.up.railway.app. Both /health and /scrape verified live.
+
+Last updated 2026-04-29 — REAL_WORLD AI-assisted fallback resolution: new `lib/ai-verifier.ts` in resolve-questions uses OpenAI Responses API + web_search_preview as a last resort for manual_review and match_lineup questions. FORBIDDEN for player_stat/match_stat/btts (official API only). Resolution rules: high confidence → resolve; medium + ≥2 sources → resolve; low/unresolvable → allow auto-void. `resolution_source = 'ai_web_verification'` when AI resolves. 4 log events. Also: bounded REAL_WORLD retry loop (MAX_RW_RETRIES=3) in generate-questions with ranked news batches, weakCandidate pattern, buildRwQuestion() helper. resolve-questions redeployed.
+
+Last updated 2026-04-29 — REAL_WORLD match binding: all REAL_WORLD questions now hard-bound to a 48h target match. 48h window filter before Call 1, strict predicate match_id validation after Call 2 (no fallback), TARGET MATCH CONSTRAINT added to prompt, manual_review answer_closes_at changed to kickoff, match_id always NOT NULL on insert. PROMPT_VERSION bumped v2.8 → v2.9. generate-questions redeployed.
+
+Last updated 2026-04-28 — REAL_WORLD sixth audit pass: 8 fixes. (C1) deleted dead `rwQuota` ReferenceError block in prematch pool Phase C — was crashing the entire prematch generation pass per league with an undefined variable left by the 5th pass cleanup. (C2) match_id added to `upcomingMatchStr` passed to Call 1 — model was fabricating numeric IDs that passed schema validation but resolved against wrong fixtures. (C3) manual_review resolvesAfter changed from deadline to deadline+91min — checkTemporal requires resolvesAfter >= deadline+90min, so deadline (5th pass fix) was always 1 minute too early, failing validation after all 4 OpenAI calls. (M1) extended player_stat VALID_FIELDS in predicate-validator: passes_total, passes_key, dribbles_attempts, dribbles_success, tackles, interceptions, duels_total, duels_won — TYPE 2/3 RW questions using these fields were silently rejected. (M2) quota-checker daily cap fail-safe: DB error now returns allowed=false instead of silently allowing through; both count queries changed from select('*') to select('id'). (M3) mergedKnownPlayers (team_players DB + keyPlayers injury list) now passed to Call 1 instead of only keyPlayers — fit squad players had no player_id in the hint causing TYPE 2/3 player predicates to fail entity validation. (M4) all upcoming matches (up to 3) now passed to Call 1 as upcoming_matches[] — model selects the most relevant fixture; post-Call-2 upcomingMatch resolved by matching predicate match_id against all upcoming matches. (M5) news-adapter/index.ts: sportsCtx.teamStandings (non-existent field) replaced with sportsCtx.standings?.map(s => s.team.name) — was silently stripping all standings team names from the knownTeams list. (M6) match_lineup resolution_deadline overridden to kickoff (not kickoff-30min): auto-void fires at kickoff+1h giving the resolver a full hour of retries; near-kickoff guard extended from 30min to 60min (lineups released ~1h before kickoff). PROMPT_VERSION bumped to v2.7. Both Edge Functions redeployed.
 
 ---
 
-# ⚠️ MVP EXECUTION CONTROL (MANDATORY)
+# System Rules
 
-**This section overrides all other rules in this document.**
+Permanent operational rules for Spontix. These apply to all development regardless of feature scope.
 
-This document describes the FULL Spontix system. The sections below contain both MVP scope and post-launch design. The full system design is preserved for continuity and post-launch development. It must not be implemented ahead of the mid-May launch.
+## Sport support
+- **Football is the only live sport.** The generation pipeline skips non-football leagues at runtime (`sport_not_supported_mvp`).
+- Hockey and tennis adapters exist in the codebase. Do not extend them until API coverage is verified end-to-end.
 
-## Active launch target: mid-May 2026
+## Timing model — MANDATORY
+Every question must have all three timestamps populated. This is the fairness guarantee — do not simplify it away.
+- `visible_from` — when the question appears in the feed
+- `answer_closes_at` — authoritative answer lock (enforced at DB level via RLS)
+- `resolves_after` — when the resolver evaluates the outcome (always strictly after `answer_closes_at`)
 
-## MVP rules
+## Scoring formula — FULLY ACTIVE
+All six multipliers are live in `resolve-questions/index.ts`:
 
-1. **MVP overrides everything.** If any section below conflicts with the MVP scope defined here, MVP wins. No exceptions.
-2. **Everything below is FULL SYSTEM unless explicitly marked MVP.** Do not assume a section is in scope just because it is documented.
-3. **Do not implement features not listed as MVP-critical.** This applies to all developers and to AI assistants reading this file.
-4. **Do not remove, delete, or simplify advanced systems.** They are preserved for post-launch. Removing them creates rework.
-5. **If in doubt, do nothing.** A missing advanced feature is always safer than a broken advanced feature at launch.
+```
+points = base_value × time_pressure × difficulty × streak × comeback × clutch
+```
 
-## MVP implementation rule
+| Multiplier | Value |
+|---|---|
+| `base_value` | Per category: 20 / 15 / 12 / 10 / 6 |
+| `time_pressure_multiplier` | 1.0–1.5× based on time remaining at answer |
+| `difficulty_multiplier` | 1.0–1.5× set at question generation time |
+| `streak_multiplier` | 1.0–1.3× based on consecutive correct answers |
+| `comeback_multiplier` | 1.0–1.3× based on gap to leaderboard leader |
+| `clutch_multiplier` | 1.0–1.25× based on match phase at generation |
 
-> If a feature is not explicitly required for MVP, do NOT implement it.
-> Leave it in code. Leave it in documentation. Do not extend it. Do not wire it up. Do not expose it to users.
+All multiplier functions and DB columns remain in code. Do not remove them.
 
----
+## Active question cap
+- **Max 3 active questions per league at any time** (enforced via `maxActiveQuestions = 3` in context packet and `MVP_MAX_ACTIVE_LIVE = 3` in live branch).
 
-## MVP scope definition
+## Generation rate limits
+- **CORE_MATCH_LIVE**: max 1 new question per 3 minutes per league (time-driven only; event-driven bypasses this limit).
+- **REAL_WORLD**: max 1 per league per day.
+- **CORE_MATCH_PREMATCH**: no rate limit — governed by publish window and weekly quota instead.
 
-### Sport
-- **Football only.** The generation pipeline skips all non-football leagues at runtime (`sport_not_supported_mvp`).
-- Hockey and tennis code, adapters, and documentation are preserved intact. Do not extend them pre-launch.
+These are independent. CORE_MATCH_LIVE rate limiting must never block REAL_WORLD or PREMATCH generation.
 
-### League type
-- **Type 1 single-match leagues** are the target user experience for launch.
-- Type 2 season league infrastructure exists in the codebase and runs for the two existing seed leagues. Do not build further Type 2 behaviour pre-launch.
-- Do not remove Type 2 code. Do not hide it from the DB. Do not break existing leagues.
+## Fallback rules — never show an empty live feed
+1. No active question during a live match → show the holding card ("Next moment dropping soon").
+2. Generation produces zero questions → holding card, log internally, no user-facing error.
+3. Resolver voids a question → remove from feed silently, no error state.
+4. Any pipeline failure (sports API, OpenAI, Supabase) → degrade quietly, log, continue.
 
-### Live questions engine
-- **`CORE_MATCH_LIVE`** is the primary lane. Time-driven questions are the reliable core; event-driven questions fire on goals and red cards only.
-- **`CORE_MATCH_PREMATCH`** is supported. Generated before kickoff, resolved post-match.
-- **`REAL_WORLD`** is limited for MVP: max 1 per league per day, only when a strong signal exists, tier-gated.
-- **Max 2 active questions at any time** (across all lanes combined). This is the MVP override. Full system target is 3.
-- No event queue system for MVP.
-- No advanced collision engine for MVP.
-- No advanced diversity orchestration for MVP.
+## Resolver safety — idempotency (CRITICAL)
+- A question is resolved exactly once.
+- The resolver fetches only `resolution_status = 'pending'` questions — do not remove or weaken this filter.
+- Re-running the resolver (cron overlap, manual trigger, retry) must never award points twice.
+- `player_answers` scoring loop must not run if the question is already resolved.
 
-### Timing model — MANDATORY, DO NOT SKIP
-The three-timestamp model is required for launch. It is not advanced — it is the fairness guarantee.
-- `visible_from` — when question appears
-- `answer_closes_at` — authoritative answer lock
-- `resolves_after` — when resolver evaluates outcome
-All three must be populated on every question. Do not simplify this away.
+## Answer submission safety
+- One answer per user per question — enforced by `UNIQUE (question_id, user_id)` in `player_answers`.
+- Answer window enforced at DB level via RLS insert policy (`answer_closes_at > now()`).
+- Do not remove the unique constraint. Do not bypass it with upsert logic that could re-award points.
 
-### Scoring — MVP mode (see §MVP SCORING MODE below)
-- **Active**: `base_value`, `time_pressure_multiplier`, `streak_multiplier`
-- **Bypassed to 1.0**: `difficulty_multiplier`, `comeback_multiplier`, `clutch_multiplier`
-- All scoring columns and functions remain in code. Only runtime values are bypassed.
+## LIVE system — current state
+All LIVE system components are fully implemented and deployed:
 
-### Question delivery
-- Polling every 5s (active questions present) / 15s (idle). This is reliable enough for launch.
-- Do not block launch on Realtime subscription. It is the highest-priority post-launch item.
-
-### Question volume
-- Hard cap: max 2 active questions.
-- Prefer reuse from pool over new generation.
-- Prefer fewer reliable questions over high volume.
-
-### UI
-- Surface only stable features.
-- Hockey/tennis hidden in create-league sport selector.
-- Do not remove any completed UI pages.
-
----
-
-## MVP SCORING MODE
-
-**Only these multipliers are active at runtime:**
-
-| Multiplier | Status | Value |
+| Component | Status | Notes |
 |---|---|---|
-| `base_value` | ✅ Active | Per category: 20/15/12/10/6 |
-| `time_pressure_multiplier` | ✅ Active | 1.0–1.5× based on time remaining |
-| `streak_multiplier` | ✅ Active | 1.0–1.3× based on consecutive correct answers |
-| `difficulty_multiplier` | 🔒 Bypassed | Fixed at 1.0 for MVP |
-| `comeback_multiplier` | 🔒 Bypassed | Fixed at 1.0 for MVP |
-| `clutch_multiplier` | 🔒 Bypassed | Fixed at 1.0 for MVP |
+| UI (league.html) | ✅ Complete | Realtime subscription (30s heartbeat fallback), holding card, lane detection, badges, timers, answer submission, live window strip |
+| Resolver | ✅ Complete | All predicate types including `match_stat_window` and `btts`; full scoring formula |
+| Prematch generation | ✅ Complete | Full pipeline, pool system, quality filter (v2.2), prematch analytics (migration 020) |
+| Live generation | ✅ Complete | In-progress match detection via `live_match_stats`; time-driven + event-driven; rate limit enforced |
+| Live analytics | ✅ Complete | `analytics_live_quality_summary` + `analytics_live_rejection_reasons` views (migration 023) |
 
-**Implementation**: bypassed multipliers are assigned `1.0` via `MVP_BYPASS` constants in `resolve-questions/index.ts`. The `multiplier_breakdown` JSONB includes `mvp_bypass: true` for audit purposes.
+## LIVE tier enforcement
+Two distinct rule types — never confuse them:
 
-**Do NOT remove the bypassed systems.** `computeComebackMultiplier()`, `computeTimePressureMultiplier()`, and all related DB columns remain in code. Post-launch activation requires only removing the bypass constants — no other change.
+**Safety rules** (all tiers, always enforced):
+- Max 3 active questions per league at any time
+- Max 1 new live question per 3 minutes per league (time-driven)
+- Minimum 90-second answer window
+- No generation after match ends (≥89 min hard reject)
 
----
+**Monetization rules** (per tier, enforced at answer submission):
+- **Starter**: answer limit = 3 per match (`liveQuestionsPerMatch: 3`); cannot create live-mode leagues
+- **Pro**: unlimited live answers; can create live-mode leagues
+- **Elite**: unlimited live answers; can create live-mode leagues; live stats tab
 
-## MVP FALLBACK RULES
+## Protected systems — do not redesign
+Stable, deployed, production-critical. Targeted bug fixes only.
 
-The system must never show an empty live experience. These rules override generation and display logic:
-
-1. **If no active question exists during a live match** → show the holding card ("Next moment dropping soon"). Never show an empty feed mid-match.
-2. **If generation produces zero questions** → do not surface an error to the user. Show the holding card. Log the failure internally.
-3. **If the resolver voids a question** → remove it from the feed silently. Do not show an error state.
-4. **Minimum engagement guarantee** → at least one question should appear in the first 10 minutes of a live match. If generation has not fired recently, the holding card is the safe fallback.
-5. **Graceful degradation over crash** → any pipeline failure (sports API, OpenAI, Supabase) must degrade quietly. The user experience continues. The failure is logged.
-
----
-
-## MVP RUNTIME SAFETY RULES
-
-These rules are MVP-active. They protect the live experience against the most likely failure modes at launch: spam, double-scoring, duplicate submission exploits, and silent failures.
-
-### Generation rate limit (MVP)
-
-This rule applies ONLY to CORE_MATCH_LIVE:
-
-- Do not generate more than 1 new CORE_MATCH_LIVE question per 3 minutes per league
-
-This rule does NOT apply to:
-
-CORE_MATCH_PREMATCH:
-- generated pre-kickoff
-- not governed by live rate limit
-
-REAL_WORLD:
-- governed by separate limit:
-  max 1 question per league per day
-
-IMPORTANT:
-- Do NOT block REAL_WORLD generation because of CORE_MATCH_LIVE rate limit
-- Do NOT apply live rate limit to PREMATCH pipeline
-
-Additional rules (apply to CORE_MATCH_LIVE only):
-
-- If a question was generated recently for that league, skip this cycle — do not force a question to fill the gap
-- Prefer quality over quantity — a missing question is always better than a low-quality filler
-- The holding card ("Next moment dropping soon") is the correct fallback when no safe question is available
-- Never generate a `low_value_filler` question just to maintain volume. If the best available option is filler, skip and wait for the next cycle.
-
-**Purpose:** prevent question spam, repeated low-value questions, and loss of user trust during the live match experience.
-
-### Resolver safety — idempotency (CRITICAL)
-
-- A question must only be resolved once
-- Before processing a question, the resolver must verify the question is still in `pending` status
-- If the question is already `resolved`, `voided`, or in any non-pending state — skip it entirely. Do not modify it.
-- Re-running the resolver (scheduled retry, manual trigger, cron overlap) must never award points twice
-- The `player_answers` scoring update loop must not run if the question has already been resolved
-- This is guaranteed in the current implementation by checking `resolution_status = 'pending'` in the resolver query — do not remove or weaken this filter
-
-**Purpose:** prevent duplicate scoring caused by cron overlap, partial failure recovery, or manual re-triggers.
-
-### Answer submission safety
-
-- Each user may submit only one answer per question
-- This is enforced at the database level by the unique constraint on `(question_id, user_id)` in `player_answers`
-- The RLS insert policy also enforces that the answer window is still open (`answer_closes_at > now()`)
-- If a duplicate submission is attempted: the DB unique constraint rejects it at the DB level — the client shows a safe error state, not a crash
-- Under no condition may the same user receive points twice for the same question — the unique constraint makes this structurally impossible
-- Do not remove or relax the `(question_id, user_id)` unique constraint. Do not bypass it with upsert logic that could re-award points.
-
-**Purpose:** prevent duplicate answer exploits, spam clicking, refresh resubmits, and race-condition duplicates.
-
-### MVP logging (minimum required)
-
-Log the following at the Edge Function level. Use `console.log` / `console.warn` — visible in Supabase Edge Function logs dashboard:
-
-- Generation failures (OpenAI call failed, predicate parse failed, all retries exhausted)
-- Resolver failures (API-Sports fetch failed, predicate evaluation error, DB write error)
-- Skipped generation events — log the reason: rate limit, no active slot, no valid question, unsupported sport, quota exhausted, NONE classification
-- Duplicate submission attempts if they surface (DB constraint violation errors in the client path)
-- Pool reuse vs fresh generation — already logged at `[pool]` prefix level
-
-Logging must never interrupt or visibly degrade the user experience. All log calls are fire-and-forget. Failures in the logging path must not propagate.
-
-**Purpose:** enable post-launch debugging without exposing internal errors to users. The generation_runs and generation_run_leagues tables already capture most of this — console logging fills the gap for runtime errors not captured in DB records.
-
----
-
-## MVP conflict resolution
-
-Where the full system spec below conflicts with MVP scope, these MVP values always win:
-
-| Parameter | Full system value | **MVP override** |
+| System | Location | Rule |
 |---|---|---|
-| Max active questions | 3 | **2** |
-| Active event-driven triggers | Goals, penalties, red cards, yellow cards | **Goals and red cards only** |
-| Scoring multipliers active | All 6 | **Base, time pressure, streak only** |
-| Sports supported | Football, hockey, tennis | **Football only** |
-| Question delivery | Realtime subscription | **Polling 5s/15s** |
-| Event queue | Bounded 3-slot priority queue | **No queue — skip if limit reached** |
-| Generation frequency | As fast as events/gaps allow | **Max 1 new question per 3 min per league** |
+| Generation pipeline | `generate-questions/index.ts` + `lib/` | Do not refactor — stable and deployed |
+| Resolver pipeline | `resolve-questions/index.ts` | Do not redesign — only safe targeted changes |
+| Database schema | `backend/migrations/001–023` | Do not drop columns, tables, or constraints |
+| Timing model | `visible_from`, `answer_closes_at`, `resolves_after` | Always populate all three on every question |
+| Pool system | `lib/pool-manager.ts` | Do not redesign — race-safe, deployed |
+| 4-stage validator | `lib/predicate-validator.ts` | Do not weaken — all four stages must run |
 
-**MVP runtime safety overrides all full-system orchestration rules below.** If any later section implies more aggressive generation, more active questions, queued events, or more complex live behaviour, the MVP runtime safety rules above take precedence.
+## Logging requirements
+Log at Edge Function level (`console.log` / `console.warn`):
+- Generation failures (OpenAI, predicate parse, all retries exhausted)
+- Resolver failures (API-Sports fetch, predicate evaluation error, DB write error)
+- Skipped generation — always log the skip reason
+- Pool reuse vs fresh generation — logged at `[pool]` prefix level
 
----
-
-## Protected systems — DO NOT MODIFY
-
-These systems are stable, deployed, and critical. Do not refactor, redesign, or extend them pre-launch. Only make targeted bug fixes if required.
-
-| System | Location | Protection level |
-|---|---|---|
-| Generation pipeline | `generate-questions/index.ts` + `lib/` | **DO NOT REFACTOR** — stable, deployed, working |
-| Resolver pipeline | `resolve-questions/index.ts` | **CRITICAL** — do not redesign; only safe scoring adjustments |
-| Database schema | `backend/migrations/001–008` | **DO NOT DROP** columns, tables, or constraints |
-| Timing model | `visible_from`, `answer_closes_at`, `resolves_after` | **MANDATORY** — locked, always populate all three |
-| Pool system | `lib/pool-manager.ts` | **DO NOT REDESIGN** — race-safe, deployed, working |
-| 4-stage validator | `lib/predicate-validator.ts` | **DO NOT WEAKEN** — schema, entity, temporal, logic checks must all run |
-
----
-
-*The full system documentation continues below. All sections describe intended post-launch behaviour unless explicitly marked as MVP above or active in the current deployment.*
+Logging is fire-and-forget. Failures in the logging path must not propagate or degrade the user experience.
 
 ---
 
@@ -376,7 +285,7 @@ These pipelines must not be merged.
 
 | Lane | MVP status | Key constraints |
 |---|---|---|
-| `CORE_MATCH_LIVE` | ✅ Primary focus | Max 2 active total, goals + red cards only, 3-min rate limit |
+| `CORE_MATCH_LIVE` | ✅ Primary focus | Max 3 active total, goals/penalties/red cards/yellow cards, 3-min rate limit |
 | `CORE_MATCH_PREMATCH` | ✅ Supported | Generated pre-kickoff, resolved post-match |
 | `REAL_WORLD` | ⚠️ Limited | Max 1 per league per day, skip if signal weak, tier-gated |
 
@@ -479,7 +388,10 @@ Rules:
 | Auth gate (redirect to login if not signed in) | ✅ Working |
 | Supabase Auth on all pages (SDK loaded everywhere) | ✅ Working |
 | Battle Royale ELO rating system | ✅ Working — `br-elo.js`, stored in `game_history` |
-| AI Real World Questions (generation pipeline) | ✅ Live — fires every 6h via pg_cron. `OPENAI_API_KEY` + `API_SPORTS_KEY` active. First run generated 6 real questions from live fixtures. |
+| AI Real World Questions (generation pipeline) | ✅ Live — fires every 6h via pg_cron. **4-call OpenAI pipeline**: Call 1 (generate) → Call 2 (predicate) → Call 3 (context + sources) → Call 4 (quality gate: APPROVE/WEAK/REJECT). `OPENAI_API_KEY` + `API_SPORTS_KEY` active. match_lineup + manual_review predicate types. Deadline auto-void. |
+| AI Real World Questions (feed UI) | ✅ Live — league.html renders rw_context snippet, confidence badge (high/medium/low), resolve-by date, sources link. Fallback copy when rw_context missing. |
+| REAL_WORLD player database | ✅ Live — migration 026: teams + players + team_players tables. live-stats-poller syncs from lineups (starters +10, subs +4) + events (goals +8, assist +6, cards +5). PLAYER BOOST RSS query targets top-relevance players per match. 5 soccer question types in RW_GENERATION_SYSTEM_PROMPT. |
+| REAL_WORLD quality gate (Call 4) | ✅ Live — `scoreRealWorldQuestion()` LLM scorer in `openai-client.ts`. 6-dimension scoring (news_link_strength + clarity + resolvability + relevance + uniqueness − risk). APPROVE ≥80 published; WEAK 65–79 published only if no better question in run; REJECT <65 discarded. Score + decision embedded in `narrative_context` for immediate DB inspection. `RwQualityResult` type in `types.ts`. `rw_quality_score` stage in `RejectionLogEntry`. |
 | AI question resolver (auto-scoring pipeline) | ✅ Deployed + verified — fires every hour via pg_cron. Returns `ok:true`. Scores `player_answers` when questions resolve. |
 | league.html — dynamic question feed + leaderboard | ✅ Fully Supabase-backed — questions, members, answers, lazy leaderboard |
 | Pre-match scheduling (migration 018) | ✅ Live — automatic/manual modes; tier-gated offset pills (Pro: 24h/12h, Elite: 48h/24h/12h/6h); Edge Function respects publish window; pool reuse recomputes per-league visible_from |
@@ -506,7 +418,7 @@ Rules:
 - **Database** (Postgres 15, eu-west-2 / London, free tier `t4g.nano` compute)
 - **Auth** (email/password; email confirmation togglable; password reset flow)
 - **Storage** — not yet configured (photos currently stored as data URLs in `venue_photos.storage_url`; migrate to CDN bucket later)
-- **Realtime** — not yet configured (planned for live gameplay websockets)
+- **Realtime** — ✅ configured: `questions` + `player_answers` tables subscribed in `league.html` via `postgres_changes` channel; migration 028 enables the Supabase publication. New questions appear sub-second; resolved cards flip in real-time when the resolver awards points.
 - **Edge Functions** — `generate-questions` (question generation) and `resolve-questions` (auto-scoring) both written, awaiting first deploy
 
 ### External APIs (used by Edge Function only)
@@ -706,7 +618,7 @@ generation_profile = {
 ### Live session design
 
 > **⚠️ POST-LAUNCH SYSTEM — DO NOT IMPLEMENT FOR MVP**
-> Session continuation flow (question chaining, Realtime feed, match summary card, deep-link from notifications) is designed but not built. For MVP, polling replaces Realtime, and the holding card replaces the chaining UI. Do not implement the full session flow pre-launch. The spec below is preserved for the post-launch sprint.
+> Session continuation flow (question chaining, match summary card, deep-link from notifications) is designed but partially built. Realtime feed ✅ implemented (migration 028 required). Holding card ✅ implemented. Chaining UI, match summary card, and deep-link from notifications remain post-launch. The spec below is preserved for the post-launch sprint.
 
 The full specification lives in `SESSION_CONTINUATION_DESIGN.txt`. Key principles for any Claude session working on live features.
 
@@ -1678,7 +1590,7 @@ These are **safe to commit and ship to the browser**. Security comes from RLS po
 - **Battle Royale ELO** — `BRElo.calculateSinglePlayer()` wired into `battle-royale.html`. Victory screen shows real ELO delta. `br-leaderboard.html` match history shows `elo_before → elo_after`.
 - **AI question generation pipeline** — deployed, firing every 6h via pg_cron. Football only (MVP guard). Pool system active.
 - **AI question resolver pipeline** — deployed, firing every hour. Full scoring formula with MVP bypasses.
-- **league.html — live engine v2** — correct question state machine (visible_from / answer_closes_at / resolves_after with legacy deadline fallback), 5-second polling while active / 15-second idle, holding card when no active question, engagement badges (HIGH VALUE / CLUTCH / FAST), point range display per question, answer window enforcement client + server side, scoring multiplier capture (clutch, streak) at submission time, dynamic league activity card replacing static live match card.
+- **league.html — live engine v2** — correct question state machine (visible_from / answer_closes_at / resolves_after with legacy deadline fallback), Supabase Realtime channel (`league-{id}`) for instant question + answer updates (replaces 5s/15s polling), 30s heartbeat polling as safety net when Realtime is active (5s/15s restored if channel errors), holding card when no active question, engagement badges (HIGH VALUE / CLUTCH / FAST), live window strip for CORE_MATCH_LIVE cards, point range display per question, answer window enforcement client + server side, scoring multiplier capture (clutch, streak) at submission time, dynamic league activity card replacing static live match card. Tab visibility handling (pauses channel when hidden, resumes on return). `beforeunload` cleanup. **Requires migration 028 in Supabase SQL editor to enable Realtime publication.**
 - **matches.html — Browse Matches** — real football fixtures loaded directly from `api_football_fixtures` table (synced from API-Sports by Edge Function); functional filters (competition, date); Save button (bookmark icon) on every card; post-save inline CTA ("Invite players" / "Create event"); **Match Live button** — one click navigates to create-league.html with competition and fixture pre-filled from page data (zero extra DB queries); pre-loads saved state on page init.
 - **upcoming.html — Upcoming Matches** — player schedule from league membership + saved fixtures merged; deduplicates (league entry takes precedence); "⭐ Saved" filter chip; **Match Live button** on every fixture card; early-exit paths (no memberships, no football leagues, no questions) all show saved matches instead of empty state.
 - **venue-schedule.html** — week grid includes saved venue fixtures as lime-bordered "Match" cards alongside regular events; loaded async via `getSavedMatches({ venueId })`.
@@ -1694,6 +1606,7 @@ These are **safe to commit and ship to the browser**. Security comes from RLS po
 - **Live Stats Feed** — `live_match_stats` table (migration 015) stores per-fixture cache: score, status, minute, events, team stats, player stats, lineups, predictions, H2H. `live-stats-poller` Edge Function (pg_cron job 8, every minute) polls API-Sports and upserts. `league.html` **Stats tab** renders the full experience: SVG visual pitch with player positions (home=lime/bottom, away=coral/top, jersey numbers + surnames, goal/card markers), events timeline, team stats comparison bars, player stat cards with Home/Away tab toggle, predictions with win-probability bars + form dots, H2H last 5. Graceful empty states when no data yet. "Updated X ago · Refresh" footer.
 - **Cache warming** — all domains auto-refresh 1.5s after page load.
 - **All UI screens** — every `.html` file renders correctly. `profile.html` and `leaderboard.html` use full-width layout.
+- **spontix-scraper-service** — standalone Node.js microservice (separate repo). POST /scrape accepts a URL, renders with headless Chromium (Playwright), extracts clean article text via Mozilla Readability + jsdom fallback. Deployed on Railway at `https://spontyx-scraper-service-production.up.railway.app`. Auth: `x-scraper-key` header. Rate limit: 20 req/min. Stack: Node 20, Express, Playwright, Readability, jsdom. Docker non-root pattern with `/ms-playwright` world-readable browser path.
 
 ---
 
@@ -1723,7 +1636,7 @@ Full spec in `SESSION_CONTINUATION_DESIGN.txt`. Items not yet implemented:
 - **Question chaining UI** — "what's next" prompt after answering; next live question slides in below
 - **Holding card** — shown in feed when no question is active mid-match; "Next moment dropping soon"
 - **Time-driven question generation** — background check alongside resolver cron: if no live question fired for 8–12 min, generate a simple stat question (corners, cards, shots, goals). Templates are pre-defined; resolves using stats the resolver already fetches
-- **Realtime question feed** — Supabase Realtime subscription on `questions` filtered by `league_id`; new live questions prepend to feed without page refresh (biggest single retention feature)
+- **Realtime question feed** — ✅ Implemented: Supabase Realtime channel in `league.html` subscribes to `questions` INSERT/UPDATE/DELETE + `player_answers` UPDATE; new questions appear sub-second; 30s heartbeat safety net; migration 028 enables publication
 - **Match summary card** — appears in feed after final whistle; shows points earned + leaderboard position; replaces result notification for users already in the app
 - **Live dot on dashboard** — lime indicator next to leagues with an active match; re-entry point for users who navigated away mid-session
 
@@ -1845,7 +1758,7 @@ See `supabase/functions/generate-questions/DEPLOY.md` for the full checklist inc
 - Replace data URL uploads with `supabase.storage.from('venue-photos').upload()`
 
 ### Longer-term (separate sprints)
-- **Live session sprint** — implement remaining session continuation design (see `SESSION_CONTINUATION_DESIGN.txt`): deep-linking from notifications, question chaining UI (what's next prompt after answering), Supabase Realtime subscription replacing polling, match summary card, live dot on dashboard. Holding card ✅ already in league.html.
+- **Live session sprint** — implement remaining session continuation design (see `SESSION_CONTINUATION_DESIGN.txt`): deep-linking from notifications, question chaining UI (what's next prompt after answering), match summary card, live dot on dashboard. Holding card ✅ already in league.html. Realtime subscription ✅ already implemented.
 - **Live gameplay websockets** — full server authority. 1-2 weeks of work.
 - **Tennis sports adapter** — implement `tennis.ts` in the Edge Function.
 - **Cross-user trophy awarding** — Postgres function bypassing RLS for venue owner → winner awards.
@@ -1862,16 +1775,124 @@ See `supabase/functions/generate-questions/DEPLOY.md` for the full checklist inc
 **Auth settings:** https://supabase.com/dashboard/project/hdulhffpmuqepoqstsor/auth/providers
 **API keys:** https://supabase.com/dashboard/project/hdulhffpmuqepoqstsor/settings/api-keys
 
+**Scraper service (Railway):** https://spontyx-scraper-service-production.up.railway.app
+**Scraper GitHub repo:** https://github.com/combatdefenderweprotect-oss/spontyx-scraper-service
+**Scraper API key:** set as `SCRAPER_API_KEY` in Railway Variables AND in Supabase Edge Function Secrets
+**Scraper base URL:** set as `SCRAPER_API_URL` in Supabase Edge Function Secrets (= `https://spontyx-scraper-service-production.up.railway.app`)
+
 **Credentials in code:** `supabase-client.js`, lines 17-18
 **Seed venue IDs:** `SpontixStore.VENUE_IDS.{PENALTY|SCORE|DUGOUT|ARENA|FULLTIME|FINAL}`
 **Arena venue owned by:** `f901f211-738e-4409-abfd-8e1a9fb4bffb` (utis.richard@gmail.com)
 
 **Resume prompt for a fresh Claude session:**
-> "Continue Spontix development. Read `CLAUDE.md` for full context. Also read `SESSION_CONTINUATION_DESIGN.txt` before working on anything related to live questions, notifications, or the league question feed. Last completed: Pre-match scheduling system live (migration 018 ✅) — automatic/manual modes, tier-gated offset pills, per-league visible_from in pool reuse. Cascade delete for leagues (migration 019 ✅) — ON DELETE CASCADE on questions + league_members, orphan cleanup, deleteLeague() rewritten. Pre-match lifecycle UX in league.html — status strips, answer-change hint, current pick label, contextual toasts, result timing messaging. All migrations 001–019 run. Next priorities: (1) Realtime subscription replacing polling in league.html — biggest single retention feature; (2) Stripe subscriptions replacing forced Elite tier; (3) GNews API key to activate news context in generation."
+> "Continue Spontix development. Read `CLAUDE.md` for full context. Also read `SESSION_CONTINUATION_DESIGN.txt` before working on anything related to live questions, notifications, or the league question feed. Last completed: (1) play_mode (singleplayer/multiplayer) ✅ — migration 029 run, `spontix-store.js` mapping added, `create-league.html` Play Experience selector + `selectSessionType()` + `applyRealWorldTierGating()` + `applySingleplayerLiveCapNotice()` + `launchLeague()` updated, `league.html` Solo tag + invite card hide added, `docs/TIER_ARCHITECTURE.md` v7 updated. play_mode is INDEPENDENT of tier — all TIER_LIMITS apply identically in both modes. (2) Supabase Realtime subscription in league.html ✅ — `realtimeChannel` global, `startRealtime()`/`stopRealtime()` functions, `questions` INSERT/UPDATE/DELETE + `player_answers` UPDATE subscriptions, 30s heartbeat polling safety net, tab visibility + beforeunload handling. (3) Scraper enrichment integrated into REAL_WORLD pipeline ✅ — `enrichArticlesWithScraper()` in generate-questions calls Railway scraper on top 5 candidates before Call 1. All migrations 001–029 run ✅ (028 Realtime publication + 029 play_mode both applied). docs/REAL_WORLD_QUESTION_SYSTEM.md is the authoritative REAL_WORLD reference. Next priorities: (1) Stripe subscriptions replacing forced Elite tier; (2) venue-tonights-events.html dynamic rendering."
 
 ---
 
 ## Update Log
+
+### 2026-04-29 — play_mode: singleplayer / multiplayer (migration 029)
+
+**Goal:** add a `play_mode` field to leagues so users can create either a solo session (just them vs the match) or a multiplayer league (compete with others). `play_mode` is a gameplay experience toggle — completely independent of subscription tier.
+
+**Key design constraint:** ALL `TIER_LIMITS` apply identically in both modes:
+- Starter: 3 live answers per match, REAL_WORLD locked — same in solo and multiplayer
+- Pro: full live, 10 REAL_WORLD/month — same in solo and multiplayer
+- Elite: all features unlimited — same in solo and multiplayer
+- `leaguesCreatePerWeek`, `leagueMaxPlayers`, all other limits: unchanged by play_mode
+
+**New migration: `backend/migrations/029_play_mode.sql`** — ✅ run:
+- `play_mode TEXT NOT NULL DEFAULT 'multiplayer' CHECK (play_mode IN ('singleplayer', 'multiplayer'))` added to `leagues`
+- `idx_leagues_play_mode` index added
+- Backfill: all existing leagues set to `multiplayer`
+
+**`spontix-store.js`:**
+- `_mapLeagueFromDb`: `playMode: row.play_mode || 'multiplayer'` — maps DB column to camelCase
+- `_mapLeagueToDb`: `if (l.playMode !== undefined) out.play_mode = l.playMode;` — maps back to DB
+- Note: `playMode` on the league object maps to `play_mode` (singleplayer/multiplayer). This is DISTINCT from the wizard-local `playMode` JS variable in `create-league.html` which maps to `leagues.mode` (individual/team).
+
+**`create-league.html` — 14 targeted edits:**
+
+*New state variable:*
+- `let sessionType = 'multiplayer';` — wizard-local; maps to `leagues.play_mode`; distinct from existing `let playMode` (individual/team → `leagues.mode`)
+
+*New HTML:*
+- `<!-- Play Experience -->` section before `<!-- Team Mode -->` — two mode cards: Multiplayer (purple icon) + Solo (lime icon); `id="play-experience-section"`
+- `id="sp-live-cap-notice"` — coral notice shown when Solo + live/hybrid + Starter tier; cap value from TIER_LIMITS, never hardcoded
+- `id="ai-rw-lock-badge"` Pro+ badge next to AI Real World toggle
+
+*New JS functions:*
+- `selectSessionType(type, el)` — updates `sessionType`; hides Team Mode section for singleplayer; locks player slider to value=1, disabled=true; calls `applySingleplayerLiveCapNotice()`
+- `applyRealWorldTierGating()` — reads `getTierLimits(tier).realWorldQuestionsEnabled`; shows Pro+ badge + reduces toggle opacity for Starter; forces toggle off if Starter and somehow enabled; called from `applyMatchNightTierGating()`, `initStandardStep()`, `DOMContentLoaded`
+- `applySingleplayerLiveCapNotice()` — shows/hides `#sp-live-cap-notice` based on `sessionType === 'singleplayer' && isLimitedLive && isLiveOrHybrid`; called from `selectSessionType()` and `selectQuestionMode()`
+
+*Modified functions:*
+- `toggleAIQuestions()` — tier check added at top: Starter → upgrade modal + return; prevents any bypass
+- `selectPlayMode()` — scoped to `.team-mode-section .mode-card` (was global `.mode-card` — would have cleared Play Experience cards)
+- `restoreStepState()` step 1 — scoped card selection + Solo state restoration (slider disabled, team section hidden)
+- `launchLeague()` — `playMode: sessionType` added (maps to `play_mode`); `maxMembers: isSingleplayer ? 1 : sliderValue`
+- `populateReview()` — new `review-session-type` row shows "Solo (1 player)" (lime) or "Multiplayer" (purple)
+- `selectQuestionMode()` — calls `applySingleplayerLiveCapNotice()`
+
+*Review HTML:*
+- New `<div class="review-row">` with `id="review-session-type"` before existing Play Mode row
+
+**`league.html`:**
+- `invite-card-section` id added to the invite card div for programmatic show/hide
+- `hydrateLeaguePage()` — `isSolo` boolean from `league.playMode === 'singleplayer'`; sets `statMode` to 'Solo'; appends Solo tag to meta strip; hides `#invite-card-section` for solo leagues
+
+**`docs/TIER_ARCHITECTURE.md`** — updated to v7 (2026-04-29):
+- New section `## Play Mode vs Subscription Tier (migration 029)` with: comparison table showing identical tier limits in both modes, 4 critical rules (never add play_mode to TIER_LIMITS; always call getTierLimits(); show locked/upgrade state; singleplayer max_members=1), implementation locations, enforcement status table
+
+**Migrations 028 + 029 status:**
+- Migration 028 (Realtime publication) — ✅ already applied: both `questions` and `player_answers` were already in `supabase_realtime` publication before this session
+- Migration 029 (play_mode column) — ✅ run successfully
+
+---
+
+### 2026-04-29 — spontix-scraper-service built and deployed
+
+**Goal:** lightweight standalone microservice that accepts a URL, renders it with headless Chromium, and returns clean extracted article content. Built as a separate repo for use by the Spontix generate-questions pipeline to fetch full article bodies from news URLs.
+
+**Stack:**
+- Node.js 20, Express, Playwright Chromium, Mozilla Readability, jsdom
+- Docker with non-root user pattern
+
+**Files created (8 total):**
+- `package.json` — dependencies + scripts (start, dev)
+- `index.js` — Express server: auth middleware (`x-scraper-key` header), rate limiter (20 req/min via express-rate-limit), `GET /health`, `POST /scrape`
+- `scraper.js` — Playwright Chromium launcher: blocks images/media/fonts/websockets, waits for `domcontentloaded` + 4s `networkidle`, returns raw HTML
+- `utils/extract.js` — content extraction: Mozilla Readability (primary) → semantic selectors fallback → `<p>` paragraph fallback. Extracts title (og:title → twitter:title → h1 → `<title>`), published_at (time[datetime] → meta tags → JSON-LD), source domain, extracted_text (capped at 3,000 chars)
+- `.env.example` — documents PORT and SCRAPER_API_KEY
+- `Dockerfile` — multi-layer Docker build with non-root user pattern:
+  - System deps for Chromium installed
+  - `PLAYWRIGHT_BROWSERS_PATH=/ms-playwright` set before install
+  - `chmod -R o+rx /ms-playwright` so non-root user can read browsers
+  - `appuser` created, `/app` owned by appuser, `USER appuser` at runtime
+- `README.md` — local dev guide, API reference, curl examples, Railway/Render/Docker deployment guides
+- `.dockerignore` — excludes node_modules, .env, *.md, .git
+
+**API:**
+- `GET /health` — no auth, returns `{"ok":true}`
+- `POST /scrape` — requires `x-scraper-key` header and `{"url":"..."}` body
+- Response includes: `success`, `url`, `title`, `source`, `published_at`, `extracted_text`, `extraction_status` (success/partial/failed), `error`
+
+**GitHub:** `https://github.com/combatdefenderweprotect-oss/spontyx-scraper-service`
+- Private repo under combatdefenderweprotect-oss org
+- `.env` excluded via `.gitignore` before first commit
+
+**Railway deployment:**
+- Connected via GitHub App (installed Railway App on GitHub account)
+- Docker auto-detected from Dockerfile
+- `SCRAPER_API_KEY` set in Railway Variables
+- Domain generated: `https://spontyx-scraper-service-production.up.railway.app` → Port 8080 (Railway injects its own PORT env var; app uses `process.env.PORT || 3000`)
+- `/health` → `{"ok":true}` ✅
+- `/scrape` with BBC Sport URL → full JSON with title, source, extracted_text ✅
+
+**Key issues resolved:**
+- npm cache EACCES: `sudo chown -R 501:20 "/Users/richutis/.npm"` then reinstall
+- Dockerfile browser path: Chromium installed to `/ms-playwright` (not `/root/.cache`) so non-root `appuser` can access it
+- Railway port mismatch: server logs showed port 8080 (Railway's injected PORT), but domain was configured for 3000 — fixed by editing the domain target port to 8080
 
 ### 2026-04-14 — Leagues domain ported to Supabase
 - Leagues async overrides: `getLeagues`, `createLeague`, `joinLeague`, `leaveLeague`, `deleteLeague`
@@ -2018,7 +2039,7 @@ SESSION_CONTINUATION_DESIGN.txt also updated to reflect this.
 - Two league types defined: single-match live (fixed budget, 5–20 questions, configured at creation) vs season/long-term (continuous generation, no per-match ceiling).
 - Two live question types: event-driven (triggered by goals/cards/penalties) + time-driven (triggered by clock when no event fires for 8–12 min). Both required. Neither alone is sufficient.
 - Blowout suppression removed. When match is one-sided, question type adapts (stat/player/next-event questions) instead of stopping. Silence during a live match is a bug.
-- Session continuation flow designed: question chaining, holding card, match summary card, Realtime feed (not yet built — planned sprint).
+- Session continuation flow: holding card ✅ built, Realtime feed ✅ built (migration 028 required), question chaining and match summary card planned post-launch sprint.
 - Notification philosophy: max 2 per match window, max 4 per day. Never notify users already in an active session. Notifications bring users in; in-app mechanics keep them there.
 
 **CLAUDE.md updated** to reflect:
@@ -2169,14 +2190,13 @@ The 3 Rayo vs Espanyol questions (`answer_closes_at = 18:00 UTC 2026-04-23`, `re
 - Event queue system — no queue, max 2 active is the safety valve
 - Advanced collision detection
 - Comeback / clutch / difficulty multipliers (bypassed, not removed)
-- Realtime subscription (polling at 5s active / 15s idle is reliable enough)
 - Tennis sequence engine
 - Hockey expansion
 
 **Launch risks remaining:**
-- No Realtime subscription — polling adds 5–15s latency for new question delivery
+- ~~No Realtime subscription~~ — ✅ Realtime implemented (migration 028 must be run in Supabase SQL editor)
 - Type 1 single-match session pacing not implemented — users experience continuous generation, not a structured session arc
-- `GNews API key` not yet added — news context missing from generation (degrades gracefully)
+- `GNews API key` not yet added — news context missing from generation (degrades gracefully; Google News RSS adapter is the primary source)
 - Stripe not wired — tier forced to Elite for all users
 
 ---
@@ -3488,3 +3508,1443 @@ This would require tracking per-batch quality scores across retry rounds and doi
 #### 7. Status
 
 **This is not a launch blocker.** The current implementation is acceptable for MVP. Prematch quality is materially better than pre-filter behaviour. Production log validation should happen in the first 2–3 generation runs after launch to confirm the filter is working as expected.
+
+---
+
+### 2026-04-28 — Prematch quality analytics (migration 020)
+
+**Goal:** structured analytics layer for the prematch quality filter — structured JSONB fields in rejection log, two Postgres views, dashboard queries, and a docs file.
+
+**`supabase/functions/generate-questions/lib/types.ts`:**
+- `RejectionLogEntry` extended with optional structured fields: `reason?: string`, `score?: number`, `fixture_id?: string | null`, `timestamp?: string`
+- All four fields are written only for `stage = 'prematch_quality'` entries
+- Other stages still write only `attempt`, `stage`, `question_text`, `error` — no breaking change
+
+**`supabase/functions/generate-questions/lib/prematch-quality-filter.ts`:**
+- `REASON_MAP` added — maps 11 internal scoring reason codes to 5 normalized analytics codes:
+  - `too_obvious` — winner questions in mismatched fixtures (2 raw codes)
+  - `duplicate_question` — near-duplicates and same-player (3 raw codes)
+  - `too_many_player_specific` — player cap exceeded (1 raw code, unchanged)
+  - `poor_team_balance` — team balance issue (1 raw code, unchanged)
+  - `low_quality_score` — all other quality failures (4 raw codes)
+- `normalizeReason(raw)` helper added — returns canonical code from `REASON_MAP`, defaults to `'low_quality_score'`
+- All `rejected.push()` calls now use `normalizeReason(...)` — `PrematchRejection.reason` is normalized at the point of creation
+
+**`supabase/functions/generate-questions/index.ts`:**
+- Prematch quality rejection log entries now include all 4 structured fields:
+  ```typescript
+  result.rejectionLog.push({
+    attempt, stage: 'prematch_quality', question_text: r.question_text,
+    error: `${r.reason} (score=${r.score})`,  // human-readable string kept
+    reason: r.reason,                          // normalized code
+    score: r.score,                            // numeric 0–100
+    fixture_id: firstMatchForQuality?.id ?? null,
+    timestamp: new Date().toISOString(),
+  });
+  ```
+- `error` string retained alongside structured fields for human-readable inspection in Supabase dashboard
+
+**New migration: `backend/migrations/020_prematch_analytics_views.sql`**
+- `analytics_prematch_quality_summary` view — daily rejection summary: total_generated, total_rejected, rejection_rate, avg_quality_score, 5 per-reason counters
+- `analytics_prematch_score_distribution` view — score bucket distribution per day (0-50 / 50-60 / 60-75 / 75-90 / 90+) for threshold tuning
+- Both views granted SELECT to `authenticated` and `anon`
+- Run in Supabase SQL editor (safe to re-run — `CREATE OR REPLACE`)
+
+**New file: `docs/PREMATCH_QUALITY_ANALYTICS.md`**
+- Normalized reason code table
+- Score threshold table
+- View column reference
+- 5 dashboard SQL queries (health check, reason breakdown, score distribution, raw log inspection, most-rejected fixture)
+- Monitoring thresholds with Green/Yellow/Red bands and investigation actions
+- Implementation notes (structured fields only from v2.1+, resilience to missing fields)
+- Future improvement note (log accepted question scores)
+
+**No generation logic changes.** No prompt changes. No pipeline restructuring. Code and docs only.
+
+---
+
+### 2026-04-28 — LIVE question system documentation + intensity preset wiring
+
+**Goal:** formalize the LIVE question system into core documentation so its design, tier rules, and post-MVP activation plan are not lost before launch. Also wire migration 017 intensity presets into the create-league wizard (they were missing).
+
+**`create-league.html` — intensity preset wiring (migration 017 gap closed):**
+- `INTENSITY_PRESETS` map added to `launchLeague()`: `casual→{preset:'casual', prematch:3, live:5}`, `competitive/standard→{preset:'standard', prematch:4, live:8}`, `hardcore→{preset:'hardcore', prematch:6, live:12}`
+- `vibe` answer from wizard (casual / competitive / hardcore) now maps to the correct preset
+- `question_intensity_preset`, `prematch_question_budget`, `live_question_budget` added to `leagueData`
+- Previously all leagues silently defaulted to STANDARD (4/8) regardless of vibe selection
+
+**`spontix-store.js` — `_mapLeagueToDb()` extended:**
+- Three new explicit mappings: `questionIntensityPreset → question_intensity_preset`, `prematchQuestionBudget → prematch_question_budget`, `liveQuestionBudget → live_question_budget`
+- `SpontixStoreAsync.createLeague()`: passes all three fields from `data.*` into `_mapLeagueToDb()` call with defaults (standard / 4 / 8)
+
+**`docs/TIER_ARCHITECTURE.md` — updated to v4 (2026-04-28):**
+- Added `## CORE_MATCH_LIVE — Product Definition` section: product rationale, LIVE vs REAL_WORLD comparison table, tier behavior tables (player + venue), feed priority rule (LIVE always first, enforced by `lanePriority` sort in league.html)
+- Added `## LIVE Cost Logic` section: ~305 API requests per 90-min match, ~$0.001–$0.003 OpenAI per question, why Starter must be limited to 3 answers, why the 3-min rate limit exists
+
+**`CLAUDE.md` — `## LIVE SYSTEM — POST-MVP ACTIVATION PLAN` section added:**
+- Current state table (what exists vs what does not)
+- Target state (7 items to build)
+- LIVE SYSTEM RULES (7 permanent rules — timing model, max active, rate limit, fallback, pool reuse, no event queue, football-only at launch)
+- LIVE TIER ENFORCEMENT: safety rules (all tiers, enforced by code) vs monetization rules (per tier, enforced at answer submission)
+- "What must be built" — 8 ordered implementation items (football adapter live detection, live quota check, question generation, timing helper, resolve-after computation, resolver live predicate handling, league.html answer gate, migration 021)
+- Why live was deferred from MVP
+
+**New file: `docs/LIVE_QUESTION_SYSTEM.md`** — 7 sections + pre-launch validation checklist:
+1. System Overview — PREMATCH/LIVE/REAL_WORLD comparison table, feed priority rule
+2. Generation Model — time-driven vs event-driven, 8-step generation flow, live context fields, match phase rules
+3. Tier Integration — player tiers, venue tiers, safety vs monetization rules distinction
+4. Timing Model — 3-timestamp model (visible_from / answer_closes_at / resolves_after), concrete examples for time-driven and event-driven questions
+5. Question Types — allowed and forbidden patterns, blowout adaptation rules
+6. Safety Rules — max 2 active, 3-min rate limit (time-driven only), fallback to holding card
+7. Analytics — rejection log format with `stage: 'live_quality'`, 8 normalized live rejection codes (`too_obvious`, `duplicate_question`, `too_many_player_specific`, `poor_team_balance`, `low_quality_score`, `window_too_short`, `stale_match_state`, `low_base_value`), key metrics table, future migration 021 SQL views
+8. Pre-Launch Validation Checklist — 34+ checkboxes across 6 categories
+
+**`docs/PREMATCH_QUALITY_ANALYTICS.md` — `## Future Extension — LIVE Quality Analytics` section added:**
+- Same analytics system will extend to `CORE_MATCH_LIVE` using `stage: 'live_quality'`
+- Identical rejection log entry structure; two additional live-specific reason codes (`window_too_short`, `stale_match_state`)
+- Future migration 021 will add `analytics_live_quality_summary` and `analytics_live_score_distribution` views
+- Marked DO NOT IMPLEMENT — documentation only
+
+**No pipeline changes.** No schema changes. No resolver changes. All live generation is post-MVP.
+
+---
+
+### 2026-04-28 — Prematch quality rules v2.2 (prompt + context signals)
+
+**Goal:** improve prematch question quality so questions feel like a sports editor prepared them, not random AI guesses. Diverse, context-aware, non-obvious, resolvable, team-balanced, match-appropriate.
+
+**`supabase/functions/generate-questions/lib/context-builder.ts`:**
+- Added `MATCH ANALYSIS` section to the context packet for prematch mode
+- Computes explicit signals from the full standings array (not the top-8-sliced view):
+  - `home_position`, `away_position` — standings positions of each team
+  - `standing_gap` — absolute position difference between the two teams
+  - `match_type` — CLOSE_MATCH (gap ≤ 3) | MODERATE (gap 4–5) | HEAVY_FAVOURITE (gap ≥ 6)
+  - `table_favourite`, `table_underdog` — team names derived from standings
+  - `home_goal_diff`, `away_goal_diff` — from standings (signals scoring tendency)
+- Inline warning messages when match_type = HEAVY_FAVOURITE or CLOSE_MATCH
+- Graceful fallback to `match_type: UNKNOWN` when standings are incomplete for one or both teams
+- Only injected for `generation_mode = "prematch"` — no effect on live generation
+
+**`supabase/functions/generate-questions/lib/openai-client.ts`:**
+- `PROMPT_VERSION` bumped `v2.1` → `v2.2`
+- Entire PREMATCH QUESTION RULESET replaced. Full changelog:
+
+  **STEP 0 (new)** — explicit context reading step before generation begins:
+  - Reads `match_type` and `standing_gap` from MATCH ANALYSIS section (no arithmetic required)
+  - Records all BLOCKED and DOUBTFUL players before any question is written
+  - Flags derby/rivalry matches and form streaks
+
+  **Rule 1** — slot assignment restructured:
+  - Model must assign structural slots (A/B/C/D/E) BEFORE writing question text
+  - Hard limits: max 2 player_specific, max 2 outcome_state, min 1 underdog/away reference
+  - Slot D explicitly MUST name the away team or underdog in question_text (for 4 questions)
+
+  **Rule 2** — quality filters hardened:
+  - Added explicit bans: half-time score, "score before minute X", lineup-confirmed start questions
+  - Removed BTTS from "DO prefer" list — BTTS is not directly resolvable (see Rule 6 BTTS note)
+  - Removed shots-based team angles — `shots_total` is not a valid resolver field
+  - Added H2H and form-streak angles to preferred list
+
+  **Rule 3** — match context adaptation rewritten around `match_type` field:
+  - CLOSE_MATCH, HEAVY_FAVOURITE, RIVALRY/DERBY, LOW-SCORING, HIGH-SCORING, KEY PLAYER UNAVAILABLE, MODERATE — each has concrete question templates with exact predicate_hint formats
+  - Removed: "Will [favourite] score in the first half?" (no half-time field)
+  - Removed: "Will [favourite] win by 2+ goals?" (requires arithmetic on two fields, not supported)
+  - Added correct resolvable alternatives for all removed templates
+  - Slot D constraint on HEAVY_FAVOURITE: must involve the underdog
+
+  **Rule 4** — team balance converted to two concrete binary checks
+  - Check 1: at least 1 question_text contains away team or underdog name
+  - Check 2: player questions from different teams (if two player slots filled)
+
+  **Rule 5** — player gate unchanged in substance; predicate_hint format added for each allowed stat
+
+  **Rule 6** — resolvability gate rewritten with exact field list:
+  - Explicit: `shots_total` is NOT a valid match_stat field in the validator (double gap documented)
+  - Added BTTS note: BTTS cannot be expressed as a single binary_condition; use `total_goals gte 2` as proxy
+  - Removed `shots_total` from resolvable field list (was incorrectly listed in v2.1)
+
+  **Rule 7** — diversity enforcement updated:
+  - Added: stat field uniqueness (same field must not appear twice in one set)
+  - Added: multiple_choice predicate_hint formats for all three common MC question types
+  - Removed: "BTTS" from binary-to-multiple_choice suggestion examples
+
+  **Rule 8** — self-check expanded from 8 to 9 binary checks:
+  - Added: STAT UNIQUENESS check
+  - All checks reframed as binary PASS/FAIL with explicit replacement instructions
+
+**Validator gaps documented (no code fix needed at launch — noted for post-MVP):**
+1. `shots_total` is in the prompt's historical text but NOT in `VALID_FIELDS` in `predicate-validator.ts` — any question using `shots_total` as a match_stat fails logic_validation and is silently rejected. Fix post-MVP: add `shots_total` to VALID_FIELDS and handle in `getMatchStatValue()` in the evaluator.
+2. BTTS (both teams score) requires a conjunction predicate (home_score ≥ 1 AND away_score ≥ 1) — the current single binary_condition predicate schema cannot express this. Fix post-MVP: add a `btts` resolution_type or compound_condition support.
+
+**No pipeline refactoring.** No schema changes. No resolver changes. No scoring changes.
+
+---
+
+### 2026-04-28 — docs/LIVE_QUESTION_SYSTEM.md safety rules + timing hardening
+
+**Goal:** fix the remaining LIVE system issues: minimum gap correctness, event-driven window safety, overlapping window prevention, late-match edge cases, and real-time validation clarity.
+
+**No code changes.** Documentation only.
+
+**Changes:**
+- **MINIMUM WINDOW GAP — HARD RULE** — minimum gap raised from 2 to 3 minutes (`window_start_minute − match_minute ≥ 3`). Rationale: 2-minute gap was insufficient; `visible_from` delay (up to 45s) + 90s minimum answer window = 135s minimum, which exceeds a 120s (2-minute) gap at the high end.
+- **EVENT WINDOW SAFETY RULE** — event-driven questions must also satisfy `window_start_minute ≥ match_minute + 3`; ensures triggering event is never inside the prediction window; cannot be bypassed by the rate limit bypass
+- **NO OVERLAPPING WINDOWS — HARD RULE** — no two active CORE_MATCH_LIVE questions may have overlapping `[window_start_minute, window_end_minute]` ranges; applies across all anchoring types; outcome/player questions exempt (resolve from match-wide stats)
+- **LATE MATCH EDGE CASE RULE** — for `match_minute ≥ 87`: minimum gap reduced to 1 minute; for `match_minute ≥ 89`: always reject; added as explicit fallback rule (rule 5)
+- **REAL-TIME VALIDATION RULE** — clarifies that all timing must be validated in real clock time via `minuteToTimestamp()`, accounting for halftime gap; both constraints must hold simultaneously or question is invalid
+- `answer_window_overlap` rejection code threshold updated in analytics table from `< 2` to `< 3`
+- Three anchored type definitions: `window_start_minute` now consistently states `match_minute + 3 (minimum)` with late-match exception noted
+- Match minute adaptation table extended to 6 rows covering 85–87, 87–89, and ≥89 separately
+- Timing example (minute 34) corrected: `window_start = 37` (was 36), reflects 3-minute minimum gap
+- Late-phase example (minute 87) corrected to show the question being **rejected** — the 90s floor cannot be met at that minute
+- Pre-launch checklist: 4 new items (match_minute ≥ 89 skip, event window safety, no overlapping windows, late-match rejection)
+
+---
+
+### 2026-04-28 — docs/LIVE_QUESTION_SYSTEM.md timing corrections
+
+**Goal:** fix inconsistencies in the live question documentation so all examples, timing math, and rules are internally consistent and correct.
+
+**No code changes.** Documentation only.
+
+**`docs/LIVE_QUESTION_SYSTEM.md` changes:**
+- **Relative time examples removed** — time-driven question type examples ("corner in the next 5 min", "2+ shots in the next 8 min") replaced with anchored equivalents ("goal between the 36th and 41st minute", "card before the 80th minute")
+- **Corner examples removed from time windows** — corners are cumulative-only stats (no per-minute event data); removed from all `match_stat_window` examples; rule added to Forbidden Patterns section and pre-launch checklist
+- **Timing example fixed (minute 34 FIXED WINDOW)** — `answer_closes_at = visible_from + ~4 min` was wrong (would land after `window_start_minute`); replaced with `answer_closes_at = kickoff + 35:50` derived from `window_start_minute` real match time. Same fix applied to the minute-67 event-driven example.
+- **LIVE WINDOW VALIDATION — HARD RULE added** (Section 4) — explicit rule: a LIVE question is invalid if a ≥90-second answer window cannot fit before `window_start_minute`; system must select a later window or reject the question entirely
+- **Event-driven delay clarified** — "fires immediately" replaced in Section 2 and Section 6 with "event detection fires immediately; question publication is delayed by 45–60 seconds to absorb broadcast and API latency differences"
+- **Pre-launch checklist extended** — two new items: `answer_closes_at` must be derived from match clock (not `visible_from + duration`); reject-or-reselect rule for tight windows; `answer_window_overlap` description updated to reference the 90-second constraint; corner field ban added as a checklist item; live window UI strip checks added (3 items)
+
+---
+
+### 2026-04-28 — Unified LIVE timing system (prompt v2.4)
+
+**Goal:** unify all LIVE question timing logic around three anchored question types. Eliminates relative phrasing ("next 5 minutes") entirely and enforces match-minute adaptation rules so question framing always makes sense at the current point in the match.
+
+**`supabase/functions/generate-questions/lib/types.ts`:**
+- `MatchStatWindowPredicate`: added `anchoring_type?: 'fixed_window' | 'deadline' | 'match_phase'` with inline doc comment explaining each type
+- `RawGeneratedQuestion`: added `anchoring_type?: 'fixed_window' | 'deadline' | 'match_phase' | null` — OpenAI returns this in Call 1 output
+- `RejectionLogEntry.stage` union: added `'live_timing_validation'` for the new validation check
+
+**`supabase/functions/generate-questions/lib/predicate-validator.ts`:**
+- `checkLogic()` for `match_stat_window`: window size maximum now depends on `anchoring_type`:
+  - `fixed_window` (default): 3–7 min (unchanged, narrow span)
+  - `deadline`: 3–45 min (can span to a milestone minute)
+  - `match_phase`: 3–90 min (can span to half-time or full-time)
+- New `checkLiveTiming()` function — stage `'live_timing_validation'`, skips prematch questions (`match_minute_at_generation == null`):
+  - `relative_time_window_rejected` — scans `question_text` for 8 banned relative phrases ("in the next X minutes", "coming minutes", "shortly", etc.)
+  - `invalid_live_window` — rejects `match_stat_window` where `window_start_minute <= match_minute_at_generation` (window in the past)
+  - `answer_window_overlap` — rejects `match_stat_window` where `window_start_minute - match_minute_at_generation < 2` (less than 2 min gap for answer period)
+- `validateQuestion()`: added `checkLiveTiming` to the checks array (runs after `checkLogic`, before `checkAvailability`)
+
+**`supabase/functions/generate-questions/lib/openai-client.ts`:**
+- `PROMPT_VERSION` bumped `v2.3` → `v2.4`
+- `TIMING` section updated: split into PREMATCH and LIVE descriptions; LIVE now points to `LIVE WINDOW CONSTANTS` in context rather than repeating timing math
+- `LIVE_EVENT` section fully replaced — new structure:
+  - **Three anchored question types** with exact format, `anchoring_type`, window size, timing source
+  - **Match minute adaptation**: < 60 → FIXED+DEADLINE; 60–75 → all three; 75–85 → DEADLINE+MATCH PHASE; > 85 → ONLY "before full-time" (match_phase, window_end = 90)
+  - **Banned phrases list** (8 patterns) — will be caught by `relative_time_window_rejected`
+  - **Required phrasing** per type: "between the Xth and Yth minute" / "before the Yth minute" / "before full-time"
+  - **Post-event framing** rules (goal → another goal; red card → card or goal)
+  - **Predicate format** includes `anchoring_type` in hint string
+  - **Distribution rules** for 2 questions: at least 2 different anchoring types
+  - **Final type diversity check** (3 binary checks before output)
+- `LIVE_GAP` section fully replaced — same three question types, same match minute adaptation, same banned phrases, same predicate format; differs only in timing buffers (20s delay, 2-min start buffer, 90s settle) and count (exactly 1)
+- `OUTPUT FORMAT` updated: `anchoring_type` field added as REQUIRED for live questions, null for prematch
+
+**Anchored window principles (permanent design constraints):**
+- FIXED WINDOW questions ("between the 60th and 65th minute"): narrow 3–7 min span; ideal for early/mid game
+- DEADLINE questions ("before the 75th minute"): wider span to milestone; adds urgency; ideal 60–85 min
+- MATCH PHASE questions ("before full-time"): natural climax framing; ONLY valid type after minute 85
+- Relative phrasing ("next 5 minutes") is permanently banned from live questions — unfair across TV delays
+- All three types resolve via the same `match_stat_window` evaluator — no resolver changes required
+
+**No resolver changes.** No DB schema changes. No pipeline restructuring. Code and prompt only.
+
+---
+
+### 2026-04-28 — Live window UI strip in league.html
+
+**Goal:** surface the prediction window ("`Window: 60'–65'`" / "`Before 75'`" / "`Before full-time`") and the answer lock minute directly on each active LIVE card so users always know what they're predicting and when they must answer.
+
+**`league.html`:**
+- `resolution_predicate` added to the SELECT columns in `loadAndRenderQuestions()` — JSONB field is now available on every question object in the browser
+- New `getWindowInfo(q)` helper — reads `q.resolution_predicate`; returns `{ start, end, type, field }` for `match_stat_window` predicates; returns `null` for all other types
+- New `renderLiveWindowStrip(q)` function — builds a coral-tinted info strip:
+  - **FIXED WINDOW** → "⚽ Prediction window: 60'–65' · 🔒 Answers lock before 60'"
+  - **DEADLINE** → "⚽ Prediction window: Before 75' · 🔒 Answers lock before 63'"
+  - **MATCH PHASE** → "⚽ Prediction window: Before full-time · 🔒 Answers lock before 87'"
+  - Card emoji switches to 🟨 when `field = 'cards'`
+- Strip is injected into `renderQuestionCard()` between the pre-match status strip position and the question text, but ONLY when `lane === 'LIVE' && state === 'active'` — no strip on closed, resolved, or voided cards
+- New CSS `.live-window-strip`, `.lw-item`, `.lw-sep`: coral tint (`rgba(255,107,107,0.06)` bg, `0.15` border), flex layout, right separator between the two info items
+
+**Rendering position in card:**
+```
+[ lane badge ]  [ engagement badges ]  [ time remaining ]
+[ RW source label — Real World only ]
+[ Pre-match status strip — PREMATCH only ]
+[ Live window strip — LIVE match_stat_window only, active only ]   ← NEW
+[ Question text ]
+[ Options ]
+[ Footer ]
+```
+
+**No backend changes.** No pipeline changes. No DB schema changes.
+
+---
+
+### 2026-04-28 — Live anchored match-minute window system (prompt v2.3)
+
+**Goal:** replace vague relative live question windows ("next 5 minutes") with anchored match-minute windows ("between the 60th and 65th minute") that remain fair across all users regardless of TV/stream/API delay. Infrastructure laid for when live generation is activated post-MVP.
+
+**`supabase/functions/generate-questions/lib/types.ts`:**
+- New `MatchStatWindowPredicate` interface added:
+  - `resolution_type: 'match_stat_window'`
+  - `match_id`, `sport` (standard)
+  - `field: 'goals' | 'cards'` — only fields with per-minute event granularity in API-Sports events timeline; corners excluded (cumulative only)
+  - `operator`, `value` — standard binary condition
+  - `window_start_minute`, `window_end_minute` — inclusive match-minute boundaries
+- `ResolutionPredicate` union updated to include `MatchStatWindowPredicate`
+- `RawGeneratedQuestion` extended with optional `window_start_minute?: number | null` and `window_end_minute?: number | null` for live anchored-window output
+- `buildContextPacket` params extended with `matchMinute?: number | null` (wired for live generation)
+
+**`supabase/functions/resolve-questions/lib/predicate-evaluator.ts`:**
+- New `MatchEvent` interface exported: `{ time, extra, type, detail, team_id, team_name }`
+- `MatchStats.events?: MatchEvent[]` — optional events timeline field (undefined = not available)
+- New `evalMatchStatWindow()` function:
+  - Counts `Goal` events (field=goals) or `Card` events (field=cards) within `[window_start_minute, window_end_minute]`
+  - Returns `unresolvable` with reason `events_not_available` if `stats.events` is missing
+  - Returns `unresolvable` with reason `invalid_window_minutes` if window_end ≤ window_start
+  - Otherwise evaluates count against predicate using `applyOperator()`
+- `case 'match_stat_window'` added to `evaluatePredicate()` switch
+
+**`supabase/functions/resolve-questions/lib/stats-fetcher/football.ts`:**
+- `MatchEvent` added to import from `predicate-evaluator.ts`
+- New `readEventsFromCache(sb, matchId)` function: reads `events` JSONB from `live_match_stats` table; maps to `MatchEvent[]` shape; returns `null` if no row or no events
+- `fetchFootballMatchStats()` now reads events in step 3 (before player stats) and includes `events` in the returned `MatchStats`
+- Events are undefined (not null) when cache misses — evaluator handles gracefully with `unresolvable` outcome
+
+**`supabase/functions/generate-questions/lib/predicate-validator.ts`:**
+- `validTypes` array: added `'match_stat_window'`
+- `checkSchema()`: full `match_stat_window` block — validates `match_id`, `field` (must be `goals` or `cards`), `operator`, `value` (number), `window_start_minute` (number), `window_end_minute` (number)
+- `checkLogic()`: `match_stat_window` block — validates `window_end > window_start`, minimum window 3 min, maximum 7 min, start ≥ 1, end ≤ 120
+
+**`supabase/functions/generate-questions/lib/context-builder.ts`:**
+- New exported `minuteToTimestamp(kickoffIso, minute)` helper — converts match minute to UTC wall-clock timestamp; accounts for 15-minute halftime gap for minute > 45
+- New `LIVE_WINDOW` constants object: all 9 timing values centralised (start buffers, window sizes, visible delays, settle buffers)
+- `buildContextPacket` param `matchMinute?: number | null` added
+- `match_minute` in context block now uses `matchMinute` param (was hardcoded `null`)
+- New `LIVE WINDOW CONSTANTS` section injected for live modes when `matchMinute` is non-null: pre-computes `suggested_window_start_minute`, `answer_closes_at_for_window`, `resolves_after_for_window` — all as ISO timestamps so OpenAI doesn't need to do timestamp arithmetic
+- `buildPredicatePrompt()` extended with Shape F: `match_stat_window` — trigger phrase, output schema, parse example
+
+**`supabase/functions/generate-questions/lib/openai-client.ts`:**
+- `PROMPT_VERSION` bumped `v2.2` → `v2.3`
+- `LIVE_EVENT` section fully replaced: proper rules for 1–2 questions, anchored-window timing, 3-min start buffer, `match_stat_window` predicate format, post-event framing, banned relative phrases
+- `LIVE_GAP` section fully replaced: 1 question, 2-min start buffer, anchored windows only, context sensitivity (close/blowout/late phase)
+- Output format extended: `window_start_minute` and `window_end_minute` added as optional fields
+- Both live sections explicitly document: corners are NOT allowed in `match_stat_window`; ban on "next X minutes" phrasing
+
+**Architectural rationale documented:**
+- Anchored windows ("between 60th and 65th minute") are fair regardless of TV/stream/API delay — no user has a timing advantage
+- Event data from `/fixtures/events` has `time.elapsed` (integer minutes) — goals and cards are fully minute-granular; corners have no such data (only cumulative totals from `/fixtures/statistics`)
+- `events` on `MatchStats` is optional (`?`) — if `live_match_stats` has no events row, the predicate resolves as `unresolvable` (graceful degradation, not a crash)
+
+**No DB migrations required.** No live generation pipeline changes (post-MVP). No existing test or generation flow affected — prematch generation is unchanged.
+
+---
+
+### 2026-04-28 — LIVE question system: deterministic overlap resolution + window selection priority + late-match generation rule
+
+**Goal:** close final edge cases in the LIVE question system documentation and code — making overlap resolution fully deterministic, adding explicit window selection priority, and hardening the late-match generation rule to prevent any retries or fallbacks after minute 87.
+
+**`supabase/functions/generate-questions/lib/predicate-validator.ts`:**
+- `answer_window_overlap` threshold updated from `< 2` to `< 3` in both comment and code
+- `MIN_GAP` constant added: `matchMinute >= 87 ? 1 : 3` — enforces the late-match gap exception
+- Dynamic error message now includes the actual `MIN_GAP` value
+- New **late-match hard reject block** added after the gap check: if `matchMinute >= 89` → return `valid: false` with `answer_window_overlap` stage — no window can be valid at this point
+- Rationale comment added: `visible_from` delay (up to 45s) + 90s minimum = 135s > 120s (2-min gap)
+
+**`docs/LIVE_QUESTION_SYSTEM.md`:**
+- **LATE MATCH GENERATION RULE** added (new subsection after LATE MATCH EDGE CASE RULE):
+  - If `match_minute ≥ 87`: MUST attempt MATCH PHASE only; if ≥90s window cannot fit → skip entirely; NO retries, NO alternative window shifting, NO fallback question types; show holding card
+  - If `match_minute ≥ 89`: skip immediately without any attempt
+  - Rationale: retrying at minute 87 produces rushed questions with <3 real clock minutes remaining
+- **OVERLAP RESOLUTION RULE** (replaces vague "reject OR shift" phrasing in NO OVERLAPPING WINDOWS section):
+  - Step 1: attempt a SINGLE window shift forward to next valid non-overlapping window
+  - Step 2: re-validate ALL constraints (3-min gap, 90s window, event safety, match phase)
+  - Step 3: if still overlapping OR violates any rule → reject
+  - Hard constraints: never multiple shifts, never compress window below allowed minimum, never override anchoring type
+- **WINDOW SELECTION PRIORITY RULE** added (new subsection in Section 4):
+  - Always select the earliest valid non-overlapping window that satisfies all constraints
+  - If multiple valid windows exist → pick the one closest to the current match minute
+  - Ensures continuous engagement, no dead zones, predictable pacing
+- **Timing example at minute 87** updated: explicitly shows the question must be rejected per LATE MATCH GENERATION RULE (no retries noted)
+- **Pre-launch checklist** extended with 3 new items: late-match retry prevention, deterministic overlap resolution, window selection priority verification
+- **Section 6 edge cases** updated: separate items for ≥89 hard reject and 87–88 rejection without retries; overlap edge case updated to reference single-shift rule
+
+**No pipeline changes.** No DB schema changes. No resolver changes.
+
+---
+
+### 2026-04-28 — LIVE question generation pipeline implemented
+
+**Goal:** implement the full CORE_MATCH_LIVE generation pipeline so the Edge Function automatically detects in_progress matches and generates live questions without manual context input. 5 files changed; prematch pipeline untouched.
+
+**`supabase/functions/generate-questions/lib/types.ts`:**
+- `GenerationMode` extended: added `'live_gap' | 'live_event'` (was `'match_preview' | 'narrative_preview' | 'narrative_only'`)
+- New `LiveMatchContext` interface — all fields needed for live generation:
+  `matchId, kickoff, homeTeamId/Name, awayTeamId/Name, matchMinute, matchPhase, homeScore, awayScore, isCloseGame, isBlowout, recentEvents[], lastEventType, lastEventMinute, activeWindows[], activeQuestionCount, generationTrigger, lastGenerationMinute`
+
+**`supabase/functions/generate-questions/lib/context-builder.ts`:**
+- `LIVE_WINDOW.timeDrivenStartBufferMinutes` fixed: `2 → 3` (aligns with LIVE_QUESTION_SYSTEM.md minimum gap rule)
+- New exported `buildLiveContext(sb, leagueId, matchId, fixtureRow)` — returns `LiveMatchContext | null`:
+  - Step 1: reads `live_match_stats` for score, status, minute, events; returns null if row doesn't exist yet (poller not yet run)
+  - Step 2: reads most recent CORE_MATCH_LIVE question for the league+match to get `lastGenerationMinute`
+  - Step 3: parses `events` JSONB — filters to events since `lastGenerationMinute` (or last 10 min if no prior question)
+  - Step 4: detects goals and red cards (own goals excluded); sets `lastEventType` and `lastEventMinute`; determines `generationTrigger` (event_driven vs time_driven)
+  - Step 5: reads pending CORE_MATCH_LIVE questions with open answer windows → extracts `match_stat_window` `window_start_minute/end_minute` into `activeWindows[]`
+  - Match phase: `< 20 → early`, `< 70 → mid`, `≥ 70 → late`
+  - `isCloseGame = scoreDiff ≤ 1`, `isBlowout = scoreDiff ≥ 3`
+
+**`supabase/functions/generate-questions/lib/sports-adapter/football.ts`:**
+- New exported `fetchInProgressFixturesFromCache(sb, leagueId, teamId?, scopeType)`:
+  - Queries `api_football_fixtures` with `status_short IN ('1H', 'HT', '2H', 'ET')`
+  - Filtered by `league_id` (full_league) or `home/away_team_id` (team_specific)
+  - Returns raw DB rows (not SportMatch) — live branch needs `fixture_id`, `kickoff_at`, team data
+  - Includes HT rows so the live branch can explicitly skip them
+
+**`supabase/functions/generate-questions/index.ts`:**
+- Imports extended: `SportsContext, LeagueClassification, GenerationMode` from types.ts; `buildLiveContext, minuteToTimestamp` from context-builder; `fetchInProgressFixturesFromCache` from sports-adapter/football
+- New live generation loop added after prematch loop (before `finaliseRun()`):
+  - Iterates all ai_enabled football leagues
+  - Per league: fetches in_progress fixtures from cache
+  - Per fixture: runs safety checks in order:
+    1. **HT skip** — `status_short === 'HT'` → `skipReason: 'halftime_pause'`
+    2. **buildLiveContext** — null return → `skipReason: 'no_live_stats_available'`
+    3. **≥89 hard reject** → `skipReason: 'match_minute_too_late'`
+    4. **Active cap** — `activeQuestionCount >= 2` → `skipReason: 'active_question_cap_reached'`
+    5. **Rate limit** — time_driven only: query `CORE_MATCH_LIVE` questions created in last 3 min → `skipReason: 'rate_limit_3min_live'` (event_driven bypasses)
+  - Builds `liveSportsCtx` (minimal SportsContext with the live match) and `liveCls` (LeagueClassification with priority=4)
+  - Calls `buildContextPacket()` with all live fields populated from `liveCtx` (match phase, last event, active count, match minute)
+  - Appends `LIVE MATCH STATE` section: current score, isCloseGame, isBlowout, generation_trigger, last event, active windows
+  - Calls `generateQuestions()` — generates exactly 1 question
+  - Fills timing: `visible_from = now + 20s (time_driven) or 45s (event_driven)`, `answer_closes_at = visible_from + 3 min` (default)
+  - If predicate is `match_stat_window`: overrides `answer_closes_at = minuteToTimestamp(kickoff, window_start_minute)`, `resolves_after = minuteToTimestamp(kickoff, window_end_minute) + 90s (or 120s event_driven)`
+  - Calls `validateQuestion()` — runs all 5 validation stages including `checkLiveTiming()`
+  - Inserts directly into `questions` table (bypasses pool — live questions are not reused)
+  - Always `question_type = 'CORE_MATCH_LIVE'`, `source_badge = 'LIVE'`, `reuse_scope = 'live_safe'`
+  - Logs every outcome: `[live-gen] CORE_MATCH_LIVE generated...` or skip reason
+
+**Safety properties preserved:**
+- All MVP safety rules enforced: HT pause, ≥89 reject, 2-question active cap, 3-min rate limit (time_driven)
+- Event_driven bypasses rate limit — exactly as documented
+- Prematch pipeline completely unchanged — no shared code paths modified
+- Pool system bypassed for live — no risk of live questions appearing in prematch pools
+- `resolution_status: 'pending'` on all inserts — resolver idempotency guarantee maintained
+- All 3 timestamps populated: `visible_from`, `answer_closes_at`, `resolves_after`
+
+---
+
+### 2026-04-28 — Migration 021: extend generation_mode CHECK for live modes
+
+**Problem:** `generation_run_leagues.generation_mode` had a DB-level CHECK constraint (from migration 002) allowing only `'match_preview' | 'narrative_preview' | 'narrative_only'`. The live generation pipeline writes `'live_gap'` and `'live_event'` as `generationMode` values. Without this migration every `writeLeagueResult()` call from the live branch would fail with a Postgres constraint violation, making all live runs invisible in the audit tables.
+
+**`backend/migrations/021_live_generation_mode.sql`** — ⚠️ **Run in Supabase SQL editor before deploying the updated Edge Function:**
+- `DROP CONSTRAINT IF EXISTS generation_run_leagues_generation_mode_check` — removes the old inline constraint (auto-named by Postgres)
+- `ADD CONSTRAINT generation_run_leagues_generation_mode_check CHECK (generation_mode IN ('match_preview','narrative_preview','narrative_only','live_gap','live_event'))` — adds expanded constraint
+- Idempotent — safe to re-run
+
+**Deploy order (MANDATORY):**
+1. Run `021_live_generation_mode.sql` in Supabase SQL editor first
+2. Then deploy `generate-questions` Edge Function: `supabase functions deploy generate-questions --no-verify-jwt`
+
+Running the Edge Function before the migration will cause every live generation audit write to fail silently (console.warn logged, run continues). The generation itself would still work — questions would be inserted into `questions` — but the run audit in `generation_run_leagues` would be incomplete.
+
+---
+
+### 2026-04-28 — Migration 022: drop outdated skip_reason CHECK constraint
+
+**Problem:** `generation_run_leagues.skip_reason` had a CHECK constraint (from migration 002) allowing only 6 original values. The pipeline uses 12+ skip reasons (`sport_not_supported_mvp`, `match_too_distant`, `no_matches_in_publish_window`, `halftime_pause`, `no_live_stats_available`, `match_minute_too_late`, `active_question_cap_reached`, `rate_limit_3min_live`, etc.). Every INSERT with a non-original skip_reason failed silently with error code 23514, causing `generation_run_leagues` to have no rows for most skipped leagues.
+
+**`backend/migrations/022_drop_skip_reason_constraint.sql`** — ✅ Run:
+- `DROP CONSTRAINT IF EXISTS generation_run_leagues_skip_reason_check` — removes the constraint entirely
+- `skip_reason` is now a free-text audit field — no restriction needed
+- Idempotent — safe to re-run
+
+---
+
+### 2026-04-28 — fetchInProgressFixturesFromCache() rewritten to use live_match_stats
+
+**Problem:** `fetchInProgressFixturesFromCache()` in `sports-adapter/football.ts` queried `api_football_fixtures WHERE status_short IN ('1H', 'HT', '2H', 'ET')`. But `api_football_fixtures.status_short` is only ever set to `NS` (not started) when prematch fixtures are fetched — it is never updated to live statuses. The live-stats-poller updates `live_match_stats.status` every minute but never touches `api_football_fixtures`. Result: the live branch could never detect any in-progress matches.
+
+**Fix (`supabase/functions/generate-questions/lib/sports-adapter/football.ts`):**
+- Step 1: query `live_match_stats WHERE status IN ('1H', 'HT', '2H', 'ET')` — authoritative live status kept current by the poller
+- Step 2: cross-reference `api_football_fixtures` for league/team scope filtering (`league_id` or `home/away_team_id`)
+- Return merged rows with `status_short` aliased from `status` for consistent field naming in index.ts
+- Deployed with `supabase functions deploy generate-questions --no-verify-jwt` ✅
+
+---
+
+### 2026-04-28 — Migration 023: live question analytics views
+
+**Goal:** mirror the prematch analytics system (migration 020) for CORE_MATCH_LIVE questions so live generation quality can be monitored from day one.
+
+**`backend/migrations/023_live_analytics_views.sql`** — ✅ Run:
+- `analytics_live_quality_summary` — one row per day: `total_generated`, `total_rejected`, `rejection_rate`, `time_driven_runs` (live_gap), `event_driven_runs` (live_event), `skipped_runs`, `halftime_skips`, `rate_limit_skips`, `active_cap_skips`, `late_match_skips`, `no_stats_skips`, `total_cycles`
+- `analytics_live_rejection_reasons` — one row per rejection_log entry from live runs: `day`, `league_id`, `generation_mode`, `stage`, `error`, `question_text`, `attempt`
+- Both views granted SELECT to `authenticated` and `anon`
+- Both return empty until first live generation cycle runs — correct behaviour
+
+**Monitoring queries:**
+```sql
+-- Daily health
+SELECT * FROM analytics_live_quality_summary ORDER BY day DESC LIMIT 7;
+
+-- Rejection detail
+SELECT day, stage, error, question_text
+FROM analytics_live_rejection_reasons
+ORDER BY day DESC LIMIT 20;
+```
+
+---
+
+### 2026-04-28 — shots_total + BTTS fully resolved (prompt v2.5)
+
+**Goal:** close the two remaining prematch pipeline gaps identified in audit — `shots_total` not in the validator's allowed field list, and BTTS having no resolution path.
+
+**`supabase/functions/generate-questions/lib/types.ts`:**
+- New `BttsPredicate` interface: `{ resolution_type: 'btts', match_id: string, sport: string }` — no `binary_condition`; resolver evaluates from match scores directly
+- `ResolutionPredicate` union extended with `BttsPredicate`
+
+**`supabase/functions/generate-questions/lib/predicate-validator.ts`:**
+- `match_stat` VALID_FIELDS extended: `shots_total` added — questions predicting total shots now pass `logic_validation`
+- `validTypes` extended: `'btts'` added
+- `btts` schema check added (early return, before the `if/else` block) — requires only `match_id`, no `binary_condition`
+- **Latent `match_stat_window` bug fixed**: the `match_stat_window` schema check was placed AFTER the `else` block that requires `binary_condition` for all non-MC types. Since `match_stat_window` predicates have no `binary_condition`, they would have failed schema validation the first time a live question went through the validator. Fix: moved `match_stat_window` handling to an early-return block BEFORE the `if/else`, matching the same pattern now used for `btts`.
+
+**`supabase/functions/resolve-questions/lib/predicate-evaluator.ts`:**
+- `case 'btts'` added to `evaluatePredicate()` switch
+- New `evalBtts(stats)` function: `homeScore >= 1 && awayScore >= 1` → `correct`, otherwise `incorrect`
+- `case 'shots_total'` added to `getMatchStatValue()`: sums `shots_total` across both teams from `teamStats` (field already populated by the stats-fetcher from `/fixtures/statistics`)
+
+**`supabase/functions/generate-questions/lib/context-builder.ts`:**
+- Shape G added to `buildPredicatePrompt()`: `btts` — trigger phrase `"btts"` in `predicate_hint`, output `{ "resolution_type":"btts", "match_id":string, "sport":string }`
+- Valid fields list updated: `shots_total` added to `match_stat`, `btts` documented as its own type with no field
+
+**`supabase/functions/generate-questions/lib/openai-client.ts`:**
+- `PROMPT_VERSION` bumped `v2.4` → `v2.5`
+- Rule 6 (resolvability): `shots_total` moved from the DO NOT USE list to the `match_stat fields` list
+- Rule 6: BTTS proxy (`total_goals gte 2`) replaced with the native `btts` type and its `predicate_hint` format; proxy note removed
+- `home_shots`, `away_shots`, `shots_on_target` remain in the DO NOT USE list (only `shots_total` is valid)
+
+**Both Edge Functions redeployed:** `generate-questions` + `resolve-questions`.
+
+---
+
+### 2026-04-28 — REAL_WORLD pipeline fully implemented
+
+**Goal:** build the complete end-to-end REAL_WORLD question pipeline: 3-call OpenAI flow, two new predicate types, resolver support, deadline auto-void, and migration 024 DB columns.
+
+**`backend/migrations/024_realworld_fields.sql`** — new migration (⚠️ run before deploying):
+- `resolution_condition TEXT` — human-readable resolution criteria shown to users
+- `resolution_deadline TIMESTAMPTZ` — auto-void deadline with 1h grace period
+- `source_news_urls JSONB DEFAULT '[]'` — URLs of news articles that triggered the question
+- `entity_focus TEXT CHECK IN ('player','coach','team','club')` — what entity the question is about
+- `confidence_level TEXT CHECK IN ('low','medium','high')` — signal strength from news
+- `rw_context TEXT` — Call 3 output: "why this question exists" snippet (shown to users)
+- `idx_questions_resolution_deadline` index for deadline-based resolver queries
+
+**`supabase/functions/generate-questions/lib/types.ts`:**
+- New `MatchLineupPredicate` interface: `{ resolution_type:'match_lineup', match_id, sport, player_id, player_name, check:'starting_xi'|'squad' }` — resolves from `live_match_stats.lineups`
+- New `ManualReviewPredicate` interface: `{ resolution_type:'manual_review', category:'coach_status'|'transfer'|'contract'|'disciplinary', description, resolution_deadline, source_urls[] }` — admin-resolved; resolver skips (leaves pending) until deadline
+- `ResolutionPredicate` union: `MatchLineupPredicate | ManualReviewPredicate` added
+- New `RawRealWorldQuestion` interface: `{ question_text, news_narrative_summary, confidence_level, resolution_type_suggestion, resolution_condition, resolution_deadline, source_news_ids[], entity_focus, predicate_hint, skip_reason? }`
+- `ValidatedQuestion`: 6 new optional REAL_WORLD fields added (`resolution_condition`, `resolution_deadline`, `source_news_urls`, `entity_focus`, `confidence_level`, `rw_context`)
+- `RejectionLogEntry.stage` union: `'real_world_generation'` added
+
+**`supabase/functions/generate-questions/lib/predicate-validator.ts`:**
+- `validTypes`: `'match_lineup' | 'manual_review'` added
+- `manual_review` early-return schema check added BEFORE the `sport` field guard (manual_review has no sport field — must come first)
+- `match_lineup` early-return schema check: validates `match_id`, `player_id`, `player_name`, `check` field
+- No duplicate `manual_review` block (second instance removed)
+
+**`supabase/functions/generate-questions/lib/openai-client.ts`:**
+- `RW_GENERATION_SYSTEM_PROMPT` added — Call 1 system prompt for REAL_WORLD generation
+- `generateRealWorldQuestion(newsItems, leagueScope, upcomingMatch, knownPlayers, nowIso, apiKey)` added — returns `RawRealWorldQuestion | null` (null = model chose to skip)
+- `RW_CONTEXT_SYSTEM_PROMPT` added — Call 3 system prompt
+- `generateRealWorldContext(questionText, newsItems, confidenceLevel, apiKey)` added — returns plain-text context string
+- `PROMPT_VERSION` bumped `v2.5` → `v2.6` (yellow_card event trigger + RW prompts)
+- `last_event_type` enum in live prompts: `yellow_card` added
+- POST-EVENT FRAMING: yellow_card framing added ("Will there be another card?" / "Will there be a goal?")
+
+**`supabase/functions/resolve-questions/lib/predicate-evaluator.ts`:**
+- `MatchStats.lineups?: any` field added — populated from `live_match_stats.lineups`
+- `case 'match_lineup'` added to switch → `evalMatchLineup()`: checks player in `startXI` or `substitutes` in the lineup array; returns `unresolvable` if lineups not available yet
+- `case 'manual_review'` added to switch → `unresolvable` with reason `'pending_admin_review'` (admin resolves manually; deadline auto-void in main loop)
+
+**`supabase/functions/resolve-questions/lib/stats-fetcher/football.ts`:**
+- `readLineupsFromCache()` added: reads `lineups` JSONB from `live_match_stats`
+- `fetchFootballMatchStats()` step 4 (lineups) added: reads lineups before player stats step
+- `lineups` included in returned `MatchStats`
+
+**`supabase/functions/resolve-questions/index.ts`:**
+- SELECT columns: `question_type`, `resolution_deadline`, `confidence_level` added
+- **Deadline auto-void block** added at the top of the per-question loop: if `resolution_deadline` is set and `now > deadline + 1h grace` → void with `resolution_deadline_passed`
+- **`manual_review` skip block** added: skips with `runStats.skipped++` (never auto-resolves; deadline void handles cleanup)
+
+**`supabase/functions/generate-questions/index.ts`:**
+- `generateRealWorldQuestion`, `generateRealWorldContext` added to import
+- **REAL_WORLD generation pass** added between live loop and `finaliseRun()`:
+  - Per league: REAL_WORLD quota check → fetch sports + news context → skip if no news
+  - Call 1: `generateRealWorldQuestion` with league scope string + upcoming match string
+  - Skip if null returned (weak signal)
+  - Call 2: `convertToPredicate` on the predicate_hint
+  - Call 3: `generateRealWorldContext` (non-fatal; rw_context = '' if fails)
+  - Timing: `visible_from = now`, `answer_closes_at = deadline − 1h`, `resolves_after = deadline + 1h`
+  - Validates via standard 4-stage validator
+  - Inserts with all 6 REAL_WORLD-specific fields
+  - Source URLs: all news item URLs included (since NewsItem.url is not sent to OpenAI, positional IDs can't be matched back)
+
+**`supabase/functions/generate-questions/lib/context-builder.ts`:**
+- `maxActiveQuestions` default: `2 → 3`
+- Event detection: `yellow_card` and `Penalty Confirmed` (VAR) added to filter
+- `lastEventType`: `'yellow_card'` union added; mapping updated
+
+**`supabase/functions/generate-questions/index.ts`:**
+- `MVP_MAX_ACTIVE_LIVE`: `2 → 3`
+
+**Deploy order (MANDATORY):**
+1. Run `024_realworld_fields.sql` in Supabase SQL editor
+2. Deploy `generate-questions`: `supabase functions deploy generate-questions --no-verify-jwt`
+3. Deploy `resolve-questions`: `supabase functions deploy resolve-questions --no-verify-jwt`
+
+---
+
+### 2026-04-28 — REAL_WORLD analytics views (migration 025)
+
+**Goal:** mirror the prematch (migration 020) and live (migration 023) analytics pattern for REAL_WORLD questions. Source is the `questions` table filtered by `question_type = 'REAL_WORLD'` (the REAL_WORLD generation pass does not write to `generation_run_leagues`, unlike prematch/live).
+
+**`backend/migrations/025_realworld_analytics_views.sql`** — ✅ run in Supabase SQL editor:
+- `analytics_realworld_summary` — one row per day: `total_generated`, entity focus breakdown (`player/coach/team/club/unknown`), confidence level breakdown (`high/medium/low`), resolution type breakdown (`lineup/manual_review/match_stat/player_stat/btts`), lifecycle coverage (`with_context`, `with_deadline`, `with_resolution_condition`, `with_source_urls`), resolution outcomes (`pending/resolved/voided`), `overdue_pending` (deadline passed but still pending)
+- `analytics_realworld_questions` — one row per question: `question_text`, `entity_focus`, `confidence_level`, `resolution_condition`, `resolution_deadline`, `predicate_type`, `manual_review_category`, `rw_context`, `has_context` boolean, `source_url_count`, `deadline_status` (`ok` / `overdue` / `no_deadline`), `league_name`
+- Both views granted SELECT to `authenticated` and `anon`
+
+**Monitoring queries:**
+```sql
+-- Daily health
+SELECT * FROM analytics_realworld_summary ORDER BY day DESC LIMIT 7;
+
+-- All questions
+SELECT * FROM analytics_realworld_questions LIMIT 20;
+
+-- Overdue (deadline passed, still pending — resolver should have voided these)
+SELECT id, question_text, entity_focus, resolution_deadline
+FROM analytics_realworld_questions WHERE deadline_status = 'overdue';
+
+-- Missing context (Call 3 failed silently)
+SELECT id, question_text, confidence_level
+FROM analytics_realworld_questions WHERE has_context = false;
+```
+
+---
+
+### 2026-04-28 — Full scoring formula activated + MVP section replaced
+
+**`supabase/functions/resolve-questions/index.ts`:**
+- Three MVP bypass constants removed: `difficulty_mvp`, `comeback_mvp`, `clutch_mvp`
+- All six multipliers now computed and applied at runtime:
+  - `difficulty` — read from `q.difficulty_multiplier` (was `difficulty_mvp = 1.0`)
+  - `comeback` — computed by `computeComebackMultiplier(a.leader_gap_at_answer)` (was `comeback_mvp = 1.0`)
+  - `clutch` — read from `a.clutch_multiplier_at_answer` (was `clutch_mvp = 1.0`)
+- `finalPts = Math.max(0, Math.round(baseValue * timePressure * difficulty * streak * comeback * clutch))`
+- `multiplier_breakdown` JSONB: `mvp_bypass: true` flag removed; now records actual computed values for all six multipliers
+- Section comment updated to: "All six multipliers are active."
+
+**`CLAUDE.md` — System Rules section:**
+- Entire `# ⚠️ MVP EXECUTION CONTROL (MANDATORY)` section replaced with `# System Rules`
+- Removed: launch target date, pre-launch gate language, scoring bypass table, LIVE "not implemented" status, "What must be built for LIVE activation", "Context: why this was deferred from MVP", pre-launch prohibitions
+- Kept (reframed as permanent operational rules): 3-timestamp model, max 2 active questions, rate limits, fallback rules, resolver idempotency, answer submission uniqueness, football-only guard, graceful degradation, logging requirements
+- LIVE system status table updated: all five components ✅ Complete
+- Scoring formula table updated: all six multipliers active
+- Protected systems table updated: migrations 001–025
+
+---
+
+### 2026-04-28 — REAL_WORLD feed UI (league.html)
+
+**Goal:** make REAL_WORLD cards feel meaningfully different from CORE_MATCH cards. The "why this question exists" context was being generated (Call 3) and stored but never shown to users.
+
+**`league.html` — SELECT updated:**
+- Added 5 REAL_WORLD fields to the questions SELECT: `rw_context`, `confidence_level`, `entity_focus`, `resolution_deadline`, `source_news_urls`
+- All fields are null for CORE_MATCH_PREMATCH and CORE_MATCH_LIVE questions — no impact on those cards
+
+**`league.html` — new CSS (5 rules added before timer bar section):**
+- `.rw-context` — italic, muted white, 0.78rem; the context snippet under the question text
+- `.rw-confidence` — small uppercase pill badge; three variants:
+  - `.high` — lime tint (`#A8E10C`)
+  - `.medium` — orange tint (`#FF9F43`)
+  - `.low` — coral tint (`#FF6B6B`)
+- `.rw-footer-row` — flex row at the bottom of REAL_WORLD cards for deadline + sources
+- `.rw-deadline` — "🗓 Resolves by D Mon YYYY"
+- `.rw-sources-link` — purple link; hover underlines
+
+**`league.html` — `renderQuestionCard()` updated (REAL_WORLD cards only):**
+
+*`rwSource` block replaced with richer rendering:*
+- Sub-label: `"Premium intelligence · AI-sourced"` + confidence badge inline
+- Context block: `rw_context` text if present; falls back to `"Based on recent news around this league."` if null/empty
+
+*New `rwFooterExtra` variable (empty for non-RW cards):*
+- `resolution_deadline` → formatted as `🗓 Resolves by 28 Apr 2026`
+- `source_news_urls` → `📰 View source` / `📰 View sources (N)` link to first URL, opens new tab
+- Row only rendered if at least one field is non-null
+- Injected after `footerHtml` in the card HTML output
+
+**REAL_WORLD card anatomy (complete):**
+```
+[ REAL WORLD badge ]  [ engagement badges ]  [ time remaining ]
+Premium intelligence · AI-sourced  [ HIGH confidence ]
+"Why this question exists — the Call 3 context snippet."
+─────────────────────────────────────────────────────────
+Question text
+─────────────────────────────────────────────────────────
+[ Yes ]  [ No ]
+─────────────────────────────────────────────────────────
+[ 🕐 4m 30s left ]                    [ Up to 15 pts ]
+🗓 Resolves by 2 May 2026  ·  📰 View sources (3)
+```
+
+**No backend changes.** No DB schema modifications. No pipeline or resolver changes. No scoring changes. CORE_MATCH_PREMATCH and CORE_MATCH_LIVE cards completely unaffected.
+
+---
+
+### 2026-04-28 — REAL_WORLD Call 3 upgraded to structured JSON output
+
+**Goal:** replace plain-text `rw_context` with a structured JSON response from Call 3 that returns a curated source list (title + publisher + date + URL) so the feed can render titled, attributed source links rather than a generic "View sources (N)" count.
+
+**`supabase/functions/generate-questions/lib/types.ts`:**
+- New `RwContextSource` interface: `{ source_name, published_at, title, url }` — one curated news source
+- New `RwContextResult` interface: `{ context, confidence_explanation, sources: RwContextSource[] }` — structured return type of Call 3
+
+**`supabase/functions/generate-questions/lib/openai-client.ts`:**
+- `import` updated: added `NewsItem`, `RwContextResult` from `types.ts`
+- `RW_CONTEXT_SYSTEM_PROMPT` replaced with the full structured prompt:
+  - Context rules (fact-based only, 1–2 sentences, no predictions)
+  - Confidence language table (low/medium/high)
+  - Source selection rules (max 3, different publishers, most recent, relevance-ranked, no duplicates)
+  - Output format: `{ context, confidence_explanation, sources[] }` JSON
+- `generateRealWorldContext()` signature updated:
+  - New params: `newsItems: NewsItem[]` (was anonymous object array), `teams: string`, `players: string`
+  - Maps `NewsItem` fields to prompt's expected names (`headline → title`, `summary → snippet`, `sourceName → source_name`, `publishedAt → published_at`)
+  - Added `response_format: { type: 'json_object' }` — forces deterministic JSON output
+  - Return type changed: `Promise<string>` → `Promise<RwContextResult>`
+  - Parses JSON; validates minimal shape; defaults gracefully if model returns partial output
+  - Sources sliced to max 3
+
+**`supabase/functions/generate-questions/index.ts`:**
+- Call 3 block rewritten:
+  - Builds `rwTeams` string from upcoming match + standings
+  - Builds `rwPlayers` string from `sportsCtxRW.keyPlayers` (first 5)
+  - Stores `rwCtxResult.context` → `rwContextText`
+  - Stores `rwCtxResult.sources` → `sourceUrls` (array of objects, not strings)
+- Fallback: if Call 3 fails, `sourceUrls` falls back to all raw news URLs as `[{ url }]` objects (backward compat)
+- `rw_context` column insert: `rwContextText` (was `rwContext`)
+- `source_news_urls` column insert: `sourceUrls` array of objects (was string array)
+
+**`league.html` — source rendering updated:**
+- New format (objects with `url`, `title`, `source_name`): renders up to 3 individual titled links — `📰 [Article title] · Publisher`; titles truncated to 55 chars
+- Legacy format (plain URL strings): falls back to generic "View sources (N)" link
+- `.rw-footer-row` CSS: changed from `flex-direction: row` to `column` so multiple source links each get their own line
+
+**`source_news_urls` schema change (no migration needed — JSONB):**
+
+| Before | After |
+|---|---|
+| `["https://bbc.co.uk/...", "https://sky.com/..."]` | `[{ "source_name": "BBC Sport", "published_at": "2026-04-28T...", "title": "Haaland ruled out...", "url": "https://..." }]` |
+
+Old string-array entries (questions generated before this change) still render correctly via the legacy fallback path in `league.html`.
+
+---
+
+### 2026-04-28 — Google News RSS adapter replaces GNews
+
+**Goal:** remove the GNews API key dependency and replace the basic keyword query system with a fully automatic, scored news pipeline that works for any league or team without manual configuration.
+
+**`lib/news-adapter/google-news-rss.ts`** — new file, replaces `gnews.ts`:
+
+*Step 1 — Query builder (`buildRssUrls()`):*
+- **Team scope**: `("team_name" OR aliases)` + signal variant with `AND (injury OR ruled out OR suspension OR transfer OR coach OR lineup OR ...)`
+- **League scope**: `("league_name" OR upcoming fixture teams)` + signal variant with same keyword set
+- Produces 2 RSS URLs (BROAD + SIGNAL) per league — fetched concurrently
+- URL: `https://news.google.com/rss/search?q=ENCODED_QUERY&hl=en-US&gl=US&ceid=US:en`
+- No API key required
+
+*Step 2 — Fetch + parse (`fetchRssFeed()` + `parseRssXml()`):*
+- 8-second timeout per feed with `AbortController`
+- Regex-based RSS XML parser (no DOM dependency) — handles CDATA sections, `<source>` tag, "Headline - Source Name" Google News title format
+- Parses: `title`, `sourceName`, `url`, `publishedAt` (ISO), `snippet` (280 char truncated)
+
+*Step 3 — Deduplication (`deduplicateArticles()`):*
+- Groups articles by Jaccard word similarity (threshold 0.50) — same story → one entry
+- Keeps best version per group: most recent first; tie-breaks by source credibility rank
+
+*Step 4 — Entity extraction (`extractEntities()`):*
+- **Teams**: string match against `knownTeams` list (from `upcomingMatches` + standings)
+- **Players**: Title Case bigram detection in headline, filtered against team names + stopwords
+- **Coach**: keyword match (`manager`, `sacked`, `appointed`, etc.)
+- **Topic**: `injury` | `lineup` | `suspension` | `transfer` | `coach` | `other`
+
+*Step 5 — Scoring (`scoreArticle()`):*
+- **RELEVANCE** (0–25): team match (+15), second team (+5), signal keyword (+10)
+- **FRESHNESS** (0–15): <6h=15, <24h=12, <48h=8, <72h=4, else=1
+- **CREDIBILITY** (0–20): BBC/Sky/ESPN/Athletic/Reuters=20; Mirror/Sun/GiveMeSport=12; unknown=8
+- **RESOLVABILITY** (0–25): injury/lineup/suspension=22–25; coach=18; transfer=15; other=5
+- **IMPACT** (0–15): named player=12; coach story=10; multi-team=10; else=5
+- **RISK** (−30 to 0): clickbait keywords=−10; <50 chars total=−15; irrelevant topic + no team=−20
+- **Thresholds**: ≥80=GENERATE, 65–79=MAYBE, 50–64=CONTEXT_ONLY, <50=SKIP
+
+*Step 6 — Output filter:*
+- Passes GENERATE articles; falls back to MAYBE only when no GENERATE exists
+- Maps to `NewsItem[]` (same type the rest of the pipeline consumes)
+- Caps at 10 articles; logs a summary line per run
+
+**`lib/news-adapter/index.ts`** — rewritten:
+- Imports `fetchAndScoreNews` from `google-news-rss.ts` (not gnews)
+- `_apiKey` param kept (prefixed `_`) for backward compat — completely ignored
+- Derives `knownTeams` from `sportsCtx.upcomingMatches` + standings + `league.scoped_team_name`
+- Derives `leagueAliases` from a built-in map of well-known league abbreviations (PL, UCL, EPL, etc.)
+- No longer gates on API key presence — runs for every league unconditionally
+
+**`index.ts` (generate-questions)**:
+- `GNEWS_API_KEY` changed from `!` (required) to `?? ''` (optional) — missing key no longer breaks the pipeline
+
+**What changed and what didn't:**
+
+| | Before | After |
+|---|---|---|
+| API key required | ✅ `GNEWS_API_KEY` required | ❌ Not required |
+| Query quality | Basic keyword strings | BROAD + SIGNAL RSS queries |
+| Articles per run | 3 per query (GNews free tier cap) | 15 per feed × 2 feeds |
+| Deduplication | Exact headline hash | Jaccard similarity grouping |
+| Entity extraction | None | Teams, players, coach, topic |
+| Scoring | None (accept all) | 5-dimension scored + thresholds |
+| News freshness window | 7 days | 5 days |
+
+**No DB schema changes.** `NewsItem` type unchanged. All downstream pipeline (Call 1, Call 2, Call 3, `source_news_urls`) unchanged.
+
+---
+
+### 2026-04-28 — REAL_WORLD soccer player database (migration 026)
+
+**Goal:** additive player intelligence layer for the REAL_WORLD pipeline. Automatically discovers and ranks players from live match data. Enables a targeted PLAYER BOOST news query for injury/availability signals on high-relevance players.
+
+**New migration: `026_realworld_player_database.sql`** — ⚠️ run before deploying Edge Functions:
+- `teams` table — `PRIMARY KEY (sport, external_team_id)`. Auto-populated from lineups. Public read, service-role write via RPC.
+- `players` table — `PRIMARY KEY (sport, external_player_id)`. Auto-populated from lineups. Same RLS.
+- `team_players` join table — `PRIMARY KEY (sport, external_team_id, external_player_id)`. Tracks `relevance_score`, `last_seen_at`, `position`, `shirt_number`, `source`.
+- `idx_team_players_by_relevance` index — for fast top-N reads per team
+- `live_match_stats.events_synced BOOLEAN` column added — prevents re-incrementing on every done-match poll
+- `sync_lineup_players(p_sport, p_home_id, p_home_name, p_away_id, p_away_name, p_players JSONB)` RPC — SECURITY DEFINER. Upserts teams + players + team_players in a single SQL batch. Uses `GREATEST()` so existing relevance scores are never downgraded.
+- `sync_match_events(p_sport, p_events JSONB)` RPC — SECURITY DEFINER. Bumps relevance scores from goal/card events. Goal scorer: +8, assist: +6, card: +5. Caps at 100.
+
+**Relevance scoring model:**
+| Source | Score contribution |
+|---|---|
+| Starting XI (lineup) | +10 (base, set on first seen) |
+| Substitute (lineup) | +4 (base) |
+| Goal scored | +8 cumulative |
+| Assist | +6 cumulative |
+| Card received | +5 cumulative |
+| Not seen in >90 days | Excluded from PLAYER BOOST query |
+| Not seen in >30 days | Soft decay: score still stored, caller applies decay weight at read time |
+
+**`supabase/functions/live-stats-poller/index.ts`:**
+- After `lineups_polled = true`: builds array of all starters and subs from both teams; calls `sync_lineup_players` RPC in one DB round-trip
+- After upsert when `isDone && !existing?.events_synced`: filters events to Goal/Card; calls `sync_match_events` RPC; marks `events_synced = true` to prevent re-incrementing on future polls
+
+**`supabase/functions/generate-questions/lib/news-adapter/google-news-rss.ts`:**
+- `NewsQueryParams` extended: `topPlayers?: string[]` — optional, up to 15 names, pre-sorted by relevance_score DESC
+- `buildRssUrls()` extended: when `topPlayers.length > 0`, adds a third RSS URL:
+  - Query: `("Player1" OR "Player2" OR ...) AND (TeamName) AND (SIGNAL_TERMS)`
+  - Anchored to team context to suppress cross-league false positives
+  - Capped at 12 player names to keep query length reasonable
+  - Surfaces injury/availability/form news for high-relevance players that broad LEAGUE queries miss
+
+**`supabase/functions/generate-questions/lib/news-adapter/index.ts`:**
+- `fetchNewsContext()` signature extended: `topPlayers?: string[]` 4th param (optional, backward-compat)
+- Passes `topPlayers.slice(0, 15)` to `fetchAndScoreNews`
+
+**`supabase/functions/generate-questions/index.ts` — REAL_WORLD pass:**
+- Before calling `fetchNewsContext`, queries `team_players` for top players from both teams in upcoming match
+- Filters: `sport='football'`, `last_seen_at > now() - 90 days`, ordered `relevance_score DESC LIMIT 8` per team
+- Joins with `players(name)` to get player names for the query
+- Passes combined list (up to 16 names) to `fetchNewsContext` as `rwTopPlayers`
+- Logs player names used in PLAYER BOOST for monitoring
+
+**`supabase/functions/generate-questions/lib/openai-client.ts` — `RW_GENERATION_SYSTEM_PROMPT` rewritten:**
+- Replaced generic 4-type prompt with 5 soccer-specific question types in priority order:
+  1. **TYPE 1 — INJURY/AVAILABILITY** (highest) — match_lineup resolution; requires match_id
+  2. **TYPE 2 — SUSPENSION/YELLOW CARD RISK** — player_stat (cards/yellow_cards); only if news names the player
+  3. **TYPE 3 — MATCH-DRIVEN PLAYER FORM** — player_stat (goals/assists); only if form explicitly in news
+  4. **TYPE 4 — COACH/CLUB STATUS** — manual_review (coach_status); medium/high confidence only
+  5. **TYPE 5 — TRANSFER/OFFICIAL ANNOUNCEMENT** — manual_review (transfer); only if imminent (within days)
+- STEP 0 added: explicit "read inputs before writing" checklist
+- Priority order section: model always picks highest-priority valid signal; never blends two signals
+- Predicate hint format expanded: yellow_cards field, match_lineup squad/starting_xi formats
+- Quality rules: player_name must match news_items or known_players; TYPE 1 requires match_id; TYPE 2 requires player named in news
+- Resolution deadline updated: match_lineup deadline = kickoff − 30 minutes (not kickoff + 2h — lineups released ~1h before kickoff)
+
+**Architectural principle:**
+- The player database is additive — it enhances the RW pipeline but doesn't break it if empty
+- A fresh deployment with no team_players data still works: `rwTopPlayers = []` → no PLAYER BOOST query → falls back to BROAD + SIGNAL only (same behaviour as before)
+- System is sport-extensible: `sport` field is a TEXT key on all three tables — hockey/tennis can follow the same pattern without schema changes
+- NFL is NOT included (football/soccer only at launch)
+
+**Deploy order:**
+1. Run `026_realworld_player_database.sql` in Supabase SQL editor ✅
+2. Deploy `live-stats-poller`: `supabase functions deploy live-stats-poller --no-verify-jwt` ✅
+3. Deploy `generate-questions`: `supabase functions deploy generate-questions --no-verify-jwt` ✅
+4. team_players will start populating automatically from the next live match polled by the poller
+
+---
+
+### 2026-04-28 — REAL_WORLD Call 4 quality gate
+
+**Goal:** prevent low-quality REAL_WORLD questions from reaching users. The 3-call pipeline (generate / predicate / context) had no final quality check — a question that passed schema validation could still be generic, weakly news-linked, or have an obvious answer. Call 4 adds an LLM-based scorer between Call 3 and the DB insert.
+
+**`supabase/functions/generate-questions/lib/types.ts`:**
+- New `RwQualityResult` interface: `{ final_score, decision, breakdown: { news_link_strength, clarity, resolvability, relevance, uniqueness, risk }, reason }`
+- `RejectionLogEntry.stage` union: `'rw_quality_score'` added
+
+**`supabase/functions/generate-questions/lib/openai-client.ts`:**
+- `RwQualityResult` added to imports
+- `RW_QUALITY_SYSTEM_PROMPT` constant added — the full 6-dimension scoring rubric with APPROVE/WEAK/REJECT thresholds, good/bad examples, and JSON output format
+- New exported `scoreRealWorldQuestion(questionText, newsContext, sources, confidenceLevel, resolutionType, resolutionDeadline, entityFocus, apiKey)` → `Promise<RwQualityResult | null>`:
+  - Model: `gpt-4o-mini`, `temperature: 0.0` (deterministic scoring)
+  - `response_format: { type: 'json_object' }` — enforces clean JSON
+  - Returns `null` on network/parse failure (caller treats null as WEAK — safe fallback)
+  - Validates minimal response shape before returning
+
+**`supabase/functions/generate-questions/index.ts`:**
+- `scoreRealWorldQuestion` added to import
+- Call 4 block inserted between Call 3 (context + sources) and timing/validation:
+  - Builds input from assembled data: `rwContextText`, `sourceUrls`, `rawRW.confidence_level`, `rwPredicate.resolution_type`, `rawRW.resolution_deadline`, `rawRW.entity_focus`
+  - `null` return → defaults to `score=65, decision=WEAK` (bad network day never silently empties the feed)
+  - `REJECT` (<65) → `continue` — question is discarded, logged
+  - `WEAK` (65–79) AND `runStats.generated > 0` → `continue` — a better question already published this run, skip the borderline one
+  - `WEAK` AND `runStats.generated === 0` → allow through (nothing better exists yet)
+  - `APPROVE` (≥80) → always allow through
+- Quality score + decision appended to `narrative_context` on every inserted question: `[quality=87 decision=APPROVE]` — inspectable immediately in Supabase Table Editor without a new column
+
+**Scoring system (6 dimensions, max 100):**
+
+| Dimension | Range | What it measures |
+|---|---|---|
+| `news_link_strength` | 0–25 | How tightly the question is derived from the news |
+| `clarity` | 0–15 | Ease of understanding |
+| `resolvability` | 0–25 | Objective resolution path exists |
+| `relevance` | 0–20 | Fan interest and impact |
+| `uniqueness` | 0–15 | Real insight vs generic question |
+| `risk` (penalty) | −30–0 | Genericness, obviousness, invalidity |
+
+**Decision thresholds:**
+
+| Score | Decision | Action |
+|---|---|---|
+| 80–100 | APPROVE | Always insert |
+| 65–79 | WEAK | Insert only if `rwLeagueGenerated === 0` for this league in this run (per-league counter, not global) |
+| 0–64 | REJECT | Discard, log, continue |
+
+**What is logged:**
+```
+[rw-quality] league abc123 score=87 decision=APPROVE reason="Clearly derived from injury news..."
+[rw-quality] league def456 score=42 decision=REJECT reason="Generic — could exist without news"
+[rw-gen] REJECTED by quality gate for league def456
+[rw-gen] WEAK question skipped (better already generated) for league ghi789
+```
+
+**Post-MVP:** add `rw_quality_score INTEGER` column and `rw_quality_breakdown JSONB` column to `questions` table for proper analytics queries — straightforward migration. Currently embedded in `narrative_context` for zero-migration inspectability.
+
+---
+
+### 2026-04-28 — REAL_WORLD pipeline audit fixes (8 surgical changes)
+
+**Goal:** fix silent rejection of valid REAL_WORLD questions, correct WEAK publishing logic, and clean up minor issues identified in a post-implementation audit.
+
+**`predicate-validator.ts`:**
+- **Fix 1 — `checkAvailability` match_lineup exemption**: Added early return for `match_lineup` predicates at the top of `checkAvailability()`. TYPE 1 questions ("Will X return from injury to start?") are specifically about injured/suspended players — the injury is the news signal. The old code was systematically blocking the highest-value RW question type.
+- **Fix 2 — `checkEntities` match_lineup exemption**: `validPlayerIds` is built from `ctx.keyPlayers` (injury/fitness list only, ~5–15 players). The player_id check now skips when `p.resolution_type === 'match_lineup'` — for lineup questions, the match_id check already validates the match; player identity is carried by `player_name` in the predicate. Prevents false rejections for players not on the injury list.
+
+**`openai-client.ts`:**
+- **Fix 3 — Call 1 skip signal**: `generateRealWorldQuestion()` now handles all skip forms: `{ skip: true }` (preferred), `{ skip_reason: "..." }` without `skip: true`, `{ SKIP: true }` (uppercase variant), and missing `question_text` entirely. Previously only `parsed.skip === true` was handled — any other form was treated as a real question with missing fields, causing downstream failures.
+- **TYPE 4/5 deprioritisation in `RW_GENERATION_SYSTEM_PROMPT`**: TYPE 4 (coach status) now marked `FALLBACK ONLY — use only when no TYPE 1/2/3 signal exists`. TYPE 5 (transfer) now marked `LAST RESORT ONLY — prefer SKIP over TYPE 5`. Both types require admin resolution and always auto-void — generating them wastes the daily quota without delivering user value.
+
+**`index.ts`:**
+- **Fix 4 — Per-league WEAK counter**: Replaced `runStats.generated > 0` with `rwLeagueGenerated > 0` in the WEAK logic gate. `runStats.generated` is a global run counter — if any other league generated a PREMATCH or LIVE question earlier in the same run, all WEAK RW questions would be silently skipped. `rwLeagueGenerated` is initialised to 0 at the top of each league iteration and only incremented on successful RW insert.
+- **Fix 5 — `player_ids` from predicate**: After Call 2 resolves `rwPredicate`, the predicate's `player_id` (present on `match_lineup` and `player_stat` predicates) is extracted into `rwPlayerIds` and written to both `rawForValidation.player_ids` and the DB insert `player_ids`. Previously always `[]` — player reference was only inside `resolution_predicate` JSONB.
+- **Fix 8 — stale comment**: Updated "3-call pipeline" to "4-call pipeline" in the REAL_WORLD pass block comment.
+
+**`quota-checker.ts`:**
+- **Fix 6 — Pro monthly UTC**: `monthStart` for Pro monthly quota check changed from `new Date(now.getFullYear(), now.getMonth(), 1)` (local timezone) to `new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1))` (UTC). Daily cap already used UTC — this makes the two quota checks consistent.
+
+**`types.ts`:**
+- **Fix 7 — `source_news_urls` type**: Changed from `string[]` to `Array<{ url: string; title?: string; source_name?: string; published_at?: string }>`. Matches the actual runtime type (objects from Call 3 structured output). No runtime change — Supabase JSONB is permissive — but TypeScript type system is now correct.
+
+**Remaining known gap — ✅ RESOLVED in next session:**
+- TYPE 2/3 `player_stat` questions about non-injured players — `checkEntities` exemption extended to cover `player_stat` when `questionType === 'REAL_WORLD'`. See update log entry `2026-04-28 — checkEntities player_stat exemption for REAL_WORLD`.
+
+---
+
+### 2026-04-28 — checkEntities player_stat exemption for REAL_WORLD
+
+**Goal:** close the remaining known gap from the audit-fixes session. TYPE 2 (yellow-card risk) and TYPE 3 (form/goals/assists) REAL_WORLD questions produce `player_stat` predicates about fit, active players identified from news signals. These players will not appear in `ctx.keyPlayers` (the injury/fitness focus list, ~5–15 players) causing silent rejection at `entity_validation`.
+
+**`supabase/functions/generate-questions/lib/predicate-validator.ts`:**
+- `validateQuestion()` signature extended with optional 6th param: `questionType?: 'CORE_MATCH_PREMATCH' | 'CORE_MATCH_LIVE' | 'REAL_WORLD'`
+- `checkEntities()` receives `questionType` as its 5th param
+- New `isRealWorldPlayerStat` boolean: `questionType === 'REAL_WORLD' && p.resolution_type === 'player_stat'`
+- Player ID check condition expanded: `p.player_id && p.resolution_type !== 'match_lineup' && !isRealWorldPlayerStat && !validPlayerIds.has(...)`
+- Full rationale comment block added explaining the different exemption rules per predicate type and per lane
+
+**`supabase/functions/generate-questions/index.ts`:**
+- REAL_WORLD call site changed from `validateQuestion(..., 1)` to `validateQuestion(..., 1, 'REAL_WORLD')`
+- PREMATCH call site (line 557) unchanged — no sixth argument
+- LIVE call site (line 962) unchanged — no sixth argument
+
+**Enforcement matrix after this change:**
+
+| Lane | Predicate | player_id validation |
+|---|---|---|
+| CORE_MATCH_PREMATCH | any | Strict — must be in keyPlayers |
+| CORE_MATCH_LIVE | any | Strict — must be in keyPlayers |
+| REAL_WORLD | match_lineup | Exempt (Fix 2 from audit session) |
+| REAL_WORLD | player_stat | Exempt (this fix) |
+| REAL_WORLD | all others | Strict — must be in keyPlayers |
+
+**No resolver changes.** No DB schema changes. No scoring changes. No pipeline restructuring. Two files changed.
+
+---
+
+### 2026-04-28 — REAL_WORLD pipeline second audit pass (7 fixes)
+
+**Goal:** fix 7 issues identified in a second audit of the REAL_WORLD pipeline — covering silent failures in Call 1 validation, degraded Call 4 context, a dead field reference, enrichment gaps in source fallback, unsafe predicate generation without an upcoming match, incorrect `answer_closes_at` for different predicate types, and missing observability on no-signal skips.
+
+**`supabase/functions/generate-questions/lib/openai-client.ts`:**
+- **Fix 1 — Call 1 full field validation**: `generateRealWorldQuestion()` now validates all 7 required string fields (`news_narrative_summary`, `confidence_level`, `resolution_type_suggestion`, `resolution_condition`, `resolution_deadline`, `entity_focus`, `predicate_hint`) after the `question_text` null check. Invalid or missing fields return `null` (treated as skip). `confidence_level` and `entity_focus` enum values are normalised to `'medium'` / `'player'` when unrecognised. `resolution_deadline` is validated as a future ISO timestamp — past or non-parseable values return `null`. Prevents 7 partially-formed fields from silently propagating through Call 2 → Call 3 → Call 4.
+
+**`supabase/functions/generate-questions/index.ts`:**
+- **Fix 2 — Call 3 context pre-seeded**: `rwContextText` initialised from `rawRW.news_narrative_summary` before the Call 3 try block. Call 3 result overwrites only when non-empty. Ensures Call 4 always receives meaningful context even if Call 3 fails on a network error.
+- **Fix 3 — `teamStandings` dead field reference**: `sportsCtxRW.teamStandings?.slice(0,2).map((t:any) => t.teamName)` replaced with `sportsCtxRW.standings?.slice(0,2).map((s) => s.team.name)`. `SportsContext` has `standings: StandingsEntry[]`; the `teamStandings` field never existed and always resolved to `undefined`, silently stripping team context from Call 3.
+- **Fix 4 — Source fallback enrichment**: When no curated sources come back from Call 3, the fallback now builds `{ url, title, source_name, published_at }` objects from the `rwNewsItems` array (NewsItem fields). Previously built bare `{ url }` objects, which rendered as generic "View sources (N)" in the feed instead of titled, attributed links.
+- **Fix 5 — No-match guard after Call 2**: After `convertToPredicate()` resolves, `rwPredType` is extracted from the predicate. If `rwPredType` is `'match_lineup'` or `'player_stat'` and `upcomingMatch` is null, the question is skipped with a log entry. Without this guard, these predicates would insert with an empty `match_id`, causing the resolver to void them every single time.
+- **Fix 6 — `answer_closes_at` per predicate type**: `answer_closes_at` and `resolvesAfter` now computed based on `rwPredType`:
+  - `match_lineup` → `answer_closes_at = deadline` (kickoff−30min); `resolves_after = deadline + 90min`
+  - `player_stat` / `match_stat` / `btts` → `answer_closes_at = kickoff`; `resolves_after = deadline + 30min`
+  - `manual_review` (and all others) → `answer_closes_at = deadline − 24h`; `resolves_after = deadline + 60min`
+  Previously all REAL_WORLD questions used `answer_closes_at = deadline − 1h` — TYPE 2/3 player_stat questions closing 1h before the resolution deadline meant they accepted answers during an in-progress match.
+- **Fix 7 — No-news-signal skip observability**: Added `console.log` when the news pass is skipped with `rwNewsUnavailable || rwNewsItems.length === 0`. Logs `skipReason: no_news_signal, items=N, unavailable=true/false` — previously a silent continue with no log output.
+
+**No resolver changes.** No DB schema changes. No scoring changes. No pipeline restructuring. Two files changed. generate-questions redeployed.
+
+---
+
+### 2026-04-28 — REAL_WORLD third audit pass (5 fixes)
+
+**Goal:** fix 5 issues found in a third audit — one critical (TYPE 2 questions completely broken), two major (unguarded null match_id, wrong team context for scoped leagues), two minor (resolver observability, entity metadata mismatch).
+
+**`supabase/functions/generate-questions/lib/predicate-validator.ts`:**
+- **Fix 1 — `yellow_cards` added to VALID_FIELDS**: `player_stat` VALID_FIELDS extended from `['goals', 'assists', 'shots', 'cards', 'minutes_played', 'clean_sheet']` to include `'yellow_cards'`. The RW_GENERATION_SYSTEM_PROMPT TYPE 2 prompt instructs the model to use `field=yellow_cards` but the validator was rejecting it as invalid — all TYPE 2 (suspension/yellow-card risk) questions were silently failing logic_validation and never reaching the DB.
+
+**`supabase/functions/resolve-questions/lib/predicate-evaluator.ts`:**
+- **Fix 1 (continued) — `yellow_cards` resolver case**: Added `case 'yellow_cards': return p.yellow_cards;` to `getPlayerStatValue()`. Without this, even a question that somehow passed validation would return `null` at resolution (unresolvable). The existing `cards` case returns `yellow_cards + red_cards` — separate field for when the question is specifically about yellow cards only.
+
+**`supabase/functions/generate-questions/index.ts`:**
+- **Fix 2 — Extended no-match guard**: `MATCH_REQUIRED_TYPES` constant replaces the inline check. Now covers `['match_lineup', 'player_stat', 'match_stat', 'btts']` (was only `match_lineup` and `player_stat`). `match_stat` and `btts` predicates require a `match_id` to resolve — without an upcoming match they insert `match_id: null` and are immediately voided by the resolver with `no_match_id`, wasting the daily quota.
+- **Fix 3 — `scoped_team_name` in Call 3 context**: `league.scoped_team_name` added to the `rwTeams` array before the standings slice. For team-specific leagues with no upcoming match, the previous code sent the top-2 standings teams (unrelated to the scoped team) to Call 3. An Arsenal-scoped league might have received "Real Madrid, Barcelona" as team context. Now always includes the scoped team name when set.
+- **Fix 5 — `entity_focus` cross-validation**: After Call 2 resolves `rwPredType`, a normalisation block checks that `entity_focus` is consistent with the predicate type. `match_lineup`/`player_stat` → must be `'player'` (normalised if not). `match_stat`/`btts`/`match_outcome` → must be `'team'` or `'club'` (normalised to `'team'` if not). `manual_review` accepted as-is (coach/player/team all valid depending on category). Logs a warning on normalisation. The `entity_focus` value now stored in DB is the normalised value, not the model's raw output.
+
+**`supabase/functions/resolve-questions/index.ts`:**
+- **Fix 4 — `manual_review` skip logging**: Added `console.log(\`[resolve] skipping manual_review question ${q.id} (pending admin action, deadline=${q.resolution_deadline})\`)` before the `continue`. Previously silent — no way to tell from resolver logs which manual_review questions were pending.
+
+**Both Edge Functions redeployed.** No DB schema changes. No scoring changes.
+
+---
+
+### 2026-04-28 — REAL_WORLD fourth audit pass (4 fixes)
+
+**Goal:** fix 4 bugs confirmed in a gap audit of the REAL_WORLD pipeline — one critical resolver correctness issue, two major silent-rejection issues, one minor quality-score accuracy issue.
+
+**`supabase/functions/resolve-questions/lib/predicate-evaluator.ts`:**
+- **Fix 1 — `evalMatchLineup` partial lineup guard**: Added `if (lineupArr.length < 2) return { outcome: 'unresolvable', reason: 'lineups_incomplete' }` after building `lineupArr`. Previously, if the API returned only one team's lineup (partial response), a player from the missing team fell through to `return { outcome: 'incorrect' }` — resolving the question as NO with wrong certainty. Now returns `unresolvable` so the resolver retries on the next cycle when both lineups are available.
+
+**`supabase/functions/generate-questions/index.ts`:**
+- **Fix 2 — `match_lineup` near-kickoff guard**: Added a pre-check immediately after the `MATCH_REQUIRED_TYPES` guard. If `rwPredType === 'match_lineup'` and `rawRW.resolution_deadline` is less than 2 minutes away, the question is skipped with a log entry. Without this, `Math.max(deadlineMs, nowRW)` clamped `answer_closes_at` to now — the temporal validator rejected with a minimum-window violation after all 4 OpenAI calls had already been consumed.
+- **Fix 3 — `match_lineup` `check` field normalisation**: Added `(rwPredicate as any).check = 'squad'` when the field is absent after Call 2. The validator rejects `undefined` (valid values: `starting_xi | squad`). The resolver's `pred.check ?? 'squad'` default was never reached because the validator ran first. Normalising before `validateQuestion()` closes the gap — valid lineup questions are no longer silently dropped for a missing optional field.
+- **Fix 4 — Call 4 `normalisedEntityFocus` argument**: `scoreRealWorldQuestion()` now receives `normalisedEntityFocus` (computed after entity/predicate cross-validation at ~line 1184) instead of `rawRW.entity_focus` (raw model output). The quality scorer was penalising entity/predicate type mismatches that had already been corrected before DB insert — unfairly reducing scores and increasing REJECT outcomes for otherwise valid questions.
+
+**Both Edge Functions redeployed.** No DB schema changes. No scoring changes. No pipeline restructuring.
+
+---
+
+### 2026-04-28 — REAL_WORLD fifth audit pass (8 fixes)
+
+**Goal:** fix 8 bugs identified in a fifth gap audit — two critical timing bugs causing systematic auto-void on every REAL_WORLD question, and 6 additional correctness/efficiency issues.
+
+**`supabase/functions/resolve-questions/index.ts`:**
+- **Fix 2 (resolver side) — lineup retry not void**: Added `LINEUP_RETRY_REASONS` Set containing `'lineups_not_available'` and `'lineups_incomplete'`. When `evaluatePredicate` returns `unresolvable` with either reason, the resolver now increments `skipped` and continues (retries next cycle) instead of voiding. Lineups may simply not be in the cache yet — voiding on the first attempt discards valid match_lineup questions before kickoff.
+
+**`supabase/functions/resolve-questions/lib/stats-fetcher/football.ts`:**
+- **Fix 5 — null score FT fallback**: Added `cacheIsIncomplete` check: if `api_football_fixtures` has a finished status (`FT`/`AET`/`PEN`) but `home_goals === null && away_goals === null`, the cache is incomplete (race condition — poller hasn't written scores yet). Falls back to direct API call instead of coercing null → 0. Null → 0 produced wrong BTTS (`0:0 = false` instead of `unresolvable`) and wrong match_stat scores. Logs a warning when this path is taken.
+
+**`supabase/functions/resolve-questions/lib/predicate-evaluator.ts`:**
+- **Fix 6 — partial lineup optimistic check**: `evalMatchLineup` now checks whether the player IS in the available entries before returning `unresolvable('lineups_incomplete')`. If the player is found in a partial response (one team's lineup), returns `correct` immediately. Only returns `unresolvable` if the player is NOT found — they may be in the missing team's data. Maintains the original safe behaviour for the not-found case.
+
+**`supabase/functions/generate-questions/index.ts`:**
+- **Fix 1 — `manual_review` resolvesAfter timing**: `resolvesAfter` for `manual_review` predicates changed from `deadline + 1h` to `deadline`. The auto-void fires when `now > deadline + 1h`. With the old timing, a manual_review question entered the resolver at exactly the moment auto-void fired — every question was voided on its first pass. Now `resolvesAfter = deadline` gives the admin a full extra hour before auto-void without the race.
+- **Fix 2 (generator side) — `match_lineup` resolvesAfter timing**: `resolvesAfter` for `match_lineup` predicates changed from `kickoff + 60min` to `kickoff` (using `upcomingMatch.kickoff` or `deadlineMs + 30min` fallback). Auto-void fires at `kickoff + 30min` (= `deadline + 30min`). With the old timing of `resolvesAfter = kickoff + 60min`, the question entered the resolver 30 minutes after auto-void had already fired — never evaluated.
+- **Fix 3 — near-kickoff guard extended from 2min → 30min**: The `checkTemporal` stage requires `deadline >= now + 30min`. The previous guard of `< 2min` left a 28-minute window where all 4 OpenAI calls were consumed before the validator rejected with a timing violation. Extended to `< 30min` to match the validator's floor — now skips before spending any tokens.
+- **Fix 4 — `manual_review` `resolution_deadline` backfill**: After Call 2, `manual_review` predicates lack a `resolution_deadline` field (Call 2 builds from `predicate_hint` which contains no deadline). Added backfill: `(rwPredicate as any).resolution_deadline = rawRW.resolution_deadline`. Without this, all `manual_review` questions fail `checkSchema` and are rejected post-Call-4 — wasting all 4 tokens.
+- **Fix 7 — dead `checkRealWorldQuota` filter removed from prematch pool loop**: `checkRealWorldQuota()` was called inside the prematch pool attach loop and used to filter out pool questions where `computeLane()` returned `'REAL_WORLD'`. But pool questions are always `CORE_MATCH_PREMATCH` — `computeLane()` never returns `REAL_WORLD` for them. The filter was a no-op that made one DB query per league per run. Removed entirely.
+- **Fix 8 — `btts` mapped to `'match_stat'` for Call 4**: `scoreRealWorldQuestion()` was receiving `'btts'` as `resolutionType`. The `RW_QUALITY_SYSTEM_PROMPT` lists `match_stat`, `player_stat`, `match_lineup`, `manual_review` as known types — `btts` is not listed. Seeing an unknown type triggered the risk penalty (−30) and REJECT on otherwise valid BTTS questions. Now passes `rwPredType === 'btts' ? 'match_stat' : rwPredicate.resolution_type` to the scorer.
+
+**Both Edge Functions redeployed.** No DB schema changes. No scoring changes.
+
+---
+
+### 2026-04-28 — REAL_WORLD sixth audit pass (8 fixes)
+
+**Goal:** fix 3 critical bugs causing zero REAL_WORLD questions to ever reach the DB plus 5 major correctness/efficiency issues identified in a comprehensive gap audit.
+
+**`supabase/functions/generate-questions/index.ts`:**
+- **C1 — dead `rwQuota` ReferenceError deleted**: A stale `if (!rwQuota.allowed)` block was left in Phase C (prematch pool attach) after the 5th pass removed the `checkRealWorldQuota()` call. `rwQuota` was undefined in prematch scope → ReferenceError crashed the entire prematch generation pass for every league. Deleted the entire 10-line filter block.
+- **C2 — `match_id` added to `upcomingMatchStr`**: Call 1 received `"Home vs Away (kickoff: ISO)"` — no match_id. The model fabricated numeric IDs that passed schema validation (string check only) but resolved against wrong fixtures. Fixed by including `match_id: ${m.id}` in every match string.
+- **C3 — `manual_review` resolvesAfter = deadline+91min**: 5th pass set `resolvesAfter = deadline`. `checkTemporal` requires `resolvesAfter >= deadline + 90min`. One minute too early — temporal validation failed after all 4 OpenAI calls, every time. Fixed to `deadline + 91min` — clears the 90-min floor while still ensuring the resolver sees the question before auto-void fires at `deadline + 60min`.
+- **M3 — `mergedKnownPlayers` wired to Call 1**: `generateRealWorldQuestion()` now receives `mergedKnownPlayers` (team_players DB + keyPlayers injury list) instead of only `sportsCtxRW.keyPlayers`. Fit squad players had no player_id in the hint — Call 2 couldn't build valid predicates for TYPE 2/3 questions.
+- **M4 — all upcoming matches passed to Call 1**: `upcomingMatchStrings[]` (up to 3 matches) replaces single `upcomingMatchStr`. Model selects the most relevant fixture. Post-Call-2: `upcomingMatch` resolved by matching predicate's `match_id` against all upcoming matches (falls back to [0] if no match). STEP 0 + TYPE 1 prompt updated to reference `upcoming_matches[]`.
+- **M6 — `match_lineup` deadline = kickoff, guard = 60min**: `resolution_deadline` overridden to `upcomingMatch.kickoff` (was `kickoff - 30min` from model). Auto-void now fires at `kickoff + 1h` giving resolver a full hour of retries. Near-kickoff guard extended from 30min to 60min (lineups released ~1h before kickoff).
+
+**`supabase/functions/generate-questions/lib/predicate-validator.ts`:**
+- **M1 — extended player_stat VALID_FIELDS**: Added `passes_total`, `passes_key`, `dribbles_attempts`, `dribbles_success`, `tackles`, `interceptions`, `duels_total`, `duels_won`. TYPE 2/3 RW questions using these fields were silently rejected by logic_validation.
+
+**`supabase/functions/generate-questions/lib/quota-checker.ts`:**
+- **M2 — daily cap fail-safe**: `if (dailyErr) return { allowed: false, skipReason: 'real_world_quota_check_failed' }` added before the daily count check. Previously a DB error silently allowed a second REAL_WORLD question through (fail-open). Both count queries changed from `select('*')` to `select('id')` to avoid fetching full row data.
+
+**`supabase/functions/generate-questions/lib/news-adapter/index.ts`:**
+- **M5 — `standings` field fix**: `sportsCtx.teamStandings` (non-existent field) replaced with `sportsCtx.standings?.map(s => s.team.name)`. Was silently stripping all standings team names from `knownTeams` — the PLAYER BOOST query and entity matching had no standing team context.
+
+**`supabase/functions/generate-questions/lib/openai-client.ts`:**
+- **PROMPT_VERSION bumped to v2.7**: `upcoming_match` → `upcoming_matches[]` in user content; STEP 0 updated; TYPE 1 match_id instruction updated.
+
+**Both Edge Functions redeployed.** No DB schema changes. No resolver changes. No scoring changes.
+
+---
+
+### 2026-04-29 — Migration 027: rw_quality_score + rw_quality_breakdown columns
+
+**Goal:** move Call 4 quality gate results from an embedded `narrative_context` suffix into proper DB columns so they are queryable, indexable, and visible in analytics.
+
+**New migration: `027_rw_quality_score.sql`** — ✅ run:
+- `rw_quality_score INTEGER` added to `questions` — the raw 0–100 Call 4 score
+- `rw_quality_breakdown JSONB` added to `questions` — the six-dimension breakdown object (`news_link_strength`, `clarity`, `resolvability`, `relevance`, `uniqueness`, `risk`)
+- `idx_questions_rw_quality_score` partial index (WHERE `question_type = 'REAL_WORLD'`)
+- Backfills `rw_quality_score` from the old `[quality=N decision=X]` suffix already in `narrative_context`
+- Strips the suffix from `narrative_context` on all existing rows — field now holds clean text only
+- Drops and rebuilds `analytics_realworld_questions` and `analytics_realworld_summary` with quality columns
+
+**`supabase/functions/generate-questions/index.ts`:**
+- `narrative_context` now stores only `rawRW.news_narrative_summary` — no suffix
+- `rw_quality_score: rwScore` and `rw_quality_breakdown: rwQuality?.breakdown ?? null` written to DB columns
+- WEAK fairness counter renamed `rwLeagueGenerated` → `rwLeagueApproved` — name now accurately reflects that it only increments on APPROVE decisions, not on WEAK publishes
+- Success log line now includes `score=N decision=X` inline
+
+**`analytics_realworld_summary` — new columns:**
+- `approve_count`, `weak_count`, `reject_count`, `unknown_score_count`, `avg_quality_score`
+
+**`analytics_realworld_questions` — new columns:**
+- `rw_quality_score`, `quality_decision` (approve/weak/reject/unknown derived label), `rw_quality_breakdown`
+
+**generate-questions redeployed.** No resolver changes. No scoring changes.
+
+---
+
+### 2026-04-29 — REAL_WORLD Call 1 prompt v2.8: news-signal-first generation
+
+**Goal:** eliminate generic and news-detached REAL_WORLD questions by enforcing a hard traceability constraint directly in the Call 1 system prompt. Questions that would exist without a specific news signal must be skipped before any tokens are spent on Call 2–4.
+
+**`supabase/functions/generate-questions/lib/openai-client.ts`:**
+- `PROMPT_VERSION` bumped `'v2.7'` → `'v2.8'`
+- `RW_GENERATION_SYSTEM_PROMPT` fully replaced with new v2.8 structure:
+
+**CORE RULE (hard constraint, opening of prompt):**
+> A question MUST ONLY be generated if there is a clear, specific news-driven trigger. If no strong, concrete signal exists → return `{ "skip": true }`. DO NOT generate fallback or generic questions.
+
+**STEP 0 — explicit pre-writing checklist (6 steps):**
+1. Read every news_item headline + summary
+2. Identify the exact piece of news that creates a prediction-worthy signal
+3. Ask: "What specific statement or implication from the news caused this question?" → if unanswerable → SKIP
+4. Check upcoming_matches[] — pick the match whose teams match the news story
+5. Check known_players — find the player_id if the story names a player
+6. Apply the QUALITY BAR — if any answer is "no" → SKIP
+
+**WHAT COUNTS AS A VALID NEWS SIGNAL (6 categories):**
+1. Player availability uncertainty
+2. Lineup expectation
+3. Strong player form — explicitly stated in news
+4. Disciplinary context
+5. Coach / club situation with immediate match impact
+6. Imminent event tied to the upcoming match
+
+**WHAT IS STRICTLY FORBIDDEN (explicit banned list):**
+- "Will Player X score?" — unless news explicitly reports recent scoring form
+- "Will Player X get a yellow card?" — unless news flags suspension risk specifically
+- "Will Team X win?" — never
+- Any question that would exist WITHOUT the news signal
+- Questions based on vague match previews with no specific uncertainty
+- Questions where the outcome is >85% or <15% certain
+- Questions based on rumour-only with no objective resolution path
+
+**TRACEABILITY RULE:**
+> The question MUST be traceable to a specific statement or implication from the news. Model internally verifies: "What exact piece of news caused this question?" — if unanswerable → SKIP.
+
+**QUALITY BAR — 4 checkboxes (all must be YES):**
+- Is this question clearly derived from a specific news item?
+- Would this question exist WITHOUT the news? (If yes → SKIP)
+- Is it specific and tied to a real upcoming match?
+- Does it have a clear, objective YES/NO resolution path?
+
+**TYPE 1–5 hardened with explicit "Hard rule:" labels.** TYPE 4 marked "FALLBACK ONLY"; TYPE 5 marked "LAST RESORT — prefer SKIP over TYPE 5".
+
+**Retained from v2.7:** all predicate hint formats (7 shapes), resolution deadline rules, confidence level definitions, priority order, `upcoming_matches[]` handling, `known_players` format.
+
+**`docs/REAL_WORLD_QUESTION_SYSTEM.md`:** Call 1 section updated — CORE RULE, STEP 0 checklist, valid signal categories, forbidden list, traceability rule, QUALITY BAR, and updated type table all documented.
+
+**generate-questions redeployed.** No resolver changes. No DB schema changes. No scoring changes.
+
+---
+
+### 2026-04-29 — REAL_WORLD hard match binding (all predicates, 48h window)
+
+**Goal:** enforce that every REAL_WORLD question is specific prematch intelligence bound to a single upcoming match — not a generic background news question that could apply to any week.
+
+**`supabase/functions/generate-questions/index.ts`:**
+
+*48h target match filter (before Call 1):*
+- `targetMatches` computed from `sportsCtxRW.upcomingMatches` filtered to `0 < msUntilKickoff <= 48h`
+- If `targetMatches.length === 0` → `continue` (log: `no upcoming match within 48h`)
+- Only `targetMatches` (not all upcoming) are passed to Call 1 as `upcomingMatchStrings`
+
+*Strict binding validation (after Call 2):*
+- `rwPredicateMatchId` extracted from `rwPredicate.match_id`
+- `upcomingMatch` resolved by looking up `rwPredicateMatchId` against `targetMatches` ONLY — no fallback to `[0]`
+- If `upcomingMatch === null` (missing or non-target match_id) → `continue` with log `real_world_match_binding_failed`
+
+*Removed: `MATCH_REQUIRED_TYPES` guard* — now redundant since all types require a bound match via the new universal guard.
+
+*`manual_review` timing updated:*
+- `answer_closes_at` changed from `deadline − 24h` to `kickoff` — users cannot change their TYPE 4/5 answer once the match starts
+- `resolvesAfter` unchanged: `deadline + 91 min`
+
+*`rawForValidation` and `rwQuestion` insert:*
+- `match_id` and `team_ids` are now unconditional (no `?.` fallback) — `upcomingMatch` is guaranteed non-null at this point
+
+**`supabase/functions/generate-questions/lib/openai-client.ts`:**
+- `PROMPT_VERSION` bumped `v2.8` → `v2.9`
+- `TARGET MATCH CONSTRAINT (HARD RULE)` section added to `RW_GENERATION_SYSTEM_PROMPT` between TRACEABILITY RULE and QUESTION TYPES:
+  - Model must identify which team/player the news references and find that team's match in `upcoming_matches[]`
+  - `match_id` in `predicate_hint` is mandatory — fabrication or omission → skip
+  - If news doesn't connect to any team/player in the 48h match list → `{ "skip": true }`
+  - Valid/invalid examples included
+
+**Guard conditions (in order of execution):**
+1. `targetMatches.length === 0` → skip: `no upcoming match within 48h`
+2. After Call 1: null return or skip signal → skip: `weak news signal`
+3. After Call 2: `upcomingMatch === null` (missing or mismatched match_id) → skip: `real_world_match_binding_failed`
+4. Existing guards follow: `match_lineup` near-kickoff (60 min), `manual_review` deadline backfill, entity_focus normalisation, Calls 3 + 4, temporal validator
+
+**generate-questions redeployed.** No resolver changes. No DB schema changes. No tier/quota changes. No feed changes.
+
+---
+
+### 2026-04-29 — REAL_WORLD bounded retry loop (generate-questions)
+
+**Goal:** improve the probability of producing one high-quality match-bound REAL_WORLD question per league per run without weakening quality rules or generating generic fallback questions.
+
+**`supabase/functions/generate-questions/index.ts`:**
+- `MAX_RW_RETRIES = 3` constant — maximum attempts per league per run
+- News items (sorted best-first by the adapter) are split positionally into `rwNewsGroups` (up to 3 batches); each attempt draws from a different ranked tier of news
+- `weakCandidate` object stores the best WEAK result seen across attempts: `{ rawRW, rwPredicate, rwPredType, upcomingMatch, normalisedEntityFocus, rwPlayerIds, rwContextText, sourceUrls, rwScore, rwQuality, answerClosesAt, resolvesAfter, nowRW, attemptNum }`
+- `rwLeagueApproved` counter (per-league, not global) — APPROVE increments it; WEAK never does
+- Inner retry loop: APPROVE → insert via `buildRwQuestion()`, increment `rwLeagueApproved`, `break`; WEAK → update `weakCandidate` if score is higher, `continue`; REJECT → log and `continue`
+- Post-loop: if `rwLeagueApproved === 0 && weakCandidate !== null` → publish best WEAK; else if both zero → log `real_world_no_valid_candidate_after_retries`
+- `leagueScopeStr` moved before the retry loop (was inside the try block — constant per league)
+
+**`buildRwQuestion()` helper** — DRY extract of the ~40-field insert object used by both APPROVE and WEAK publish paths. Parameters: `league, runId, rawRW, rwPredicate, upcomingMatch, normalisedEntityFocus, rwPlayerIds, rwContextText, sourceUrls, answerClosesAt, resolvesAfter, nowRW, rwScore, rwQuality`. Added to Helpers section at bottom of file.
+
+**7 new log events:**
+- `real_world_attempt_skip` — Call 1 returned null/skip
+- `real_world_attempt_reject` — Call 4 scored REJECT (<65)
+- `real_world_attempt_binding_failed` — post-Call-2 match_id validation failed
+- `real_world_attempt_weak_stored` — WEAK candidate stored
+- `real_world_attempt_approve_published` — APPROVE inserted, loop breaks
+- `real_world_best_weak_published` — best WEAK published after all retries exhausted
+- `real_world_no_valid_candidate_after_retries` — all attempts ended in SKIP/REJECT/binding failure
+
+**No prompt changes.** No quality rule changes. No pipeline restructuring outside the REAL_WORLD pass. generate-questions redeployed.
+
+---
+
+### 2026-04-29 — REAL_WORLD AI-assisted fallback resolution (resolve-questions)
+
+**Goal:** prevent REAL_WORLD questions from being auto-voided solely due to missing admin action or delayed lineup data. As a last resort, use OpenAI web search to verify the outcome before voiding.
+
+**New file: `supabase/functions/resolve-questions/lib/ai-verifier.ts`**
+- `AiVerificationResult` interface: `{ decision: 'correct'|'incorrect'|'unresolvable', confidence: 'low'|'medium'|'high', sources: [{url, title}], reasoning }`
+- `verifyRealWorldOutcome(questionText, resolutionCondition, predicateType, apiKey)` — async, returns `AiVerificationResult | null`
+  - **Safety gate**: forbidden predicate types (`player_stat`, `match_stat`, `btts`, `match_outcome`, `multiple_choice_map`) return null immediately — these must rely on official APIs only
+  - Uses OpenAI Responses API (`POST https://api.openai.com/v1/responses`) with `tool: web_search_preview`, `tool_choice: 'required'`, `text.format: { type: 'json_object' }`
+  - 30-second timeout via `AbortSignal.timeout(30_000)`
+  - Response parsed from `data.output[].content[].text` (type=message, type=output_text)
+  - Validates `decision` + `confidence` enums; normalises sources array; strips markdown fences; caps sources at 5
+  - Returns null on network error, non-200 status, JSON parse failure, or missing required fields
+- `isAiResultResolvable(result)` — exported helper: `true` when `high` confidence (any source count) OR `medium` + `≥2 sources`; `false` for `low` / `unresolvable` / medium+<2 sources
+- System prompt: fact-checker framing; requires reliable sources (BBC/ESPN/Sky/Athletic/Reuters/AP/national press); bans betting sites, fan forums, Wikipedia; explicit confidence definitions; "never guess" rule
+
+**`supabase/functions/resolve-questions/index.ts`:**
+- New import: `verifyRealWorldOutcome, isAiResultResolvable` from `./lib/ai-verifier.ts`
+- New env var: `OPENAI_API_KEY = Deno.env.get('OPENAI_API_KEY') ?? ''` (optional — if absent, AI path is bypassed)
+- SELECT extended: `question_text`, `resolution_condition` added
+- `resolveQuestion()` signature extended: optional `source` param (default `'system'`); AI path passes `'ai_web_verification'`
+
+**`manual_review` integration point:**
+- Was: unconditional skip + log
+- Now: if `question_type === 'REAL_WORLD' && OPENAI_API_KEY && question_text && resolution_condition` → call `tryAiVerification()`; if it returns `true` (handled) → `continue`; otherwise fall through to original skip behaviour
+- Non-REAL_WORLD `manual_review` questions: unchanged — still skip for admin action
+
+**`match_lineup` unresolvable integration point:**
+- Was: unconditional skip when reason is `lineups_not_available` or `lineups_incomplete`
+- Now: if `deadlinePassed && question_type === 'REAL_WORLD' && OPENAI_API_KEY && question_text && resolution_condition` → call `tryAiVerification()`; if handled → `continue`; if deadline not passed → original skip logic; if deadline passed and AI failed → fall through to void
+
+**`tryAiVerification()` private helper:**
+- Logs `real_world_ai_resolution_attempt` before calling verifier
+- On null return: logs `real_world_ai_resolution_failed` with `decision=null confidence=null source_count=0`, returns `false`
+- On network/API error: logs `real_world_ai_resolution_failed` with error text, returns `false`
+- On strong result (`isAiResultResolvable = true`): resolves question with `'ai_web_verification'` source, calls `markCorrectAnswers()`, increments `runStats.resolved`, returns `true`
+- On weak result (`unresolvable` or `low` confidence): logs `real_world_ai_resolution_voided` with full detail, returns `false`
+- On medium + <2 sources: logs `real_world_ai_resolution_failed` with "insufficient sources" note, returns `false`
+
+**4 required log events (all include question_id, predicate_type, decision, confidence, source_count):**
+- `real_world_ai_resolution_attempt` — before the AI call
+- `real_world_ai_resolution_success` — strong result, question resolved
+- `real_world_ai_resolution_failed` — null result, network error, or insufficient confidence/sources
+- `real_world_ai_resolution_voided` — AI ran but result is unresolvable/low confidence
+
+**Resolution priority order (complete):**
+1. Standard predicate evaluation (official API data)
+2. Retry cycles (lineups: skip for next poll; manual_review: skip for admin)
+3. AI web verification (last resort, REAL_WORLD only, manual_review + match_lineup post-deadline)
+4. Auto-void (resolution_deadline + 1h grace)
+
+**Forbidden predicate types for AI fallback:** `player_stat`, `match_stat`, `btts`, `match_outcome`, `multiple_choice_map` — stats must come from official APIs only, never AI inference.
+
+**resolve-questions redeployed.** No DB schema changes. No scoring changes. No generation pipeline changes.
+
+---
+
+### 2026-04-29 — Scraper enrichment integrated into REAL_WORLD generation pipeline
+
+**Goal:** give Call 1 full article text (not just a 280-char RSS snippet) for the top-ranked candidate news items before generating each REAL_WORLD question. Improves signal quality and reduces SKIP/REJECT rate.
+
+**`supabase/functions/generate-questions/lib/types.ts`:**
+- `EnrichedNewsItem` interface added extending `NewsItem`:
+  - `extracted_text?` — full body text, capped at 3,000 chars by the scraper
+  - `extracted_context?` — first 800 chars of `extracted_text`; what is sent to OpenAI
+  - `extraction_status?` — `'success' | 'partial' | 'failed' | 'skipped'`
+  - `scraper_error?` — error message when scraper fails
+
+**`supabase/functions/generate-questions/index.ts`:**
+- Import: `EnrichedNewsItem` added to type imports from `./lib/types.ts`
+- New env vars: `SCRAPER_API_URL` + `SCRAPER_API_KEY` (both optional — pipeline degrades gracefully when absent)
+- New `enrichArticlesWithScraper(articles, leagueId)` async helper:
+  - Selects up to 5 unique URLs from top candidates (already sorted best-first)
+  - Calls `${SCRAPER_API_URL}/scrape` concurrently with 10s `AbortController` timeout
+  - On success: attaches `extracted_text` (≤3,000 chars) and `extracted_context` (≤800 chars)
+  - On any failure (network error, timeout, non-200, extraction failure): sets `extraction_status` and `scraper_error`; returns original article unchanged
+  - Never throws
+  - 4 log events: `real_world_article_scrape_attempt`, `real_world_article_scrape_success`, `real_world_article_scrape_failed`, `real_world_article_scrape_fallback_to_rss`
+- REAL_WORLD pass: `enrichArticlesWithScraper(rwNewsItems, league.id)` called after `rwNewsGroups` is split, before the retry loop
+- `rwEnrichedGroups` built from the enriched list (same chunk sizes); retry loop now iterates `rwEnrichedGroups` instead of `rwNewsGroups`
+- `generateRealWorldQuestion()` called with enriched items — no other change to the call site
+
+**`supabase/functions/generate-questions/lib/openai-client.ts`:**
+- Import: `EnrichedNewsItem` added
+- `generateRealWorldQuestion()` param type: `Array<{ ... }>` → `EnrichedNewsItem[]`
+- `news_items` mapping: `extracted_context` conditionally included when non-empty — sent as an extra field in the JSON object alongside `headline`, `summary`, `publishedAt`, etc.
+- `RW_GENERATION_SYSTEM_PROMPT` STEP 0 (item 1) updated:
+  > "If a news_item includes 'extracted_context', READ IT — it is the full article text and is more reliable than the RSS summary. Prefer extracted_context over summary when identifying the specific news signal."
+- No prompt version bump required — content clarification only, not a structural change
+
+**`docs/REAL_WORLD_QUESTION_SYSTEM.md`:**
+- Generation Pipeline diagram: step ⑤ `enrichArticlesWithScraper()` added; remaining steps renumbered ⑥–⑬
+- New "Article Enrichment Layer" subsection: how it works, key design constraints, log events, required env vars, graceful fallback behaviour
+
+**⚠️ DEPLOY REQUIRED before this change takes effect:**
+1. Add `SCRAPER_API_URL = https://spontyx-scraper-service-production.up.railway.app` to Supabase Edge Function Secrets
+2. Add `SCRAPER_API_KEY = Welcome2Spontyx` to Supabase Edge Function Secrets
+3. `supabase functions deploy generate-questions --no-verify-jwt`
+
+Until step 1–3 are done, the pipeline runs exactly as before (`SCRAPER_API_URL` and `SCRAPER_API_KEY` both default to `''`, causing `enrichArticlesWithScraper()` to return articles unmodified).
+
+**No resolver changes.** No DB schema changes. No scoring changes. No prematch/live generation changes.
+
+---
+
+### 2026-04-29 — Supabase Realtime subscription in league.html (replaces polling)
+
+**Goal:** eliminate 5s/15s poll latency so new questions appear sub-second and resolved cards flip in real-time when the resolver awards points. Polling downgraded to a 30s heartbeat safety net.
+
+**`league.html` — 6 targeted changes (JS + no CSS changes):**
+
+*Global state:*
+- `var realtimeChannel = null;` — tracks the active Supabase Realtime channel handle
+
+*Polling interval logic updated:*
+- `loadAndRenderQuestions()` now checks `var rtActive = realtimeChannel !== null` before setting polling interval
+- When Realtime is active: `startPolling(30000)` (heartbeat, catches reconnect gaps and missed events)
+- When Realtime is inactive (channel error or not yet started): `startPolling(5000)` active / `startPolling(15000)` idle — restores the original fast cadence automatically
+
+*New `startRealtime()` function:*
+- Channel name: `'league-' + currentLeagueId`
+- `questions` subscription: listens to `*` (INSERT/UPDATE/DELETE), filtered by `league_id=eq.{currentLeagueId}` → calls `loadAndRenderQuestions(true)` on any event
+- `player_answers` subscription: listens to `UPDATE` events (no server-side filter — `league_id` not on `player_answers`), client-side filter: `payload.new.user_id === currentUserId` → calls `loadAndRenderQuestions(true)` to flip the user's own answer card when the resolver scores it
+- On `SUBSCRIBED` status: calls `loadAndRenderQuestions(true)` to re-evaluate the polling interval (switches from 5s → 30s)
+- On `CHANNEL_ERROR` or `TIMED_OUT`: sets `realtimeChannel = null`, calls `loadAndRenderQuestions(true)` to restore 5s/15s polling — no dead feed possible
+
+*New `stopRealtime()` function:*
+- Calls `window.sb.removeChannel(realtimeChannel)` if channel is set; sets `realtimeChannel = null`
+
+*`hydrateLeaguePage()` wiring:*
+- `startRealtime()` called after `Promise.all([loadAndRenderQuestions(false), loadAndRenderMembers()])` completes
+
+*`DOMContentLoaded` — two new event listeners:*
+- `visibilitychange`: when tab becomes hidden → `stopRealtime(); stopPolling(); stopTimerTick()`; when tab becomes visible again → `loadAndRenderQuestions(false).then(() => startRealtime())`
+- `beforeunload`: `stopRealtime(); stopPolling(); stopTimerTick()` — clean teardown, prevents lingering subscriptions
+
+**New migration: `backend/migrations/028_enable_realtime.sql`:**
+```sql
+ALTER PUBLICATION supabase_realtime ADD TABLE questions;
+ALTER PUBLICATION supabase_realtime ADD TABLE player_answers;
+```
+- ⚠️ **MUST be run in Supabase SQL editor before Realtime events will flow.** The channel connects without this but receives no events.
+
+**Why `player_answers` cannot be filtered server-side:** Supabase Realtime `postgres_changes` filters work on columns that exist in the changed table. `player_answers` has `question_id`, `user_id`, and `is_correct` — no `league_id`. Server-side filter is impossible; client-side `user_id` check is the correct pattern.
+
+**Latency comparison:**
+
+| | Before | After |
+|---|---|---|
+| New question appears in feed | Up to 5s (active poll) / 15s (idle) | Sub-second via Realtime |
+| Resolved card flips to correct/incorrect | Up to 5s (active poll) | Sub-second via Realtime |
+| Fallback if Realtime fails | N/A (polling was primary) | 5s/15s polling auto-restored |
+| Tab hidden | Polling continued (wasted DB queries) | Channel + polling stopped |
+
+**No backend changes.** No DB schema changes beyond the publication. No pipeline, resolver, or scoring changes.

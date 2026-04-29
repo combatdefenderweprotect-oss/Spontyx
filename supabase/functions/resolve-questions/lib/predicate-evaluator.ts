@@ -7,6 +7,17 @@
 //   'incorrect'     → binary question resolved NO
 //   'unresolvable'  → data unavailable or predicate can't be evaluated
 
+// ── Match event (from /fixtures/events endpoint, stored in live_match_stats.events) ──
+// Used to evaluate match_stat_window predicates.
+export interface MatchEvent {
+  time:      number;        // match minute (elapsed)
+  extra:     number | null; // extra-time minute (null if not in extra time)
+  type:      string;        // "Goal" | "Card" | "subst" | "Var"
+  detail:    string | null; // "Normal Goal" | "Own Goal" | "Yellow Card" | "Red Card" | etc.
+  team_id:   number;
+  team_name: string;
+}
+
 export interface MatchStats {
   finished:    boolean;
   status:      string;              // 'FT', 'AET', 'PEN', 'PST', 'CANC', etc.
@@ -18,6 +29,8 @@ export interface MatchStats {
   isDraw:      boolean;
   teamStats:   Record<string, TeamStatBlock>;
   playerStats: Record<string, PlayerStatBlock>;
+  events?:     MatchEvent[];        // optional — populated from live_match_stats.events when available
+  lineups?:    any;                 // optional — populated from live_match_stats.lineups when available
 }
 
 export interface TeamStatBlock {
@@ -78,6 +91,16 @@ export function evaluatePredicate(
       return { outcome: 'unresolvable', reason: 'player_status_no_historical_data' };
     case 'multiple_choice_map':
       return evalMultipleChoiceMap(pred, stats, questionOptions);
+    case 'match_stat_window':
+      return evalMatchStatWindow(pred, stats);
+    case 'btts':
+      return evalBtts(stats);
+    case 'match_lineup':
+      return evalMatchLineup(pred, stats);
+    case 'manual_review':
+      // Admin-resolved — resolver leaves these pending; deadline auto-void is
+      // handled upstream in the main resolver loop before evaluatePredicate is called.
+      return { outcome: 'unresolvable', reason: 'pending_admin_review' };
     default:
       return { outcome: 'unresolvable', reason: `unknown_resolution_type:${type}` };
   }
@@ -181,6 +204,108 @@ function evalMultipleChoiceMap(
   return { outcome: 'correct', winningOptionId: winning.id };
 }
 
+// ── Match Stat Window ─────────────────────────────────────────────────
+// Resolves live anchored-window questions by counting goal or card events
+// that occurred within [window_start_minute, window_end_minute] (both inclusive).
+// Event data comes from live_match_stats.events (minute-granular timeline).
+
+function evalMatchStatWindow(pred: any, stats: MatchStats): EvalResult {
+  const { field, operator, value, window_start_minute, window_end_minute } = pred;
+
+  if (!stats.events) {
+    return { outcome: 'unresolvable', reason: 'events_not_available' };
+  }
+
+  if (window_start_minute == null || window_end_minute == null) {
+    return { outcome: 'unresolvable', reason: 'window_minutes_missing' };
+  }
+
+  if (window_end_minute <= window_start_minute) {
+    return { outcome: 'unresolvable', reason: 'invalid_window_minutes' };
+  }
+
+  let count = 0;
+  for (const event of stats.events) {
+    const minute = event.time;
+    if (minute < window_start_minute || minute > window_end_minute) continue;
+
+    if (field === 'goals' && event.type === 'Goal') count++;
+    if (field === 'cards' && event.type === 'Card') count++;
+  }
+
+  const match = applyOperator(count, operator, value);
+  return { outcome: match ? 'correct' : 'incorrect' };
+}
+
+// ── BTTS ──────────────────────────────────────────────────────────────
+// Both Teams To Score — true when both home_score >= 1 AND away_score >= 1.
+
+function evalBtts(stats: MatchStats): EvalResult {
+  const btts = stats.homeScore >= 1 && stats.awayScore >= 1;
+  return { outcome: btts ? 'correct' : 'incorrect' };
+}
+
+// ── Match Lineup ──────────────────────────────────────────────────────
+// Checks whether a player appears in the starting XI or full squad
+// for a given match. Lineup data comes from live_match_stats.lineups
+// which is populated by the live-stats-poller once per fixture.
+//
+// Lineup JSON shape (from API-Sports /fixtures/lineups):
+//   [ { team: { id }, startXI: [ { player: { id, name } } ], substitutes: [...] }, ... ]
+
+function evalMatchLineup(pred: any, stats: MatchStats): EvalResult {
+  if (!stats.lineups) {
+    return { outcome: 'unresolvable', reason: 'lineups_not_available' };
+  }
+
+  const playerId = String(pred.player_id);
+  const check: 'starting_xi' | 'squad' = pred.check ?? 'squad';
+
+  // lineups is an array of team lineup objects
+  const lineupArr: any[] = Array.isArray(stats.lineups) ? stats.lineups : [];
+
+  // Partial lineup response: API returned fewer than 2 team entries.
+  // Optimistic check first: if the player IS in the available entry, answer is
+  // definitively YES — return correct immediately rather than waiting for both
+  // team lineups. Only return unresolvable if the player is NOT found, since
+  // they might be in the missing team's lineup.
+  if (lineupArr.length < 2) {
+    for (const teamLineup of lineupArr) {
+      const startXI: any[]    = teamLineup.startXI    ?? [];
+      const substitutes: any[] = teamLineup.substitutes ?? [];
+      const inStart = startXI.some((e: any) => String(e?.player?.id) === playerId);
+      if (inStart) return { outcome: 'correct' };
+      if (check === 'squad') {
+        const inSub = substitutes.some((e: any) => String(e?.player?.id) === playerId);
+        if (inSub) return { outcome: 'correct' };
+      }
+    }
+    // Not found in partial data — may be in the missing team's lineup
+    return { outcome: 'unresolvable', reason: 'lineups_incomplete' };
+  }
+
+  for (const teamLineup of lineupArr) {
+    const startXI: any[] = teamLineup.startXI ?? [];
+    const substitutes: any[] = teamLineup.substitutes ?? [];
+
+    if (check === 'starting_xi') {
+      const inStart = startXI.some((entry: any) =>
+        String(entry?.player?.id) === playerId,
+      );
+      if (inStart) return { outcome: 'correct' };
+    } else {
+      // squad = starting XI + substitutes
+      const inSquad =
+        startXI.some((entry: any) => String(entry?.player?.id) === playerId) ||
+        substitutes.some((entry: any) => String(entry?.player?.id) === playerId);
+      if (inSquad) return { outcome: 'correct' };
+    }
+  }
+
+  // Player not found in any team lineup — question resolves NO
+  return { outcome: 'incorrect' };
+}
+
 // ── Field extractors ──────────────────────────────────────────────────
 
 function getMatchStatValue(field: string, stats: MatchStats): number | null {
@@ -198,6 +323,11 @@ function getMatchStatValue(field: string, stats: MatchStats): number | null {
       for (const b of Object.values(stats.teamStats)) c += b.corners;
       return c;
     }
+    case 'shots_total': {
+      let s = 0;
+      for (const b of Object.values(stats.teamStats)) s += b.shots_total;
+      return s;
+    }
     default: return null;
   }
 }
@@ -208,6 +338,7 @@ function getPlayerStatValue(field: string, p: PlayerStatBlock): number | boolean
     case 'assists':             return p.assists;
     case 'shots':               return p.shots;
     case 'cards':               return p.yellow_cards + p.red_cards;
+    case 'yellow_cards':        return p.yellow_cards;
     case 'minutes_played':      return p.minutes_played;
     case 'clean_sheet':         return p.clean_sheet;
     // Extended stats

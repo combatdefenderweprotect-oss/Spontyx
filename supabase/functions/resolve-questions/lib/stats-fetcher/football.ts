@@ -1,4 +1,4 @@
-import type { MatchStats, TeamStatBlock, PlayerStatBlock } from '../predicate-evaluator.ts';
+import type { MatchStats, TeamStatBlock, PlayerStatBlock, MatchEvent } from '../predicate-evaluator.ts';
 
 const FOOTBALL_BASE = 'https://v3.football.api-sports.io';
 
@@ -23,7 +23,16 @@ export async function fetchFootballMatchStats(
 
   const cachedFixture = sb ? await readFixtureFromCache(sb, matchId) : null;
 
-  if (cachedFixture) {
+  // Bug 5 fix: if the cache reports a finished status but null scores, the poller
+  // hasn't written scores yet (race condition). Fall through to the API so we get
+  // accurate scores rather than coercing null → 0 (which breaks BTTS / match_stat).
+  const cacheIsIncomplete =
+    cachedFixture !== null &&
+    FINISHED_STATUSES.has(cachedFixture.status_short ?? '') &&
+    cachedFixture.home_goals === null &&
+    cachedFixture.away_goals === null;
+
+  if (cachedFixture && !cacheIsIncomplete) {
     statusShort = cachedFixture.status_short ?? '';
     homeTeamId  = String(cachedFixture.home_team_id ?? '');
     awayTeamId  = String(cachedFixture.away_team_id ?? '');
@@ -33,6 +42,9 @@ export async function fetchFootballMatchStats(
     awayWins    = cachedFixture.away_winner === true;
     console.log(`[football-stats] fixture ${matchId} read from cache (status: ${statusShort})`);
   } else {
+    if (cacheIsIncomplete) {
+      console.warn(`[football-stats] fixture ${matchId} cache has FT status but null scores — falling back to API`);
+    }
     // Fall back to direct API call
     console.log(`[football-stats] fixture ${matchId} cache miss — calling API`);
     const fixtureData = await fetchFixtureFromAPI(matchId, apiKey);
@@ -98,7 +110,32 @@ export async function fetchFootballMatchStats(
     }
   }
 
-  // ── 3. Player statistics — always from API (not cached) ───────────────
+  // ── 3. Events from live_match_stats (for match_stat_window predicates) ──
+  // Events are stored in live_match_stats.events JSONB by the live-stats-poller.
+  // Each event has: time (minute), type ("Goal"|"Card"|...), detail, team_id.
+  // We read them here so the resolver can evaluate anchored-window live questions.
+  let events: MatchEvent[] | undefined;
+  if (sb) {
+    const cachedEvents = await readEventsFromCache(sb, matchId);
+    if (cachedEvents) {
+      events = cachedEvents;
+      console.log(`[football-stats] events for ${matchId} read from cache (${events.length} events)`);
+    }
+  }
+
+  // ── 4. Lineups from live_match_stats (for match_lineup predicates) ──────
+  // Lineups are populated once per fixture by the live-stats-poller.
+  // Used to resolve REAL_WORLD questions like "Will Player X start?"
+  let lineups: any | undefined;
+  if (sb) {
+    const cachedLineups = await readLineupsFromCache(sb, matchId);
+    if (cachedLineups) {
+      lineups = cachedLineups;
+      console.log(`[football-stats] lineups for ${matchId} read from cache`);
+    }
+  }
+
+  // ── 5. Player statistics — always from API (not cached) ───────────────
   // Player-level stats (goals, assists, minutes, clean sheets) require the
   // /fixtures/players endpoint which we don't cache. Called only when the
   // predicate type is player_stat (rare in MVP).
@@ -153,10 +190,45 @@ export async function fetchFootballMatchStats(
     isDraw,
     teamStats,
     playerStats,
+    events,    // undefined if no cache hit — evaluator handles gracefully
+    lineups,   // undefined if not yet polled or cache miss
   };
 }
 
 // ── Cache readers ─────────────────────────────────────────────────────
+
+// Reads the events timeline from live_match_stats (populated by live-stats-poller).
+// Returns null if the fixture is not in the cache or has no events yet.
+async function readEventsFromCache(sb: any, matchId: string): Promise<MatchEvent[] | null> {
+  const { data, error } = await sb
+    .from('live_match_stats')
+    .select('events')
+    .eq('fixture_id', parseInt(matchId, 10))
+    .maybeSingle();
+
+  if (error || !data || !data.events) return null;
+  // events is a JSONB array; map to the MatchEvent shape used by the evaluator
+  return (data.events as any[]).map((e: any) => ({
+    time:      e.time      ?? 0,
+    extra:     e.extra     ?? null,
+    type:      e.type      ?? '',
+    detail:    e.detail    ?? null,
+    team_id:   e.team_id   ?? 0,
+    team_name: e.team_name ?? '',
+  }));
+}
+
+// Reads lineups from live_match_stats (populated once per fixture by the poller).
+async function readLineupsFromCache(sb: any, matchId: string): Promise<any | null> {
+  const { data, error } = await sb
+    .from('live_match_stats')
+    .select('lineups')
+    .eq('fixture_id', parseInt(matchId, 10))
+    .maybeSingle();
+
+  if (error || !data || !data.lineups) return null;
+  return data.lineups; // raw JSONB array — evalMatchLineup handles parsing
+}
 
 async function readFixtureFromCache(sb: any, matchId: string): Promise<any | null> {
   const { data, error } = await sb

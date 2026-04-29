@@ -2,12 +2,14 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { fetchMatchStats, needsPlayerStats } from './lib/stats-fetcher/index.ts';
 import { evaluatePredicate }                 from './lib/predicate-evaluator.ts';
 import type { MatchStats }                   from './lib/predicate-evaluator.ts';
+import { verifyRealWorldOutcome, isAiResultResolvable } from './lib/ai-verifier.ts';
 
 // ── Environment ───────────────────────────────────────────────────────
 const SUPABASE_URL     = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const API_SPORTS_KEY   = Deno.env.get('API_SPORTS_KEY')!;
 const CRON_SECRET      = Deno.env.get('CRON_SECRET');
+const OPENAI_API_KEY   = Deno.env.get('OPENAI_API_KEY') ?? '';
 
 // Max questions to process per invocation — keeps run time predictable
 const BATCH_SIZE = 30;
@@ -30,10 +32,14 @@ Deno.serve(async (req: Request) => {
   const { data: questions, error: fetchErr } = await sb
     .from('questions')
     .select([
-      'id', 'league_id', 'type', 'sport', 'options', 'resolution_predicate',
+      'id', 'league_id', 'type', 'question_type', 'sport', 'options', 'resolution_predicate',
       // Scoring metadata (added by migration 006)
       'base_value', 'difficulty_multiplier',
       'answer_closes_at', 'deadline',
+      // REAL_WORLD fields (added by migration 024)
+      'resolution_deadline', 'confidence_level',
+      // AI fallback resolution fields
+      'question_text', 'resolution_condition',
     ].join(', '))
     .eq('resolution_status', 'pending')
     .lt('resolves_after', new Date().toISOString())
@@ -65,10 +71,37 @@ Deno.serve(async (req: Request) => {
     const matchId = pred.match_id ? String(pred.match_id) : null;
 
     try {
+      // ── REAL_WORLD deadline auto-void ─────────────────────────────────
+      // If resolution_deadline has passed (+ 1-hour grace), void the question.
+      // This covers both manual_review and match_lineup questions that were
+      // never resolved before their stated deadline.
+      if (q.resolution_deadline) {
+        const deadlineMs  = new Date(q.resolution_deadline).getTime();
+        const gracePeriodMs = 60 * 60 * 1000; // 1 hour
+        if (Date.now() > deadlineMs + gracePeriodMs) {
+          await voidQuestion(sb, q.id, 'resolution_deadline_passed');
+          runStats.voided++;
+          continue;
+        }
+      }
+
       // ── player_status: no historical data → void immediately ──────────
       if (pred.resolution_type === 'player_status') {
         await voidQuestion(sb, q.id, 'player_status_no_historical_data');
         runStats.voided++;
+        continue;
+      }
+
+      // ── manual_review: attempt AI web verification for REAL_WORLD ────
+      // For REAL_WORLD questions, try AI verification before leaving pending.
+      // For all other lanes (or if AI key missing), skip as normal — admin resolves.
+      if (pred.resolution_type === 'manual_review') {
+        if (q.question_type === 'REAL_WORLD' && OPENAI_API_KEY && q.question_text && q.resolution_condition) {
+          const aiResolved = await tryAiVerification(sb, q, pred.resolution_type, runStats);
+          if (aiResolved) continue; // resolved or voided — handled inside helper
+        }
+        console.log(`[resolve] skipping manual_review question ${q.id} (pending admin action, deadline=${q.resolution_deadline ?? 'none'})`);
+        runStats.skipped++;
         continue;
       }
 
@@ -119,6 +152,35 @@ Deno.serve(async (req: Request) => {
       const result = evaluatePredicate(pred, stats, q.options ?? null);
 
       if (result.outcome === 'unresolvable') {
+        // Lineup questions may return unresolvable when lineups aren't in cache yet.
+        // For REAL_WORLD match_lineup: if lineups will never arrive (deadline passed),
+        // try AI web verification as a last resort before voiding.
+        const LINEUP_RETRY_REASONS = new Set(['lineups_not_available', 'lineups_incomplete']);
+        if (LINEUP_RETRY_REASONS.has(result.reason ?? '')) {
+          // Only attempt AI fallback when the lineup window has definitively closed
+          // (resolution_deadline has passed) — otherwise just retry next cycle.
+          const deadlinePassed = q.resolution_deadline
+            ? Date.now() > new Date(q.resolution_deadline).getTime()
+            : false;
+
+          if (
+            deadlinePassed &&
+            q.question_type === 'REAL_WORLD' &&
+            OPENAI_API_KEY &&
+            q.question_text &&
+            q.resolution_condition
+          ) {
+            const aiResolved = await tryAiVerification(sb, q, pred.resolution_type, runStats);
+            if (aiResolved) continue;
+          }
+
+          if (!deadlinePassed) {
+            console.log(`[resolve] lineups not yet available for question ${q.id} (${result.reason}) — skipping for retry`);
+            runStats.skipped++;
+            continue;
+          }
+          // Deadline passed and AI could not resolve — fall through to void
+        }
         await voidQuestion(sb, q.id, result.reason ?? 'unresolvable');
         runStats.voided++;
         continue;
@@ -146,11 +208,16 @@ Deno.serve(async (req: Request) => {
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
-async function resolveQuestion(sb: any, questionId: string, outcome: string) {
+async function resolveQuestion(
+  sb:         any,
+  questionId: string,
+  outcome:    string,
+  source:     string = 'system',
+) {
   const { error } = await sb.from('questions').update({
     resolution_status:  'resolved',
     resolution_outcome: outcome,
-    resolution_source:  'system',
+    resolution_source:  source,
     resolved_at:        new Date().toISOString(),
   }).eq('id', questionId);
 
@@ -173,14 +240,94 @@ async function voidQuestion(sb: any, questionId: string, reason: string) {
   }
 }
 
+// ── AI-assisted fallback resolution ──────────────────────────────────
+//
+// LAST-RESORT ONLY. Called when:
+//   • question_type = 'REAL_WORLD'
+//   • predicate type is manual_review OR match_lineup (with expired deadline)
+//   • standard evaluation could not produce a result
+//   • OPENAI_API_KEY is configured
+//
+// Returns true if the question was handled (resolved or decided to void),
+// false if the caller should continue with its own fallback path.
+//
+// Resolution rules:
+//   high confidence                          → resolve
+//   medium confidence + ≥2 sources           → resolve
+//   medium confidence + <2 sources           → return false (allow auto-void)
+//   low confidence / unresolvable            → return false (allow auto-void)
+
+async function tryAiVerification(
+  sb:            any,
+  q:             any,
+  predicateType: string,
+  runStats:      { resolved: number; voided: number; skipped: number; errors: number },
+): Promise<boolean> {
+  console.log(`[resolve] real_world_ai_resolution_attempt — question_id=${q.id} predicate_type=${predicateType}`);
+
+  let aiResult;
+  try {
+    aiResult = await verifyRealWorldOutcome(
+      q.question_text        as string,
+      q.resolution_condition as string,
+      predicateType,
+      OPENAI_API_KEY,
+    );
+  } catch (err) {
+    console.warn(`[resolve] real_world_ai_resolution_failed — question_id=${q.id} error=${String(err)}`);
+    return false;
+  }
+
+  if (!aiResult) {
+    console.warn(
+      `[resolve] real_world_ai_resolution_failed — question_id=${q.id} ` +
+      `predicate_type=${predicateType} decision=null confidence=null source_count=0`,
+    );
+    return false;
+  }
+
+  const { decision, confidence, sources, reasoning } = aiResult;
+  const sourceCount = sources.length;
+
+  if (isAiResultResolvable(aiResult)) {
+    const outcome = decision === 'correct' ? 'yes' : 'no';
+    console.log(
+      `[resolve] real_world_ai_resolution_success — question_id=${q.id} ` +
+      `predicate_type=${predicateType} decision=${decision} confidence=${confidence} source_count=${sourceCount}`,
+    );
+    await resolveQuestion(sb, q.id, outcome, 'ai_web_verification');
+    await markCorrectAnswers(sb, q, outcome);
+    runStats.resolved++;
+    return true;
+  }
+
+  // AI ran but result is not strong enough to resolve — log and return false
+  // so caller can fall through to auto-void or its own skip logic.
+  if (decision === 'unresolvable' || confidence === 'low') {
+    console.log(
+      `[resolve] real_world_ai_resolution_voided — question_id=${q.id} ` +
+      `predicate_type=${predicateType} decision=${decision} confidence=${confidence} ` +
+      `source_count=${sourceCount} reasoning="${reasoning.slice(0, 120)}"`,
+    );
+  } else {
+    // medium + <2 sources — not enough certainty
+    console.log(
+      `[resolve] real_world_ai_resolution_failed — question_id=${q.id} ` +
+      `predicate_type=${predicateType} decision=${decision} confidence=${confidence} ` +
+      `source_count=${sourceCount} (insufficient sources for medium confidence)`,
+    );
+  }
+
+  return false;
+}
+
 // ── Full scoring formula ──────────────────────────────────────────────
 //
 // points = base_value × time_pressure × difficulty × streak × comeback × clutch
 //
-// MVP (mid-May launch): difficulty, comeback, and clutch are bypassed to 1.0.
-// time_pressure and streak remain active — both are reliable at MVP scale.
-// All multiplier columns and functions are preserved for post-launch activation.
-// To re-enable post-MVP: remove the MVP_BYPASS constants and use computed values.
+// All six multipliers are active. Values are captured at answer-submission time
+// (streak, leader_gap, clutch) and at question-generation time (difficulty)
+// so scoring always reflects the conditions when the player made their decision.
 
 function computeTimePressureMultiplier(
   answeredAt:     string,
@@ -272,14 +419,13 @@ async function markCorrectAnswers(
     // ── Correct answer: apply formula ─────────────────────────────────
     const timePressure = computeTimePressureMultiplier(a.answered_at, closesAt, deadlineFb);
     const streak       = computeStreakMultiplier(a.streak_at_answer);
-    // MVP: difficulty, comeback, clutch bypassed to 1.0 — data columns intact for post-launch
-    const difficulty_mvp = 1.0;
-    const comeback_mvp   = 1.0;
-    const clutch_mvp     = 1.0;
+    const comeback     = computeComebackMultiplier(a.leader_gap_at_answer);
+    // clutch_multiplier_at_answer is captured at submission time from match_minute_at_generation
+    const clutch       = parseFloat(a.clutch_multiplier_at_answer ?? '1.0') || 1.0;
 
     const finalPts = Math.max(
       0,
-      Math.round(baseValue * timePressure * difficulty_mvp * streak * comeback_mvp * clutch_mvp),
+      Math.round(baseValue * timePressure * difficulty * streak * comeback * clutch),
     );
 
     return sb.from('player_answers').update({
@@ -289,12 +435,11 @@ async function markCorrectAnswers(
       multiplier_breakdown: {
         base_value:    baseValue,
         time_pressure: timePressure,
-        difficulty:    difficulty_mvp,
+        difficulty,
         streak,
-        comeback:      comeback_mvp,
-        clutch:        clutch_mvp,
+        comeback,
+        clutch,
         total:         finalPts,
-        mvp_bypass:    true,  // flag so post-launch audit can identify MVP-era scores
       },
     }).eq('id', a.id);
   });

@@ -49,6 +49,66 @@ export async function fetchFootballContext(opts: FootballAdapterOptions): Promis
   return { upcomingMatches, standings, form, keyPlayers, narrativeHooks, playerAvailability };
 }
 
+// ── In-progress fixtures — reads from api_football_fixtures cache ──────
+//
+// Returns raw DB rows (not SportMatch) so the live generation branch in index.ts
+// can access fixture_id, kickoff_at, and team data directly.
+// Statuses covered: 1H (first half), HT (halftime), 2H (second half), ET (extra time).
+// Note: HT is returned so the live branch can explicitly skip it (no play happening).
+
+export async function fetchInProgressFixturesFromCache(
+  sb: any,
+  leagueId: number,
+  teamId?: number,
+  scopeType: 'full_league' | 'team_specific' = 'full_league',
+): Promise<any[]> {
+  const IN_PROGRESS = ['1H', 'HT', '2H', 'ET'];
+
+  // live_match_stats.status is the authoritative live status — it is updated every minute
+  // by the live-stats-poller.  api_football_fixtures.status_short is only set at prematch
+  // generation time (NS) and is never updated to 1H/2H/ET, so we cannot use it here.
+  //
+  // Step 1: fetch all currently in-progress fixtures from live_match_stats.
+  const { data: liveRows, error: liveErr } = await sb
+    .from('live_match_stats')
+    .select('fixture_id, home_team_id, home_team_name, away_team_id, away_team_name, kickoff_at, status')
+    .in('status', IN_PROGRESS);
+
+  if (liveErr) {
+    console.warn('[football-adapter] live_match_stats in_progress read error:', liveErr.message);
+    return [];
+  }
+  if (!liveRows?.length) return [];
+
+  // Step 2: filter by league / team scope using api_football_fixtures.
+  const fixtureIds = (liveRows as any[]).map((r) => r.fixture_id);
+  let scopeQuery = sb
+    .from('api_football_fixtures')
+    .select('fixture_id')
+    .in('fixture_id', fixtureIds);
+
+  if (scopeType === 'team_specific' && teamId) {
+    scopeQuery = scopeQuery.or(`home_team_id.eq.${teamId},away_team_id.eq.${teamId}`);
+  } else {
+    scopeQuery = scopeQuery.eq('league_id', leagueId);
+  }
+
+  const { data: scopedRows, error: scopeErr } = await scopeQuery;
+  if (scopeErr) {
+    console.warn('[football-adapter] scope filter error:', scopeErr.message);
+    return [];
+  }
+  if (!scopedRows?.length) return [];
+
+  const scopedIds = new Set((scopedRows as any[]).map((r) => r.fixture_id));
+
+  // Return live_match_stats rows that passed scope, aliasing status → status_short
+  // so the live generation branch in index.ts can use a consistent field name.
+  return (liveRows as any[])
+    .filter((r) => scopedIds.has(r.fixture_id))
+    .map((r) => ({ ...r, status_short: r.status }));
+}
+
 // ── Upcoming fixtures — reads from api_football_fixtures cache ────────
 
 async function fetchUpcomingFixturesFromCache(opts: FootballAdapterOptions): Promise<SportMatch[]> {

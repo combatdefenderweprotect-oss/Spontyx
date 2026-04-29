@@ -3225,6 +3225,9 @@ SpontixStore._mapLeagueFromDb = function (row, memberUserIds) {
     aiQuestionsEnabled:  row.ai_questions_enabled || false,
     aiWeeklyQuota:       row.ai_weekly_quota      || null,
     aiTotalQuota:        row.ai_total_quota       || null,
+    // Play mode (migration 029): 'singleplayer' | 'multiplayer'
+    // Independent of subscription tier — tier rules apply to both modes.
+    playMode:            row.play_mode            || 'multiplayer',
   };
 };
 
@@ -3256,6 +3259,12 @@ SpontixStore._mapLeagueToDb = function (l) {
   if (l.aiTotalQuota !== undefined)        out.ai_total_quota       = l.aiTotalQuota;
   if (l.prematchGenerationMode !== undefined)     out.prematch_generation_mode      = l.prematchGenerationMode;
   if (l.prematchPublishOffsetHours !== undefined) out.prematch_publish_offset_hours = l.prematchPublishOffsetHours;
+  // Intensity preset + question budgets (migration 017)
+  if (l.questionIntensityPreset !== undefined) out.question_intensity_preset = l.questionIntensityPreset;
+  if (l.prematchQuestionBudget !== undefined)  out.prematch_question_budget  = l.prematchQuestionBudget;
+  if (l.liveQuestionBudget !== undefined)      out.live_question_budget      = l.liveQuestionBudget;
+  // Play mode (migration 029): 'singleplayer' | 'multiplayer'
+  if (l.playMode !== undefined) out.play_mode = l.playMode;
   return out;
 };
 
@@ -3345,6 +3354,10 @@ SpontixStoreAsync.createLeague = async function (data) {
     aiTotalQuota:        data.ai_total_quota      || null,
     prematchGenerationMode:     data.prematch_generation_mode     || 'automatic',
     prematchPublishOffsetHours: data.prematch_publish_offset_hours != null ? data.prematch_publish_offset_hours : 24,
+    // Intensity preset + question budgets (migration 017)
+    questionIntensityPreset: data.question_intensity_preset || 'standard',
+    prematchQuestionBudget:  data.prematch_question_budget  != null ? data.prematch_question_budget  : 4,
+    liveQuestionBudget:      data.live_question_budget      != null ? data.live_question_budget      : 8,
   });
   const { data: inserted, error } = await window.sb
     .from('leagues')

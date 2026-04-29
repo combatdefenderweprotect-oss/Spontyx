@@ -271,6 +271,21 @@
       text-align: center; padding: 5px 0 2px;
       letter-spacing: 0.01em;
     }
+    /* Live anchored window strip */
+    .live-window-strip {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      font-size: 0.71rem; padding: 6px 10px;
+      border-radius: 6px; margin-bottom: 10px;
+      background: rgba(255,107,107,0.06);
+      border: 1px solid rgba(255,107,107,0.15);
+      color: rgba(255,107,107,0.9);
+    }
+    .live-window-strip .lw-item {
+      display: flex; align-items: center; gap: 4px; white-space: nowrap;
+    }
+    .live-window-strip .lw-sep {
+      width: 1px; height: 12px; background: rgba(255,107,107,0.25); flex-shrink: 0;
+    }
 
     /* ══════════════════════════════════════ */
     /*  RIGHT COLUMN                         */
@@ -510,6 +525,15 @@
     }
     .question-card.rw-card:hover { border-color: rgba(124,92,252,0.4); }
     .rw-source { font-size: 0.62rem; color: rgba(124,92,252,0.55); font-style: italic; margin-top: 2px; }
+    .rw-context { font-size: 0.78rem; color: rgba(255,255,255,0.55); line-height: 1.45; margin: 6px 0 2px; font-style: italic; }
+    .rw-confidence { display: inline-block; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 6px; border-radius: 3px; margin-left: 6px; vertical-align: middle; }
+    .rw-confidence.high   { background: rgba(168,225,12,0.15); color: #A8E10C; }
+    .rw-confidence.medium { background: rgba(255,159,67,0.15); color: #FF9F43; }
+    .rw-confidence.low    { background: rgba(255,107,107,0.15); color: #FF6B6B; }
+    .rw-footer-row { display: flex; flex-direction: column; gap: 5px; font-size: 0.72rem; color: rgba(255,255,255,0.4); margin-top: 8px; }
+    .rw-deadline { white-space: nowrap; }
+    .rw-sources-link { color: rgba(124,92,252,0.7); text-decoration: none; white-space: nowrap; }
+    .rw-sources-link:hover { color: rgba(124,92,252,1); text-decoration: underline; }
 
     /* ── Timer progress bar ──────────────────────────── */
     .timer-bar-wrap {
@@ -822,8 +846,8 @@
           </div>
         </div>
 
-        <!-- Invite Card -->
-        <div class="invite-card">
+        <!-- Invite Card (hidden for singleplayer leagues) -->
+        <div class="invite-card" id="invite-card-section">
           <h3>Invite Mates</h3>
           <p>Share the code and they're in. No download, no friction.</p>
           <div class="invite-code-row">
@@ -945,8 +969,9 @@ var myAnswers        = {};   // questionId → { answer, is_correct, points_earn
 var prevMyAnswers    = {};   // snapshot from previous poll cycle — used to detect newly-resolved correct answers
 var currentQuestions = [];   // full question set from last fetch
 var pollInterval     = null; // setInterval handle
-var pollIntervalMs   = 0;    // current polling rate (5s active / 15s idle)
+var pollIntervalMs   = 0;    // current polling rate (5s active / 15s idle / 30s realtime-heartbeat)
 var tickTimer        = null; // 1s interval for timer bar + countdown text updates
+var realtimeChannel  = null; // Supabase Realtime channel for instant question updates
 var AVATAR_COLORS    = ['var(--purple)','var(--coral)','var(--teal)','rgba(168,225,12,0.8)','rgba(124,92,252,0.6)','rgba(255,107,107,0.8)'];
 
 // ── Tab switching ─────────────────────────────────────
@@ -1228,9 +1253,22 @@ async function hydrateLeaguePage() {
   document.getElementById('statPlayers').textContent = league.members || '—';
   document.getElementById('statSport').textContent   = league.sport ? league.sport.charAt(0).toUpperCase() + league.sport.slice(1) : '—';
   document.getElementById('statStage').textContent   = league.stage || 'Active';
-  document.getElementById('statMode').textContent    = league.mode === 'team' ? 'Team' : 'Individual';
+  var isSolo = league.playMode === 'singleplayer';
 
-  // Invite card
+  // statMode shows play experience + competition mode
+  var modeLabel = isSolo ? 'Solo' : (league.mode === 'team' ? 'Team' : 'Individual');
+  document.getElementById('statMode').textContent = modeLabel;
+
+  // Solo indicator tag in meta (distinct from Public/Private/Owner tags)
+  if (isSolo && metaEl) {
+    metaEl.innerHTML += '<span class="league-tag" style="background:rgba(168,225,12,0.1);color:var(--lime);border:1px solid rgba(168,225,12,0.2);">Solo</span>';
+  }
+
+  // Invite card: hide for singleplayer (no invites in a solo session)
+  var inviteCard = document.getElementById('invite-card-section');
+  if (inviteCard) inviteCard.style.display = isSolo ? 'none' : '';
+
+  // Invite card code
   var codeEl = document.getElementById('invite-code-display');
   if (codeEl) codeEl.textContent = league.joinPassword || league.join_password || (league.type === 'public' ? 'Public' : '—');
 
@@ -1251,6 +1289,10 @@ async function hydrateLeaguePage() {
     loadAndRenderQuestions(false),
     loadAndRenderMembers(),
   ]);
+
+  // Start Realtime subscription AFTER the initial render so the feed is
+  // already populated before we switch to push-driven updates.
+  startRealtime();
 }
 
 // ════════════════════════════════════════════════════════
@@ -1272,9 +1314,11 @@ async function loadAndRenderQuestions(silent) {
       'id', 'question_text', 'type', 'options',
       'question_type', 'sport', 'event_type', 'source', 'source_badge',
       'match_id', 'visible_from', 'answer_closes_at', 'opens_at', 'deadline', 'resolves_after',
-      'resolution_status', 'resolution_outcome',
+      'resolution_status', 'resolution_outcome', 'resolution_predicate',
       'base_value', 'difficulty_multiplier', 'match_minute_at_generation',
-      'created_at'
+      'created_at',
+      // REAL_WORLD fields (migration 024)
+      'rw_context', 'confidence_level', 'entity_focus', 'resolution_deadline', 'source_news_urls'
     ].join(', ');
 
     var res = await window.sb
@@ -1397,14 +1441,19 @@ async function loadAndRenderQuestions(silent) {
   updateMatchContextStrip(qs);
 
   // ── Polling + timer tick ──────────────────────────────
+  // When Realtime is connected, Supabase pushes INSERT/UPDATE events instantly —
+  // polling is reduced to a 30s heartbeat only (catches reconnect gaps / missed events).
+  // Without Realtime (connection failed or not yet established), polling runs at
+  // 5s (active question) or 15s (idle) as before.
+  var rtActive = realtimeChannel !== null;
   if (qs.length === 0) {
     stopPolling();
     stopTimerTick();
   } else if (hasActive) {
-    startPolling(5000);   // fast: active question — check every 5s for state changes
-    startTimerTick();     // 1s tick for smooth countdown + progress bar
+    startPolling(rtActive ? 30000 : 5000);  // realtime: 30s heartbeat; fallback: 5s
+    startTimerTick();
   } else {
-    startPolling(15000);  // idle: no active question — check every 15s for new ones
+    startPolling(rtActive ? 30000 : 15000); // realtime: 30s heartbeat; fallback: 15s
     stopTimerTick();
   }
 }
@@ -1589,6 +1638,75 @@ function stopPolling() {
   }
 }
 
+// ── Realtime subscription ─────────────────────────────
+// Subscribes to INSERT and UPDATE events on the `questions` table filtered
+// by the current league_id.  Any push triggers a silent re-fetch so the feed
+// updates instantly without waiting for the next poll cycle.
+//
+// Also subscribes to `player_answers` UPDATE events (is_correct / points_earned
+// written by the resolver) so resolved cards flip to correct/incorrect in real time.
+//
+// Falls back gracefully — if the channel fails to connect the polling heartbeat
+// still keeps the feed fresh.
+function startRealtime() {
+  if (!window.sb || !currentLeagueId) return;
+  stopRealtime(); // clean up any existing channel first
+
+  realtimeChannel = window.sb
+    .channel('league-' + currentLeagueId)
+    .on(
+      'postgres_changes',
+      {
+        event:  '*',          // INSERT + UPDATE + DELETE
+        schema: 'public',
+        table:  'questions',
+        filter: 'league_id=eq.' + currentLeagueId,
+      },
+      function(payload) {
+        console.log('[realtime] questions event:', payload.eventType);
+        loadAndRenderQuestions(true);
+      }
+    )
+    .on(
+      'postgres_changes',
+      {
+        event:  'UPDATE',
+        schema: 'public',
+        table:  'player_answers',
+      },
+      function(payload) {
+        // Only react if the updated answer belongs to the current user
+        // and is for a question in this league (we can't filter player_answers
+        // by league_id directly via Realtime — so we check after receipt).
+        if (payload.new && payload.new.user_id === currentUserId) {
+          console.log('[realtime] player_answers resolved for current user');
+          loadAndRenderQuestions(true);
+        }
+      }
+    )
+    .subscribe(function(status) {
+      console.log('[realtime] channel status:', status);
+      if (status === 'SUBSCRIBED') {
+        // Now that Realtime is live, drop polling to the 30s heartbeat rate.
+        // We call loadAndRenderQuestions to re-evaluate the polling interval.
+        loadAndRenderQuestions(true);
+      }
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        // Realtime unavailable — fall back to fast polling
+        console.warn('[realtime] channel error — falling back to polling');
+        realtimeChannel = null;
+        loadAndRenderQuestions(true); // will restart polling at 5s/15s rates
+      }
+    });
+}
+
+function stopRealtime() {
+  if (realtimeChannel) {
+    window.sb.removeChannel(realtimeChannel).catch(function() {});
+    realtimeChannel = null;
+  }
+}
+
 // ── League activity card ──────────────────────────────
 function updateLiveMatchCard(qs) {
   var label   = document.getElementById('live-card-label');
@@ -1686,11 +1804,72 @@ function renderQuestionCard(q, isPrimary) {
       : 'border-color:rgba(255,255,255,0.1);';
   }
 
-  // Real World source sub-label
-  var rwSource = isRW ? '<div class="rw-source">Premium intelligence · AI-sourced</div>' : '';
+  // ── Real World header label + context block ───────────────────────────────
+  var rwSource = '';
+  var rwFooterExtra = '';
+  if (isRW) {
+    // Confidence badge
+    var confLevel = (q.confidence_level || '').toLowerCase();
+    var confBadge = confLevel
+      ? '<span class="rw-confidence ' + escHtml(confLevel) + '">' + escHtml(confLevel) + ' confidence</span>'
+      : '';
+
+    // Source sub-label with confidence inline
+    rwSource = '<div class="rw-source">Premium intelligence · AI-sourced' + confBadge + '</div>';
+
+    // Context snippet — the "why this question exists" copy from Call 3
+    var ctxText = (q.rw_context && q.rw_context.trim())
+      ? q.rw_context.trim()
+      : 'Based on recent news around this league.';
+    rwSource += '<div class="rw-context">' + escHtml(ctxText) + '</div>';
+
+    // Footer row: resolution deadline + sources link
+    var rwFooterParts = [];
+    if (q.resolution_deadline) {
+      var dl = new Date(q.resolution_deadline);
+      var dlStr = dl.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+      rwFooterParts.push('<span class="rw-deadline">🗓 Resolves by ' + dlStr + '</span>');
+    }
+    var srcUrls = q.source_news_urls;
+    if (srcUrls && Array.isArray(srcUrls) && srcUrls.length > 0) {
+      var firstSrc = srcUrls[0];
+      // New format: objects with { url, title, source_name, published_at }
+      // Legacy format: plain strings (raw URLs from before Call 3 structured output)
+      if (firstSrc && typeof firstSrc === 'object' && firstSrc.url) {
+        // Render up to 3 curated sources as individual titled links
+        srcUrls.slice(0, 3).forEach(function(src) {
+          if (!src.url) return;
+          var label = src.title
+            ? escHtml(src.title.length > 55 ? src.title.slice(0, 52) + '…' : src.title)
+            : '📰 Source';
+          var publisher = src.source_name ? ' <span style="opacity:0.5;">· ' + escHtml(src.source_name) + '</span>' : '';
+          rwFooterParts.push(
+            '<a class="rw-sources-link" href="' + escAttr(src.url) + '" target="_blank" rel="noopener noreferrer">' +
+            '📰 ' + label + publisher +
+            '</a>'
+          );
+        });
+      } else if (typeof firstSrc === 'string' && firstSrc.startsWith('http')) {
+        // Legacy: plain URL strings
+        rwFooterParts.push(
+          '<a class="rw-sources-link" href="' + escAttr(firstSrc) + '" target="_blank" rel="noopener noreferrer">' +
+          '📰 View source' + (srcUrls.length > 1 ? 's (' + srcUrls.length + ')' : '') +
+          '</a>'
+        );
+      }
+    }
+    if (rwFooterParts.length) {
+      rwFooterExtra = '<div class="rw-footer-row">' + rwFooterParts.join('<span style="opacity:0.3">·</span>') + '</div>';
+    }
+  }
 
   // Timer bar (active questions only)
   var timerBar = open ? renderTimerBar(q) : '';
+
+  // ── Live anchored window strip ─────────────────────────────────────────
+  // Shown only for active LIVE match_stat_window questions. Displays the
+  // prediction window ("Window: 60'–65'") and answer lock minute.
+  var liveWindowHtml = (lane === 'LIVE' && open) ? renderLiveWindowStrip(q) : '';
 
   // ── Pre-match lifecycle strip ──────────────────────────────────────────
   var isPrematch = lane === 'PREMATCH';
@@ -1786,9 +1965,11 @@ function renderQuestionCard(q, isPrimary) {
     '<div class="question-card-header">' + typeBadge + engBadges + timeLabel + '</div>' +
     rwSource +
     pmStatusHtml +
+    liveWindowHtml +
     '<div class="question-text">' + escHtml(q.question_text) + '</div>' +
     timerBar +
     bodyHtml + currentPickHtml + multHtml + footerHtml +
+    rwFooterExtra +
     '</div>';
 }
 
@@ -1799,6 +1980,55 @@ function renderBinaryOptions(q, myAns, open, resolved) {
 
 function renderMCOptions(q, myAns, open, resolved) {
   return renderOptions(q, q.options, myAns, open, resolved);
+}
+
+// ── Live anchored window info ─────────────────────────────────────────────
+// Extracts window_start_minute, window_end_minute, and anchoring_type from
+// the resolution_predicate JSONB for match_stat_window predicates.
+// Returns null for all other question types or when data is unavailable.
+function getWindowInfo(q) {
+  if (detectLane(q) !== 'LIVE') return null;
+  var pred = q.resolution_predicate;
+  if (!pred || pred.resolution_type !== 'match_stat_window') return null;
+  var start = pred.window_start_minute;
+  var end   = pred.window_end_minute;
+  if (typeof start !== 'number' || typeof end !== 'number') return null;
+  return {
+    start:   start,
+    end:     end,
+    type:    pred.anchoring_type || 'fixed_window',  // fixed_window | deadline | match_phase
+    field:   pred.field || 'goals',
+  };
+}
+
+// Renders the anchored prediction window strip for LIVE match_stat_window questions.
+// Examples: "Window: 60'–65'" / "Before 75'" / "Before full-time"
+function renderLiveWindowStrip(q) {
+  var wi = getWindowInfo(q);
+  if (!wi) return '';
+
+  // Window label
+  var windowLabel;
+  if (wi.type === 'match_phase') {
+    windowLabel = wi.end === 90 ? 'Before full-time' : 'Before half-time';
+  } else if (wi.type === 'deadline') {
+    windowLabel = 'Before ' + wi.end + '’';
+  } else {
+    // fixed_window
+    windowLabel = wi.start + '’–' + wi.end + '’';
+  }
+
+  // "Answers close" label — shown when the question is still open
+  var ansLabel = 'Answers lock before ' + wi.start + '’';
+
+  // Field emoji
+  var fieldEmoji = wi.field === 'cards' ? '🟨' : '⚽';
+
+  return '<div class="live-window-strip">' +
+    '<span class="lw-item">' + fieldEmoji + ' <strong>Prediction window:</strong> ' + windowLabel + '</span>' +
+    '<span class="lw-sep"></span>' +
+    '<span class="lw-item">🔒 ' + ansLabel + '</span>' +
+  '</div>';
 }
 
 function getLiveQuotaState(q) {
@@ -2691,6 +2921,27 @@ document.addEventListener('DOMContentLoaded', function() {
   hydrateLeaguePage();
   window.addEventListener('spontix-leagues-refreshed', function() {
     hydrateLeaguePage();
+  });
+
+  // Pause Realtime when the tab is hidden (saves socket quota), resume on return.
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      stopRealtime();
+      stopPolling();
+      stopTimerTick();
+    } else {
+      // Tab is visible again — refresh immediately then restart Realtime + polling.
+      loadAndRenderQuestions(false).then(function() {
+        startRealtime();
+      });
+    }
+  });
+
+  // Clean up the Realtime channel when navigating away.
+  window.addEventListener('beforeunload', function() {
+    stopRealtime();
+    stopPolling();
+    stopTimerTick();
   });
 });
 </script>

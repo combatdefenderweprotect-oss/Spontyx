@@ -906,6 +906,33 @@
       </div>
     </div>
 
+    <!-- Play Experience: Singleplayer vs Multiplayer (migration 029) -->
+    <!-- play_mode is INDEPENDENT of subscription tier. Tier limits apply to both modes. -->
+    <div class="form-group" id="play-experience-section" style="margin-top:24px;">
+      <label class="form-label">Play Experience</label>
+      <div class="form-hint" style="margin-bottom:14px;">Solo play or compete with others?</div>
+      <div class="mode-toggle" id="play-experience-cards">
+        <div class="mode-card selected" onclick="selectSessionType('multiplayer', this)">
+          <div class="mode-card-icon" style="background:rgba(124,92,252,0.12);">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          </div>
+          <div class="mode-card-name">Multiplayer</div>
+          <div class="mode-card-desc">Compete with friends. Shared leaderboard.</div>
+        </div>
+        <div class="mode-card" onclick="selectSessionType('singleplayer', this)">
+          <div class="mode-card-icon" style="background:var(--lime-dim);">
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="var(--lime)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          </div>
+          <div class="mode-card-name">Solo</div>
+          <div class="mode-card-desc">Just you vs the match. Personal score only.</div>
+        </div>
+      </div>
+      <!-- Shown for Starter on live/hybrid in singleplayer mode. Tier cap applies to both modes. -->
+      <div id="sp-live-cap-notice" style="display:none; margin-top:10px; font-size:0.72rem; color:var(--coral); background:rgba(255,107,107,0.08); border:1px solid rgba(255,107,107,0.25); border-radius:8px; padding:8px 12px;">
+        ⚠️ Your Starter plan allows <strong>3 live answers per match</strong>. This limit applies in Solo mode too. <span style="color:var(--lime); cursor:pointer; font-weight:700;" onclick="SpontixSidebar.showUpgradeModal({feature:'More Live Answers',requiredTier:'Pro',icon:'⚡',description:'Starter allows 3 live answers per match in any play mode. Upgrade for unlimited.',benefits:['Unlimited live answers per match','Full live + hybrid mode','Real World questions']})">Upgrade to Pro →</span>
+      </div>
+    </div>
+
     <!-- Team Mode -->
     <div class="team-mode-section">
       <label class="form-label">Play Mode</label>
@@ -1181,7 +1208,8 @@
             </div>
             <div class="form-hint" style="margin-top:4px;">AI generates questions based on real matches, injuries, and news. Goes live automatically.</div>
           </div>
-          <div class="ai-toggle-wrap">
+          <div class="ai-toggle-wrap" style="display:flex;align-items:center;gap:6px;">
+            <span id="ai-rw-lock-badge" style="display:none;font-size:0.6rem;background:rgba(124,92,252,0.15);color:var(--purple);padding:2px 7px;border-radius:100px;font-weight:800;white-space:nowrap;">Pro+</span>
             <div class="toggle-switch" id="ai-toggle" onclick="toggleAIQuestions()">
               <div class="toggle-knob"></div>
             </div>
@@ -1378,6 +1406,7 @@
 
     <div class="review-card">
       <h4>Rules</h4>
+      <div class="review-row"><span class="review-label">Play Experience</span><span class="review-value" id="review-session-type">—</span></div>
       <div class="review-row"><span class="review-label">Play Mode</span><span class="review-value" id="review-mode">—</span></div>
       <div class="review-row" id="review-teams-row" style="display:none;"><span class="review-label">Teams</span><span class="review-value" id="review-teams">—</span></div>
       <div class="review-row"><span class="review-label">Question Types</span><span class="review-value" id="review-qtypes">—</span></div>
@@ -1647,6 +1676,9 @@ document.addEventListener('DOMContentLoaded', async function() {
   // Wire date inputs to quota display
   document.getElementById('league-start-date').addEventListener('change', updateAIQuotaDisplay);
   document.getElementById('league-end-date').addEventListener('change', updateAIQuotaDisplay);
+
+  // Apply tier gates that are visible from page load (not match-night-specific)
+  applyRealWorldTierGating();
 });
 
 function updateProgress() {
@@ -1716,11 +1748,20 @@ function restoreStepState(step) {
     } else {
       initStandardStep(false);
     }
-    // Play mode cards
-    document.querySelectorAll('.mode-card').forEach((c, i) => {
+    // Restore Play Experience (singleplayer / multiplayer) cards
+    document.querySelectorAll('#play-experience-cards .mode-card').forEach((c, i) => {
+      c.classList.toggle('selected', (i === 0 && sessionType === 'multiplayer') || (i === 1 && sessionType === 'singleplayer'));
+    });
+    // Restore Team Mode cards (scoped to avoid affecting Play Experience cards)
+    document.querySelectorAll('.team-mode-section .mode-card').forEach((c, i) => {
       c.classList.toggle('selected', (i === 0 && playMode === 'individual') || (i === 1 && playMode === 'team'));
     });
     document.getElementById('team-config').classList.toggle('visible', playMode === 'team');
+    // Restore singleplayer state
+    const teamSection = document.querySelector('.team-mode-section');
+    if (teamSection) teamSection.style.display = sessionType === 'singleplayer' ? 'none' : '';
+    const slider = document.getElementById('player-slider');
+    if (slider) slider.disabled = sessionType === 'singleplayer';
     validateStep1();
   }
   // Steps 2 & 3 — chip selections and slider values persist in DOM naturally
@@ -1893,6 +1934,9 @@ function initStandardStep(reloadComps) {
   matchNightMode = '';
   selectedMatch = null;
 
+  // Apply RW tier gate for standard league flow (same gate, both play modes)
+  applyRealWorldTierGating();
+
   if (reloadComps) onSportChange();
 }
 
@@ -1929,6 +1973,9 @@ function applyMatchNightTierGating() {
     if (hybridBadge) hybridBadge.style.display = 'none';
     if (hybridTier)  hybridTier.style.display  = 'none';
   }
+
+  // AI Real World toggle gate — applies in both singleplayer and multiplayer
+  applyRealWorldTierGating();
 }
 
 async function loadMatchNightCompetitions() {
@@ -2051,6 +2098,8 @@ function selectQuestionMode(mode, el) {
   document.querySelectorAll('.qmode-card').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
   updatePrematchTimingVisibility();
+  // Update live-cap notice: tier cap applies identically in solo and multiplayer
+  applySingleplayerLiveCapNotice();
   validateStep1();
 }
 
@@ -2192,6 +2241,21 @@ function selectScope(scope) {
 
 // ── AI questions toggle ──
 function toggleAIQuestions() {
+  // Tier gate: REAL_WORLD questions require Pro+. Applies to both singleplayer AND multiplayer.
+  const _p = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
+  const _t = _p ? (_p.tier || 'starter') : 'starter';
+  const _l = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(_t) : null;
+  if (_l && !_l.realWorldQuestionsEnabled) {
+    SpontixSidebar.showUpgradeModal({
+      feature: 'AI Real World Questions',
+      requiredTier: 'Pro',
+      isVenue: false,
+      icon: '🌍',
+      description: 'Real World questions are a Pro+ feature and apply in both Solo and Multiplayer modes.',
+      benefits: ['AI questions from real news, transfers & injuries', '10 questions/month on Pro · unlimited on Elite', 'Available in both Singleplayer and Multiplayer']
+    });
+    return;
+  }
   aiQuestionsEnabled = !aiQuestionsEnabled;
   document.getElementById('ai-toggle').classList.toggle('on', aiQuestionsEnabled);
   document.getElementById('ai-questions-config').classList.toggle('visible', aiQuestionsEnabled);
@@ -2228,15 +2292,94 @@ function updateAIQuotaDisplay() {
   modeEl.textContent   = leagueScope === 'team_specific' ? 'Team focused' : 'Full competition';
 }
 
-// ── Play Mode (Individual / Team) ──
+// ── Session Type (Singleplayer / Multiplayer) — maps to leagues.play_mode (migration 029) ──
+// Independent of subscription tier: all TIER_LIMITS apply identically to both modes.
+let sessionType = 'multiplayer';
+
+// ── Play Mode (Individual / Team) — maps to leagues.mode ──
 let playMode = 'individual';
 function selectPlayMode(mode) {
   playMode = mode;
-  document.querySelectorAll('.mode-card').forEach(c => c.classList.remove('selected'));
-  event.currentTarget.closest('.mode-card') ? event.currentTarget.closest('.mode-card').classList.add('selected') : document.querySelectorAll('.mode-card')[mode==='individual'?0:1].classList.add('selected');
+  // Scope to team-mode-section only — do not affect Play Experience cards
+  document.querySelectorAll('.team-mode-section .mode-card').forEach(c => c.classList.remove('selected'));
+  const teamCards = document.querySelectorAll('.team-mode-section .mode-card');
+  if (teamCards[mode === 'individual' ? 0 : 1]) teamCards[mode === 'individual' ? 0 : 1].classList.add('selected');
   document.getElementById('team-config').classList.toggle('visible', mode === 'team');
   if (mode === 'team') updateTeamPreview();
 }
+// ── Session Type (Singleplayer / Multiplayer) ──
+// play_mode is INDEPENDENT of subscription tier. All tier rules apply to both modes.
+function selectSessionType(type, el) {
+  sessionType = type;
+  // Visual: update Play Experience cards
+  document.querySelectorAll('#play-experience-cards .mode-card').forEach(c => c.classList.remove('selected'));
+  if (el) el.classList.add('selected');
+
+  // Singleplayer: hide team mode (can't have teams in a solo session)
+  const teamSection = document.querySelector('.team-mode-section');
+  if (teamSection) teamSection.style.display = type === 'singleplayer' ? 'none' : '';
+
+  // Singleplayer: lock player count to 1
+  const slider   = document.getElementById('player-slider');
+  const sliderLbl = document.getElementById('slider-value');
+  if (slider) {
+    if (type === 'singleplayer') {
+      slider.value    = 1;
+      slider.disabled = true;
+      if (sliderLbl) sliderLbl.textContent = '1 player';
+    } else {
+      slider.disabled = false;
+    }
+  }
+
+  // Show live cap notice if applicable (tier applies to both modes)
+  applySingleplayerLiveCapNotice();
+}
+
+// Applies visual lock to the AI Real World toggle for tiers where realWorldQuestionsEnabled = false.
+// The tier gate applies in both singleplayer and multiplayer modes — never create separate RW limits.
+function applyRealWorldTierGating() {
+  const player = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
+  const tier   = player ? (player.tier || 'starter') : 'starter';
+  const limits = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(tier) : null;
+  const canRW  = limits ? !!limits.realWorldQuestionsEnabled : false;
+
+  const rwBadge = document.getElementById('ai-rw-lock-badge');
+  const toggleEl = document.getElementById('ai-toggle');
+  if (!toggleEl) return;
+
+  if (!canRW) {
+    if (rwBadge) rwBadge.style.display = 'inline-block';
+    toggleEl.style.opacity = '0.45';
+    toggleEl.title = 'Pro+ required — click for upgrade options';
+    // Force RW off if it was on
+    if (aiQuestionsEnabled) {
+      aiQuestionsEnabled = false;
+      toggleEl.classList.remove('on');
+      const cfgEl = document.getElementById('ai-questions-config');
+      if (cfgEl) cfgEl.classList.remove('visible');
+      updatePrematchTimingVisibility();
+    }
+  } else {
+    if (rwBadge) rwBadge.style.display = 'none';
+    toggleEl.style.opacity = '';
+    toggleEl.title = '';
+  }
+}
+
+// Shows the Starter live-answer cap notice when: singleplayer + live/hybrid + limited tier.
+// The cap (liveQuestionsPerMatch) comes from TIER_LIMITS and is the same for both play modes.
+function applySingleplayerLiveCapNotice() {
+  const noticeEl = document.getElementById('sp-live-cap-notice');
+  if (!noticeEl) return;
+  const player = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
+  const tier   = player ? (player.tier || 'starter') : 'starter';
+  const limits = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(tier) : null;
+  const isLimitedLive   = limits && limits.liveQuestionsMode === 'limited';
+  const isLiveOrHybrid  = matchNightMode === 'live' || matchNightMode === 'hybrid';
+  noticeEl.style.display = (sessionType === 'singleplayer' && isLimitedLive && isLiveOrHybrid) ? 'block' : 'none';
+}
+
 let leagueVisibility = 'public';
 function selectVisibility(vis) {
   leagueVisibility = vis;
@@ -2448,7 +2591,14 @@ function populateReview() {
     document.getElementById('review-duration-row').style.display = 'none';
   }
 
-  // Play mode
+  // Play Experience (singleplayer / multiplayer — independent of tier)
+  const reviewSessionEl = document.getElementById('review-session-type');
+  if (reviewSessionEl) {
+    reviewSessionEl.textContent = sessionType === 'singleplayer' ? 'Solo (1 player)' : 'Multiplayer';
+    reviewSessionEl.style.color = sessionType === 'singleplayer' ? 'var(--lime)' : 'var(--purple)';
+  }
+
+  // Play mode (individual / team)
   document.getElementById('review-mode').textContent = playMode === 'team' ? 'Team Mode' : 'Individual';
   if (playMode === 'team') {
     const teams = document.getElementById('team-count').value;
@@ -2566,6 +2716,19 @@ async function launchLeague() {
     resolvedEnd   = dateStr;
   }
 
+  // ── Intensity preset → question budgets (migration 017) ──────────────
+  const INTENSITY_PRESETS = {
+    casual:     { preset: 'casual',   prematch: 3, live: 5  },
+    standard:   { preset: 'standard', prematch: 4, live: 8  },
+    competitive: { preset: 'standard', prematch: 4, live: 8 }, // wizard alias
+    hardcore:   { preset: 'hardcore', prematch: 6, live: 12 },
+  };
+  const vibeKey = (typeof answers !== 'undefined' && answers.vibe) ? answers.vibe : 'standard';
+  const intensity = INTENSITY_PRESETS[vibeKey] || INTENSITY_PRESETS.standard;
+
+  // Singleplayer forces max_members = 1. The tier cap (liveQuestionsPerMatch etc.) is the same.
+  const isSingleplayer = sessionType === 'singleplayer';
+
   const leagueData = {
     name: document.getElementById('league-name').value || 'Untitled League',
     sport: sportEl.options[sportEl.selectedIndex].value,
@@ -2575,7 +2738,9 @@ async function launchLeague() {
       ? (document.getElementById('league-password').value.trim() || Math.random().toString(36).slice(2, 8).toUpperCase())
       : null,
     mode: playMode,
-    maxMembers: parseInt(document.getElementById('player-slider').value) || 50,
+    // play_mode: singleplayer | multiplayer — independent of tier (migration 029)
+    playMode: sessionType,
+    maxMembers: isSingleplayer ? 1 : (parseInt(document.getElementById('player-slider').value) || 50),
     trophy: selectedTrophy,
     // AI / sports fields
     scope:                leagueType === 'match' ? 'full_league' : leagueScope,
@@ -2593,6 +2758,10 @@ async function launchLeague() {
     // Pre-match scheduling (migration 018)
     prematch_generation_mode:      prematchScheduleMode,
     prematch_publish_offset_hours: prematchPublishOffset,
+    // Intensity preset + question budgets (migration 017)
+    question_intensity_preset: intensity.preset,
+    prematch_question_budget:  intensity.prematch,
+    live_question_budget:      intensity.live,
   };
 
   var newLeagueId = null;

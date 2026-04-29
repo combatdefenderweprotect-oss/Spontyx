@@ -1,6 +1,6 @@
 # Spontix Tier Architecture
 
-Last updated: 2026-04-27 (v3)
+Last updated: 2026-04-29 (v7 — play_mode vs tier distinction)
 
 This document is the authoritative reference for all tier logic in Spontix. All pricing, feature gates, limits, and upgrade copy must be derived from this file. The implementation lives in `TIER_LIMITS` in `spontix-store.js`.
 
@@ -644,6 +644,36 @@ These limits are now read from Supabase on every check — not from localStorage
 - `realWorldQuestionsPerMonth` — enforced in `generate-questions` Edge Function via `checkRealWorldQuota()` in `lib/quota-checker.ts`. Two sequential checks: (1) **daily cap** — max 1 REAL_WORLD question per league per UTC day, applies to ALL tiers including Elite (`real_world_daily_cap`); (2) **tier rule** — Starter: fully blocked (`real_world_tier_locked`), Pro: 10/month per league (`real_world_quota_reached` when limit hit), Elite: unlimited beyond the daily cap. Quota checked against `questions` table count. Owner tier resolved from `users.tier` via `owner_id` on `leagues`.
 - `aiWeeklyQuota` — `leagues.ai_weekly_quota` column is set at creation time from `TIER_LIMITS.aiWeeklyQuota` (Starter: 2, Pro: 5, Elite: 10). The generation Edge Function reads this column directly — it is not re-derived from the owner's live tier.
 
+### Currently enforced (Edge Function — REAL_WORLD pipeline)
+
+These rules govern what REAL_WORLD questions are generated and how they are validated.
+
+- **4-call pipeline** — Call 1 (generate from news) → Call 2 (convert to predicate) → Call 3 (context + curated sources via Google News RSS) → Call 4 (quality gate: APPROVE ≥80 / WEAK 65–79 / REJECT <65). No GNews API key required — Google News RSS adapter runs unconditionally.
+- **`yellow_cards` field** — `player_stat` predicates may use `field = 'yellow_cards'` (validates separately from the combined `cards` field). Both are valid: `yellow_cards` = only yellow; `cards` = yellow + red. Supported in both `predicate-validator.ts` (`VALID_FIELDS.player_stat`) and `predicate-evaluator.ts` (`getPlayerStatValue()`).
+- **`MATCH_REQUIRED_TYPES` guard** — `match_lineup`, `player_stat`, `match_stat`, and `btts` predicates require an upcoming match. If no upcoming match exists for the league, questions with these predicate types are skipped (not inserted). Prevents silent void cycles from `no_match_id` resolver errors.
+- **`match_lineup` near-kickoff guard** — if the kickoff is less than **60 minutes** away, generation is skipped immediately after the `MATCH_REQUIRED_TYPES` check. Lineups are released ~1h before kickoff — generating after that window produces an un-answerable question. Guard runs before any API call so no tokens are consumed. (Previously 30min matching checkTemporal floor — extended to 60min in 6th audit pass.)
+- **`match_lineup` `check` field normalisation** — if Call 2 returns a `match_lineup` predicate without a `check` field, it is defaulted to `'squad'` before `validateQuestion()` runs. The resolver's `pred.check ?? 'squad'` fallback was unreachable because the validator ran first and rejected `undefined`.
+- **`match_lineup` `resolution_deadline` backfill** — after Call 2, `manual_review` predicates lack a `resolution_deadline` field (Call 2 builds from `predicate_hint` which carries no deadline). Backfilled from `rawRW.resolution_deadline` before `validateQuestion()` runs — without this, all `manual_review` questions fail `checkSchema` post-Call-4 and are silently rejected.
+- **`evalMatchLineup` partial lineup handling** — if the API returns fewer than 2 team entries, the evaluator first checks whether the player IS in the available entry. If found → returns `correct` immediately. If not found → returns `unresolvable('lineups_incomplete')` so the resolver retries next cycle. Prevents both wrong-NO resolution and unnecessary retries when the answer is already deterministic.
+- **`entity_focus` cross-validation** — after Call 2 resolves the predicate type, `entity_focus` is normalised to match: player predicates (`match_lineup`, `player_stat`) force `entity_focus = 'player'`; team predicates (`match_stat`, `btts`) force `entity_focus = 'team'`. Mismatches are corrected silently with a warning log, not rejected. The normalised value (`normalisedEntityFocus`) is passed to Call 4 — the quality scorer no longer penalises mismatches that have already been corrected.
+- **`scoped_team_name` in Call 3 context** — team-scoped leagues include the league's `scoped_team_name` in the `rwTeams` context string sent to Call 3. Ensures team-specific leagues without an upcoming match still receive correctly targeted context for the news snippet and source curation.
+- **REAL_WORLD player database** (migration 026) — `team_players` table tracks player relevance scores (starters +10, subs +4, goals +8, assists +6, cards +5). The PLAYER BOOST RSS query in `google-news-rss.ts` uses the top-8 players per team (by relevance, last 90 days) to surface injury/availability signals for high-relevance players.
+- **Per-league WEAK counter** — Call 4 WEAK decisions (score 65–79) are published only if no APPROVE question was generated for that specific league in the same run (`rwLeagueGenerated === 0`). The counter is per-league (not global run count) — a PREMATCH or LIVE question generated earlier in the run does not block REAL_WORLD WEAK publishing.
+- **`mergedKnownPlayers` in Call 1** — `generateRealWorldQuestion()` receives a merged player list combining `team_players` DB entries (all squad members sorted by relevance score) and `keyPlayers` (injury/fitness focus list). Fit players not on the injury list now have their `player_id` available in Call 1, enabling Call 2 to build valid predicates for TYPE 2/3 questions. Previously only `keyPlayers` (~5–15 injured/doubtful players) were passed, causing all TYPE 2/3 predicates about fit players to fail entity validation.
+- **All upcoming matches passed to Call 1** — `upcoming_matches[]` (up to 3 matches with `match_id`) replaces single `upcoming_match` string. The model selects the most relevant fixture for the news story. Post-Call-2, `upcomingMatch` is resolved by matching the predicate's `match_id` against all upcoming matches (falls back to `[0]` if no ID match). Prevents ID fabrication that was passing schema validation but resolving against wrong fixtures.
+- **Daily cap fail-safe** — `checkRealWorldQuota()`: DB error on the daily cap count query now returns `{ allowed: false, skipReason: 'real_world_quota_check_failed' }` instead of silently allowing through (was fail-open). Both count queries changed from `select('*')` to `select('id')` to avoid fetching full row data.
+- **Extended player_stat VALID_FIELDS** — `predicate-validator.ts`: `passes_total`, `passes_key`, `dribbles_attempts`, `dribbles_success`, `tackles`, `interceptions`, `duels_total`, `duels_won` added to `VALID_FIELDS.player_stat`. These fields are populated by the player stats API and stored in `PlayerStatBlock` in the evaluator — they were always resolvable but silently rejected by logic_validation when used in TYPE 2/3 RW questions.
+- **`standings` field fix in news adapter** — `news-adapter/index.ts`: `sportsCtx.teamStandings` (non-existent field) replaced with `sportsCtx.standings?.map(s => s.team.name)`. Was silently stripping all standings team names from `knownTeams` — both the PLAYER BOOST query and entity matching had no standings team context.
+
+### Currently enforced (resolver — scoring formula)
+
+- **Full scoring formula** — all 6 multipliers active in `resolve-questions/index.ts`: `base_value × time_pressure × difficulty × streak × comeback × clutch`. MVP bypass constants (`difficulty_mvp = 1.0`, `comeback_mvp = 1.0`, `clutch_mvp = 1.0`) have been removed. `multiplier_breakdown` JSONB reflects real computed values (no `mvp_bypass: true` flag).
+- **`manual_review` skip logging** — the resolver logs `[resolve] skipping manual_review question {id} (pending admin action, deadline=...)` for every skipped manual review question, making resolver output transparent in Edge Function logs.
+- **Lineup retry not void** — when `evaluatePredicate` returns `unresolvable` with reason `lineups_not_available` or `lineups_incomplete`, the resolver increments `skipped` and continues (retries next cycle) rather than voiding. Lineups may not be in `live_match_stats` yet — voiding on the first attempt discards valid `match_lineup` questions before kickoff.
+- **`manual_review` timing** — `resolvesAfter = resolution_deadline` (not `deadline + 1h`). The auto-void fires when `now > deadline + 1h grace`. Setting `resolvesAfter = deadline` ensures the question enters the resolver one hour before auto-void fires, giving the admin the full grace window.
+- **`match_lineup` timing** — `resolution_deadline = kickoff` (not `kickoff - 30min`); `resolvesAfter = kickoff`. Auto-void fires at `kickoff + 1h` (was `kickoff + 30min` when deadline was kickoff-30min). The old `resolvesAfter = kickoff + 60min` caused the question to enter the resolver 30 minutes after auto-void; updated to `kickoff` in 5th pass. 6th pass also corrected the deadline from `kickoff - 30min` to `kickoff` — gives the resolver a full hour of retries before auto-void fires.
+- **Null score FT fallback** — `resolve-questions/lib/stats-fetcher/football.ts`: if `api_football_fixtures` has a finished status (`FT`/`AET`/`PEN`) but `home_goals` and `away_goals` are both `null` (poller race condition), the cache is treated as incomplete and the resolver falls back to a direct API call. Previously `null` was coerced to `0`, producing incorrect BTTS (`0:0 = false`) and wrong match_stat scores.
+
 ### Currently enforced (Edge Function — server-side, added 2026-04-27)
 - **Pre-Match Scheduling publish window** — `generate-questions` Edge Function: `isMatchEligibleForPrematch()` filters each match before pool operations using `league.prematch_generation_mode` and `league.prematch_publish_offset_hours`. Automatic: match must be ≤ 48h away. Manual: `now >= kickoff − offset_hours`. After kickoff: always ineligible. Leagues with no eligible matches are skipped with `no_matches_in_publish_window`. `computeVisibleFrom()` sets `visible_from` at generation time; `computeLeagueVisibleFrom()` in `pool-manager.ts` overrides `visible_from` per-league for pool-reused questions.
 - `aiPreviewPerEvent` — Venue Starter capped at 3 total AI questions per league_id in `generate-questions` Edge Function. Before Phase A, counts `questions WHERE league_id = league.id AND source = 'ai_generated'`. If count ≥ 3, skips with `skipReason: 'venue_ai_preview_cap'`. Each venue event maps to its own `league_id` — enforcing by `league_id` is the correct mechanism. UI-only gate in `venue-live-floor.html` is retained for real-time feedback.
@@ -656,6 +686,157 @@ These limits are now read from Supabase on every check — not from localStorage
 - Stripe billing → real tier reads from `users.tier`
 - RLS policies mirroring tier limits for league creation and membership at DB level
 - Venue event count enforcement at DB level (currently only frontend-checked)
+
+---
+
+## CORE_MATCH_LIVE — Product Definition
+
+`CORE_MATCH_LIVE` is the **primary monetization driver** of Spontix. It is not a premium add-on — it is the core product experience that differentiates Starter from paid tiers.
+
+### What LIVE is
+
+Live questions are generated **during a match**, based on live match state (score, clock, events). They have short answer windows (2–5 min), resolve within minutes, and are designed to create moment-by-moment tension alongside the broadcast.
+
+This is what makes Spontix a second-screen live experience rather than a prediction app. LIVE is the product.
+
+### Why LIVE is the upgrade hook
+
+Starter users can **see** live questions and **answer up to 3 per match**. They experience the product but hit a clear, meaningful wall at exactly the moment they're most engaged. The cap is not arbitrary — 3 questions is enough to feel the experience and want more.
+
+The upgrade CTA is always: **"Remove Live Prediction Limits — Go Pro"**.
+
+### LIVE is NOT REAL_WORLD
+
+| | CORE_MATCH_LIVE | REAL_WORLD |
+|---|---|---|
+| Based on | Live match state | News, transfers, injuries |
+| Timing | During the match | Days/weeks before |
+| Cost driver | API polling + OpenAI | Google News RSS + OpenAI (4 calls) |
+| Tier gate | Starter (limited) → Pro | Pro (limited) → Elite |
+| Volume | 8–12 per match (standard) | 1 per league per day max |
+| Priority in feed | Highest | Lowest |
+
+REAL_WORLD is premium because of cost and editorial complexity. LIVE is gated because it is the core value proposition. These are different rationales and must never be confused.
+
+### Tier behavior — LIVE
+
+| Tier | LIVE access | Details |
+|---|---|---|
+| **Starter** | Limited | Can see all live questions; can answer max 3 per match (`liveQuestionsPerMatch: 3`) |
+| **Pro** | Full | Unlimited live answers; can create live-mode leagues |
+| **Elite** | Full + advanced | Unlimited; live stats tab; enhanced scoring feedback; advanced predictions |
+
+### Venue tier behavior — LIVE
+
+| Venue tier | LIVE behavior |
+|---|---|
+| Venue Starter | AI preview only (max 3 questions total per league via `aiPreviewPerEvent`); no live-mode leagues |
+| Venue Pro | Full live question generation for their leagues |
+| Venue Elite | Full live + priority generation slot |
+
+### LIVE feed priority — MANDATORY
+
+`CORE_MATCH_LIVE` **always** renders first in the question feed. This is enforced in `league.html` via `lanePriority` sort. REAL_WORLD must never appear above a live question. This rule is permanent.
+
+---
+
+## LIVE Cost Logic
+
+Understanding the cost model is essential for knowing why tier limits exist and why LIVE cannot be unlimited for all tiers.
+
+### API cost per live match
+
+The `live-stats-poller` Edge Function runs every minute during a live fixture. Per 90-minute match:
+
+| Call type | Frequency | ~Requests |
+|---|---|---|
+| `/fixtures` (score + status) | Every minute | 90 |
+| `/fixtures/events` | Every minute | 90 |
+| `/fixtures/statistics` | Every minute (×2 teams) | 180 |
+| `/fixtures/players` | Every 3 minutes when live | ~30 |
+| `/fixtures/lineups` | Once | 1 |
+| `/predictions` | Once | 1 |
+| `/fixtures/headtohead` | Once | 1 |
+| **Total per match** | | **~305 requests** |
+
+API-Sports Pro plan: 7,500 requests/day. One live match = ~305 requests = 4% of daily budget. At scale, this is a real constraint.
+
+### OpenAI cost per live question
+
+Each `CORE_MATCH_LIVE` question requires two OpenAI calls (Call 1: generation, Call 2: predicate). At `gpt-4o-mini` pricing, each question costs approximately **$0.001–$0.003**. At 8 questions per match, that is ~$0.02 per match per league.
+
+At 50 active leagues with live matches simultaneously: ~$1/match cycle. This is manageable but must be rate-limited per league (max 1 new live question per 3 minutes per league).
+
+### Why Starter must be limited
+
+Unlimited Starter access to live questions would mean:
+- Full API polling cost for every Starter league
+- Full OpenAI generation cost with no revenue
+- No meaningful upgrade incentive
+
+The 3-answer cap creates engagement without full cost exposure. The server still generates and delivers all live questions — the cap only limits how many the user can answer. This is intentional: they see what they're missing.
+
+### Why rate limiting exists (1 per 3 min per league)
+
+The 3-minute rate limit per league is a **safety rule**, not a tier rule. It applies to ALL tiers including Elite. Purpose:
+- Prevents question flooding mid-match
+- Preserves question quality (low-value filler is always worse than waiting)
+- Keeps the active question count manageable (MVP cap: 2 active at once)
+- Reduces OpenAI cost
+
+---
+
+---
+
+## Play Mode vs Subscription Tier (migration 029)
+
+`play_mode` and subscription tier are **completely independent systems**. They must never be confused.
+
+### What `play_mode` controls
+
+`play_mode = 'singleplayer' | 'multiplayer'` on the `leagues` table.
+
+- **`multiplayer`** (default) — social competition: leaderboard, invite friends, shared session, invite card visible.
+- **`singleplayer`** — solo session: just the player vs the match. `max_members = 1`, no leaderboard, invite card hidden.
+
+This is a **gameplay mode** switch — it controls the social experience and UI, not feature availability.
+
+### What subscription tier controls
+
+Tier controls **what content and how much** the player can access — identically in both play modes:
+
+| Limit | Singleplayer | Multiplayer |
+|---|---|---|
+| `liveQuestionsPerMatch` | Same cap (Starter: 3, Pro/Elite: unlimited) | Same cap |
+| `realWorldQuestionsEnabled` | Same gate (Starter: locked, Pro: limited, Elite: full) | Same gate |
+| `leaguesCreatePerWeek` | Same limit | Same limit |
+| `liveQuestionsMode` | Same ('limited' for Starter, 'full' for Pro+) | Same |
+| All other `TIER_LIMITS` fields | Unchanged | Unchanged |
+
+### Critical rules
+
+1. **Never create separate tier limits for singleplayer.** Always read from `TIER_LIMITS` via `SpontixStore.getTierLimits(tier)`.
+2. **Never silently allow features in singleplayer that are locked in multiplayer.** If Starter can't access REAL_WORLD in multiplayer, they can't in singleplayer either.
+3. **Tier upgrade prompts must mention both modes** so users understand the upgrade benefit applies everywhere.
+4. `play_mode` is NOT a subscription tier. There is no "singleplayer tier" or "multiplayer tier".
+
+### Implementation locations
+
+- DB: `leagues.play_mode TEXT NOT NULL DEFAULT 'multiplayer' CHECK (play_mode IN ('singleplayer','multiplayer'))` — migration 029
+- Store: `_mapLeagueFromDb` maps `play_mode → playMode`, `_mapLeagueToDb` maps back
+- Creation wizard: `sessionType` JS variable (`create-league.html`); `launchLeague()` writes `playMode: sessionType`
+- League view: `league.html` reads `league.playMode` — hides invite card, shows "Solo" tag, adjusts stat mode label
+- All tier gates in `create-league.html` apply to both modes via the same `getTierLimits()` call
+
+### Enforcement status
+
+| Feature | Both modes? | How enforced |
+|---|---|---|
+| `liveQuestionsPerMatch` cap (Starter: 3) | ✅ Yes | In-memory count from `currentQuestions + myAnswers` in `league.html` |
+| REAL_WORLD toggle lock (Starter) | ✅ Yes | `toggleAIQuestions()` + `applyRealWorldTierGating()` in `create-league.html` |
+| Live/Hybrid creation gate (Pro+) | ✅ Yes | `applyMatchNightTierGating()` in `create-league.html` |
+| `leaguesCreatePerWeek` cap | ✅ Yes | Supabase count in `launchLeague()` |
+| `maxMembers = 1` for singleplayer | N/A | Enforced in `launchLeague()` when `sessionType === 'singleplayer'` |
 
 ---
 

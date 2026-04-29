@@ -205,7 +205,7 @@ export function filterPrematchBatch(
       if (playerSpecificCount + playerSpecificInAccepted >= 2) {
         rejected.push({
           question_text: q.question_text,
-          reason: 'too_many_player_specific',
+          reason: normalizeReason('too_many_player_specific'),
           score: 0,
         });
         continue;
@@ -218,7 +218,7 @@ export function filterPrematchBatch(
     if (score < 60) {
       rejected.push({
         question_text: q.question_text,
-        reason: reasons[0] ?? 'low_quality_score',
+        reason: normalizeReason(reasons[0] ?? 'low_quality_score'),
         score,
       });
       continue;
@@ -228,7 +228,7 @@ export function filterPrematchBatch(
     if (score < 75 && accepted.length >= quotaRemaining) {
       rejected.push({
         question_text: q.question_text,
-        reason: `marginal_not_needed`,
+        reason: normalizeReason('marginal_not_needed'),
         score,
       });
       continue;
@@ -266,6 +266,29 @@ export function computeStandingGap(
 
   if (!homeEntry || !awayEntry) return null;
   return Math.abs(homeEntry.position - awayEntry.position);
+}
+
+// ── Reason normalization ──────────────────────────────────────────
+// Maps internal scoring reason codes → canonical analytics reason names.
+// These canonical names are used in the analytics SQL views.
+
+const REASON_MAP: Record<string, string> = {
+  obvious_winner_heavy_favourite:      'too_obvious',
+  winner_question_no_standings_context: 'too_obvious',
+  near_duplicate_in_batch:             'duplicate_question',
+  near_duplicate_prior_round:          'duplicate_question',
+  duplicate_player:                    'duplicate_question',
+  too_many_player_specific:            'too_many_player_specific',
+  poor_team_balance:                   'poor_team_balance',
+  over_represented_category:           'low_quality_score',
+  weak_short_question:                 'low_quality_score',
+  weak_resolvability_hint:             'low_quality_score',
+  marginal_not_needed:                 'low_quality_score',
+  low_quality_score:                   'low_quality_score',
+};
+
+function normalizeReason(raw: string): string {
+  return REASON_MAP[raw] ?? 'low_quality_score';
 }
 
 // ── Private helpers ───────────────────────────────────────────────────

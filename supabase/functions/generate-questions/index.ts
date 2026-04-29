@@ -1,10 +1,11 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import type { LeagueWithConfig, ValidatedQuestion, RejectionLogEntry, LeagueRunResult } from './lib/types.ts';
+import type { LeagueWithConfig, ValidatedQuestion, RejectionLogEntry, LeagueRunResult, SportsContext, LeagueClassification, GenerationMode, SportMatch, NewsItem, EnrichedNewsItem } from './lib/types.ts';
 import { classifyLeague, sortLeaguesByPriority, checkQuota, getRecentQuestionTexts, checkRealWorldQuota } from './lib/quota-checker.ts';
 import { fetchSportsContext } from './lib/sports-adapter/index.ts';
+import { fetchInProgressFixturesFromCache } from './lib/sports-adapter/football.ts';
 import { fetchNewsContext }   from './lib/news-adapter/index.ts';
-import { buildContextPacket, buildPredicatePrompt, computeResolvesAfter } from './lib/context-builder.ts';
-import { generateQuestions, convertToPredicate, PROMPT_VERSION } from './lib/openai-client.ts';
+import { buildContextPacket, buildPredicatePrompt, computeResolvesAfter, buildLiveContext, minuteToTimestamp } from './lib/context-builder.ts';
+import { generateQuestions, convertToPredicate, generateRealWorldQuestion, generateRealWorldContext, scoreRealWorldQuestion, PROMPT_VERSION } from './lib/openai-client.ts';
 import { validateQuestion } from './lib/predicate-validator.ts';
 import {
   buildCacheKey, getLeagueType, getPhaseScope, getMode,
@@ -62,7 +63,9 @@ const SUPABASE_URL      = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const OPENAI_API_KEY    = Deno.env.get('OPENAI_API_KEY')!;
 const API_SPORTS_KEY    = Deno.env.get('API_SPORTS_KEY')!;
-const GNEWS_API_KEY     = Deno.env.get('GNEWS_API_KEY')!;
+const GNEWS_API_KEY     = Deno.env.get('GNEWS_API_KEY') ?? ''  // Optional — Google News RSS needs no key;
+const SCRAPER_API_URL   = Deno.env.get('SCRAPER_API_URL') ?? '';   // e.g. https://spontyx-scraper-service-production.up.railway.app
+const SCRAPER_API_KEY   = Deno.env.get('SCRAPER_API_KEY') ?? '';   // x-scraper-key header value
 
 // ── Main handler ──────────────────────────────────────────────────────
 
@@ -339,15 +342,14 @@ Deno.serve(async (req: Request) => {
       const existingPools = await findReadyPools(sb, upcomingMatchIds, baseKey);
       let totalAttached = 0;
 
-      const ownerTier = ownerTierMap.get(league.owner_id ?? '') ?? 'starter';
-      const rwQuota = await checkRealWorldQuota(sb, league.id, ownerTier);
-
       for (const [matchId, pool] of existingPools) {
         if (totalAttached >= leagueQuotaCap) break;
-        let poolQs = await getPoolQuestions(sb, pool.id, baseKey.mode);
-        if (!rwQuota.allowed) {
-          poolQs = poolQs.filter((pq) => computeLane(pq.matchMinuteAtGeneration, pq.matchId) !== 'REAL_WORLD');
-        }
+        // Note: no REAL_WORLD filter needed here — prematch pool questions are always
+        // CORE_MATCH_PREMATCH (computeLane returns REAL_WORLD only when matchId is null
+        // AND no matchMinute, which never applies to pool questions). The previous
+        // checkRealWorldQuota call + filter was dead code that ran an unnecessary DB
+        // query without ever removing any questions.
+        const poolQs = await getPoolQuestions(sb, pool.id, baseKey.mode);
         const attached = await attachPoolQuestionsToLeague(
           sb, poolQs, league, runId, PROMPT_VERSION,
           recentQuestions, totalAttached, leagueQuotaCap,
@@ -470,6 +472,11 @@ Deno.serve(async (req: Request) => {
                   stage:         'prematch_quality',
                   question_text: r.question_text,
                   error:         `${r.reason} (score=${r.score})`,
+                  // ── Structured fields for analytics views ──────────────
+                  reason:        r.reason,
+                  score:         r.score,
+                  fixture_id:    firstMatchForQuality?.id ?? null,
+                  timestamp:     new Date().toISOString(),
                 });
                 result.questionsRejected++;
               }
@@ -596,18 +603,6 @@ Deno.serve(async (req: Request) => {
             }
           }
 
-          // Filter out REAL_WORLD questions if league owner's tier doesn't allow them
-          if (!rwQuota.allowed) {
-            const beforeFilter = validatedQuestions.length;
-            const filtered = validatedQuestions.filter((q) => q.question_type !== 'REAL_WORLD');
-            const dropped = beforeFilter - filtered.length;
-            if (dropped > 0) {
-              console.log(`[real_world_quota] dropped ${dropped} REAL_WORLD question(s) for league ${league.id}: ${rwQuota.skipReason}`);
-              result.questionsRejected += dropped;
-            }
-            validatedQuestions.splice(0, validatedQuestions.length, ...filtered);
-          }
-
           // Phase C: group by match_id → store in pool → attach to league
           const byMatch = new Map<string, ValidatedQuestion[]>();
           for (const q of validatedQuestions) {
@@ -659,6 +654,844 @@ Deno.serve(async (req: Request) => {
       await writeLeagueResult(sb, runId, result);
     }
 
+    // ── Live generation pass ──────────────────────────────────────────
+    // Detect in_progress football matches and generate exactly 1 CORE_MATCH_LIVE
+    // question per eligible league per match. Runs after the prematch loop.
+    //
+    // Unlike prematch, live questions:
+    //   - Bypass the pool system (not reused across leagues)
+    //   - Are always question_type = CORE_MATCH_LIVE
+    //   - Use timing anchored to match minute (not kickoff offset)
+    //   - Are rate-limited to 1 per 3 min (time-driven); event-driven bypasses this
+    //   - Are skipped at ≥89 min or during HT
+    //
+    // Max active questions per league — matches maxActiveQuestions in context-builder.ts.
+    const MVP_MAX_ACTIVE_LIVE = 3;
+
+    for (const league of (leagues as LeagueWithConfig[])) {
+      // MVP: football only
+      if (league.sport !== 'football') continue;
+
+      // Fetch in_progress fixtures for this league from cache
+      let inProgressFixtures: any[];
+      try {
+        inProgressFixtures = await fetchInProgressFixturesFromCache(
+          sb,
+          league.api_sports_league_id,
+          league.api_sports_team_id ?? undefined,
+          (league.scope ?? 'full_league') as 'full_league' | 'team_specific',
+        );
+      } catch (err) {
+        console.warn(`[live-gen] fixture fetch failed for league ${league.id}:`, err);
+        continue;
+      }
+
+      if (!inProgressFixtures.length) continue;
+
+      for (const fixture of inProgressFixtures) {
+        const matchId   = String(fixture.fixture_id);
+        const leagueStart = Date.now();
+
+        const liveResult: LeagueRunResult = {
+          leagueId:             league.id,
+          sport:                league.sport,
+          generationMode:       'live_gap' as GenerationMode,
+          earliestMatchKickoff: fixture.kickoff_at,
+          hoursUntilKickoff:    0,
+          priorityScore:        4, // live always higher than IMMINENT (3)
+          quotaTotal:           league.ai_total_quota,
+          quotaUsedTotal:       0,
+          quotaUsedThisWeek:    0,
+          questionsRequested:   1,
+          questionsGenerated:   0,
+          questionsRejected:    0,
+          rejectionLog:         [],
+          skipped:              false,
+          newsItemsFetched:     0,
+          newsUnavailable:      true,
+          newsSnapshot:         [],
+          durationMs:           0,
+        };
+
+        // Explicit HT skip — no play happening during half-time break
+        if (fixture.status_short === 'HT') {
+          liveResult.skipped    = true;
+          liveResult.skipReason = 'halftime_pause';
+          runStats.leaguesSkipped++;
+          await writeLeagueResult(sb, runId, liveResult);
+          continue;
+        }
+
+        // Build live context from live_match_stats + active questions
+        let liveCtx;
+        try {
+          liveCtx = await buildLiveContext(sb, league.id, matchId, fixture);
+        } catch (err) {
+          console.warn(`[live-gen] buildLiveContext failed for league ${league.id} match ${matchId}:`, err);
+          liveCtx = null;
+        }
+
+        if (!liveCtx) {
+          liveResult.skipped    = true;
+          liveResult.skipReason = 'no_live_stats_available';
+          runStats.leaguesSkipped++;
+          await writeLeagueResult(sb, runId, liveResult);
+          continue;
+        }
+
+        // Hard skip at ≥89 min — insufficient match time for a valid anchored window
+        if (liveCtx.matchMinute >= 89) {
+          liveResult.skipped    = true;
+          liveResult.skipReason = 'match_minute_too_late';
+          runStats.leaguesSkipped++;
+          await writeLeagueResult(sb, runId, liveResult);
+          continue;
+        }
+
+        // Active question cap — enforce MVP max 2 per league
+        if (liveCtx.activeQuestionCount >= MVP_MAX_ACTIVE_LIVE) {
+          liveResult.skipped    = true;
+          liveResult.skipReason = 'active_question_cap_reached';
+          runStats.leaguesSkipped++;
+          await writeLeagueResult(sb, runId, liveResult);
+          continue;
+        }
+
+        // Rate limit: max 1 CORE_MATCH_LIVE per 3 min per league (time-driven only).
+        // Event-driven questions bypass this limit.
+        if (liveCtx.generationTrigger === 'time_driven') {
+          const rateLimitCutoff = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+          const { data: recentLiveQ } = await sb
+            .from('questions')
+            .select('id')
+            .eq('league_id', league.id)
+            .eq('question_type', 'CORE_MATCH_LIVE')
+            .gte('created_at', rateLimitCutoff)
+            .limit(1);
+
+          if (recentLiveQ && recentLiveQ.length > 0) {
+            liveResult.skipped    = true;
+            liveResult.skipReason = 'rate_limit_3min_live';
+            runStats.leaguesSkipped++;
+            await writeLeagueResult(sb, runId, liveResult);
+            continue;
+          }
+        }
+
+        const generationMode: GenerationMode =
+          liveCtx.generationTrigger === 'event_driven' ? 'live_event' : 'live_gap';
+        liveResult.generationMode = generationMode;
+
+        // Minimal SportsContext for context packet — just the live match
+        const liveSportsCtx: SportsContext = {
+          upcomingMatches: [{
+            id:          matchId,
+            sport:       'football',
+            homeTeam:    { id: liveCtx.homeTeamId, name: liveCtx.homeTeamName },
+            awayTeam:    { id: liveCtx.awayTeamId, name: liveCtx.awayTeamName },
+            kickoff:     liveCtx.kickoff,
+            competition: String(league.api_sports_league_id),
+            status:      'in_progress',
+          }],
+          standings:          [],
+          form:               [],
+          keyPlayers:         [],
+          narrativeHooks:     [],
+          playerAvailability: [],
+        };
+
+        const liveCls: LeagueClassification = {
+          league,
+          classification:    'IMMINENT',
+          priorityScore:     4,
+          earliestKickoff:   liveCtx.kickoff,
+          hoursUntilKickoff: 0,
+          generationMode,
+        };
+
+        const recentQuestions = await getRecentQuestionTexts(sb, league.id, 5);
+
+        // Summarise active windows for context
+        const activeWindowsStr = liveCtx.activeWindows.length > 0
+          ? liveCtx.activeWindows.map((w) => `${w.start}–${w.end}`).join(', ')
+          : 'none';
+
+        // Build context packet — live fields are populated here
+        const baseContextPacket = buildContextPacket({
+          league,
+          classification:      liveCls,
+          sportsCtx:           liveSportsCtx,
+          newsItems:           [],
+          recentQuestions,
+          questionsToGenerate: 1,
+          existingQuestionCount: liveCtx.activeQuestionCount,
+          recentCategories:    [],
+          recentStatFocus:     [],
+          matchPhase:          liveCtx.matchPhase,
+          lastEventType:       liveCtx.lastEventType,
+          activeQuestionCount: liveCtx.activeQuestionCount,
+          maxActiveQuestions:  MVP_MAX_ACTIVE_LIVE,
+          matchMinute:         liveCtx.matchMinute,
+        });
+
+        // Append live score + active windows as a dedicated section
+        const liveStateSuffix = [
+          'LIVE MATCH STATE',
+          '-----------------',
+          `current_score: ${liveCtx.homeScore}–${liveCtx.awayScore} (home–away)`,
+          `is_close_game: ${liveCtx.isCloseGame}`,
+          `is_blowout: ${liveCtx.isBlowout}`,
+          `generation_trigger: ${liveCtx.generationTrigger}`,
+          `last_event_type: ${liveCtx.lastEventType}`,
+          liveCtx.lastEventMinute != null
+            ? `last_event_minute: ${liveCtx.lastEventMinute}`
+            : 'last_event_minute: null',
+          `active_prediction_windows: [${activeWindowsStr}]`,
+        ].join('\n');
+
+        const fullContextPacket = baseContextPacket + '\n\n' + liveStateSuffix;
+
+        // ── Generate exactly 1 LIVE question ───────────────────────────
+        runStats.leaguesProcessed++;
+        let rawQuestions;
+        try {
+          rawQuestions = await generateQuestions(fullContextPacket, OPENAI_API_KEY);
+        } catch (err) {
+          liveResult.rejectionLog.push({
+            attempt: 1, stage: 'question_generation', error: String(err),
+          });
+          liveResult.questionsRejected++;
+          liveResult.durationMs = Date.now() - leagueStart;
+          await writeLeagueResult(sb, runId, liveResult);
+          continue;
+        }
+
+        if (!rawQuestions.length) {
+          liveResult.skipped    = true;
+          liveResult.skipReason = 'no_questions_generated';
+          liveResult.durationMs = Date.now() - leagueStart;
+          await writeLeagueResult(sb, runId, liveResult);
+          continue;
+        }
+
+        // Take only the first question — live generation always produces exactly 1
+        const raw = rawQuestions[0];
+
+        // Fill system-computed fields
+        raw.event_type             = CATEGORY_EVENT_TYPE[raw.question_category] ?? 'time_window';
+        raw.narrative_context      = raw.reasoning_short ?? '';
+        raw.resolution_rule_text   = raw.predicate_hint  ?? '';
+        raw.match_minute_at_generation = liveCtx.matchMinute;
+        raw.match_id               = matchId;
+        raw.team_ids               = [liveCtx.homeTeamId, liveCtx.awayTeamId];
+        raw.player_ids             = [];
+
+        // Live timing — visible_from: delayed by broadcast lag buffer
+        const isEventDriven     = liveCtx.generationTrigger === 'event_driven';
+        const visibleDelayMs    = (isEventDriven ? 45 : 20) * 1000;
+        raw.visible_from        = new Date(Date.now() + visibleDelayMs).toISOString();
+        raw.opens_at            = raw.visible_from;
+
+        // Default answer_closes_at: visible_from + 3 minutes
+        // Overridden below if the predicate is match_stat_window
+        raw.answer_closes_at    = new Date(Date.now() + visibleDelayMs + 3 * 60 * 1000).toISOString();
+        raw.deadline            = raw.answer_closes_at;
+
+        // resolves_after: after match ends (kickoff + sport buffer)
+        raw.resolves_after      = computeResolvesAfter(liveCtx.kickoff, league.sport);
+
+        // ── Convert predicate_hint → structured predicate (Call 2) ─────
+        let predicate;
+        try {
+          const predicatePrompt = buildPredicatePrompt({
+            questionText:       raw.question_text,
+            type:               raw.type,
+            options:            raw.options,
+            resolutionRuleText: raw.predicate_hint ?? '',
+            matches:            liveSportsCtx.upcomingMatches,
+            players:            [],
+            sport:              league.sport,
+          });
+          predicate = await convertToPredicate(predicatePrompt, OPENAI_API_KEY);
+        } catch (err) {
+          liveResult.rejectionLog.push({
+            attempt: 1, stage: 'predicate_parse',
+            question_text: raw.question_text, error: String(err),
+          });
+          liveResult.questionsRejected++;
+          liveResult.durationMs = Date.now() - leagueStart;
+          await writeLeagueResult(sb, runId, liveResult);
+          continue;
+        }
+
+        // For match_stat_window: compute timing from window minutes
+        const predAny = predicate as any;
+        if (
+          predAny.resolution_type === 'match_stat_window' &&
+          predAny.window_start_minute != null &&
+          predAny.window_end_minute   != null
+        ) {
+          // answer_closes_at = real clock time at window_start_minute
+          // (user must answer BEFORE the prediction window opens)
+          raw.answer_closes_at = minuteToTimestamp(liveCtx.kickoff, predAny.window_start_minute);
+          raw.deadline         = raw.answer_closes_at;
+          raw.window_start_minute = predAny.window_start_minute;
+          raw.window_end_minute   = predAny.window_end_minute;
+          // resolves_after = clock time at window_end_minute + settle buffer
+          const settleMs = (isEventDriven ? 120 : 90) * 1000;
+          raw.resolves_after = new Date(
+            new Date(minuteToTimestamp(liveCtx.kickoff, predAny.window_end_minute)).getTime() + settleMs,
+          ).toISOString();
+        }
+
+        // player_ids from predicate if present
+        raw.player_ids = predAny.player_id ? [String(predAny.player_id)] : [];
+
+        // ── Validate ───────────────────────────────────────────────────
+        const rejection = validateQuestion(raw, predicate, liveSportsCtx, league, 1);
+        if (rejection) {
+          liveResult.rejectionLog.push(rejection);
+          liveResult.questionsRejected++;
+          liveResult.durationMs = Date.now() - leagueStart;
+          await writeLeagueResult(sb, runId, liveResult);
+          continue;
+        }
+
+        const baseValue = (raw.base_value && raw.base_value > 0)
+          ? raw.base_value
+          : (CATEGORY_BASE_VALUE[raw.question_category] ?? 6);
+
+        // ── Insert directly into questions (no pool for live) ──────────
+        const liveQuestion: ValidatedQuestion = {
+          league_id:                  league.id,
+          source:                     'ai_generated',
+          generation_run_id:          runId,
+          question_text:              raw.question_text,
+          type:                       raw.type,
+          options:                    raw.options ?? null,
+          sport:                      league.sport,
+          match_id:                   matchId,
+          team_ids:                   raw.team_ids,
+          player_ids:                 raw.player_ids,
+          event_type:                 raw.event_type,
+          narrative_context:          raw.narrative_context,
+          opens_at:                   raw.opens_at,
+          deadline:                   raw.deadline,
+          resolves_after:             raw.resolves_after,
+          resolution_rule_text:       raw.resolution_rule_text,
+          resolution_predicate:       predicate,
+          resolution_status:          'pending',
+          ai_model:                   'gpt-4o-mini',
+          ai_prompt_version:          PROMPT_VERSION,
+          question_type:              'CORE_MATCH_LIVE',
+          source_badge:               'LIVE',
+          base_value:                 baseValue,
+          difficulty_multiplier:      raw.difficulty_multiplier ?? 1.0,
+          reuse_scope:                'live_safe',
+          visible_from:               raw.visible_from,
+          answer_closes_at:           raw.answer_closes_at,
+          match_minute_at_generation: liveCtx.matchMinute,
+          generation_trigger:         liveCtx.generationTrigger,
+        };
+
+        const { error: insertErr } = await sb.from('questions').insert(liveQuestion);
+        if (insertErr) {
+          console.error(`[live-gen] insert failed for league ${league.id}:`, insertErr.message);
+          liveResult.questionsRejected++;
+        } else {
+          liveResult.questionsGenerated = 1;
+          runStats.generated++;
+          console.log(
+            `[live-gen] CORE_MATCH_LIVE generated for league ${league.id} ` +
+            `(match ${matchId}, minute=${liveCtx.matchMinute}, trigger=${liveCtx.generationTrigger})`,
+          );
+        }
+
+        liveResult.durationMs = Date.now() - leagueStart;
+        await writeLeagueResult(sb, runId, liveResult);
+      }
+    }
+
+    // ── REAL_WORLD generation pass ────────────────────────────────────
+    // Runs after prematch and live passes. One REAL_WORLD question per
+    // league per day (enforced by checkRealWorldQuota). Questions are
+    // generated from news signals via a 4-call pipeline:
+    //   Call 1 (generateRealWorldQuestion) — question + resolution metadata
+    //   Call 2 (convertToPredicate)        — structured resolution predicate
+    //   Call 3 (generateRealWorldContext)  — user-facing "why this exists" snippet
+    //   Call 4 (scoreRealWorldQuestion)    — quality gate: APPROVE / WEAK / REJECT
+    //
+    // Unlike prematch/live, REAL_WORLD:
+    //   - REQUIRES a match_id bound to a 48h target match (hard constraint)
+    //   - Uses resolution_deadline (not resolves_after from match) for voiding
+    //   - Is never pooled — always league-specific
+    //   - Requires confidence_level, entity_focus, rw_context, source_news_urls
+
+    // MAX_RW_RETRIES controls how many ranked news batches to try per league.
+    // Items returned from the news adapter are sorted by finalScore DESC (highest quality
+    // articles first). Splitting into up to 3 chunks gives each attempt a progressively
+    // lower-quality news slice — the first attempt gets the strongest signals.
+    const MAX_RW_RETRIES = 3;
+
+    for (const league of (leagues as LeagueWithConfig[])) {
+      // Football only (same MVP guard as other passes)
+      if (league.sport !== 'football') continue;
+
+      // Per-league APPROVE counter for WEAK fairness.
+      // WEAK questions (score 65–79) are only published when no APPROVE was generated
+      // for THIS league in this run. The counter is reset for every league so each
+      // league is evaluated independently — using the global runStats.generated would
+      // incorrectly penalise leagues that ran later in the same cycle.
+      let rwLeagueApproved = 0;
+
+      // ── REAL_WORLD quota check ────────────────────────────────────────
+      const ownerTierRW = ownerTierMap.get(league.owner_id ?? '') ?? 'starter';
+      const rwQ = await checkRealWorldQuota(sb, league.id, ownerTierRW);
+      if (!rwQ.allowed) {
+        continue;
+      }
+
+      // ── Fetch news context (REAL_WORLD lives and dies by news signal) ─
+      let sportsCtxRW: SportsContext;
+      try {
+        sportsCtxRW = await fetchSportsContext(league, API_SPORTS_KEY, sb);
+      } catch {
+        continue;
+      }
+
+      // ── Fetch top players for PLAYER BOOST query ──────────────────────
+      // Reads from team_players table (auto-populated by live-stats-poller).
+      // Provides up to 15 player names from both upcoming match teams,
+      // sorted by relevance_score DESC. Players not seen in >90 days excluded.
+      // Enables a third RSS query targeting specific player names — surfaces
+      // injury/availability/form news that broad queries often miss.
+      // rwTopPlayers: names only — used for the PLAYER BOOST RSS news query.
+      // rwKnownPlayersForCall1: { id, name } objects — passed to Call 1 so the model
+      //   can embed player_id in the predicate_hint for fit (non-injured) players.
+      //   Previously, known_players came only from sportsCtxRW.keyPlayers (injury/fitness
+      //   list, ~5–15 players). A news story about a fully fit squad player (TYPE 2/3)
+      //   produced no player_id in the hint → Call 2 couldn't build a valid player_stat
+      //   predicate → validator rejected with schema error. Now we include all players
+      //   from team_players (relevance-ranked from live match data).
+      const rwTopPlayers: string[] = [];
+      const rwKnownPlayersForCall1: Array<{ id: string; name: string }> = [];
+      const rwUpcomingMatch = sportsCtxRW.upcomingMatches[0] ?? null;
+      if (rwUpcomingMatch && league.sport === 'football') {
+        const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString();
+        const teamIds = [rwUpcomingMatch.homeTeam.id, rwUpcomingMatch.awayTeam.id].filter(Boolean);
+        for (const teamId of teamIds) {
+          const { data: tps } = await sb
+            .from('team_players')
+            .select('external_player_id, players(name)')
+            .eq('sport', 'football')
+            .eq('external_team_id', String(teamId))
+            .gte('last_seen_at', ninetyDaysAgo)
+            .order('relevance_score', { ascending: false })
+            .limit(8);
+          if (tps) {
+            for (const tp of tps) {
+              const playerName = (tp as any).players?.name;
+              const playerId   = String((tp as any).external_player_id ?? '');
+              if (playerName) {
+                rwTopPlayers.push(playerName);
+                if (playerId) rwKnownPlayersForCall1.push({ id: playerId, name: playerName });
+              }
+            }
+          }
+        }
+        if (rwTopPlayers.length > 0) {
+          console.log(`[rw-gen] PLAYER BOOST: ${rwTopPlayers.length} players for league ${league.id}: ${rwTopPlayers.slice(0, 5).join(', ')}...`);
+        }
+      }
+      // Merge team_players entries with the existing injury-list keyPlayers.
+      // keyPlayers are already { id, name } shaped; dedup by id.
+      const rwKnownPlayersMap = new Map<string, { id: string; name: string }>();
+      for (const p of rwKnownPlayersForCall1) rwKnownPlayersMap.set(p.id, p);
+      for (const p of (sportsCtxRW.keyPlayers ?? [])) {
+        const pid = String((p as any).id ?? (p as any).playerId ?? '');
+        const pname = (p as any).name ?? (p as any).playerName ?? '';
+        if (pid && pname) rwKnownPlayersMap.set(pid, { id: pid, name: pname });
+      }
+      const mergedKnownPlayers = Array.from(rwKnownPlayersMap.values());
+
+      const { items: rwNewsItems, unavailable: rwNewsUnavailable } = await fetchNewsContext(
+        league, sportsCtxRW, GNEWS_API_KEY, rwTopPlayers,
+      );
+
+      // Skip if news is unavailable or there are no articles — REAL_WORLD
+      // must be grounded in actual news signal, not invented from thin air.
+      if (rwNewsUnavailable || rwNewsItems.length === 0) {
+        console.log(`[rw-gen] league ${league.id} — skipping REAL_WORLD (skipReason: no_news_signal, items=${rwNewsItems.length}, unavailable=${rwNewsUnavailable})`);
+        continue;
+      }
+
+      // ── Select target matches (48h window) ───────────────────────────
+      // REAL_WORLD questions must be hard-bound to a specific upcoming match.
+      // Only matches kicking off within the next 48 hours are eligible targets.
+      // If the news refers to Team X or Player Y, Call 1 must pick the match
+      // whose teams include that entity — the 48h filter prevents binding to
+      // distant fixtures that would produce a misleadingly long answer window.
+      const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
+      const targetMatches = sportsCtxRW.upcomingMatches.filter((m) => {
+        const msUntil = new Date(m.kickoff).getTime() - Date.now();
+        return msUntil > 0 && msUntil <= FORTY_EIGHT_HOURS_MS;
+      });
+
+      if (targetMatches.length === 0) {
+        console.log(
+          `[rw-gen] league ${league.id} — no upcoming match within 48h — skipping REAL_WORLD ` +
+          `(next match: ${sportsCtxRW.upcomingMatches[0]?.kickoff ?? 'none'})`,
+        );
+        continue;
+      }
+
+      // Build match strings from the 48h target set only.
+      // Each string includes match_id so the model embeds it verbatim in predicate_hint,
+      // preventing ID fabrication that passes schema validation but resolves against
+      // the wrong fixture.
+      const upcomingMatchStrings = targetMatches.map((m) =>
+        `${m.homeTeam.name} vs ${m.awayTeam.name} (kickoff: ${m.kickoff}, match_id: ${m.id})`
+      );
+
+      // leagueScope string: "full_league" or "team_specific:TeamName"
+      // Built once per league — constant across all retry attempts.
+      const leagueScopeStr = league.scope === 'team_specific' && league.scoped_team_name
+        ? `team_specific:${league.scoped_team_name}`
+        : 'full_league';
+
+      // ── Split news into ranked attempt groups ─────────────────────────
+      // News items are already sorted by finalScore DESC from the adapter.
+      // Splitting into up to MAX_RW_RETRIES chunks gives each attempt a
+      // progressively lower-quality news slice — attempt 1 gets the strongest
+      // signals, attempt 2 gets the next batch, etc.
+      // chunkSize: divide articles evenly across attempts, at least 1 per group.
+      // Empty groups (when item count < MAX_RW_RETRIES) are filtered out.
+      const rwChunkSize  = Math.max(1, Math.ceil(rwNewsItems.length / MAX_RW_RETRIES));
+      const rwNewsGroups: NewsItem[][] = Array.from({ length: MAX_RW_RETRIES }, (_, i) => {
+        const start = i * rwChunkSize;
+        return rwNewsItems.slice(start, start + rwChunkSize);
+      }).filter((g) => g.length > 0);
+
+      // ── Article enrichment: deep-read top candidates with scraper ──────
+      // Runs once per league (not per retry attempt) so the same URL is never
+      // scraped more than once per run.  The enrichment map is keyed by URL;
+      // inside the retry loop each attemptItems array is converted to enriched
+      // versions before being sent to Call 1.
+      // Falls back silently to RSS summary when the scraper is unavailable.
+      const enrichedNewsItems: EnrichedNewsItem[] = await enrichArticlesWithScraper(rwNewsItems, league.id);
+      // Re-chunk from the enriched list (same order, same sizes).
+      const rwEnrichedGroups: EnrichedNewsItem[][] = Array.from({ length: MAX_RW_RETRIES }, (_, i) => {
+        const start = i * rwChunkSize;
+        return enrichedNewsItems.slice(start, start + rwChunkSize);
+      }).filter((g) => g.length > 0);
+
+      // weakCandidate: holds the best WEAK result seen so far across all attempts.
+      // Published after the retry loop ONLY if no APPROVE was found and
+      // rwLeagueApproved === 0 (same condition that gated WEAK publishing before).
+      // Shape mirrors the fields needed for buildRwQuestion().
+      let weakCandidate: {
+        rawRW: any; rwPredicate: any; rwPredType: string;
+        upcomingMatch: SportMatch; normalisedEntityFocus: string; rwPlayerIds: string[];
+        rwContextText: string; sourceUrls: Array<Record<string, string>>;
+        rwScore: number; rwQuality: any;
+        answerClosesAt: string; resolvesAfter: string; nowRW: Date;
+        attemptNum: number;
+      } | null = null;
+
+      // ── Retry loop: up to MAX_RW_RETRIES ranked news batches ─────────
+      for (let attemptNum = 0; attemptNum < rwEnrichedGroups.length; attemptNum++) {
+        const attemptItems = rwEnrichedGroups[attemptNum];
+        const attemptLabel = `league ${league.id} attempt ${attemptNum + 1}/${rwEnrichedGroups.length}`;
+
+        // ── Call 1: Generate REAL_WORLD question from this news batch ──
+        let rawRW;
+        try {
+          rawRW = await generateRealWorldQuestion(
+            attemptItems,
+            leagueScopeStr,
+            upcomingMatchStrings.length > 0 ? upcomingMatchStrings : null,
+            mergedKnownPlayers,
+            new Date().toISOString(),
+            OPENAI_API_KEY,
+          );
+        } catch (err) {
+          console.warn(`[rw-gen] ${attemptLabel} — Call 1 failed:`, err);
+          continue;
+        }
+
+        // null return = OpenAI deliberately skipped (news signal too weak)
+        if (!rawRW) {
+          console.log(`[rw-gen] real_world_attempt_skip — ${attemptLabel} (model skipped: weak news signal)`);
+          continue;
+        }
+
+        // ── Call 2: Convert predicate_hint → structured predicate ──────
+        let rwPredicate;
+        try {
+          const predicatePrompt = buildPredicatePrompt({
+            questionText:       rawRW.question_text,
+            type:               'binary',
+            options:            [{ id: 'yes', text: 'Yes' }, { id: 'no', text: 'No' }],
+            resolutionRuleText: rawRW.predicate_hint,
+            matches:            sportsCtxRW.upcomingMatches,
+            players:            sportsCtxRW.keyPlayers,
+            sport:              league.sport,
+          });
+          rwPredicate = await convertToPredicate(predicatePrompt, OPENAI_API_KEY);
+        } catch (err) {
+          console.warn(`[rw-gen] ${attemptLabel} — Call 2 failed:`, err);
+          continue;
+        }
+
+        const rwPredType = (rwPredicate as any).resolution_type;
+
+        // ── Hard match binding: predicate must reference a 48h target match ─
+        // Call 1 was given ONLY the 48h target matches and instructed to embed the
+        // match_id of the one relevant to the news signal. Call 2 extracts that ID
+        // into the predicate. Validate that it maps to one of our target matches.
+        // No fallback to [0] — a missing or mismatched match_id means the question
+        // is not news-signal-bound to a specific fixture and must be rejected.
+        const rwPredicateMatchId = String((rwPredicate as any).match_id ?? '');
+        const upcomingMatch = rwPredicateMatchId
+          ? (targetMatches.find((m) => String(m.id) === rwPredicateMatchId) ?? null)
+          : null;
+
+        if (!upcomingMatch) {
+          const bindReason = !rwPredicateMatchId
+            ? 'predicate has no match_id'
+            : `predicate match_id "${rwPredicateMatchId}" not in 48h target matches [${targetMatches.map((m) => m.id).join(', ')}]`;
+          console.log(`[rw-gen] real_world_attempt_binding_failed — ${attemptLabel}: ${bindReason}`);
+          continue;
+        }
+
+        // ── match_lineup near-kickoff guard ────────────────────────────
+        // match_lineup deadline = kickoff. checkTemporal enforces deadline >= now + 30 min.
+        // Skip if < 60 min to kickoff (lineups are released ~1h before kickoff).
+        if (rwPredType === 'match_lineup') {
+          // Override resolution_deadline to kickoff (not kickoff - 30min).
+          rawRW.resolution_deadline = upcomingMatch.kickoff;
+          const minsUntilKickoff = (new Date(upcomingMatch.kickoff).getTime() - Date.now()) / 60_000;
+          if (minsUntilKickoff < 60) {
+            console.log(
+              `[rw-gen] real_world_attempt_skip — ${attemptLabel}: match_lineup kickoff too close ` +
+              `(${minsUntilKickoff.toFixed(1)} min, need 60+)`,
+            );
+            continue;
+          }
+        }
+
+        // ── match_lineup `check` field normalisation ───────────────────
+        if (rwPredType === 'match_lineup' && !(rwPredicate as any).check) {
+          (rwPredicate as any).check = 'squad';
+        }
+
+        // ── manual_review `resolution_deadline` backfill ──────────────
+        if (rwPredType === 'manual_review' && !(rwPredicate as any).resolution_deadline) {
+          (rwPredicate as any).resolution_deadline = rawRW.resolution_deadline;
+        }
+
+        // ── Cross-validate entity_focus against predicate type ─────────
+        const rwEntityFocus = rawRW.entity_focus;
+        const PLAYER_PRED_TYPES = ['match_lineup', 'player_stat'];
+        const TEAM_PRED_TYPES   = ['match_stat', 'btts', 'match_outcome', 'match_stat_window'];
+        let normalisedEntityFocus = rwEntityFocus;
+        if (PLAYER_PRED_TYPES.includes(rwPredType) && !['player'].includes(rwEntityFocus)) {
+          console.warn(`[rw-gen] entity_focus "${rwEntityFocus}" mismatch for ${rwPredType} — normalising to "player"`);
+          normalisedEntityFocus = 'player';
+        } else if (TEAM_PRED_TYPES.includes(rwPredType) && !['team', 'club'].includes(rwEntityFocus)) {
+          console.warn(`[rw-gen] entity_focus "${rwEntityFocus}" mismatch for ${rwPredType} — normalising to "team"`);
+          normalisedEntityFocus = 'team';
+        }
+
+        // ── Call 3: Generate context + curated sources ─────────────────
+        // Pre-seed from Call 1 narrative so Call 4 always has meaningful context
+        // even when Call 3 fails (network error). Call 3 result overwrites when present.
+        let rwContextText = rawRW.news_narrative_summary ?? '';
+        let sourceUrls: Array<Record<string, string>> = [];
+
+        const rwTeams = [
+          upcomingMatch.homeTeam.name, upcomingMatch.awayTeam.name,
+          ...(league.scoped_team_name ? [league.scoped_team_name] : []),
+          ...(sportsCtxRW.standings?.slice(0, 2).map((s) => s.team.name) ?? []),
+        ].filter(Boolean).join(', ') || 'Unknown';
+
+        const rwPlayers = sportsCtxRW.keyPlayers
+          ?.slice(0, 5)
+          .map((p: any) => p.name ?? p.playerName ?? '')
+          .filter(Boolean)
+          .join(', ') ?? '';
+
+        try {
+          const rwCtxResult = await generateRealWorldContext(
+            rawRW.question_text,
+            attemptItems,
+            rawRW.confidence_level,
+            rwTeams,
+            rwPlayers,
+            OPENAI_API_KEY,
+          );
+          rwContextText = rwCtxResult.context || rwContextText;
+          if (rwCtxResult.sources.length > 0) {
+            sourceUrls = rwCtxResult.sources as Array<Record<string, string>>;
+          }
+        } catch (err) {
+          console.warn(`[rw-gen] ${attemptLabel} — Call 3 failed:`, err);
+        }
+
+        // Fallback: build enriched source objects from NewsItem data.
+        if (sourceUrls.length === 0) {
+          sourceUrls = attemptItems
+            .slice(0, 3)
+            .map((n) => ({
+              url:          n.url ?? '',
+              title:        n.headline,
+              source_name:  n.sourceName,
+              published_at: n.publishedAt,
+            }))
+            .filter((s) => s.url) as Array<Record<string, string>>;
+        }
+
+        // ── Call 4: Quality scoring gate ───────────────────────────────
+        const rwQuality = await scoreRealWorldQuestion(
+          rawRW.question_text,
+          rwContextText || rawRW.news_narrative_summary,
+          sourceUrls as Array<{ source_name?: string; title?: string; published_at?: string }>,
+          rawRW.confidence_level,
+          // btts → pass as 'match_stat' so the quality scorer recognises it
+          rwPredType === 'btts' ? 'match_stat' : (rwPredicate as any).resolution_type,
+          rawRW.resolution_deadline,
+          normalisedEntityFocus,
+          OPENAI_API_KEY,
+        );
+
+        const rwScore    = rwQuality?.final_score ?? 65;
+        const rwDecision = rwQuality?.decision    ?? 'WEAK';
+
+        console.log(
+          `[rw-quality] ${attemptLabel} score=${rwScore} decision=${rwDecision}` +
+          (rwQuality ? ` reason="${rwQuality.reason}"` : ' (call failed — defaulting to WEAK)'),
+        );
+
+        if (rwDecision === 'REJECT') {
+          console.log(`[rw-gen] real_world_attempt_reject — ${attemptLabel}: score=${rwScore}`);
+          continue;
+        }
+
+        // ── Build timing ───────────────────────────────────────────────
+        const nowRW      = new Date();
+        const deadlineMs = new Date(rawRW.resolution_deadline).getTime();
+        let answerClosesAt: string;
+        let resolvesAfter: string;
+
+        if (rwPredType === 'match_lineup') {
+          answerClosesAt = new Date(Math.max(deadlineMs, nowRW.getTime())).toISOString();
+          const kickoffForLineup = new Date(upcomingMatch.kickoff).getTime();
+          resolvesAfter = new Date(kickoffForLineup).toISOString();
+        } else if (rwPredType === 'player_stat' || rwPredType === 'match_stat' || rwPredType === 'btts') {
+          const kickoffMs = new Date(upcomingMatch.kickoff).getTime();
+          answerClosesAt = new Date(Math.max(kickoffMs, nowRW.getTime())).toISOString();
+          resolvesAfter  = new Date(deadlineMs + 30 * 60 * 1000).toISOString();
+        } else {
+          const kickoffMs = new Date(upcomingMatch.kickoff).getTime();
+          answerClosesAt = new Date(Math.max(kickoffMs, nowRW.getTime())).toISOString();
+          resolvesAfter  = new Date(deadlineMs + 91 * 60 * 1000).toISOString();
+        }
+
+        // ── Validate via the standard 4-stage validator ────────────────
+        const rwPlayerIds: string[] = [];
+        if ((rwPredicate as any).player_id) rwPlayerIds.push(String((rwPredicate as any).player_id));
+
+        const rawForValidation = {
+          question_text:              rawRW.question_text,
+          type:                       'binary',
+          options:                    [{ id: 'yes', text: 'Yes' }, { id: 'no', text: 'No' }],
+          match_id:                   upcomingMatch.id,
+          team_ids:                   [upcomingMatch.homeTeam.id, upcomingMatch.awayTeam.id],
+          player_ids:                 rwPlayerIds,
+          event_type:                 'time_window',
+          opens_at:                   nowRW.toISOString(),
+          deadline:                   answerClosesAt,
+          resolves_after:             resolvesAfter,
+          resolution_rule_text:       rawRW.resolution_condition,
+          narrative_context:          rawRW.news_narrative_summary,
+          visible_from:               nowRW.toISOString(),
+          answer_closes_at:           answerClosesAt,
+          match_minute_at_generation: null,
+          base_value:                 10,
+          difficulty_multiplier:      1.0,
+          reusable_scope:             'league_specific',
+        };
+
+        const rwRejection = validateQuestion(rawForValidation as any, rwPredicate, sportsCtxRW, league, attemptNum + 1, 'REAL_WORLD');
+        if (rwRejection) {
+          console.log(`[rw-gen] real_world_attempt_reject — ${attemptLabel}: validation failed: ${rwRejection.error}`);
+          continue;
+        }
+
+        // ── APPROVE → publish immediately and break the retry loop ─────
+        if (rwDecision === 'APPROVE') {
+          console.log(`[rw-gen] real_world_attempt_approve_published — ${attemptLabel}: score=${rwScore}, match=${upcomingMatch.id}`);
+          const { error: rwInsertErr } = await sb.from('questions').insert(
+            buildRwQuestion(league, runId, rawRW, rwPredicate, upcomingMatch,
+              normalisedEntityFocus, rwPlayerIds, rwContextText, sourceUrls,
+              answerClosesAt, resolvesAfter, nowRW, rwScore, rwQuality),
+          );
+          if (!rwInsertErr) {
+            rwLeagueApproved++;
+            runStats.generated++;
+            console.log(
+              `[rw-gen] REAL_WORLD generated for league ${league.id} ` +
+              `(score=${rwScore}, decision=APPROVE, match=${upcomingMatch.id})`,
+            );
+          } else {
+            console.error(`[rw-gen] insert failed for league ${league.id}:`, rwInsertErr.message);
+          }
+          break; // stop retrying — APPROVE found
+        }
+
+        // ── WEAK → store as best candidate, continue searching for APPROVE
+        if (!weakCandidate || rwScore > weakCandidate.rwScore) {
+          weakCandidate = {
+            rawRW, rwPredicate, rwPredType, upcomingMatch,
+            normalisedEntityFocus, rwPlayerIds, rwContextText, sourceUrls,
+            rwScore, rwQuality, answerClosesAt, resolvesAfter, nowRW, attemptNum,
+          };
+          console.log(`[rw-gen] real_world_attempt_weak_stored — ${attemptLabel}: score=${rwScore}`);
+        }
+      } // end retry loop
+
+      // ── After all attempts: publish best WEAK if no APPROVE was found ─
+      if (rwLeagueApproved === 0 && weakCandidate !== null) {
+        const {
+          rawRW, rwPredicate, upcomingMatch, normalisedEntityFocus, rwPlayerIds,
+          rwContextText, sourceUrls, rwScore, rwQuality, answerClosesAt, resolvesAfter, nowRW, attemptNum,
+        } = weakCandidate;
+        console.log(
+          `[rw-gen] real_world_best_weak_published — league ${league.id}: ` +
+          `score=${rwScore}, match=${upcomingMatch.id}, attempt=${attemptNum + 1}`,
+        );
+        const { error: rwInsertErr } = await sb.from('questions').insert(
+          buildRwQuestion(league, runId, rawRW, rwPredicate, upcomingMatch,
+            normalisedEntityFocus, rwPlayerIds, rwContextText, sourceUrls,
+            answerClosesAt, resolvesAfter, nowRW, rwScore, rwQuality),
+        );
+        if (!rwInsertErr) {
+          runStats.generated++;
+          console.log(
+            `[rw-gen] REAL_WORLD generated for league ${league.id} ` +
+            `(score=${rwScore}, decision=WEAK, match=${upcomingMatch.id})`,
+          );
+        } else {
+          console.error(`[rw-gen] insert failed for league ${league.id}:`, rwInsertErr.message);
+        }
+      } else if (rwLeagueApproved === 0) {
+        console.log(
+          `[rw-gen] real_world_no_valid_candidate_after_retries — league ${league.id}: ` +
+          `all ${rwNewsGroups.length} attempt(s) exhausted`,
+        );
+      }
+    }
+
     await finaliseRun(sb, runId, runStats, 'completed');
     return new Response(
       JSON.stringify({ ok: true, run_id: runId, ...runStats }),
@@ -676,6 +1509,165 @@ Deno.serve(async (req: Request) => {
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────
+
+// enrichArticlesWithScraper: deep-reads the top-ranked candidate articles using the
+// spontyx-scraper-service, attaching full article text to each item before Call 1.
+//
+// Rules:
+// - Max 5 unique URLs per league per run (keeps cost and latency bounded)
+// - 10-second timeout per article (scraper is fast; stale pages get dropped)
+// - extracted_context = first 800 chars of extracted_text (sent to OpenAI)
+// - Never throws — any failure falls back to the original NewsItem unchanged
+// - Does not store extracted text anywhere; ephemeral per-run enrichment only
+async function enrichArticlesWithScraper(
+  articles: NewsItem[],
+  leagueId: string,
+): Promise<EnrichedNewsItem[]> {
+  if (!SCRAPER_API_URL || !SCRAPER_API_KEY) {
+    // Scraper not configured — return articles unmodified (safe no-op)
+    return articles as EnrichedNewsItem[];
+  }
+
+  // Collect up to 5 unique URLs from the candidate list (articles are already
+  // sorted best-first by the news adapter's relevance scorer).
+  const seenUrls  = new Set<string>();
+  const toEnrich: NewsItem[] = [];
+  for (const a of articles) {
+    if (!a.url || seenUrls.has(a.url)) continue;
+    seenUrls.add(a.url);
+    toEnrich.push(a);
+    if (toEnrich.length >= 5) break;
+  }
+
+  // Build the enrichment map: url → EnrichedNewsItem
+  const enrichMap = new Map<string, Partial<EnrichedNewsItem>>();
+
+  await Promise.all(toEnrich.map(async (article) => {
+    console.log(`[rw-scraper] real_world_article_scrape_attempt — league ${leagueId} url=${article.url} source=${article.sourceName}`);
+    try {
+      const controller = new AbortController();
+      const timeoutId  = setTimeout(() => controller.abort(), 10_000);
+
+      const res = await fetch(`${SCRAPER_API_URL}/scrape`, {
+        method:  'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-scraper-key': SCRAPER_API_KEY,
+        },
+        body:    JSON.stringify({ url: article.url }),
+        signal:  controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      if (!res.ok) {
+        const errText = await res.text().catch(() => res.statusText);
+        console.warn(`[rw-scraper] real_world_article_scrape_failed — league ${leagueId} url=${article.url} status=${res.status} error=${errText.slice(0, 120)}`);
+        enrichMap.set(article.url, { extraction_status: 'failed', scraper_error: `HTTP ${res.status}` });
+        return;
+      }
+
+      const json: {
+        success: boolean;
+        extraction_status: string;
+        extracted_text?: string;
+        error?: string | null;
+      } = await res.json();
+
+      if (!json.success || !json.extracted_text) {
+        const reason = json.error ?? `extraction_status=${json.extraction_status}`;
+        console.log(`[rw-scraper] real_world_article_scrape_fallback_to_rss — league ${leagueId} url=${article.url} reason=${reason}`);
+        enrichMap.set(article.url, {
+          extraction_status: (json.extraction_status as EnrichedNewsItem['extraction_status']) ?? 'failed',
+          scraper_error: json.error ?? null,
+        });
+        return;
+      }
+
+      const extracted_text    = json.extracted_text.slice(0, 3_000);
+      const extracted_context = extracted_text.slice(0, 800);
+      console.log(`[rw-scraper] real_world_article_scrape_success — league ${leagueId} url=${article.url} chars=${extracted_text.length}`);
+      enrichMap.set(article.url, {
+        extracted_text,
+        extracted_context,
+        extraction_status: (json.extraction_status as EnrichedNewsItem['extraction_status']) ?? 'success',
+        scraper_error: null,
+      });
+    } catch (err: any) {
+      const isTimeout = err?.name === 'AbortError';
+      const errMsg    = isTimeout ? 'timeout after 10s' : String(err?.message ?? err);
+      console.warn(`[rw-scraper] real_world_article_scrape_failed — league ${leagueId} url=${article.url} error=${errMsg}`);
+      enrichMap.set(article.url, { extraction_status: 'failed', scraper_error: errMsg });
+    }
+  }));
+
+  // Merge enrichment fields back onto every article in the original list order.
+  return articles.map((a): EnrichedNewsItem => ({
+    ...a,
+    ...(a.url ? enrichMap.get(a.url) ?? {} : {}),
+  }));
+}
+
+// buildRwQuestion: assembles the questions table insert object for a REAL_WORLD question.
+// Called from both the APPROVE publish path and the WEAK fallback publish path to avoid
+// duplicating the ~40-field insert object.
+function buildRwQuestion(
+  league: LeagueWithConfig,
+  runId: string,
+  rawRW: any,
+  rwPredicate: any,
+  upcomingMatch: SportMatch,
+  normalisedEntityFocus: string,
+  rwPlayerIds: string[],
+  rwContextText: string,
+  sourceUrls: Array<Record<string, string>>,
+  answerClosesAt: string,
+  resolvesAfter: string,
+  nowRW: Date,
+  rwScore: number,
+  rwQuality: any,
+) {
+  return {
+    league_id:                  league.id,
+    source:                     'ai_generated',
+    generation_run_id:          runId,
+    question_text:              rawRW.question_text,
+    type:                       'binary',
+    options:                    [{ id: 'yes', text: 'Yes' }, { id: 'no', text: 'No' }],
+    sport:                      league.sport,
+    match_id:                   upcomingMatch.id,
+    team_ids:                   [upcomingMatch.homeTeam.id, upcomingMatch.awayTeam.id],
+    player_ids:                 rwPlayerIds,
+    event_type:                 'time_window',
+    narrative_context:          rawRW.news_narrative_summary,
+    opens_at:                   nowRW.toISOString(),
+    deadline:                   answerClosesAt,
+    resolves_after:             resolvesAfter,
+    resolution_rule_text:       rawRW.resolution_condition,
+    resolution_predicate:       rwPredicate,
+    resolution_status:          'pending',
+    ai_model:                   'gpt-4o-mini',
+    ai_prompt_version:          PROMPT_VERSION,
+    question_type:              'REAL_WORLD',
+    source_badge:               'REAL WORLD',
+    base_value:                 10,
+    difficulty_multiplier:      1.0,
+    reuse_scope:                'league_specific',
+    visible_from:               nowRW.toISOString(),
+    answer_closes_at:           answerClosesAt,
+    match_minute_at_generation: null,
+    generation_trigger:         'time_driven',
+    // ── REAL_WORLD-specific fields (migration 024) ──────────────────
+    resolution_condition:       rawRW.resolution_condition,
+    resolution_deadline:        rawRW.resolution_deadline,
+    source_news_urls:           sourceUrls,
+    entity_focus:               normalisedEntityFocus,
+    confidence_level:           rawRW.confidence_level,
+    rw_context:                 rwContextText || null,
+    // ── Quality gate metadata (Call 4, migration 027) ───────────────
+    rw_quality_score:           rwScore,
+    rw_quality_breakdown:       rwQuality?.breakdown ?? null,
+  };
+}
 
 // Compute the pool generation target for a set of match IDs being claimed this cycle.
 //

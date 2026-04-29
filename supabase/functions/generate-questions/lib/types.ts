@@ -80,13 +80,73 @@ export interface NewsItem {
   sourceName: string;
   publishedAt: string;   // ISO timestamp
   relevanceTag: string;  // e.g. "team:liverpool", "player:salah", "competition:pl"
-  url: string;           // for logging only — never sent to OpenAI
+  url: string;           // included in Call 3 source selection; never sent to Call 1/2
+}
+
+/** NewsItem extended with optional full-text enrichment from the scraper service.
+ *  All enrichment fields are optional — callers must handle the un-enriched case. */
+export interface EnrichedNewsItem extends NewsItem {
+  /** Full article body text, capped at 3,000 chars by the scraper. */
+  extracted_text?:    string;
+  /** First ~800 chars of extracted_text — sent to OpenAI as the primary signal. */
+  extracted_context?: string;
+  /** 'success' | 'partial' | 'failed' | 'skipped' — scraper's own status. */
+  extraction_status?: 'success' | 'partial' | 'failed' | 'skipped';
+  /** Non-null when the scraper encountered an error fetching/parsing the page. */
+  scraper_error?:     string | null;
+}
+
+// ── REAL_WORLD Call 3 return types ────────────────────────────────────
+
+/** One curated news source returned by Call 3. Stored in source_news_urls JSONB. */
+export interface RwContextSource {
+  source_name:  string;
+  published_at: string;  // ISO timestamp (original from NewsItem)
+  title:        string;  // shortened headline, factual
+  url:          string;
+}
+
+/** Structured output of generateRealWorldContext() (Call 3). */
+export interface RwContextResult {
+  context:                string;   // 1–2 sentence "why this question exists" shown to users
+  confidence_explanation: string;   // short phrase e.g. "Based on multiple independent reports"
+  sources:                RwContextSource[];  // max 3 curated sources; stored as source_news_urls
 }
 
 // ── League classification ─────────────────────────────────────────────
 
 export type MatchClassification = 'IMMINENT' | 'UPCOMING' | 'DISTANT' | 'NONE';
-export type GenerationMode = 'match_preview' | 'narrative_preview' | 'narrative_only';
+export type GenerationMode = 'match_preview' | 'narrative_preview' | 'narrative_only' | 'live_gap' | 'live_event';
+
+// ── Live match generation context ─────────────────────────────────────
+// Built at generation time from live_match_stats + active questions.
+// Used by the live generation branch in index.ts.
+export interface LiveMatchContext {
+  matchId: string;
+  kickoff: string;                    // ISO timestamp from api_football_fixtures.kickoff_at
+  homeTeamId: string;
+  homeTeamName: string;
+  awayTeamId: string;
+  awayTeamName: string;
+  matchMinute: number;                // current match clock minute
+  matchPhase: 'early' | 'mid' | 'late';  // derived from matchMinute
+  homeScore: number;
+  awayScore: number;
+  isCloseGame: boolean;               // score diff ≤ 1
+  isBlowout: boolean;                 // score diff ≥ 3
+  recentEvents: Array<{               // events since last generation (from live_match_stats.events)
+    time: number;
+    type: string;
+    detail: string | null;
+    team_id: number;
+  }>;
+  lastEventType: 'goal' | 'penalty' | 'red_card' | 'yellow_card' | 'none';  // most significant event since last generation
+  lastEventMinute: number | null;     // match minute of the last significant event
+  activeWindows: Array<{ start: number; end: number }>;  // windows from active CORE_MATCH_LIVE questions
+  activeQuestionCount: number;        // current count of active (pending + answer window open) LIVE questions
+  generationTrigger: 'time_driven' | 'event_driven';
+  lastGenerationMinute: number | null;  // match_minute_at_generation from the most recent LIVE question
+}
 
 export interface LeagueWithConfig {
   id: string;
@@ -156,6 +216,11 @@ export interface RawGeneratedQuestion {
   reasoning_short: string;       // internal reasoning (stored as narrative_context)
   predicate_hint: string;        // resolution description used as input to Call 2
 
+  // Live anchored-window fields (optional — only for match_stat_window questions)
+  window_start_minute?: number | null;  // match minute where prediction window begins (live only)
+  window_end_minute?: number | null;    // match minute where prediction window ends (live only)
+  anchoring_type?: 'fixed_window' | 'deadline' | 'match_phase' | null;  // live window type
+
   // Computed by system after generation (not returned by OpenAI)
   event_type: string;
   team_ids: string[];
@@ -172,7 +237,11 @@ export type ResolutionPredicate =
   | MatchStatPredicate
   | PlayerStatPredicate
   | PlayerStatusPredicate
-  | MultipleChoiceMapPredicate;
+  | MultipleChoiceMapPredicate
+  | MatchStatWindowPredicate
+  | BttsPredicate
+  | MatchLineupPredicate
+  | ManualReviewPredicate;
 
 export interface BinaryCondition {
   field: string;
@@ -226,6 +295,78 @@ export interface MultipleChoiceMapPredicate {
   options: MCOption[];
 }
 
+// ── Live anchored match-minute window predicate ───────────────────────
+// Resolves by counting goal or card EVENTS within [window_start_minute, window_end_minute].
+// Only goal and card events are available with per-minute granularity from the
+// API-Sports /fixtures/events endpoint (stored in live_match_stats.events).
+// Corners are NOT supported — they are cumulative totals only.
+//
+// Three anchoring types define how the window is framed to the user:
+//   fixed_window — "between the 60th and 65th minute" (3–7 min range)
+//   deadline     — "before the 75th minute" (wider window up to 45 min)
+//   match_phase  — "before half-time" / "before full-time" (window to 45 or 90)
+export interface MatchStatWindowPredicate {
+  resolution_type: 'match_stat_window';
+  match_id: string;
+  sport: string;
+  field: 'goals' | 'cards';            // must match event types in live_match_stats.events
+  operator: 'eq' | 'gt' | 'gte' | 'lt' | 'lte';
+  value: number;
+  window_start_minute: number;         // inclusive — prediction window starts at this match minute
+  window_end_minute: number;           // inclusive — prediction window ends at this match minute
+  anchoring_type?: 'fixed_window' | 'deadline' | 'match_phase';  // default: fixed_window
+}
+
+// ── BTTS predicate ────────────────────────────────────────────────────
+// Resolves true when both home_score >= 1 AND away_score >= 1 at full time.
+// Simpler than a compound binary_condition — evaluated directly from match scores.
+export interface BttsPredicate {
+  resolution_type: 'btts';
+  match_id: string;
+  sport: string;
+}
+
+// ── Match lineup predicate (REAL_WORLD) ───────────────────────────────
+// Resolves from live_match_stats.lineups — checks if a player appears in
+// the starting XI or squad for a specific match.
+export interface MatchLineupPredicate {
+  resolution_type: 'match_lineup';
+  match_id: string;
+  sport: string;
+  player_id: string;
+  player_name: string;   // for display/logging
+  check: 'starting_xi' | 'squad';  // starting_xi = in the 11; squad = in the 23
+}
+
+// ── Manual review predicate (REAL_WORLD) ─────────────────────────────
+// Used for coach status, transfers, disciplinary bans — anything that
+// cannot be resolved from match data automatically. A human admin must
+// mark the outcome in the Supabase dashboard before resolution_deadline.
+// If not resolved by deadline, the question is auto-voided.
+export interface ManualReviewPredicate {
+  resolution_type: 'manual_review';
+  category: 'coach_status' | 'transfer' | 'contract' | 'disciplinary';
+  description: string;         // human-readable: what to check and mark
+  resolution_deadline: string; // ISO timestamp — auto-void after this
+  source_urls: string[];       // reference articles for the admin
+}
+
+// ── Raw output from REAL_WORLD Call 1 ────────────────────────────────
+// OpenAI returns this shape from generateRealWorldQuestion().
+// 'SKIP' is returned as a string when the news signal is too weak.
+export interface RawRealWorldQuestion {
+  question_text: string;
+  news_narrative_summary: string;    // 1-sentence summary of the driving news story
+  confidence_level: 'low' | 'medium' | 'high';
+  resolution_type_suggestion: 'match_stat' | 'player_stat' | 'match_lineup' | 'manual_review';
+  resolution_condition: string;      // human-readable: "Correct if player starts as per official lineup"
+  resolution_deadline: string;       // ISO timestamp — when the question must resolve by
+  source_news_ids: string[];         // URLs of source articles
+  entity_focus: 'player' | 'coach' | 'team' | 'club';
+  predicate_hint: string;            // fed into Call 2 (convertToPredicate)
+  skip_reason?: string;              // set when OpenAI decides to return SKIP
+}
+
 // ── Validated question ready for DB insert ────────────────────────────
 
 export interface ValidatedQuestion {
@@ -259,15 +400,45 @@ export interface ValidatedQuestion {
   answer_closes_at?: string;
   match_minute_at_generation?: number | null;
   generation_trigger?: string;
+  // ── REAL_WORLD-specific fields (migration 024) ────────────────────────
+  resolution_condition?: string;    // human-readable resolution criteria
+  resolution_deadline?: string;     // ISO — auto-void deadline
+  source_news_urls?: Array<{ url: string; title?: string; source_name?: string; published_at?: string }>;  // curated source objects (Call 3 output)
+  entity_focus?: string;            // player | coach | team | club
+  confidence_level?: string;        // low | medium | high
+  rw_context?: string;              // Call 3 output — "why this question exists"
+}
+
+// ── REAL_WORLD quality scoring result (Call 4) ───────────────────────
+// Returned by scoreRealWorldQuestion() in openai-client.ts.
+// Drives the APPROVE / WEAK / REJECT gate in index.ts before DB insert.
+
+export interface RwQualityResult {
+  final_score: number;
+  decision: 'APPROVE' | 'WEAK' | 'REJECT';
+  breakdown: {
+    news_link_strength: number;   // 0–25: how tightly derived from the news
+    clarity:            number;   // 0–15: easy to understand
+    resolvability:      number;   // 0–25: can be resolved objectively
+    relevance:          number;   // 0–20: interesting to fans
+    uniqueness:         number;   // 0–15: feels like real insight, not generic
+    risk:               number;   // -30–0: penalty for genericness / obviousness / invalidity
+  };
+  reason: string;  // short explanation for logging
 }
 
 // ── Run tracking ──────────────────────────────────────────────────────
 
 export interface RejectionLogEntry {
   attempt: number;
-  stage: 'question_generation' | 'predicate_parse' | 'schema_validation' | 'entity_validation' | 'temporal_validation' | 'logic_validation' | 'availability_validation' | 'prematch_quality';
+  stage: 'question_generation' | 'predicate_parse' | 'schema_validation' | 'entity_validation' | 'temporal_validation' | 'logic_validation' | 'availability_validation' | 'prematch_quality' | 'live_timing_validation' | 'real_world_generation' | 'rw_quality_score';
   question_text?: string;
   error: string;
+  // ── Structured fields for prematch_quality stage (used by analytics views) ──
+  reason?: string;        // normalized reason key (too_obvious / duplicate_question / etc.)
+  score?: number;         // 0–100 quality score
+  fixture_id?: string | null;  // match_id of the fixture being evaluated
+  timestamp?: string;     // ISO timestamp of rejection
 }
 
 export interface LeagueRunResult {
