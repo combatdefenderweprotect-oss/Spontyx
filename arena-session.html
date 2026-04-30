@@ -668,7 +668,7 @@ async function loadQuestions() {
       'match_id', 'visible_from', 'answer_closes_at', 'opens_at', 'deadline', 'resolves_after',
       'resolution_status', 'resolution_outcome', 'resolution_predicate',
       'base_value', 'difficulty_multiplier', 'match_minute_at_generation',
-      'created_at'
+      'clutch_context', 'created_at'
     ].join(', ');
 
     var { data: qs } = await window.sb
@@ -864,7 +864,7 @@ function renderCard(q, isPrimary) {
     cls += my.is_correct ? ' resolved-correct' : ' resolved-wrong';
   }
   if (state === 'voided') cls += ' voided';
-  if ((q.match_minute_at_generation || 0) >= 70 && state === 'active') cls += ' clutch-state';
+  if (isDisplayClutch(q) && state === 'active') cls += ' clutch-state';
 
   // Lane badge
   var lane = detectLane(q);
@@ -877,7 +877,7 @@ function renderCard(q, isPrimary) {
     var badges = [];
     var bv = q.base_value || 0;
     if (bv >= 20 || ['goal','penalty','red_card'].indexOf(q.event_type) >= 0) badges.push('<span class="as-eng-badge hv">High Value</span>');
-    if ((q.match_minute_at_generation || 0) >= 70) badges.push('<span class="as-eng-badge clutch">Clutch</span>');
+    if (isDisplayClutch(q)) badges.push('<span class="as-eng-badge clutch">Clutch</span>');
     var closes = qClosesAt(q);
     if (closes && (closes - now) < 180000) badges.push('<span class="as-eng-badge fast">Fast</span>');
     if (currentMyStreak >= 4) badges.push('<span class="as-eng-badge hot-streak">HOT STREAK ×1.3</span>');
@@ -1518,6 +1518,33 @@ function showComebackNotif(myScore, oppScore) {
   el.textContent = cb.popupLabel;
   el.classList.add('show');
   setTimeout(function() { el.classList.remove('show'); }, 3500);
+}
+
+function isDisplayClutch(q) {
+  if ((q.question_type || '') !== 'CORE_MATCH_LIVE') return false;
+
+  var minute = q.match_minute_at_generation;
+  if (!minute) return false;
+
+  var scope = sessionData && sessionData.half_scope;
+  var inWindow = (scope === 'first_half') ? (minute >= 35) : (minute >= 80);
+  if (!inWindow) return false;
+
+  // 3A. Match score from clutch_context (preferred)
+  var ctx = q.clutch_context;
+  if (ctx && typeof ctx === 'string') { try { ctx = JSON.parse(ctx); } catch(e) { ctx = null; } }
+  if (ctx && typeof ctx.homeScore === 'number' && typeof ctx.awayScore === 'number') {
+    if (Math.abs(ctx.homeScore - ctx.awayScore) <= 1) return true;
+  }
+
+  // 3B. Arena score gap — only if BOTH players are present
+  var me  = players.find(function(p) { return p.user_id === currentUserId; });
+  var opp = players.find(function(p) { return p.user_id !== currentUserId; });
+  if (me && opp) {
+    return Math.abs((me.score || 0) - (opp.score || 0)) <= 20;
+  }
+
+  return false;
 }
 
 // ── Cleanup ───────────────────────────────────────────────────────────────
