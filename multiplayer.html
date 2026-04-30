@@ -385,6 +385,20 @@
       font-size: 0.65rem; font-weight: 800; color: var(--grey-dark); flex-shrink: 0;
     }
     .match-row-comp { font-size: 0.62rem; color: var(--grey); }
+    .match-signal {
+      display: inline-flex; align-items: center;
+      margin-top: 4px; font-size: 0.68rem; font-weight: 700;
+      padding: 2px 8px; border-radius: 20px;
+    }
+    .match-signal.ready    { background: rgba(168,225,12,0.12); color: var(--lime); border: 1px solid rgba(168,225,12,0.25); }
+    .match-signal.trending { background: rgba(78,205,196,0.10); color: var(--teal); border: 1px solid rgba(78,205,196,0.22); }
+    .match-signal.queue    { background: rgba(255,107,107,0.10); color: var(--coral); border: 1px solid rgba(255,107,107,0.22); }
+    .match-row-comp-badge {
+      font-size: 0.62rem; font-weight: 600; color: var(--grey);
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 6px; padding: 3px 8px; white-space: nowrap;
+      text-align: right;
+    }
 
     /* Queue info */
     .match-row-right {
@@ -1031,6 +1045,9 @@
   var filterLeague     = 'all';
   var sortMode         = 'time';
   var queueMap         = {};   // queueMap[matchId][halfScope][mode] = count
+  var trendingMap      = {};   // trendingMap[matchId] = players joined last 2 min
+  var readyMap         = {};   // readyMap[matchId] = true if any lobby is 1 away from full
+  var TRENDING_THRESHOLD = 5;
   var currentUserId    = null;
   var currentUserHandle = null;
 
@@ -1305,6 +1322,7 @@
 
       html += '<div class="match-row-time">' + timeColHtml + '</div>';
 
+      var signal = getMatchSignal(m.matchId);
       html += '<div class="match-row-teams">';
       html += '<div class="match-row-matchup">';
       html += '<span class="match-row-name">' + escHtml(m.home) + '</span>';
@@ -1312,6 +1330,7 @@
       html += '<span class="match-row-name">' + escHtml(m.away) + '</span>';
       html += '</div>';
       html += '<div class="match-row-comp">' + escHtml(m.compName) + '</div>';
+      if (signal) html += '<span class="match-signal ' + signal.type + '">' + signal.html + '</span>';
       html += '</div>';
 
       html += '<div class="match-row-right">';
@@ -1339,22 +1358,54 @@
   // ── QUEUE COUNTS ───────────────────────────────────────────────────────────
   async function loadQueueCounts() {
     // Single query — player_count is maintained by a DB trigger (migration 031).
-    // No second query into match_lobby_players; scales to any number of players.
     var { data: lobbies } = await window.sb
       .from('match_lobbies')
-      .select('match_id, half_scope, mode, player_count')
+      .select('id, match_id, half_scope, mode, player_count')
       .eq('status', 'waiting');
 
-    queueMap = {};
+    queueMap  = {};
+    readyMap  = {};
+    var lobbyIdToMatchId = {};
+
     (lobbies || []).forEach(function(lb) {
       if (!queueMap[lb.match_id]) queueMap[lb.match_id] = {};
       if (!queueMap[lb.match_id][lb.half_scope]) queueMap[lb.match_id][lb.half_scope] = {};
       queueMap[lb.match_id][lb.half_scope][lb.mode] = lb.player_count || 0;
+
+      // ready = lobby is 1 player away from full (1v1 needs 2, 2v2 needs 4)
+      var capacity = lb.mode === '2v2' ? 4 : 2;
+      if ((lb.player_count || 0) >= capacity - 1) readyMap[lb.match_id] = true;
+
+      lobbyIdToMatchId[lb.id] = lb.match_id;
     });
+
+    // Trending: count joins in the last 2 minutes across all waiting lobbies
+    trendingMap = {};
+    if (Object.keys(lobbyIdToMatchId).length > 0) {
+      var twoMinAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+      var { data: recentJoins } = await window.sb
+        .from('match_lobby_players')
+        .select('lobby_id')
+        .in('lobby_id', Object.keys(lobbyIdToMatchId))
+        .gte('joined_at', twoMinAgo);
+
+      (recentJoins || []).forEach(function(r) {
+        var mid = lobbyIdToMatchId[r.lobby_id];
+        if (mid) trendingMap[mid] = (trendingMap[mid] || 0) + 1;
+      });
+    }
 
     applyFilters();
     if (selectedMatch) updateHalfQueueBadges();
     if (selectedMatch) updateConfigPanel();
+  }
+
+  function getMatchSignal(matchId) {
+    var waiting = getMatchQueueTotal(matchId);
+    if (readyMap[matchId])                              return { type: 'ready',    html: '👥 Ready to play' };
+    if ((trendingMap[matchId] || 0) >= TRENDING_THRESHOLD) return { type: 'trending', html: '⚡ Trending' };
+    if (waiting >= 2)                                   return { type: 'queue',    html: '🔥 ' + waiting + ' in queue' };
+    return null;
   }
 
   function getQueueCount(matchId, half, mode) {
