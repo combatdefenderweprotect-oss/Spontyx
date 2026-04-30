@@ -393,6 +393,21 @@
       border-color: rgba(255,255,255,0.08);
       color: rgba(255,255,255,0.25);
     }
+    .queue-scope-pills {
+      display: flex; flex-wrap: wrap; gap: 4px;
+      margin-top: 5px;
+    }
+    .queue-scope-pill {
+      display: inline-flex; align-items: center; gap: 3px;
+      background: rgba(168,225,12,0.07);
+      border: 1px solid rgba(168,225,12,0.15);
+      border-radius: 12px; padding: 2px 7px;
+      font-size: 0.65rem; font-weight: 600;
+      color: rgba(168,225,12,0.75); white-space: nowrap;
+    }
+    .queue-scope-pill .pill-count {
+      font-weight: 800; color: var(--lime);
+    }
     .match-row-chevron {
       color: rgba(255,255,255,0.2);
       flex-shrink: 0;
@@ -1239,14 +1254,32 @@
         }
       }
 
+      // build per-scope breakdown pills
+      var scopePillsHtml = '';
+      var SCOPE_LABELS = { full_match: 'Full', first_half: '1st Half', second_half: '2nd Half' };
+      if (queueMap[m.matchId]) {
+        var pills = [];
+        ['full_match', 'first_half', 'second_half'].forEach(function(scope) {
+          var count = 0;
+          if (queueMap[m.matchId][scope]) {
+            ['1v1','2v2'].forEach(function(mo) { count += queueMap[m.matchId][scope][mo] || 0; });
+          }
+          if (count > 0) {
+            pills.push('<span class="queue-scope-pill">' + SCOPE_LABELS[scope] + ' <span class="pill-count">' + count + '</span></span>');
+          }
+        });
+        if (pills.length) scopePillsHtml = '<div class="queue-scope-pills">' + pills.join('') + '</div>';
+      }
+
       var qBadge = qTotal > 0
-        ? '<span class="queue-total-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>' + qTotal + '</span>'
-        : '<span class="queue-total-badge empty">0</span>';
+        ? '<span class="queue-total-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>' + qTotal + ' waiting</span>'
+        : '';
 
       html += '<div class="match-row' + (isSelected ? ' selected' : '') + (isLive ? ' live-row' : '') + '" onclick="selectMatch(\'' + escAttr(m.matchId) + '\')" data-mid="' + escAttr(m.matchId) + '">';
       html += '<div class="match-row-left">';
       html += '<div class="match-row-teams">' + escHtml(m.home) + ' vs ' + escHtml(m.away) + '</div>';
       html += '<div class="match-row-meta">' + (timeStr || '') + (timeStr ? '<span>·</span>' : '') + escHtml(m.compName) + '</div>';
+      if (scopePillsHtml) html += scopePillsHtml;
       html += '</div>';
       html += '<div class="match-row-right">' + qBadge;
       html += '<span class="match-row-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>';
