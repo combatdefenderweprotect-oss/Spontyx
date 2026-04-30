@@ -266,16 +266,17 @@
     }
     #match-search::placeholder { color: rgba(255,255,255,0.28); }
     #match-search:focus { border-color: rgba(168,225,12,0.35); }
-    #league-filter {
+    #sport-filter, #league-filter {
       background: rgba(255,255,255,0.05);
       border: 1px solid rgba(255,255,255,0.09);
       border-radius: 9px; color: #fff;
       font-family: 'Inter', sans-serif;
       font-size: 0.8rem; padding: 8px 12px;
       outline: none; cursor: pointer;
-      min-width: 130px;
     }
-    #league-filter option { background: #1a1a2e; }
+    #sport-filter { min-width: 110px; }
+    #league-filter { min-width: 130px; }
+    #sport-filter option, #league-filter option { background: #1a1a2e; }
     .sort-toggle {
       display: flex;
       background: rgba(255,255,255,0.04);
@@ -393,12 +394,6 @@
     .match-signal.ready    { background: rgba(168,225,12,0.12); color: var(--lime); border: 1px solid rgba(168,225,12,0.25); }
     .match-signal.trending { background: rgba(78,205,196,0.10); color: var(--teal); border: 1px solid rgba(78,205,196,0.22); }
     .match-signal.queue    { background: rgba(255,107,107,0.10); color: var(--coral); border: 1px solid rgba(255,107,107,0.22); }
-    .match-row-comp-badge {
-      font-size: 0.62rem; font-weight: 600; color: var(--grey);
-      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.07);
-      border-radius: 6px; padding: 3px 8px; white-space: nowrap;
-      text-align: right;
-    }
 
     /* Queue info */
     .match-row-right {
@@ -933,6 +928,9 @@
             </svg>
             <input type="text" id="match-search" placeholder="Search teams…" oninput="applyFilters()">
           </div>
+          <select id="sport-filter" onchange="onSportFilterChange()">
+            <option value="all">All Sports</option>
+          </select>
           <select id="league-filter" onchange="applyFilters()">
             <option value="all">All Competitions</option>
           </select>
@@ -1042,6 +1040,7 @@
   var lobbyChannel     = null;
   var allMatches       = [];
   var compMap          = {};   // api_league_id → name
+  var filterSport      = 'all';
   var filterLeague     = 'all';
   var sortMode         = 'time';
   var queueMap         = {};   // queueMap[matchId][halfScope][mode] = count
@@ -1149,12 +1148,15 @@
     if (leagueIds.length) {
       var { data: comps } = await window.sb
         .from('sports_competitions')
-        .select('api_league_id, name')
+        .select('api_league_id, name, sport')
         .in('api_league_id', leagueIds);
-      if (comps) comps.forEach(function(c) { compById[c.api_league_id] = c.name; });
+      if (comps) comps.forEach(function(c) {
+        compById[c.api_league_id] = { name: c.name, sport: c.sport || 'football' };
+      });
     }
 
     allMatches = fixtures.map(function(f) {
+      var comp = compById[f.league_id] || { name: 'Football', sport: 'football' };
       return {
         matchId: String(f.fixture_id),
         home: f.home_team_name || 'Home',
@@ -1162,8 +1164,20 @@
         kickoff: f.kickoff_at ? new Date(f.kickoff_at) : null,
         statusShort: f.status_short || 'NS',
         compId: f.league_id,
-        compName: compById[f.league_id] || 'Football',
+        compName: comp.name,
+        sport: comp.sport,
       };
+    });
+
+    // build sport filter
+    var sports = [...new Set(allMatches.map(function(m) { return m.sport; }).filter(Boolean))].sort();
+    var sportSel = document.getElementById('sport-filter');
+    sportSel.innerHTML = '<option value="all">All Sports</option>';
+    sports.forEach(function(s) {
+      var opt = document.createElement('option');
+      opt.value = s;
+      opt.textContent = s.charAt(0).toUpperCase() + s.slice(1);
+      sportSel.appendChild(opt);
     });
 
     // build comp filter
@@ -1227,11 +1241,33 @@
     applyFilters();
   }
 
+  function onSportFilterChange() {
+    filterSport = document.getElementById('sport-filter').value;
+    // reset competition filter when sport changes
+    var sel = document.getElementById('league-filter');
+    sel.innerHTML = '<option value="all">All Competitions</option>';
+    var filtered = filterSport === 'all' ? allMatches : allMatches.filter(function(m) { return m.sport === filterSport; });
+    var seen = {};
+    filtered.forEach(function(m) {
+      if (m.compId && !seen[String(m.compId)]) {
+        seen[String(m.compId)] = true;
+        var opt = document.createElement('option');
+        opt.value = String(m.compId);
+        opt.textContent = m.compName;
+        sel.appendChild(opt);
+      }
+    });
+    sel.value = 'all';
+    applyFilters();
+  }
+
   function applyFilters() {
     var q = (document.getElementById('match-search').value || '').toLowerCase().trim();
+    var sport = document.getElementById('sport-filter').value;
     var league = document.getElementById('league-filter').value;
 
     var visible = allMatches.filter(function(m) {
+      if (sport !== 'all' && m.sport !== sport) return false;
       if (league !== 'all' && String(m.compId) !== league) return false;
       if (q) {
         var text = (m.home + ' ' + m.away + ' ' + m.compName).toLowerCase();
@@ -1624,7 +1660,9 @@
       currentLobbyId = result.lobbyId;
       if (result.league_id) { redirectToGame(result.league_id); return; }
       if (selected2v2Sub === 'invite_friend' && currentLobbyId) {
-        var inviteUrl = window.location.origin + window.location.pathname + '?join=' + currentLobbyId;
+        // team=1 → invited player joins as the host's teammate on team 1.
+        // The opponent side should share their own ?join=X&team=2 link.
+        var inviteUrl = window.location.origin + window.location.pathname + '?join=' + currentLobbyId + '&team=1';
         var inp = document.getElementById('wr-invite-link');
         if (inp) inp.value = inviteUrl;
       }
@@ -1707,22 +1745,25 @@
   }
 
   async function handleLobbyFull(lobby, players, maxPlayers) {
-    if (lobby.league_id) { redirectToGame(lobby.league_id); return; }
-    var result = await SpontixStoreAsync.createLeagueFromLobby(lobby.id, currentUserId);
-    if (result && result.leagueId) {
-      redirectToGame(result.leagueId);
+    // If an arena session already exists for this lobby, go straight there
+    if (lobby.arena_session_id) { redirectToArena(lobby.arena_session_id); return; }
+    var result = await SpontixStoreAsync.createArenaSession(lobby.id, currentUserId);
+    if (result && result.sessionId) {
+      redirectToArena(result.sessionId);
+    } else if (result && result.error === 'invalid_team_split') {
+      showToast('Team assignment failed — please rejoin to retry.');
     } else {
-      showToast('Setting up match…');
+      showToast('Setting up arena match…');
     }
   }
 
-  function redirectToGame(leagueId) {
+  function redirectToArena(sessionId) {
     stopLobbyRealtime();
     var foundEl = document.getElementById('wr-found');
     if (foundEl) { foundEl.style.display = 'block'; foundEl.textContent = 'Match starting — taking you to the arena!'; }
     var statusEl = document.getElementById('wr-status');
     if (statusEl) statusEl.style.display = 'none';
-    setTimeout(function(){ window.location.href = 'league.html?id=' + leagueId; }, 1600);
+    setTimeout(function(){ window.location.href = 'arena-session.html?id=' + sessionId; }, 1600);
   }
 
   async function directJoinLobby(lobbyId) {
@@ -1753,7 +1794,10 @@
       currentUserId = session.user.id;
     }
 
-    var joinResult = await SpontixStoreAsync.joinLobbyById(lobbyId, 1, true, currentUserId);
+    // Read ?team param — valid (1 or 2) → use it; missing/invalid → null (assigned in createArenaSession)
+    var urlTeam = new URLSearchParams(window.location.search).get('team');
+    var teamFromUrl = (urlTeam === '1' || urlTeam === '2') ? parseInt(urlTeam, 10) : null;
+    var joinResult = await SpontixStoreAsync.joinLobbyById(lobbyId, teamFromUrl, true, currentUserId);
     if (!joinResult.ok && joinResult.error !== 'already_in_lobby') {
       showToast(joinResult.error === 'lobby_full' ? 'This lobby is already full.' : 'Could not join lobby.');
       window.location.href = 'dashboard.html';
@@ -1826,10 +1870,10 @@
         if (error || !created) return { ok: false, error: 'create_failed' };
         lobbyId = created.id;
       }
-      // join as player
-      var team = opts.isInvited ? 2 : 1;
+      // Host (lobby creator) joins as team 1. All other players join with null — team assigned deterministically in createArenaSession().
+      var isHost = !(existing && existing.length > 0);
       await window.sb.from('match_lobby_players').upsert({
-        lobby_id: lobbyId, user_id: opts.userId, team_number: team,
+        lobby_id: lobbyId, user_id: opts.userId, team_number: isHost ? 1 : null,
         is_invited: opts.isInvited || false,
       }, { onConflict: 'lobby_id,user_id' });
       return { ok: true, lobbyId: lobbyId };
@@ -1850,11 +1894,105 @@
       return error ? { ok: false, error: error.message } : { ok: true };
     };
   }
-  if (typeof SpontixStoreAsync.createLeagueFromLobby !== 'function') {
-    SpontixStoreAsync.createLeagueFromLobby = async function(lobbyId, userId) {
-      // placeholder — real implementation creates a league from this lobby
-      console.log('createLeagueFromLobby not implemented', lobbyId);
-      return null;
+  if (typeof SpontixStoreAsync.createArenaSession !== 'function') {
+    SpontixStoreAsync.createArenaSession = async function(lobbyId, userId) {
+      // Fetch lobby details
+      var { data: lobby, error: lobbyErr } = await window.sb
+        .from('match_lobbies')
+        .select('*')
+        .eq('id', lobbyId)
+        .single();
+      if (lobbyErr || !lobby) return null;
+
+      var mode = lobby.mode; // '1v1' or '2v2'
+      var required = mode === '2v2' ? 4 : 2;
+
+      // Fetch all players sorted by join order (oldest first)
+      var { data: rawPlayers } = await window.sb
+        .from('match_lobby_players')
+        .select('user_id, team_number, joined_at')
+        .eq('lobby_id', lobbyId)
+        .order('joined_at', { ascending: true });
+
+      var players = rawPlayers || [];
+
+      // Validate total player count
+      if (players.length !== required) {
+        console.warn('createArenaSession: wrong player count', players.length, 'expected', required);
+        return { ok: false, error: 'invalid_team_split' };
+      }
+
+      // ── Assign team numbers ──────────────────────────────────────────────────
+      var assignedPlayers;
+      if (mode === '1v1') {
+        // Always assign by join order — first joined = team 1, second = team 2
+        assignedPlayers = players.map(function(p, i) {
+          return { user_id: p.user_id, team_number: i === 0 ? 1 : 2 };
+        });
+      } else {
+        // 2v2: use stored team_numbers if all are valid; otherwise balanced fallback
+        var hasNulls = players.some(function(p) { return p.team_number == null; });
+        if (!hasNulls) {
+          var t1stored = players.filter(function(p) { return p.team_number === 1; });
+          var t2stored = players.filter(function(p) { return p.team_number === 2; });
+          if (t1stored.length !== 2 || t2stored.length !== 2) {
+            console.warn('createArenaSession: invalid stored 2v2 split', t1stored.length, 'vs', t2stored.length);
+            return { ok: false, error: 'invalid_team_split' };
+          }
+          assignedPlayers = players.map(function(p) {
+            return { user_id: p.user_id, team_number: p.team_number };
+          });
+        } else {
+          // Balanced fallback: sorted by joined_at → 1, 2, 1, 2
+          assignedPlayers = players.map(function(p, i) {
+            return { user_id: p.user_id, team_number: i % 2 === 0 ? 1 : 2 };
+          });
+        }
+      }
+
+      // Final validation: correct split, no nulls
+      var perTeam = required / 2;
+      var finalT1 = assignedPlayers.filter(function(p) { return p.team_number === 1; });
+      var finalT2 = assignedPlayers.filter(function(p) { return p.team_number === 2; });
+      if (finalT1.length !== perTeam || finalT2.length !== perTeam) {
+        console.warn('createArenaSession: final split invalid', finalT1.length, 'vs', finalT2.length);
+        return { ok: false, error: 'invalid_team_split' };
+      }
+
+      // Insert arena_session row
+      var { data: session, error: sessionErr } = await window.sb
+        .from('arena_sessions')
+        .insert({
+          lobby_id:       lobbyId,
+          match_id:       lobby.match_id,
+          half_scope:     lobby.half_scope || 'full_match',
+          mode:           mode,
+          home_team_name: lobby.home_team_name,
+          away_team_name: lobby.away_team_name,
+          kickoff_at:     lobby.kickoff_at,
+          api_league_id:  lobby.api_league_id,
+          status:         'active',
+          started_at:     new Date().toISOString(),
+        })
+        .select('id')
+        .single();
+      if (sessionErr || !session) { console.error('createArenaSession insert failed:', sessionErr); return null; }
+
+      var sessionId = session.id;
+
+      // Add players with validated team assignments
+      var playerRows = assignedPlayers.map(function(p) {
+        return { session_id: sessionId, user_id: p.user_id, team_number: p.team_number };
+      });
+      await window.sb.from('arena_session_players').insert(playerRows);
+
+      // Update lobby status and store arena_session_id reference
+      await window.sb.from('match_lobbies').update({
+        status: 'active',
+        arena_session_id: sessionId,
+      }).eq('id', lobbyId);
+
+      return { sessionId: sessionId };
     };
   }
   </script>
