@@ -1302,37 +1302,18 @@
 
   // ── QUEUE COUNTS ───────────────────────────────────────────────────────────
   async function loadQueueCounts() {
-    var { data: waitingLobbies } = await window.sb
+    // Single query — player_count is maintained by a DB trigger (migration 031).
+    // No second query into match_lobby_players; scales to any number of players.
+    var { data: lobbies } = await window.sb
       .from('match_lobbies')
-      .select('id, match_id, half_scope, mode')
+      .select('match_id, half_scope, mode, player_count')
       .eq('status', 'waiting');
 
-    if (!waitingLobbies || !waitingLobbies.length) {
-      queueMap = {};
-      applyFilters();
-      if (selectedMatch) updateHalfQueueBadges();
-      return;
-    }
-
-    var lobbyIds = waitingLobbies.map(function(l){ return l.id; });
-    var { data: players } = await window.sb
-      .from('match_lobby_players')
-      .select('lobby_id')
-      .in('lobby_id', lobbyIds);
-
-    var countPerLobby = {};
-    (players || []).forEach(function(p) {
-      countPerLobby[p.lobby_id] = (countPerLobby[p.lobby_id] || 0) + 1;
-    });
-
     queueMap = {};
-    waitingLobbies.forEach(function(lobby) {
-      var count = countPerLobby[lobby.id] || 0;
-      if (!queueMap[lobby.match_id]) queueMap[lobby.match_id] = {};
-      if (!queueMap[lobby.match_id][lobby.half_scope]) queueMap[lobby.match_id][lobby.half_scope] = {};
-      var key = lobby.mode;
-      queueMap[lobby.match_id][lobby.half_scope][key] =
-        (queueMap[lobby.match_id][lobby.half_scope][key] || 0) + count;
+    (lobbies || []).forEach(function(lb) {
+      if (!queueMap[lb.match_id]) queueMap[lb.match_id] = {};
+      if (!queueMap[lb.match_id][lb.half_scope]) queueMap[lb.match_id][lb.half_scope] = {};
+      queueMap[lb.match_id][lb.half_scope][lb.mode] = lb.player_count || 0;
     });
 
     applyFilters();
