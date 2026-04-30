@@ -3228,6 +3228,9 @@ SpontixStore._mapLeagueFromDb = function (row, memberUserIds) {
     // Play mode (migration 029): 'singleplayer' | 'multiplayer'
     // Independent of subscription tier — tier rules apply to both modes.
     playMode:            row.play_mode            || 'multiplayer',
+    // Multiplayer lobby (migration 030)
+    lobbyId:             row.lobby_id             || null,
+    multiplayerMode:     row.multiplayer_mode     || null,
   };
 };
 
@@ -3265,6 +3268,9 @@ SpontixStore._mapLeagueToDb = function (l) {
   if (l.liveQuestionBudget !== undefined)      out.live_question_budget      = l.liveQuestionBudget;
   // Play mode (migration 029): 'singleplayer' | 'multiplayer'
   if (l.playMode !== undefined) out.play_mode = l.playMode;
+  // Multiplayer lobby (migration 030)
+  if (l.lobbyId !== undefined)         out.lobby_id          = l.lobbyId;
+  if (l.multiplayerMode !== undefined) out.multiplayer_mode  = l.multiplayerMode;
   return out;
 };
 
@@ -3496,6 +3502,221 @@ SpontixStoreAsync.deleteLeague = async function (leagueId) {
 
   await SpontixStoreAsync.getLeagues();
   return { ok: true };
+};
+
+// ══════════════════════════════════════════════════════════════════════
+// MULTIPLAYER LOBBIES — Supabase async methods (migration 030)
+// ══════════════════════════════════════════════════════════════════════
+//   match_lobbies     — one row per matchmaking session (waiting→active→finished)
+//   match_lobby_players — one row per player per lobby
+//
+//   findOrJoinLobby  — find an open waiting lobby for this match/half/mode, or create one
+//   joinLobbyById    — join a specific lobby by ID (invite link flow)
+//   createLeagueFromLobby — auto-create a league when a lobby is full; first joiner wins
+// ══════════════════════════════════════════════════════════════════════
+
+SpontixStoreAsync.findOrJoinLobby = async function (matchId, halfScope, mode, opts) {
+  // opts: { homeTeamName, awayTeamName, kickoffAt, apiLeagueId }
+  opts = opts || {};
+  var uid = SpontixStore.Session.getCurrentUserId();
+  if (!uid) return { ok: false, error: 'no-session' };
+  if (!window.sb) return { ok: false, error: 'no-supabase' };
+
+  // 1. Look for an existing waiting lobby for this exact match+half+mode
+  var { data: existing, error: findErr } = await window.sb
+    .from('match_lobbies')
+    .select('id, mode, status, home_team_name, away_team_name, kickoff_at')
+    .eq('match_id', matchId)
+    .eq('half_scope', halfScope)
+    .eq('mode', mode)
+    .eq('status', 'waiting')
+    .order('created_at', { ascending: true })
+    .limit(1)
+    .maybeSingle();
+
+  if (findErr) return { ok: false, error: findErr.message };
+
+  var lobbyId;
+  var isNew = false;
+
+  if (existing) {
+    lobbyId = existing.id;
+  } else {
+    // 2. No open lobby — create one
+    var { data: created, error: createErr } = await window.sb
+      .from('match_lobbies')
+      .insert({
+        match_id:       matchId,
+        half_scope:     halfScope,
+        mode:           mode,
+        status:         'waiting',
+        home_team_name: opts.homeTeamName  || null,
+        away_team_name: opts.awayTeamName  || null,
+        kickoff_at:     opts.kickoffAt     || null,
+        api_league_id:  opts.apiLeagueId   || null,
+      })
+      .select('id')
+      .single();
+    if (createErr) return { ok: false, error: createErr.message };
+    lobbyId = created.id;
+    isNew = true;
+  }
+
+  // 3. Assign team_number: for 1v1 first joiner = team 1, second = team 2
+  //    For 2v2 first two joiners = team 1, last two = team 2
+  var { data: currentPlayers } = await window.sb
+    .from('match_lobby_players')
+    .select('user_id, team_number, joined_at')
+    .eq('lobby_id', lobbyId)
+    .order('joined_at', { ascending: true });
+
+  currentPlayers = currentPlayers || [];
+
+  // Already in the lobby?
+  var alreadyIn = currentPlayers.find(function (p) { return p.user_id === uid; });
+  if (alreadyIn) {
+    return { ok: true, lobbyId: lobbyId, teamNumber: alreadyIn.team_number, isNew: isNew };
+  }
+
+  var slotsPerTeam = mode === '1v1' ? 1 : 2;
+  var team1Count = currentPlayers.filter(function (p) { return p.team_number === 1; }).length;
+  var team2Count = currentPlayers.filter(function (p) { return p.team_number === 2; }).length;
+  var teamNumber = team1Count <= team2Count && team1Count < slotsPerTeam ? 1 : 2;
+
+  var { error: joinErr } = await window.sb
+    .from('match_lobby_players')
+    .insert({ lobby_id: lobbyId, user_id: uid, team_number: teamNumber, is_invited: false });
+
+  if (joinErr) return { ok: false, error: joinErr.message };
+
+  return { ok: true, lobbyId: lobbyId, teamNumber: teamNumber, isNew: isNew };
+};
+
+SpontixStoreAsync.joinLobbyById = async function (lobbyId, teamNumber, isInvited, invitedByUserId) {
+  var uid = SpontixStore.Session.getCurrentUserId();
+  if (!uid) return { ok: false, error: 'no-session' };
+  if (!window.sb) return { ok: false, error: 'no-supabase' };
+
+  // Fetch lobby to verify it's still waiting
+  var { data: lobby, error: lobbyErr } = await window.sb
+    .from('match_lobbies')
+    .select('id, mode, status')
+    .eq('id', lobbyId)
+    .maybeSingle();
+
+  if (lobbyErr) return { ok: false, error: lobbyErr.message };
+  if (!lobby)   return { ok: false, error: 'lobby-not-found' };
+  if (lobby.status !== 'waiting') return { ok: false, error: 'lobby-not-waiting' };
+
+  // Check if already in lobby
+  var { data: existing } = await window.sb
+    .from('match_lobby_players')
+    .select('user_id, team_number')
+    .eq('lobby_id', lobbyId)
+    .eq('user_id', uid)
+    .maybeSingle();
+
+  if (existing) return { ok: true, lobbyId: lobbyId, teamNumber: existing.team_number, alreadyJoined: true };
+
+  // Determine team assignment for invited players (always team 1 for invite flow)
+  var assignedTeam = teamNumber || 1;
+
+  var { error: joinErr } = await window.sb
+    .from('match_lobby_players')
+    .insert({
+      lobby_id:    lobbyId,
+      user_id:     uid,
+      team_number: assignedTeam,
+      is_invited:  !!isInvited,
+      invited_by:  invitedByUserId || null,
+    });
+
+  if (joinErr) return { ok: false, error: joinErr.message };
+
+  return { ok: true, lobbyId: lobbyId, teamNumber: assignedTeam };
+};
+
+SpontixStoreAsync.createLeagueFromLobby = async function (leagueData, players) {
+  // leagueData: standard createLeague payload plus lobbyId + multiplayerMode
+  // players: array of { userId, teamNumber } from match_lobby_players
+  var uid = SpontixStore.Session.getCurrentUserId();
+  if (!uid) return { ok: false, error: 'no-session' };
+  if (!window.sb) return { ok: false, error: 'no-supabase' };
+
+  var lobbyId = leagueData.lobbyId;
+
+  // Race guard: only insert the league if this lobby has no league yet
+  // Use a conditional UPDATE — only the first caller wins
+  var { data: guardCheck } = await window.sb
+    .from('match_lobbies')
+    .select('id, league_id')
+    .eq('id', lobbyId)
+    .maybeSingle();
+
+  if (guardCheck && guardCheck.league_id) {
+    // Another player already created the league — return its ID
+    return { ok: true, leagueId: guardCheck.league_id, alreadyCreated: true };
+  }
+
+  // Create the league row
+  var row = SpontixStore._mapLeagueToDb({
+    ownerId:             uid,
+    name:                leagueData.name,
+    sport:               leagueData.sport               || 'Football',
+    type:                leagueData.type                || 'private',
+    mode:                leagueData.mode                || 'individual',
+    maxMembers:          leagueData.maxMembers           || players.length,
+    status:              'active',
+    aiQuestionsEnabled:  leagueData.aiQuestionsEnabled  || false,
+    playMode:            leagueData.playMode             || 'multiplayer',
+    multiplayerMode:     leagueData.multiplayerMode     || null,
+    lobbyId:             lobbyId,
+    apiSportsLeagueId:   leagueData.apiSportsLeagueId   || null,
+    apiSportsSeason:     leagueData.apiSportsSeason     || null,
+    leagueStartDate:     leagueData.leagueStartDate     || null,
+    leagueEndDate:       leagueData.leagueEndDate       || null,
+  });
+
+  var { data: newLeague, error: createErr } = await window.sb
+    .from('leagues')
+    .insert(row)
+    .select('id')
+    .single();
+
+  if (createErr) return { ok: false, error: createErr.message };
+
+  var newLeagueId = newLeague.id;
+
+  // Bind lobby → league (conditional: only if league_id is still null)
+  var { error: bindErr } = await window.sb
+    .from('match_lobbies')
+    .update({ league_id: newLeagueId, status: 'active', started_at: new Date().toISOString() })
+    .eq('id', lobbyId)
+    .is('league_id', null);
+
+  if (bindErr) {
+    // Another process won the race — fetch the winning league_id
+    var { data: raceWinner } = await window.sb
+      .from('match_lobbies')
+      .select('league_id')
+      .eq('id', lobbyId)
+      .maybeSingle();
+    if (raceWinner && raceWinner.league_id) {
+      // Clean up our orphan league
+      await window.sb.from('leagues').delete().eq('id', newLeagueId);
+      return { ok: true, leagueId: raceWinner.league_id, alreadyCreated: true };
+    }
+  }
+
+  // Add all lobby players as league members
+  var memberInserts = players.map(function (p) {
+    return { league_id: newLeagueId, user_id: p.userId };
+  });
+  if (memberInserts.length > 0) {
+    await window.sb.from('league_members').insert(memberInserts);
+  }
+
+  return { ok: true, leagueId: newLeagueId, alreadyCreated: false };
 };
 
 // ══════════════════════════════════════════════════════════════════════

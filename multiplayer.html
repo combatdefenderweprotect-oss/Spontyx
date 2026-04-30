@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Multiplayer — Spontix</title>
+  <meta name="view-transition" content="same-origin">
+  <style>html{background:#080815;margin:0;padding:0}</style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    :root {
+      --lime: #A8E10C;
+      --purple: #7C5CFC;
+      --coral: #FF6B6B;
+      --teal: #4ECDC4;
+      --navy: #080815;
+      --card-bg: rgba(255,255,255,0.03);
+      --border: rgba(255,255,255,0.07);
+    }
+
+    /* ── GLOBAL RESET FOR FULL-SCREEN ── */
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 0;
+      background: var(--navy);
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      overflow: hidden;
+      height: 100vh;
+      display: block !important;
+      animation: page-enter 120ms ease;
+    }
+    #app {
+      display: block !important;
+      width: 100% !important;
+      margin-left: 0 !important;
+    }
+    @keyframes page-enter { from { opacity: 0; } to { opacity: 1; } }
+
+    /* ── PAGE SHELL ── */
+    .mp-page {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      width: 100%;
+    }
+
+    /* ── TOP BAR ── */
+    .mp-topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 24px 0;
+      flex-shrink: 0;
+    }
+    .mp-back {
+      background: none; border: none;
+      color: rgba(255,255,255,0.45);
+      cursor: pointer; padding: 7px;
+      display: flex; align-items: center;
+      border-radius: 8px;
+      transition: color 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+    .mp-back:hover { color: #fff; background: rgba(255,255,255,0.07); }
+    .mp-back svg { width: 18px; height: 18px; }
+    #mp-page-title {
+      font-size: 0.88rem; font-weight: 700;
+      color: rgba(255,255,255,0.5);
+      letter-spacing: 0.01em;
+    }
+
+    /* ── STEP BARS ── */
+    .mp-steps {
+      display: flex; gap: 5px;
+      margin: 10px 24px 0;
+      flex-shrink: 0;
+    }
+    .mp-step-bar {
+      flex: 1; height: 3px; border-radius: 2px;
+      background: rgba(255,255,255,0.08);
+      transition: background 0.3s;
+    }
+    .mp-step-bar.done   { background: var(--lime); }
+    .mp-step-bar.active { background: rgba(168,225,12,0.45); }
+
+    /* ═══════════════════════════════════════════
+       STEP 1 — FORMAT SELECTION
+    ═══════════════════════════════════════════ */
+    #step-1 {
+      flex: 1;
+      overflow-y: auto;
+      padding: 28px 24px 80px;
+    }
+    .s1-inner { max-width: 820px; margin: 0 auto; }
+
+    @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.25; } }
+
+    .arena-hero { text-align: center; padding: 8px 0 36px; }
+    .arena-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(168,225,12,0.08);
+      border: 1px solid rgba(168,225,12,0.22);
+      border-radius: 20px; padding: 5px 14px;
+      font-size: 0.62rem; font-weight: 800;
+      letter-spacing: 0.13em; text-transform: uppercase;
+      color: var(--lime); margin-bottom: 18px;
+    }
+    .arena-badge-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--lime);
+      animation: pulse-dot 1.4s ease-in-out infinite;
+    }
+    .arena-title {
+      font-size: 3rem; font-weight: 900;
+      color: #fff; line-height: 1.08;
+      letter-spacing: -0.025em; margin-bottom: 12px;
+    }
+    .arena-sub {
+      font-size: 0.95rem;
+      color: rgba(255,255,255,0.4);
+      max-width: 460px; margin: 0 auto;
+    }
+
+    .format-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px; margin: 0 0 28px;
+    }
+    .format-card {
+      position: relative; overflow: hidden;
+      border-radius: 20px;
+      border: 2px solid rgba(255,255,255,0.07);
+      background: rgba(255,255,255,0.025);
+      padding: 32px 28px;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s, transform 0.15s, box-shadow 0.2s;
+      min-height: 230px;
+      display: flex; flex-direction: column; justify-content: flex-end;
+    }
+    .format-card:hover {
+      background: rgba(255,255,255,0.055);
+      border-color: rgba(255,255,255,0.15);
+      transform: translateY(-3px);
+    }
+    .format-card.selected.card-1v1 {
+      border-color: rgba(255,107,107,0.5);
+      background: rgba(255,107,107,0.07);
+      box-shadow: 0 0 40px rgba(255,107,107,0.2), 0 0 0 1px rgba(255,107,107,0.2);
+    }
+    .format-card.selected.card-2v2 {
+      border-color: rgba(168,225,12,0.5);
+      background: rgba(168,225,12,0.055);
+      box-shadow: 0 0 40px rgba(168,225,12,0.15), 0 0 0 1px rgba(168,225,12,0.15);
+    }
+    .format-watermark {
+      position: absolute; top: -8px; right: -4px;
+      font-size: 8rem; font-weight: 900; line-height: 1;
+      letter-spacing: -0.04em;
+      pointer-events: none; user-select: none;
+      transition: opacity 0.2s;
+    }
+    .card-1v1 .format-watermark { color: var(--coral); opacity: 0.07; }
+    .card-1v1:hover .format-watermark,
+    .card-1v1.selected .format-watermark { opacity: 0.16; }
+    .card-2v2 .format-watermark { color: var(--lime); opacity: 0.06; }
+    .card-2v2:hover .format-watermark,
+    .card-2v2.selected .format-watermark { opacity: 0.13; }
+
+    .format-icon {
+      font-size: 2.2rem; margin-bottom: 14px;
+      display: block; line-height: 1;
+    }
+    .format-name {
+      font-size: 2rem; font-weight: 900;
+      letter-spacing: -0.03em; line-height: 1;
+      margin-bottom: 4px;
+    }
+    .card-1v1 .format-name { color: var(--coral); }
+    .card-2v2 .format-name { color: var(--lime); }
+    .format-desc {
+      font-size: 0.82rem;
+      color: rgba(255,255,255,0.45);
+      margin-bottom: 18px;
+    }
+    .format-players {
+      display: flex; gap: 5px; flex-wrap: wrap;
+    }
+    .format-player-dot {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      border: 1.5px solid rgba(255,255,255,0.12);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.65rem; font-weight: 700;
+      color: rgba(255,255,255,0.5);
+    }
+    .card-1v1 .format-player-dot { border-color: rgba(255,107,107,0.3); color: var(--coral); }
+    .card-2v2 .format-player-dot { border-color: rgba(168,225,12,0.3); color: var(--lime); }
+
+    .format-check {
+      position: absolute; top: 18px; right: 18px;
+      width: 26px; height: 26px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.15);
+      display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .format-check svg { width: 13px; height: 13px; opacity: 0; transition: opacity 0.2s; }
+    .format-card.selected .format-check {
+      border: none;
+    }
+    .card-1v1.selected .format-check { background: var(--coral); }
+    .card-2v2.selected .format-check { background: var(--lime); }
+    .format-card.selected .format-check svg { opacity: 1; }
+    .card-1v1.selected .format-check svg { stroke: #000; }
+    .card-2v2.selected .format-check svg { stroke: #000; }
+
+    .s1-cta {
+      background: var(--lime); color: #000;
+      border: none; border-radius: 14px;
+      width: 100%; padding: 16px;
+      font-size: 1rem; font-weight: 800;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s, opacity 0.15s;
+      letter-spacing: 0.01em;
+    }
+    .s1-cta:hover:not(:disabled) { background: #b8f00f; transform: translateY(-1px); }
+    .s1-cta:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+    /* ═══════════════════════════════════════════
+       STEP 2 — MATCH + CONFIG (SPLIT LAYOUT)
+    ═══════════════════════════════════════════ */
+    #step-2 {
+      flex: 1;
+      overflow: hidden;
+      display: none;
+      flex-direction: column;
+    }
+
+    /* toolbar row below step bars */
+    .s2-toolbar {
+      display: flex; align-items: center;
+      gap: 10px;
+      padding: 10px 24px 0;
+      flex-shrink: 0;
+    }
+    .s2-search-wrap {
+      flex: 1;
+      position: relative;
+    }
+    .s2-search-wrap svg {
+      position: absolute; left: 11px; top: 50%;
+      transform: translateY(-50%);
+      width: 15px; height: 15px;
+      color: rgba(255,255,255,0.3); pointer-events: none;
+    }
+    #match-search {
+      width: 100%; background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 9px; color: #fff;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.83rem; padding: 8px 12px 8px 32px;
+      outline: none; transition: border-color 0.15s;
+    }
+    #match-search::placeholder { color: rgba(255,255,255,0.28); }
+    #match-search:focus { border-color: rgba(168,225,12,0.35); }
+    #league-filter {
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 9px; color: #fff;
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8rem; padding: 8px 12px;
+      outline: none; cursor: pointer;
+      min-width: 130px;
+    }
+    #league-filter option { background: #1a1a2e; }
+    .sort-toggle {
+      display: flex;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 9px; overflow: hidden;
+      flex-shrink: 0;
+    }
+    .sort-btn {
+      background: none; border: none;
+      color: rgba(255,255,255,0.4);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.75rem; font-weight: 600;
+      padding: 7px 12px; cursor: pointer;
+      white-space: nowrap;
+      transition: color 0.15s, background 0.15s;
+    }
+    .sort-btn.active {
+      background: rgba(168,225,12,0.12);
+      color: var(--lime);
+    }
+    .sort-btn:hover:not(.active) { color: rgba(255,255,255,0.7); }
+
+    /* split grid */
+    .mp-split {
+      display: grid;
+      grid-template-columns: 1fr 380px;
+      flex: 1;
+      overflow: hidden;
+      border-top: 1px solid rgba(255,255,255,0.055);
+      margin-top: 12px;
+    }
+
+    /* LEFT: match list */
+    .mp-split-left {
+      overflow: hidden;
+      display: flex; flex-direction: column;
+      border-right: 1px solid rgba(255,255,255,0.055);
+    }
+    .match-list-header {
+      display: flex; align-items: center;
+      padding: 12px 20px 10px;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .match-list-header-label {
+      font-size: 0.72rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.3);
+      flex: 1;
+    }
+    .match-list-count {
+      font-size: 0.72rem; color: rgba(255,255,255,0.25);
+    }
+    #match-list {
+      flex: 1; overflow-y: auto;
+      padding: 6px 0 40px;
+    }
+    #match-list::-webkit-scrollbar { width: 4px; }
+    #match-list::-webkit-scrollbar-track { background: transparent; }
+    #match-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+    .match-row {
+      display: flex; align-items: center;
+      gap: 12px;
+      padding: 11px 20px;
+      cursor: pointer;
+      border-left: 3px solid transparent;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .match-row:hover { background: rgba(255,255,255,0.04); }
+    .match-row.selected {
+      background: rgba(168,225,12,0.06);
+      border-left-color: var(--lime);
+    }
+    .match-row.live-row { border-left-color: var(--coral); }
+    .match-row.live-row.selected { border-left-color: var(--lime); }
+
+    .match-row-left { flex: 1; min-width: 0; }
+    .match-row-teams {
+      font-size: 0.85rem; font-weight: 600;
+      color: #fff; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+      margin-bottom: 3px;
+    }
+    .match-row-meta {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 0.72rem; color: rgba(255,255,255,0.35);
+    }
+    .match-live-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--coral);
+      flex-shrink: 0;
+      animation: pulse-dot 1.2s ease-in-out infinite;
+    }
+    .match-live-label {
+      color: var(--coral); font-weight: 700;
+      font-size: 0.67rem; text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    .match-row-right {
+      display: flex; align-items: center;
+      gap: 8px; flex-shrink: 0;
+    }
+    .queue-total-badge {
+      display: flex; align-items: center; gap: 4px;
+      background: rgba(168,225,12,0.1);
+      border: 1px solid rgba(168,225,12,0.2);
+      border-radius: 20px; padding: 3px 9px;
+      font-size: 0.72rem; font-weight: 700;
+      color: var(--lime); white-space: nowrap;
+    }
+    .queue-total-badge svg { width: 10px; height: 10px; flex-shrink: 0; }
+    .queue-total-badge.empty {
+      background: rgba(255,255,255,0.04);
+      border-color: rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.25);
+    }
+    .match-row-chevron {
+      color: rgba(255,255,255,0.2);
+      flex-shrink: 0;
+    }
+    .match-row-chevron svg { width: 14px; height: 14px; display: block; }
+
+    .match-list-empty {
+      padding: 48px 20px; text-align: center;
+      color: rgba(255,255,255,0.3);
+      font-size: 0.88rem;
+    }
+    .match-list-loading {
+      padding: 48px 20px; text-align: center;
+      color: rgba(255,255,255,0.25); font-size: 0.85rem;
+    }
+
+    /* RIGHT: config panel */
+    .mp-split-right {
+      display: flex; flex-direction: column;
+      overflow: hidden;
+      background: rgba(0,0,0,0.2);
+    }
+
+    .config-placeholder {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 12px; padding: 32px;
+      text-align: center;
+    }
+    .config-placeholder-icon { font-size: 2.4rem; opacity: 0.3; }
+    .config-placeholder-text {
+      font-size: 0.88rem;
+      color: rgba(255,255,255,0.3);
+      max-width: 220px; line-height: 1.5;
+    }
+
+    #config-panel {
+      flex: 1; overflow-y: auto;
+      padding: 20px 20px 32px;
+      display: none;
+    }
+    #config-panel::-webkit-scrollbar { width: 3px; }
+    #config-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); }
+
+    .config-match-header { margin-bottom: 20px; }
+    .config-match-teams {
+      font-size: 1.05rem; font-weight: 800;
+      color: #fff; letter-spacing: -0.01em;
+      margin-bottom: 4px;
+    }
+    .config-match-meta {
+      font-size: 0.77rem; color: rgba(255,255,255,0.35);
+    }
+
+    .config-section-label {
+      font-size: 0.68rem; font-weight: 800;
+      text-transform: uppercase; letter-spacing: 0.12em;
+      color: rgba(255,255,255,0.3);
+      margin: 0 0 10px;
+    }
+
+    /* half cards */
+    .half-cards { display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px; }
+    .half-card {
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(255,255,255,0.03);
+      border: 1.5px solid rgba(255,255,255,0.07);
+      border-radius: 12px; padding: 13px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .half-card:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.14); }
+    .half-card.active {
+      border-color: rgba(168,225,12,0.45);
+      background: rgba(168,225,12,0.07);
+    }
+    .half-card-left { display: flex; align-items: center; gap: 12px; }
+    .half-card-time {
+      font-size: 0.82rem; font-weight: 800;
+      color: rgba(255,255,255,0.35);
+      min-width: 28px;
+    }
+    .half-card.active .half-card-time { color: var(--lime); }
+    .half-card-title {
+      font-size: 0.88rem; font-weight: 700; color: #fff;
+    }
+    .half-card-sub {
+      font-size: 0.72rem; color: rgba(255,255,255,0.35);
+    }
+    .half-card-right { display: flex; align-items: center; gap: 10px; }
+    .half-q-count {
+      font-size: 0.75rem; font-weight: 700;
+      color: rgba(168,225,12,0.7);
+      min-width: 24px; text-align: right;
+    }
+    .half-q-count.zero { color: rgba(255,255,255,0.2); }
+    .half-card-check {
+      width: 20px; height: 20px; border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.15);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: all 0.15s;
+    }
+    .half-card.active .half-card-check {
+      background: var(--lime); border-color: var(--lime);
+    }
+    .half-card-check svg { width: 10px; height: 10px; opacity: 0; stroke: #000; transition: opacity 0.15s; }
+    .half-card.active .half-card-check svg { opacity: 1; }
+
+    /* config mode tabs (1v1 vs 2v2 sub for reference) */
+    .config-mode-badge {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 0.68rem; font-weight: 800;
+      letter-spacing: 0.06em; text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+    .config-mode-badge.m1v1 { background: rgba(255,107,107,0.1); color: var(--coral); }
+    .config-mode-badge.m2v2 { background: rgba(168,225,12,0.1); color: var(--lime); }
+
+    /* teammate option cards (2v2 only) */
+    .teammate-cards { display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px; }
+    .teammate-card {
+      display: flex; align-items: center;
+      background: rgba(255,255,255,0.03);
+      border: 1.5px solid rgba(255,255,255,0.07);
+      border-radius: 12px; padding: 13px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+      gap: 12px;
+    }
+    .teammate-card:hover:not(.disabled) { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.14); }
+    .teammate-card.active {
+      border-color: rgba(168,225,12,0.45);
+      background: rgba(168,225,12,0.07);
+    }
+    .teammate-card.disabled {
+      opacity: 0.4; cursor: not-allowed;
+    }
+    .teammate-card-icon {
+      width: 34px; height: 34px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; flex-shrink: 0;
+      background: rgba(255,255,255,0.06);
+    }
+    .teammate-card.active .teammate-card-icon { background: rgba(168,225,12,0.12); }
+    .teammate-card-content { flex: 1; min-width: 0; }
+    .teammate-card-title {
+      font-size: 0.85rem; font-weight: 700; color: #fff;
+      margin-bottom: 2px;
+    }
+    .teammate-card-sub {
+      font-size: 0.72rem; color: rgba(255,255,255,0.35);
+    }
+    .teammate-card-check {
+      width: 20px; height: 20px; border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.15);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: all 0.15s;
+    }
+    .teammate-card.active .teammate-card-check {
+      background: var(--lime); border-color: var(--lime);
+    }
+    .teammate-card-check svg { width: 10px; height: 10px; opacity: 0; stroke: #000; transition: opacity 0.15s; }
+    .teammate-card.active .teammate-card-check svg { opacity: 1; }
+    .soon-tag {
+      font-size: 0.6rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.1em; color: rgba(255,255,255,0.3);
+      background: rgba(255,255,255,0.07);
+      padding: 2px 6px; border-radius: 4px; flex-shrink: 0;
+    }
+
+    /* queue breakdown in config */
+    .queue-breakdown {
+      background: rgba(168,225,12,0.05);
+      border: 1px solid rgba(168,225,12,0.12);
+      border-radius: 12px; padding: 12px 14px;
+      margin-bottom: 20px;
+    }
+    .queue-breakdown-title {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: rgba(168,225,12,0.6);
+      margin-bottom: 10px;
+    }
+    .queue-breakdown-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 5px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.04);
+    }
+    .queue-breakdown-row:last-child { border-bottom: none; padding-bottom: 0; }
+    .queue-row-label {
+      font-size: 0.8rem; color: rgba(255,255,255,0.5);
+      display: flex; align-items: center; gap: 7px;
+    }
+    .queue-row-val {
+      font-size: 0.85rem; font-weight: 700; color: var(--lime);
+    }
+    .queue-row-val.zero { color: rgba(255,255,255,0.2); }
+
+    /* enter arena button */
+    .enter-arena-btn {
+      background: var(--lime); color: #000;
+      border: none; border-radius: 14px;
+      width: 100%; padding: 15px;
+      font-size: 0.95rem; font-weight: 800;
+      cursor: pointer; letter-spacing: 0.01em;
+      transition: background 0.15s, transform 0.1s;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .enter-arena-btn:hover { background: #b8f00f; transform: translateY(-1px); }
+    .enter-arena-btn svg { width: 16px; height: 16px; }
+
+    /* ═══════════════════════════════════════════
+       WAITING ROOM OVERLAY (STEP 3)
+    ═══════════════════════════════════════════ */
+    #wr-overlay {
+      position: fixed; inset: 0;
+      background: #080815;
+      z-index: 200;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* pulsing rings */
+    @keyframes ring-pulse {
+      0%   { transform: translate(-50%, -50%) scale(0.6); opacity: 0; }
+      20%  { opacity: 0.5; }
+      100% { transform: translate(-50%, -50%) scale(1.8); opacity: 0; }
+    }
+    .wr-ring {
+      position: absolute;
+      left: 50%; top: 50%;
+      border-radius: 50%;
+      border: 1.5px solid rgba(168,225,12,0.12);
+      animation: ring-pulse 4s ease-out infinite;
+      pointer-events: none;
+    }
+    .wr-ring.r1 { width: 160px; height: 160px; animation-delay: 0s; }
+    .wr-ring.r2 { width: 320px; height: 320px; animation-delay: 1s; border-color: rgba(168,225,12,0.07); }
+    .wr-ring.r3 { width: 480px; height: 480px; animation-delay: 2s; border-color: rgba(168,225,12,0.04); }
+    .wr-ring.r4 { width: 640px; height: 640px; animation-delay: 3s; border-color: rgba(168,225,12,0.02); }
+
+    /* content */
+    .wr-content {
+      position: relative; z-index: 1;
+      display: flex; flex-direction: column;
+      align-items: center; gap: 0;
+      width: 100%; max-width: 560px;
+      padding: 0 24px;
+    }
+
+    .wr-match-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 20px; padding: 5px 14px;
+      font-size: 0.75rem; color: rgba(255,255,255,0.5);
+      margin-bottom: 36px;
+      text-align: center;
+    }
+    .wr-match-badge strong { color: #fff; }
+
+    /* avatars */
+    .wr-avatars {
+      display: flex; align-items: center;
+      gap: 24px; margin-bottom: 32px;
+    }
+    .wr-player-col {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 8px;
+    }
+    .wr-avatar {
+      width: 72px; height: 72px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem; font-weight: 900;
+      border: 2px solid transparent;
+      transition: all 0.3s;
+    }
+    .wr-avatar.you {
+      background: rgba(168,225,12,0.12);
+      border-color: rgba(168,225,12,0.4);
+      color: var(--lime);
+    }
+    .wr-avatar.opp {
+      background: rgba(124,92,252,0.1);
+      border-color: rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.3);
+    }
+    @keyframes searching-pulse {
+      0%, 100% { opacity: 0.35; transform: scale(0.93); }
+      50%       { opacity: 0.8; transform: scale(1.05); box-shadow: 0 0 0 6px rgba(124,92,252,0.15); }
+    }
+    .wr-avatar.opp.searching {
+      animation: searching-pulse 1.8s ease-in-out infinite;
+    }
+    @keyframes found-pop {
+      0%   { transform: scale(0.75); opacity: 0; }
+      60%  { transform: scale(1.12); }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .wr-avatar.opp.found {
+      background: rgba(124,92,252,0.15);
+      border-color: rgba(124,92,252,0.55);
+      color: var(--purple);
+      animation: found-pop 0.4s ease-out forwards;
+    }
+    .wr-player-name {
+      font-size: 0.8rem; font-weight: 600;
+      color: rgba(255,255,255,0.5);
+    }
+    .wr-vs {
+      font-size: 1.2rem; font-weight: 900;
+      color: rgba(255,255,255,0.15);
+      letter-spacing: 0.05em;
+    }
+
+    .wr-mode-badge {
+      display: inline-flex; align-items: center;
+      padding: 4px 12px; border-radius: 20px;
+      font-size: 0.68rem; font-weight: 800;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+    .wr-mode-badge.m1v1 { background: rgba(255,107,107,0.12); color: var(--coral); border: 1px solid rgba(255,107,107,0.2); }
+    .wr-mode-badge.m2v2 { background: rgba(168,225,12,0.1); color: var(--lime); border: 1px solid rgba(168,225,12,0.2); }
+
+    #wr-status {
+      font-size: 0.9rem; color: rgba(255,255,255,0.35);
+      margin-bottom: 10px; text-align: center;
+    }
+    #wr-status span { color: var(--lime); font-weight: 600; }
+
+    @keyframes dot-bounce {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.3; }
+      40% { transform: translateY(-5px); opacity: 1; }
+    }
+    .wr-dots { display: inline-flex; gap: 4px; }
+    .wr-dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--lime); opacity: 0.3;
+      animation: dot-bounce 1.2s ease-in-out infinite;
+    }
+    .wr-dot:nth-child(2) { animation-delay: 0.2s; }
+    .wr-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    #wr-found {
+      display: none;
+      font-size: 0.95rem; font-weight: 700;
+      color: var(--lime); text-align: center;
+      margin-bottom: 10px;
+    }
+
+    /* invite section inside WR */
+    #wr-invite-section {
+      width: 100%; margin-top: 20px; display: none;
+    }
+    .wr-invite-box {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 12px; padding: 14px 16px;
+      text-align: center;
+    }
+    .wr-invite-label {
+      font-size: 0.75rem; color: rgba(255,255,255,0.35);
+      margin-bottom: 10px;
+    }
+    .wr-invite-link-row {
+      display: flex; gap: 8px; align-items: center;
+    }
+    .wr-invite-link-input {
+      flex: 1; background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.09);
+      border-radius: 8px; color: rgba(255,255,255,0.5);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.75rem; padding: 8px 10px;
+      outline: none;
+    }
+    .wr-copy-btn {
+      background: rgba(168,225,12,0.1);
+      border: 1px solid rgba(168,225,12,0.2);
+      border-radius: 8px; color: var(--lime);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.75rem; font-weight: 700;
+      padding: 8px 14px; cursor: pointer;
+      white-space: nowrap;
+      transition: background 0.15s;
+    }
+    .wr-copy-btn:hover { background: rgba(168,225,12,0.18); }
+
+    /* cancel button */
+    .wr-cancel-btn {
+      margin-top: 20px;
+      background: none; border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px; color: rgba(255,255,255,0.3);
+      font-family: 'Inter', sans-serif;
+      font-size: 0.8rem; font-weight: 600;
+      padding: 9px 24px; cursor: pointer;
+      transition: color 0.15s, border-color 0.15s;
+    }
+    .wr-cancel-btn:hover { color: rgba(255,255,255,0.6); border-color: rgba(255,255,255,0.2); }
+
+    /* ── TOAST ── */
+    #toast {
+      position: fixed; bottom: 28px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(30,30,50,0.96);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px; padding: 11px 20px;
+      font-size: 0.85rem; font-weight: 500;
+      color: #fff; z-index: 999;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      white-space: nowrap; max-width: 90vw;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="mp-page">
+
+      <!-- TOP BAR -->
+      <div class="mp-topbar">
+        <button class="mp-back" onclick="handleBack()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="15 18 9 12 15 6"/>
+          </svg>
+        </button>
+        <span id="mp-page-title">Multiplayer</span>
+      </div>
+
+      <!-- STEP BARS -->
+      <div class="mp-steps">
+        <div class="mp-step-bar active" id="step-bar-1"></div>
+        <div class="mp-step-bar" id="step-bar-2"></div>
+        <div class="mp-step-bar" id="step-bar-3"></div>
+      </div>
+
+      <!-- ═══ STEP 1: FORMAT ═══ -->
+      <div id="step-1">
+        <div class="s1-inner">
+          <div class="arena-hero">
+            <div class="arena-badge">
+              <span class="arena-badge-dot"></span>
+              Live Arena
+            </div>
+            <div class="arena-title">Enter the Arena</div>
+            <div class="arena-sub">Choose your format. Find your match. Prove it.</div>
+          </div>
+
+          <div class="format-grid">
+            <!-- 1v1 -->
+            <div class="format-card card-1v1" id="fc-1v1" onclick="selectFormat('1v1')">
+              <div class="format-watermark">1v1</div>
+              <div class="format-check">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </div>
+              <span class="format-icon">⚔️</span>
+              <div class="format-name">1 vs 1</div>
+              <div class="format-desc">Solo duel. You against one opponent — every prediction counts.</div>
+              <div class="format-players">
+                <div class="format-player-dot">1</div>
+                <div class="format-player-dot">2</div>
+              </div>
+            </div>
+            <!-- 2v2 -->
+            <div class="format-card card-2v2" id="fc-2v2" onclick="selectFormat('2v2')">
+              <div class="format-watermark">2v2</div>
+              <div class="format-check">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="20 6 9 17 4 12"/>
+                </svg>
+              </div>
+              <span class="format-icon">🛡️</span>
+              <div class="format-name">2 vs 2</div>
+              <div class="format-desc">Team battle. Pair up with a partner and take on the competition.</div>
+              <div class="format-players">
+                <div class="format-player-dot">1</div>
+                <div class="format-player-dot">2</div>
+                <div class="format-player-dot">3</div>
+                <div class="format-player-dot">4</div>
+              </div>
+            </div>
+          </div>
+
+          <button class="s1-cta" id="s1-cta-btn" onclick="goStep(2)" disabled>
+            Find a Match →
+          </button>
+        </div>
+      </div>
+
+      <!-- ═══ STEP 2: MATCH + CONFIG ═══ -->
+      <div id="step-2">
+        <!-- toolbar -->
+        <div class="s2-toolbar">
+          <div class="s2-search-wrap">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" id="match-search" placeholder="Search teams…" oninput="applyFilters()">
+          </div>
+          <select id="league-filter" onchange="applyFilters()">
+            <option value="all">All Competitions</option>
+          </select>
+          <div class="sort-toggle">
+            <button class="sort-btn active" id="sort-time" onclick="setSortMode('time')">By Time</button>
+            <button class="sort-btn" id="sort-active" onclick="setSortMode('active')">Most Active</button>
+          </div>
+        </div>
+
+        <!-- split -->
+        <div class="mp-split">
+          <!-- LEFT: match list -->
+          <div class="mp-split-left">
+            <div class="match-list-header">
+              <span class="match-list-header-label">Upcoming Matches</span>
+              <span class="match-list-count" id="match-count-label"></span>
+            </div>
+            <div id="match-list">
+              <div class="match-list-loading">Loading matches…</div>
+            </div>
+          </div>
+
+          <!-- RIGHT: config panel -->
+          <div class="mp-split-right">
+            <div class="config-placeholder" id="config-placeholder">
+              <div class="config-placeholder-icon">🎯</div>
+              <div class="config-placeholder-text">Select a match from the left to configure your game</div>
+            </div>
+
+            <div id="config-panel">
+              <!-- injected by updateConfigPanel() -->
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /.mp-page -->
+  </div><!-- /#app -->
+
+  <!-- ═══ WAITING ROOM OVERLAY ═══ -->
+  <div id="wr-overlay">
+    <!-- rings -->
+    <div class="wr-ring r1"></div>
+    <div class="wr-ring r2"></div>
+    <div class="wr-ring r3"></div>
+    <div class="wr-ring r4"></div>
+
+    <div class="wr-content">
+      <div class="wr-match-badge" id="wr-match-badge">
+        <span id="wr-match-teams">—</span>
+        &nbsp;·&nbsp;
+        <span id="wr-match-meta">—</span>
+      </div>
+
+      <div class="wr-avatars">
+        <div class="wr-player-col">
+          <div class="wr-avatar you" id="wr-you-avatar">Y</div>
+          <div class="wr-player-name" id="wr-you-name">You</div>
+        </div>
+        <div class="wr-vs">VS</div>
+        <div class="wr-player-col">
+          <div class="wr-avatar opp searching" id="wr-opp-avatar">?</div>
+          <div class="wr-player-name" id="wr-opp-name">…</div>
+        </div>
+      </div>
+
+      <div class="wr-mode-badge m1v1" id="wr-mode-badge">1v1 DUEL</div>
+
+      <div id="wr-status">
+        Searching for opponent&nbsp;
+        <span class="wr-dots">
+          <span class="wr-dot"></span>
+          <span class="wr-dot"></span>
+          <span class="wr-dot"></span>
+        </span>
+      </div>
+      <div id="wr-found"></div>
+
+      <div id="wr-invite-section">
+        <div class="wr-invite-box">
+          <div class="wr-invite-label">Share this link to invite your teammate</div>
+          <div class="wr-invite-link-row">
+            <input type="text" class="wr-invite-link-input" id="wr-invite-link" readonly>
+            <button class="wr-copy-btn" onclick="copyInviteLink()">Copy</button>
+          </div>
+        </div>
+      </div>
+
+      <button class="wr-cancel-btn" onclick="cancelWaitingRoom()">Cancel</button>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div id="toast"></div>
+
+  <!-- SCRIPTS -->
+  <script src="supabase-client.js"></script>
+  <script src="spontix-store.js"></script>
+  <script>
+  // ── STATE ──────────────────────────────────────────────────────────────────
+  var currentStep   = 1;
+  var selectedMode  = null;    // '1v1' | '2v2'
+  var selectedMatch = null;    // match object
+  var selectedHalf  = 'full_match';
+  var selected2v2Sub = 'solo_queue'; // 'solo_queue' | 'invite_app' | 'invite_friend'
+  var currentLobbyId   = null;
+  var lobbyChannel     = null;
+  var allMatches       = [];
+  var compMap          = {};   // api_league_id → name
+  var filterLeague     = 'all';
+  var sortMode         = 'time';
+  var queueMap         = {};   // queueMap[matchId][halfScope][mode] = count
+  var currentUserId    = null;
+  var currentUserHandle = null;
+
+  var urlParams    = new URLSearchParams(window.location.search);
+  var joinLobbyId  = urlParams.get('join');
+
+  // ── INIT ───────────────────────────────────────────────────────────────────
+  window.addEventListener('load', async function() {
+    if (!window.sb) { console.warn('Supabase not ready'); return; }
+
+    var { data: { session } } = await window.sb.auth.getSession();
+    if (!session) { window.location.href = 'login.html'; return; }
+    currentUserId = session.user.id;
+
+    // get handle
+    var { data: profile } = await window.sb.from('users')
+      .select('handle, name').eq('id', currentUserId).single();
+    if (profile) {
+      currentUserHandle = profile.handle || profile.name || 'You';
+    }
+
+    // invite-link direct join
+    if (joinLobbyId) {
+      await directJoinLobby(joinLobbyId);
+      return;
+    }
+  });
+
+  // ── STEP NAVIGATION ────────────────────────────────────────────────────────
+  function goStep(n) {
+    var s1 = document.getElementById('step-1');
+    var s2 = document.getElementById('step-2');
+    s1.style.display = (n === 1) ? '' : 'none';
+    if (s2) s2.style.display = (n === 2) ? 'flex' : 'none';
+    currentStep = n;
+    updateStepBars();
+    var titles = { 1: 'Multiplayer', 2: 'Choose Match' };
+    document.getElementById('mp-page-title').textContent = titles[n] || 'Multiplayer';
+    if (n === 2) {
+      if (allMatches.length === 0) { loadMatches(); }
+      loadQueueCounts();
+    }
+  }
+
+  function updateStepBars() {
+    var wrVisible = document.getElementById('wr-overlay').style.display === 'flex';
+    var eff = wrVisible ? 3 : currentStep;
+    for (var i = 1; i <= 3; i++) {
+      var bar = document.getElementById('step-bar-' + i);
+      if (!bar) continue;
+      bar.className = 'mp-step-bar' + (i < eff ? ' done' : (i === eff ? ' active' : ''));
+    }
+  }
+
+  function handleBack() {
+    var wrVisible = document.getElementById('wr-overlay').style.display === 'flex';
+    if (wrVisible) { cancelWaitingRoom(); return; }
+    if (currentStep === 1) { window.location.href = 'dashboard.html'; }
+    else { goStep(1); }
+  }
+
+  // ── STEP 1: FORMAT ─────────────────────────────────────────────────────────
+  function selectFormat(mode) {
+    selectedMode = mode;
+    document.getElementById('fc-1v1').classList.toggle('selected', mode === '1v1');
+    document.getElementById('fc-2v2').classList.toggle('selected', mode === '2v2');
+    document.getElementById('s1-cta-btn').disabled = false;
+  }
+
+  // ── STEP 2: MATCHES ────────────────────────────────────────────────────────
+  async function loadMatches() {
+    var list = document.getElementById('match-list');
+    list.innerHTML = '<div class="match-list-loading">Loading matches…</div>';
+
+    var twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString();
+    var fourteenDaysOut = new Date(Date.now() + 14 * 86400 * 1000).toISOString();
+
+    var { data: fixtures, error } = await window.sb
+      .from('api_football_fixtures')
+      .select('id, home_team_name, away_team_name, kickoff_at, status_short, league_id, league_name, home_team_id, away_team_id')
+      .gte('kickoff_at', twoDaysAgo)
+      .lte('kickoff_at', fourteenDaysOut)
+      .order('kickoff_at', { ascending: true })
+      .limit(100);
+
+    if (error || !fixtures) {
+      list.innerHTML = '<div class="match-list-empty">Could not load fixtures.<br>Try again later.</div>';
+      return;
+    }
+
+    allMatches = fixtures.map(function(f) {
+      return {
+        matchId: String(f.id),
+        home: f.home_team_name || 'Home',
+        away: f.away_team_name || 'Away',
+        kickoff: f.kickoff_at ? new Date(f.kickoff_at) : null,
+        statusShort: f.status_short || 'NS',
+        compId: f.league_id,
+        compName: f.league_name || 'Football',
+        homeTeamId: f.home_team_id,
+        awayTeamId: f.away_team_id,
+      };
+    });
+
+    // build comp filter
+    var seen = {};
+    allMatches.forEach(function(m) {
+      if (m.compId && !seen[m.compId]) {
+        seen[m.compId] = m.compName;
+        compMap[String(m.compId)] = m.compName;
+      }
+    });
+    var sel = document.getElementById('league-filter');
+    sel.innerHTML = '<option value="all">All Competitions</option>';
+    Object.keys(compMap).forEach(function(cid) {
+      var opt = document.createElement('option');
+      opt.value = cid;
+      opt.textContent = compMap[cid];
+      sel.appendChild(opt);
+    });
+
+    sortAndRender();
+  }
+
+  function isLiveStatus(s) {
+    return ['1H','HT','2H','ET','BT','P','SUSP','INT','LIVE'].indexOf(s) !== -1;
+  }
+
+  function getMatchQueueTotal(matchId) {
+    if (!queueMap[matchId]) return 0;
+    var total = 0;
+    ['full_match', 'first_half', 'second_half'].forEach(function(h) {
+      if (queueMap[matchId][h]) {
+        ['1v1','2v2'].forEach(function(m) { total += queueMap[matchId][h][m] || 0; });
+      }
+    });
+    return total;
+  }
+
+  function setSortMode(mode) {
+    sortMode = mode;
+    document.getElementById('sort-time').classList.toggle('active', mode === 'time');
+    document.getElementById('sort-active').classList.toggle('active', mode === 'active');
+    sortAndRender();
+  }
+
+  function sortAndRender() {
+    var now = Date.now();
+    allMatches.sort(function(a, b) {
+      if (sortMode === 'active') {
+        var aQ = getMatchQueueTotal(a.matchId);
+        var bQ = getMatchQueueTotal(b.matchId);
+        if (aQ !== bQ) return bQ - aQ;
+      }
+      var aLive = isLiveStatus(a.statusShort);
+      var bLive = isLiveStatus(b.statusShort);
+      if (aLive && !bLive) return -1;
+      if (!aLive && bLive) return 1;
+      var aDiff = a.kickoff ? Math.abs(a.kickoff.getTime() - now) : Infinity;
+      var bDiff = b.kickoff ? Math.abs(b.kickoff.getTime() - now) : Infinity;
+      return aDiff - bDiff;
+    });
+    applyFilters();
+  }
+
+  function applyFilters() {
+    var q = (document.getElementById('match-search').value || '').toLowerCase().trim();
+    var league = document.getElementById('league-filter').value;
+
+    var visible = allMatches.filter(function(m) {
+      if (league !== 'all' && String(m.compId) !== league) return false;
+      if (q) {
+        var text = (m.home + ' ' + m.away + ' ' + m.compName).toLowerCase();
+        if (text.indexOf(q) === -1) return false;
+      }
+      return true;
+    });
+
+    renderMatchList(visible);
+    document.getElementById('match-count-label').textContent = visible.length + ' match' + (visible.length !== 1 ? 'es' : '');
+  }
+
+  function renderMatchList(matches) {
+    var list = document.getElementById('match-list');
+    if (!matches.length) {
+      list.innerHTML = '<div class="match-list-empty">No matches found</div>';
+      return;
+    }
+    var html = '';
+    matches.forEach(function(m) {
+      var isLive   = isLiveStatus(m.statusShort);
+      var qTotal   = getMatchQueueTotal(m.matchId);
+      var isSelected = selectedMatch && selectedMatch.matchId === m.matchId;
+
+      var timeStr = '';
+      if (isLive) {
+        timeStr = '<span class="match-live-dot"></span><span class="match-live-label">Live</span>';
+      } else if (m.kickoff) {
+        var diff = m.kickoff.getTime() - Date.now();
+        if (diff > 0) {
+          var h = Math.floor(diff / 3600000);
+          var min = Math.floor((diff % 3600000) / 60000);
+          if (h > 24) {
+            timeStr = m.kickoff.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ' ' +
+              m.kickoff.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+          } else if (h > 0) {
+            timeStr = 'In ' + h + 'h ' + min + 'm';
+          } else {
+            timeStr = 'In ' + min + 'm';
+          }
+        } else {
+          timeStr = m.kickoff.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        }
+      }
+
+      var qBadge = qTotal > 0
+        ? '<span class="queue-total-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>' + qTotal + '</span>'
+        : '<span class="queue-total-badge empty">0</span>';
+
+      html += '<div class="match-row' + (isSelected ? ' selected' : '') + (isLive ? ' live-row' : '') + '" onclick="selectMatch(\'' + escAttr(m.matchId) + '\')" data-mid="' + escAttr(m.matchId) + '">';
+      html += '<div class="match-row-left">';
+      html += '<div class="match-row-teams">' + escHtml(m.home) + ' vs ' + escHtml(m.away) + '</div>';
+      html += '<div class="match-row-meta">' + (timeStr || '') + (timeStr ? '<span>·</span>' : '') + escHtml(m.compName) + '</div>';
+      html += '</div>';
+      html += '<div class="match-row-right">' + qBadge;
+      html += '<span class="match-row-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>';
+      html += '</div>';
+      html += '</div>';
+    });
+    list.innerHTML = html;
+  }
+
+  function selectMatch(matchId) {
+    var m = allMatches.find(function(x){ return x.matchId === matchId; });
+    if (!m) return;
+    selectedMatch = m;
+    // update row highlights
+    document.querySelectorAll('.match-row').forEach(function(row) {
+      row.classList.toggle('selected', row.dataset.mid === matchId);
+    });
+    updateConfigPanel();
+  }
+
+  // ── QUEUE COUNTS ───────────────────────────────────────────────────────────
+  async function loadQueueCounts() {
+    var { data: waitingLobbies } = await window.sb
+      .from('match_lobbies')
+      .select('id, match_id, half_scope, mode')
+      .eq('status', 'waiting');
+
+    if (!waitingLobbies || !waitingLobbies.length) {
+      queueMap = {};
+      applyFilters();
+      if (selectedMatch) updateHalfQueueBadges();
+      return;
+    }
+
+    var lobbyIds = waitingLobbies.map(function(l){ return l.id; });
+    var { data: players } = await window.sb
+      .from('match_lobby_players')
+      .select('lobby_id')
+      .in('lobby_id', lobbyIds);
+
+    var countPerLobby = {};
+    (players || []).forEach(function(p) {
+      countPerLobby[p.lobby_id] = (countPerLobby[p.lobby_id] || 0) + 1;
+    });
+
+    queueMap = {};
+    waitingLobbies.forEach(function(lobby) {
+      var count = countPerLobby[lobby.id] || 0;
+      if (!queueMap[lobby.match_id]) queueMap[lobby.match_id] = {};
+      if (!queueMap[lobby.match_id][lobby.half_scope]) queueMap[lobby.match_id][lobby.half_scope] = {};
+      var key = lobby.mode;
+      queueMap[lobby.match_id][lobby.half_scope][key] =
+        (queueMap[lobby.match_id][lobby.half_scope][key] || 0) + count;
+    });
+
+    applyFilters();
+    if (selectedMatch) updateHalfQueueBadges();
+    if (selectedMatch) updateConfigPanel();
+  }
+
+  function getQueueCount(matchId, half, mode) {
+    return (queueMap[matchId] && queueMap[matchId][half] && queueMap[matchId][half][mode]) || 0;
+  }
+
+  function updateHalfQueueBadges() {
+    if (!selectedMatch) return;
+    ['full_match', 'first_half', 'second_half'].forEach(function(h) {
+      var el = document.getElementById('hq-' + h);
+      if (!el) return;
+      var cnt = getQueueCount(selectedMatch.matchId, h, selectedMode);
+      el.textContent = cnt > 0 ? cnt + ' waiting' : '—';
+      el.className = 'half-q-count' + (cnt === 0 ? ' zero' : '');
+    });
+  }
+
+  // ── CONFIG PANEL ───────────────────────────────────────────────────────────
+  function updateConfigPanel() {
+    var placeholder = document.getElementById('config-placeholder');
+    var panel       = document.getElementById('config-panel');
+    if (!selectedMatch) {
+      placeholder.style.display = 'flex';
+      panel.style.display = 'none';
+      return;
+    }
+    placeholder.style.display = 'none';
+    panel.style.display = 'block';
+
+    var m = selectedMatch;
+    var kickStr = '';
+    if (m.kickoff) {
+      kickStr = m.kickoff.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) +
+                ' · ' + m.kickoff.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    }
+    if (isLiveStatus(m.statusShort)) kickStr = '🔴 Live now';
+
+    var modeBadgeClass = selectedMode === '1v1' ? 'm1v1' : 'm2v2';
+    var modeLabel      = selectedMode === '1v1' ? '1v1 DUEL' : '2v2 TEAM BATTLE';
+
+    // half cards
+    var halves = [
+      { id: 'full_match',   label: 'Full Match',   sub: 'All 90 minutes',   time: "90'" },
+      { id: 'first_half',   label: 'First Half',   sub: '0\' to 45\'',      time: "45'" },
+      { id: 'second_half',  label: 'Second Half',  sub: '45\' to 90\'',     time: "45'" },
+    ];
+    var halfCardsHtml = halves.map(function(h) {
+      var cnt = getQueueCount(m.matchId, h.id, selectedMode);
+      var active = selectedHalf === h.id ? ' active' : '';
+      return '<div class="half-card' + active + '" id="hc-' + h.id + '" onclick="selectHalf(\'' + h.id + '\')">' +
+        '<div class="half-card-left">' +
+        '<div class="half-card-time">' + h.time + '</div>' +
+        '<div><div class="half-card-title">' + h.label + '</div><div class="half-card-sub">' + h.sub + '</div></div>' +
+        '</div>' +
+        '<div class="half-card-right">' +
+        '<span class="half-q-count' + (cnt === 0 ? ' zero' : '') + '" id="hq-' + h.id + '">' + (cnt > 0 ? cnt + ' waiting' : '—') + '</span>' +
+        '<div class="half-card-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>' +
+        '</div></div>';
+    }).join('');
+
+    // queue breakdown for selected half
+    var cnt1v1  = getQueueCount(m.matchId, selectedHalf, '1v1');
+    var cnt2v2  = getQueueCount(m.matchId, selectedHalf, '2v2');
+    var cntMode = getQueueCount(m.matchId, selectedHalf, selectedMode);
+
+    var qBreakdownHtml = '<div class="queue-breakdown">' +
+      '<div class="queue-breakdown-title">Players waiting now</div>' +
+      '<div class="queue-breakdown-row">' +
+        '<span class="queue-row-label">⚔️ 1v1 Duel</span>' +
+        '<span class="queue-row-val' + (cnt1v1 === 0 ? ' zero' : '') + '">' + (cnt1v1 || '—') + '</span>' +
+      '</div>' +
+      '<div class="queue-breakdown-row">' +
+        '<span class="queue-row-label">🛡️ 2v2 Team</span>' +
+        '<span class="queue-row-val' + (cnt2v2 === 0 ? ' zero' : '') + '">' + (cnt2v2 || '—') + '</span>' +
+      '</div>' +
+      '</div>';
+
+    // teammate options (2v2 only)
+    var teammateHtml = '';
+    if (selectedMode === '2v2') {
+      var opts = [
+        { id: 'solo_queue',    icon: '🎲', label: 'Auto-match partner', sub: 'We\'ll find you a teammate from the queue', disabled: false },
+        { id: 'invite_app',    icon: '👤', label: 'Invite from friends', sub: 'Coming soon', disabled: true },
+        { id: 'invite_friend', icon: '🔗', label: 'Share invite link', sub: 'Send the link to your teammate', disabled: false },
+      ];
+      var optsHtml = opts.map(function(o) {
+        var active   = selected2v2Sub === o.id && !o.disabled ? ' active' : '';
+        var disabled = o.disabled ? ' disabled' : '';
+        var click    = o.disabled ? '' : ' onclick="select2v2Sub(\'' + o.id + '\')"';
+        return '<div class="teammate-card' + active + disabled + '"' + click + '>' +
+          '<div class="teammate-card-icon">' + o.icon + '</div>' +
+          '<div class="teammate-card-content">' +
+            '<div class="teammate-card-title">' + o.label + '</div>' +
+            '<div class="teammate-card-sub">' + o.sub + '</div>' +
+          '</div>' +
+          (o.disabled
+            ? '<span class="soon-tag">Soon</span>'
+            : '<div class="teammate-card-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>') +
+          '</div>';
+      }).join('');
+      teammateHtml = '<p class="config-section-label">Teammate</p><div class="teammate-cards">' + optsHtml + '</div>';
+    }
+
+    panel.innerHTML =
+      '<div class="config-match-header">' +
+        '<div class="config-match-teams">' + escHtml(m.home) + ' vs ' + escHtml(m.away) + '</div>' +
+        '<div class="config-match-meta">' + escHtml(kickStr) + ' · ' + escHtml(m.compName) + '</div>' +
+      '</div>' +
+      '<div class="config-mode-badge ' + modeBadgeClass + '">' + modeLabel + '</div>' +
+      '<p class="config-section-label">Match Scope</p>' +
+      '<div class="half-cards">' + halfCardsHtml + '</div>' +
+      qBreakdownHtml +
+      teammateHtml +
+      '<button class="enter-arena-btn" onclick="showWaitingRoom()">' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>' +
+        'Enter the Arena' +
+      '</button>';
+  }
+
+  function selectHalf(half) {
+    selectedHalf = half;
+    // update half card UI
+    ['full_match', 'first_half', 'second_half'].forEach(function(h) {
+      var el = document.getElementById('hc-' + h);
+      if (el) el.classList.toggle('active', h === half);
+    });
+    updateHalfQueueBadges();
+    // refresh queue breakdown in panel
+    var cnt1v1 = getQueueCount(selectedMatch.matchId, selectedHalf, '1v1');
+    var cnt2v2 = getQueueCount(selectedMatch.matchId, selectedHalf, '2v2');
+    var q = document.querySelector('.queue-breakdown');
+    if (q) {
+      var rows = q.querySelectorAll('.queue-row-val');
+      if (rows[0]) { rows[0].textContent = cnt1v1 || '—'; rows[0].className = 'queue-row-val' + (cnt1v1 === 0 ? ' zero' : ''); }
+      if (rows[1]) { rows[1].textContent = cnt2v2 || '—'; rows[1].className = 'queue-row-val' + (cnt2v2 === 0 ? ' zero' : ''); }
+    }
+  }
+
+  function select2v2Sub(value) {
+    selected2v2Sub = value;
+    document.querySelectorAll('.teammate-card').forEach(function(el) {
+      el.classList.remove('active');
+    });
+    var map = { solo_queue: 0, invite_app: 1, invite_friend: 2 };
+    var cards = document.querySelectorAll('.teammate-card');
+    var idx = map[value];
+    if (cards[idx] && !cards[idx].classList.contains('disabled')) {
+      cards[idx].classList.add('active');
+    }
+  }
+
+  function halfLabel(h) {
+    var labels = { full_match: 'Full Match', first_half: 'First Half', second_half: 'Second Half' };
+    return labels[h] || h;
+  }
+
+  // ── WAITING ROOM ───────────────────────────────────────────────────────────
+  function showWaitingRoom() {
+    if (!selectedMatch) return;
+
+    // populate static info
+    document.getElementById('wr-match-teams').textContent = selectedMatch.home + ' vs ' + selectedMatch.away;
+    document.getElementById('wr-match-meta').textContent = halfLabel(selectedHalf) + ' · ' + (selectedMatch.compName || 'Football');
+
+    var modeBadge = document.getElementById('wr-mode-badge');
+    modeBadge.textContent = selectedMode === '1v1' ? '1v1 DUEL' : '2v2 TEAM BATTLE';
+    modeBadge.className   = 'wr-mode-badge ' + (selectedMode === '1v1' ? 'm1v1' : 'm2v2');
+
+    var initials = (currentUserHandle || 'Y')[0].toUpperCase();
+    document.getElementById('wr-you-avatar').textContent = initials;
+    document.getElementById('wr-you-name').textContent   = currentUserHandle || 'You';
+
+    var oppAvatar = document.getElementById('wr-opp-avatar');
+    oppAvatar.textContent = '?';
+    oppAvatar.className   = 'wr-avatar opp searching';
+    document.getElementById('wr-opp-name').textContent = '…';
+
+    document.getElementById('wr-status').style.display = '';
+    document.getElementById('wr-found').style.display  = 'none';
+
+    var invSection = document.getElementById('wr-invite-section');
+    invSection.style.display = (selectedMode === '2v2' && selected2v2Sub === 'invite_friend') ? '' : 'none';
+
+    document.getElementById('wr-overlay').style.display = 'flex';
+    updateStepBars();
+
+    enterLobby();
+  }
+
+  function cancelWaitingRoom() {
+    leaveLobby(true);
+    document.getElementById('wr-overlay').style.display = 'none';
+    updateStepBars();
+  }
+
+  // ── LOBBY LOGIC ────────────────────────────────────────────────────────────
+  async function enterLobby() {
+    if (!currentUserId || !selectedMatch) return;
+    try {
+      var result = await SpontixStoreAsync.findOrJoinLobby({
+        matchId:   selectedMatch.matchId,
+        halfScope: selectedHalf,
+        mode:      selectedMode,
+        userId:    currentUserId,
+        homeTeamName: selectedMatch.home,
+        awayTeamName: selectedMatch.away,
+        kickoffAt:    selectedMatch.kickoff ? selectedMatch.kickoff.toISOString() : null,
+        apiLeagueId:  selectedMatch.apiLeagueId || null,
+        isInvited:    false,
+      });
+      if (!result || !result.ok) {
+        showToast('Could not join lobby. Try again.');
+        cancelWaitingRoom();
+        return;
+      }
+      currentLobbyId = result.lobbyId;
+      if (result.league_id) { redirectToGame(result.league_id); return; }
+      if (selected2v2Sub === 'invite_friend' && currentLobbyId) {
+        var inviteUrl = window.location.origin + window.location.pathname + '?join=' + currentLobbyId;
+        var inp = document.getElementById('wr-invite-link');
+        if (inp) inp.value = inviteUrl;
+      }
+      startLobbyRealtime(currentLobbyId);
+      refreshLobbyUI(currentLobbyId);
+    } catch(e) {
+      console.error('enterLobby error', e);
+      showToast('Something went wrong. Try again.');
+      cancelWaitingRoom();
+    }
+  }
+
+  async function leaveLobby(backOnly) {
+    stopLobbyRealtime();
+    if (currentLobbyId && currentUserId) {
+      await window.sb.from('match_lobby_players').delete()
+        .eq('lobby_id', currentLobbyId).eq('user_id', currentUserId);
+      currentLobbyId = null;
+    }
+    if (!backOnly) window.location.href = 'dashboard.html';
+  }
+
+  function startLobbyRealtime(lobbyId) {
+    stopLobbyRealtime();
+    lobbyChannel = window.sb.channel('lobby-' + lobbyId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'match_lobbies', filter: 'id=eq.' + lobbyId }, function() {
+        refreshLobbyUI(lobbyId);
+      })
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'match_lobby_players', filter: 'lobby_id=eq.' + lobbyId }, function() {
+        refreshLobbyUI(lobbyId);
+      })
+      .subscribe();
+  }
+
+  function stopLobbyRealtime() {
+    if (lobbyChannel) { window.sb.removeChannel(lobbyChannel); lobbyChannel = null; }
+  }
+
+  async function refreshLobbyUI(lobbyId) {
+    var { data: lobby } = await window.sb.from('match_lobbies')
+      .select('*, match_lobby_players ( user_id, team_number, joined_at, is_invited )')
+      .eq('id', lobbyId).single();
+    if (!lobby) return;
+    if (lobby.league_id) { redirectToGame(lobby.league_id); return; }
+
+    var players = lobby.match_lobby_players || [];
+    var maxPlayers = lobby.mode === '1v1' ? 2 : 4;
+
+    var handleMap = {};
+    if (players.length > 0) {
+      var { data: profiles } = await window.sb.from('users').select('id, handle, name')
+        .in('id', players.map(function(p){ return p.user_id; }));
+      (profiles || []).forEach(function(u) {
+        handleMap[u.id] = u.handle || u.name || u.id.slice(0, 8);
+      });
+    }
+
+    var team2 = players.filter(function(p){ return p.team_number === 2; });
+    var oppPlayer = team2.length > 0 ? team2[0] : null;
+
+    if (oppPlayer) {
+      var oppHandle  = handleMap[oppPlayer.user_id] || '?';
+      var oppAvatarEl = document.getElementById('wr-opp-avatar');
+      if (oppAvatarEl) {
+        oppAvatarEl.textContent = (oppHandle[0] || '?').toUpperCase();
+        oppAvatarEl.className   = 'wr-avatar opp found';
+      }
+      var oppNameEl = document.getElementById('wr-opp-name');
+      if (oppNameEl) oppNameEl.textContent = oppHandle;
+
+      var statusEl = document.getElementById('wr-status');
+      if (statusEl) statusEl.style.display = 'none';
+      var foundEl = document.getElementById('wr-found');
+      if (foundEl) { foundEl.style.display = 'block'; foundEl.textContent = 'Opponent found — heading to the arena!'; }
+    }
+
+    if (players.length >= maxPlayers) {
+      handleLobbyFull(lobby, players, maxPlayers);
+    }
+  }
+
+  async function handleLobbyFull(lobby, players, maxPlayers) {
+    if (lobby.league_id) { redirectToGame(lobby.league_id); return; }
+    var result = await SpontixStoreAsync.createLeagueFromLobby(lobby.id, currentUserId);
+    if (result && result.leagueId) {
+      redirectToGame(result.leagueId);
+    } else {
+      showToast('Setting up match…');
+    }
+  }
+
+  function redirectToGame(leagueId) {
+    stopLobbyRealtime();
+    var foundEl = document.getElementById('wr-found');
+    if (foundEl) { foundEl.style.display = 'block'; foundEl.textContent = 'Match starting — taking you to the arena!'; }
+    var statusEl = document.getElementById('wr-status');
+    if (statusEl) statusEl.style.display = 'none';
+    setTimeout(function(){ window.location.href = 'league.html?id=' + leagueId; }, 1600);
+  }
+
+  async function directJoinLobby(lobbyId) {
+    var { data: lobby } = await window.sb.from('match_lobbies').select('*').eq('id', lobbyId).single();
+    if (!lobby) { showToast('Lobby not found.'); window.location.href = 'dashboard.html'; return; }
+
+    if (lobby.status === 'finished' || lobby.status === 'active') {
+      if (lobby.league_id) { window.location.href = 'league.html?id=' + lobby.league_id; }
+      else { showToast('That lobby has already started.'); window.location.href = 'dashboard.html'; }
+      return;
+    }
+
+    selectedMatch = {
+      matchId: lobby.match_id,
+      home: lobby.home_team_name || 'Home',
+      away: lobby.away_team_name || 'Away',
+      kickoff: lobby.kickoff_at ? new Date(lobby.kickoff_at) : null,
+      apiLeagueId: lobby.api_league_id,
+      compName: 'Football',
+    };
+    selectedHalf   = lobby.half_scope;
+    selectedMode   = lobby.mode;
+    selected2v2Sub = 'invite_friend';
+
+    if (!currentUserId) {
+      var { data: { session } } = await window.sb.auth.getSession();
+      if (!session) { window.location.href = 'login.html'; return; }
+      currentUserId = session.user.id;
+    }
+
+    var joinResult = await SpontixStoreAsync.joinLobbyById(lobbyId, 1, true, currentUserId);
+    if (!joinResult.ok && joinResult.error !== 'already_in_lobby') {
+      showToast(joinResult.error === 'lobby_full' ? 'This lobby is already full.' : 'Could not join lobby.');
+      window.location.href = 'dashboard.html';
+      return;
+    }
+
+    currentLobbyId = lobbyId;
+    document.getElementById('step-1').style.display = 'none';
+    var s2 = document.getElementById('step-2');
+    if (s2) s2.style.display = 'flex';
+    currentStep = 2;
+    updateStepBars();
+    showWaitingRoom();
+  }
+
+  function copyInviteLink() {
+    var inp = document.getElementById('wr-invite-link');
+    if (!inp || !inp.value) return;
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(inp.value);
+    } else {
+      inp.select(); document.execCommand('copy');
+    }
+    showToast('Invite link copied!');
+  }
+
+  // ── HELPERS ────────────────────────────────────────────────────────────────
+  function escHtml(str) {
+    return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+  function escAttr(str) {
+    return String(str || '').replace(/'/g, "\\'");
+  }
+
+  var _toastTimer = null;
+  function showToast(msg, duration) {
+    var t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    if (_toastTimer) clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(function(){ t.classList.remove('show'); }, duration || 3000);
+  }
+
+  // Stub fallbacks for store methods that may not exist yet
+  if (typeof SpontixStoreAsync === 'undefined') {
+    window.SpontixStoreAsync = {};
+  }
+  if (typeof SpontixStoreAsync.findOrJoinLobby !== 'function') {
+    SpontixStoreAsync.findOrJoinLobby = async function(opts) {
+      // find waiting lobby for this match+half+mode
+      var { data: existing } = await window.sb.from('match_lobbies')
+        .select('id, league_id')
+        .eq('match_id', opts.matchId)
+        .eq('half_scope', opts.halfScope)
+        .eq('mode', opts.mode)
+        .eq('status', 'waiting')
+        .limit(1);
+      var lobbyId;
+      if (existing && existing.length > 0) {
+        lobbyId = existing[0].id;
+        if (existing[0].league_id) return { ok: true, lobbyId: lobbyId, league_id: existing[0].league_id };
+      } else {
+        var { data: created, error } = await window.sb.from('match_lobbies').insert({
+          match_id: opts.matchId, half_scope: opts.halfScope, mode: opts.mode,
+          status: 'waiting',
+          home_team_name: opts.homeTeamName, away_team_name: opts.awayTeamName,
+          kickoff_at: opts.kickoffAt, api_league_id: opts.apiLeagueId,
+        }).select('id').single();
+        if (error || !created) return { ok: false, error: 'create_failed' };
+        lobbyId = created.id;
+      }
+      // join as player
+      var team = opts.isInvited ? 2 : 1;
+      await window.sb.from('match_lobby_players').upsert({
+        lobby_id: lobbyId, user_id: opts.userId, team_number: team,
+        is_invited: opts.isInvited || false,
+      }, { onConflict: 'lobby_id,user_id' });
+      return { ok: true, lobbyId: lobbyId };
+    };
+  }
+  if (typeof SpontixStoreAsync.joinLobbyById !== 'function') {
+    SpontixStoreAsync.joinLobbyById = async function(lobbyId, teamNumber, isInvited, userId) {
+      var { data: existing } = await window.sb.from('match_lobby_players')
+        .select('user_id').eq('lobby_id', lobbyId).eq('user_id', userId);
+      if (existing && existing.length > 0) return { ok: true, error: 'already_in_lobby' };
+      var { data: players } = await window.sb.from('match_lobby_players').select('user_id').eq('lobby_id', lobbyId);
+      var { data: lobbyInfo } = await window.sb.from('match_lobbies').select('mode').eq('id', lobbyId).single();
+      var maxP = lobbyInfo && lobbyInfo.mode === '1v1' ? 2 : 4;
+      if (players && players.length >= maxP) return { ok: false, error: 'lobby_full' };
+      var { error } = await window.sb.from('match_lobby_players').insert({
+        lobby_id: lobbyId, user_id: userId, team_number: teamNumber, is_invited: isInvited || false,
+      });
+      return error ? { ok: false, error: error.message } : { ok: true };
+    };
+  }
+  if (typeof SpontixStoreAsync.createLeagueFromLobby !== 'function') {
+    SpontixStoreAsync.createLeagueFromLobby = async function(lobbyId, userId) {
+      // placeholder — real implementation creates a league from this lobby
+      console.log('createLeagueFromLobby not implemented', lobbyId);
+      return null;
+    };
+  }
+  </script>
+</body>
+</html>

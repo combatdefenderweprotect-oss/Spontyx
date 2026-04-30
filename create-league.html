@@ -767,6 +767,10 @@
     </div>
 
     <div class="wizard-actions">
+      <button class="btn btn-secondary" onclick="window.location.href='dashboard.html'">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </button>
       <button class="btn btn-primary" id="btn-next-0" disabled onclick="nextStep()">
         Continue
         <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
@@ -1073,7 +1077,7 @@
       </div>
     </div>
 
-    <div class="slider-group">
+    <div class="slider-group" id="max-players-group">
       <div class="slider-header">
         <label class="form-label" style="margin-bottom:0;">Max Players</label>
         <div class="slider-value" id="player-count">10</div>
@@ -1113,7 +1117,7 @@
       </div>
       <label class="toggle-switch" data-min-tier="elite" data-feature="Betting-Style Predictions"><input type="checkbox" /><span class="slider"></span></label>
     </div>
-    <div class="toggle-row">
+    <div class="toggle-row" id="leaderboard-toggle-row">
       <div class="toggle-info">
         <div class="toggle-label">Standard Leaderboard</div>
         <div class="toggle-desc">Track rankings throughout the league</div>
@@ -1122,7 +1126,7 @@
     </div>
 
     <!-- ── League Trophy ── -->
-    <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06);">
+    <div id="trophy-section" style="margin-top: 24px; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.06);">
       <label class="form-label" style="display:flex;align-items:center;gap:8px;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#FFD700" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0012 0V2Z"/></svg>
         Winner's Trophy
@@ -1410,11 +1414,11 @@
       <div class="review-row"><span class="review-label">Play Mode</span><span class="review-value" id="review-mode">—</span></div>
       <div class="review-row" id="review-teams-row" style="display:none;"><span class="review-label">Teams</span><span class="review-value" id="review-teams">—</span></div>
       <div class="review-row"><span class="review-label">Question Types</span><span class="review-value" id="review-qtypes">—</span></div>
-      <div class="review-row"><span class="review-label">Max Players</span><span class="review-value" id="review-players">—</span></div>
+      <div class="review-row" id="review-players-row"><span class="review-label">Max Players</span><span class="review-value" id="review-players">—</span></div>
       <div class="review-row"><span class="review-label">Risky Answers</span><span class="review-value" id="review-risky">—</span></div>
       <div class="review-row"><span class="review-label">Streaks</span><span class="review-value" id="review-streaks">—</span></div>
       <div class="review-row"><span class="review-label">AI Questions</span><span class="review-value" id="review-ai-questions" style="color:var(--grey);">Off</span></div>
-      <div class="review-row"><span class="review-label">Winner's Trophy</span><span class="review-value" id="review-trophy" style="color:#FFD700;">League Champion</span></div>
+      <div class="review-row" id="review-trophy-row"><span class="review-label">Winner's Trophy</span><span class="review-value" id="review-trophy" style="color:#FFD700;">League Champion</span></div>
     </div>
 
     <div class="review-card">
@@ -1715,6 +1719,14 @@ function updateProgress() {
       document.getElementById('line-' + i).className = i < currentStep ? 'wizard-step-line done' : 'wizard-step-line';
     }
   }
+  // Singleplayer: hide the Invite step indicator (dot 3, line 3, label 3)
+  const isSolo = sessionType === 'singleplayer';
+  const dot3   = document.getElementById('dot-3');
+  const line3  = document.getElementById('line-3');
+  const lbl3   = document.getElementById('label-3');
+  if (dot3)  dot3.style.display  = isSolo ? 'none' : '';
+  if (line3) line3.style.display = isSolo ? 'none' : '';
+  if (lbl3)  lbl3.style.display  = isSolo ? 'none' : '';
   // Show/hide panels
   document.querySelectorAll('.wizard-panel').forEach((p, i) => {
     p.classList.toggle('active', i === currentStep);
@@ -1727,6 +1739,8 @@ function nextStep() {
   if (currentStep === 3 && !generatedCode) generateCode();
   if (currentStep < totalSteps - 1) {
     currentStep++;
+    // Singleplayer: skip the Invite step (step 3)
+    if (sessionType === 'singleplayer' && currentStep === 3) currentStep++;
     updateProgress();
     window.scrollTo({ top: 0, behavior: 'smooth' });
     if (currentStep === 4) populateReview();
@@ -1736,6 +1750,8 @@ function nextStep() {
 function prevStep() {
   if (currentStep > 0) {
     currentStep--;
+    // Singleplayer: skip back over the Invite step (step 3)
+    if (sessionType === 'singleplayer' && currentStep === 3) currentStep--;
     updateProgress();
     restoreStepState(currentStep);
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -2324,19 +2340,41 @@ function selectPlayMode(mode) {
 // play_mode is INDEPENDENT of subscription tier. All tier rules apply to both modes.
 function selectSessionType(type, el) {
   sessionType = type;
+  const isSolo = type === 'singleplayer';
+
   // Visual: update Play Experience cards
   document.querySelectorAll('#play-experience-cards .mode-card').forEach(c => c.classList.remove('selected'));
   if (el) el.classList.add('selected');
 
+  // Singleplayer: hide the Multiplayer card — solo setup shows Solo only
+  const multiCard = document.querySelector('#play-experience-cards .mode-card:first-child');
+  if (multiCard) multiCard.style.display = isSolo ? 'none' : '';
+
   // Singleplayer: hide team mode (can't have teams in a solo session)
   const teamSection = document.querySelector('.team-mode-section');
-  if (teamSection) teamSection.style.display = type === 'singleplayer' ? 'none' : '';
+  if (teamSection) teamSection.style.display = isSolo ? 'none' : '';
+
+  // Singleplayer: hide League Access (Public/Private) — solo is always private to the user
+  const visSection = document.querySelector('.visibility-section');
+  if (visSection) visSection.style.display = isSolo ? 'none' : '';
+
+  // Singleplayer: hide Winner's Trophy — no trophy awarded for solo play
+  const trophySection = document.getElementById('trophy-section');
+  if (trophySection) trophySection.style.display = isSolo ? 'none' : '';
+
+  // Singleplayer: hide Max Players slider — always 1 player in solo
+  const maxPlayersGroup = document.getElementById('max-players-group');
+  if (maxPlayersGroup) maxPlayersGroup.style.display = isSolo ? 'none' : '';
+
+  // Singleplayer: hide Standard Leaderboard toggle — no competition in solo
+  const lbToggleRow = document.getElementById('leaderboard-toggle-row');
+  if (lbToggleRow) lbToggleRow.style.display = isSolo ? 'none' : '';
 
   // Singleplayer: lock player count to 1
-  const slider   = document.getElementById('player-slider');
+  const slider    = document.getElementById('player-slider');
   const sliderLbl = document.getElementById('slider-value');
   if (slider) {
-    if (type === 'singleplayer') {
+    if (isSolo) {
       slider.value    = 1;
       slider.disabled = true;
       if (sliderLbl) sliderLbl.textContent = '1 player';
@@ -2665,13 +2703,23 @@ function populateReview() {
     aiEl.style.color = 'var(--grey)';
   }
 
-  // Trophy review
-  var trophyEl = document.getElementById('review-trophy');
-  if (trophyEl && selectedTrophy) {
+  // Trophy review — hidden for singleplayer (no trophy awarded in solo play)
+  var trophyRow = document.getElementById('review-trophy-row');
+  var trophyEl  = document.getElementById('review-trophy');
+  if (trophyRow) trophyRow.style.display = sessionType === 'singleplayer' ? 'none' : '';
+  if (trophyEl && selectedTrophy && sessionType !== 'singleplayer') {
     var rarity = SpontixStore.TROPHY_RARITY[selectedTrophy.rarity] || SpontixStore.TROPHY_RARITY.common;
     trophyEl.textContent = selectedTrophy.name + (selectedTrophy.custom ? ' ✨' : '');
     trophyEl.style.color = rarity.color;
   }
+
+  // Max Players row — hidden for singleplayer (always 1)
+  var playersRow = document.getElementById('review-players-row');
+  if (playersRow) playersRow.style.display = sessionType === 'singleplayer' ? 'none' : '';
+
+  // Invites card — hidden for singleplayer (no one to invite)
+  var invitesCard = document.querySelector('.review-card:has(#review-code)');
+  if (invitesCard) invitesCard.style.display = sessionType === 'singleplayer' ? 'none' : '';
 }
 
 // ── Launch ──

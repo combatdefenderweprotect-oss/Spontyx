@@ -965,6 +965,8 @@
 var currentLeague    = null;
 var currentLeagueId  = null;
 var currentUserId    = null;
+var currentLeagueIsSolo         = false;  // true for play_mode='singleplayer'
+var currentLeagueMultiplayerMode = null;  // '1v1' | '2v2' | null
 var myAnswers        = {};   // questionId → { answer, is_correct, points_earned, multiplier_breakdown }
 var prevMyAnswers    = {};   // snapshot from previous poll cycle — used to detect newly-resolved correct answers
 var currentQuestions = [];   // full question set from last fetch
@@ -1254,6 +1256,8 @@ async function hydrateLeaguePage() {
   document.getElementById('statSport').textContent   = league.sport ? league.sport.charAt(0).toUpperCase() + league.sport.slice(1) : '—';
   document.getElementById('statStage').textContent   = league.stage || 'Active';
   var isSolo = league.playMode === 'singleplayer';
+  currentLeagueIsSolo          = isSolo;
+  currentLeagueMultiplayerMode = league.multiplayerMode || null;
 
   // statMode shows play experience + competition mode
   var modeLabel = isSolo ? 'Solo' : (league.mode === 'team' ? 'Team' : 'Individual');
@@ -1263,6 +1267,10 @@ async function hydrateLeaguePage() {
   if (isSolo && metaEl) {
     metaEl.innerHTML += '<span class="league-tag" style="background:rgba(168,225,12,0.1);color:var(--lime);border:1px solid rgba(168,225,12,0.2);">Solo</span>';
   }
+
+  // Rename "Leaderboard" tab to "Your Score" for solo leagues
+  var lbTabBtn = document.querySelector('.tab[onclick="switchTab(\'leaderboard\')"]');
+  if (lbTabBtn && isSolo) lbTabBtn.textContent = 'Your Score';
 
   // Invite card: hide for singleplayer (no invites in a solo session)
   var inviteCard = document.getElementById('invite-card-section');
@@ -2327,24 +2335,40 @@ async function loadLeaderboard() {
   if (!container || container.dataset.loaded) return;
   container.dataset.loaded = '1';
 
-  // Fetch all resolved answers for this league to compute scores
-  var answers = [], memberUsers = [];
+  // ── Solo mode: show personal score card only ──────────────────────
+  if (currentLeagueIsSolo) {
+    await loadSoloScore(container);
+    return;
+  }
+
+  // ── Fetch answers + members ───────────────────────────────────────
+  var answers = [], memberUsers = [], lobbyPlayers = [];
   try {
-    var [aRes, mRes] = await Promise.all([
+    var fetches = [
       window.sb
         .from('player_answers')
         .select('user_id, points_earned, is_correct')
         .eq('league_id', currentLeagueId)
-        .eq('is_correct', true),   // only resolved correct answers
+        .eq('is_correct', true),
       window.sb
         .from('league_members')
         .select('user_id')
         .eq('league_id', currentLeagueId),
-    ]);
-    answers = aRes.data || [];
+    ];
+    // For 2v2 multiplayer: also fetch team assignments from the lobby
+    if (currentLeagueMultiplayerMode === '2v2' && currentLeague && currentLeague.lobbyId) {
+      fetches.push(
+        window.sb
+          .from('match_lobby_players')
+          .select('user_id, team_number')
+          .eq('lobby_id', currentLeague.lobbyId)
+      );
+    }
+    var results = await Promise.all(fetches);
+    answers      = results[0].data || [];
+    var memberIds = (results[1].data || []).map(function(m) { return m.user_id; });
+    lobbyPlayers  = results[2] ? (results[2].data || []) : [];
 
-    // Fetch user profiles for all members
-    var memberIds = (mRes.data || []).map(function(m) { return m.user_id; });
     if (memberIds.length > 0) {
       var uRes = await window.sb
         .from('users')
@@ -2362,9 +2386,10 @@ async function loadLeaderboard() {
     scores[a.user_id] = (scores[a.user_id] || 0) + (a.points_earned || 0);
   });
 
-  // Build rows: all members, even if score is 0
+  // Build rows
   var rows = memberUsers.map(function(u) {
-    return { id: u.id, name: u.name || u.handle || 'Player', pts: scores[u.id] || 0 };
+    var lp = lobbyPlayers.find(function(p) { return p.user_id === u.id; });
+    return { id: u.id, name: u.name || u.handle || 'Player', pts: scores[u.id] || 0, team: lp ? lp.team_number : null };
   });
   rows.sort(function(a, b) { return b.pts - a.pts; });
 
@@ -2373,9 +2398,39 @@ async function loadLeaderboard() {
     return;
   }
 
+  // ── 2v2: team score banner before the standard table ─────────────
+  var teamBannerHtml = '';
+  if (currentLeagueMultiplayerMode === '2v2' && lobbyPlayers.length > 0) {
+    var team1pts = 0, team2pts = 0;
+    rows.forEach(function(r) {
+      if (r.team === 1) team1pts += r.pts;
+      else if (r.team === 2) team2pts += r.pts;
+    });
+    var myTeam = (function() {
+      var lp = lobbyPlayers.find(function(p) { return p.user_id === currentUserId; });
+      return lp ? lp.team_number : null;
+    })();
+    var t1Style = myTeam === 1 ? 'border-color:rgba(168,225,12,0.5);' : '';
+    var t2Style = myTeam === 2 ? 'border-color:rgba(168,225,12,0.5);' : '';
+    teamBannerHtml =
+      '<div style="display:flex;gap:10px;margin-bottom:20px;">' +
+        '<div style="flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);' + t1Style + 'border-radius:10px;padding:14px;text-align:center;">' +
+          '<div style="font-size:0.7rem;color:var(--grey);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em;">Team 1</div>' +
+          '<div style="font-size:1.5rem;font-weight:800;color:' + (myTeam===1?'var(--lime)':'#fff') + ';">' + team1pts.toLocaleString() + '</div>' +
+          '<div style="font-size:0.65rem;color:var(--grey);">pts</div>' +
+        '</div>' +
+        '<div style="display:flex;align-items:center;font-size:0.8rem;color:var(--grey);font-weight:700;">VS</div>' +
+        '<div style="flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);' + t2Style + 'border-radius:10px;padding:14px;text-align:center;">' +
+          '<div style="font-size:0.7rem;color:var(--grey);margin-bottom:4px;text-transform:uppercase;letter-spacing:.04em;">Team 2</div>' +
+          '<div style="font-size:1.5rem;font-weight:800;color:' + (myTeam===2?'var(--lime)':'#fff') + ';">' + team2pts.toLocaleString() + '</div>' +
+          '<div style="font-size:0.65rem;color:var(--grey);">pts</div>' +
+        '</div>' +
+      '</div>';
+  }
+
   // Podium (top 3)
   var podiumHtml = '<div class="lb-podium">';
-  var podiumOrder = [1, 0, 2]; // second, first, third
+  var podiumOrder = [1, 0, 2];
   var podiumClasses = ['second', 'first', 'third'];
   var rankColors = ['rgba(192,192,192,0.15);color:#C0C0C0', 'rgba(255,215,0,0.15);color:#FFD700', 'rgba(205,127,50,0.15);color:#CD7F32'];
   podiumOrder.forEach(function(idx, pos) {
@@ -2387,11 +2442,13 @@ async function loadLeaderboard() {
     var crownHtml = idx === 0
       ? '<div class="lb-podium-crown"><svg viewBox="0 0 24 24"><path d="M2 20h20L19 8l-5 5-2-7-2 7-5-5z" fill="#FFD700"/></svg></div>'
       : '';
+    var teamTag = row.team ? '<div style="font-size:0.6rem;color:var(--grey);margin-top:2px;">Team ' + row.team + '</div>' : '';
     podiumHtml +=
       '<div class="lb-podium-card ' + podiumClasses[pos] + '">' +
       '<div class="lb-podium-avatar" style="background:' + bgColor + ';color:' + txtColor + ';">' +
       crownHtml + avatarInitials(row.name) + '</div>' +
       '<div class="lb-podium-name">' + escHtml(row.name) + '</div>' +
+      teamTag +
       '<div class="lb-podium-pts">' + row.pts.toLocaleString() + ' pts</div>' +
       '<div class="lb-podium-rank" style="background:' + rankColors[pos] + ';">' + (idx + 1) + '</div>' +
       '</div>';
@@ -2410,16 +2467,73 @@ async function loadLeaderboard() {
     var bgColor  = isYou ? 'var(--lime)' : avatarColor(row.id);
     var txtColor = isYou ? 'var(--navy)' : '#fff';
     var youBadge = isYou ? ' <span class="you-badge">YOU</span>' : '';
+    var teamBadge = row.team ? ' <span style="font-size:0.6rem;background:rgba(255,255,255,0.06);border-radius:4px;padding:1px 5px;color:var(--grey);">T' + row.team + '</span>' : '';
     tableHtml +=
       '<div class="lb-row' + (isYou ? ' you' : '') + '">' +
       '<div class="lb-rank">' + (i + 1) + '</div>' +
       '<div class="lb-avatar" style="background:' + bgColor + ';color:' + txtColor + ';">' + avatarInitials(row.name) + '</div>' +
-      '<div class="lb-name">' + escHtml(row.name) + youBadge + '</div>' +
+      '<div class="lb-name">' + escHtml(row.name) + youBadge + teamBadge + '</div>' +
       '<div class="lb-pts">' + row.pts.toLocaleString() + '</div>' +
       '</div>';
   });
 
-  container.innerHTML = podiumHtml + tableHtml;
+  container.innerHTML = teamBannerHtml + podiumHtml + tableHtml;
+}
+
+async function loadSoloScore(container) {
+  if (!currentUserId || !window.sb) {
+    container.innerHTML = '<div class="feed-empty">Sign in to see your score.</div>';
+    return;
+  }
+  var answers = [];
+  try {
+    var aRes = await window.sb
+      .from('player_answers')
+      .select('points_earned, is_correct')
+      .eq('league_id', currentLeagueId)
+      .eq('user_id', currentUserId)
+      .not('is_correct', 'is', null);
+    answers = aRes.data || [];
+  } catch(e) {
+    console.warn('[solo-score] fetch error:', e);
+  }
+
+  var totalPts    = 0;
+  var correctCnt  = 0;
+  var totalCnt    = answers.length;
+  answers.forEach(function(a) {
+    if (a.is_correct) { totalPts += (a.points_earned || 0); correctCnt++; }
+  });
+  var accuracy = totalCnt > 0 ? Math.round(correctCnt / totalCnt * 100) : 0;
+
+  if (totalCnt === 0) {
+    container.innerHTML =
+      '<div style="text-align:center;padding:40px 20px;">' +
+        '<div style="font-size:2rem;margin-bottom:12px;">🎯</div>' +
+        '<div style="font-weight:700;margin-bottom:6px;">No answers yet</div>' +
+        '<div style="font-size:0.8rem;color:var(--grey);">Answer questions in the Questions tab to build your score.</div>' +
+      '</div>';
+    return;
+  }
+
+  container.innerHTML =
+    '<div style="padding:8px 0;">' +
+      '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px;">' +
+        '<div style="background:rgba(168,225,12,0.08);border:1px solid rgba(168,225,12,0.2);border-radius:10px;padding:16px;text-align:center;">' +
+          '<div style="font-size:0.65rem;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Points</div>' +
+          '<div style="font-size:1.6rem;font-weight:800;color:var(--lime);">' + totalPts.toLocaleString() + '</div>' +
+        '</div>' +
+        '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:16px;text-align:center;">' +
+          '<div style="font-size:0.65rem;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Correct</div>' +
+          '<div style="font-size:1.6rem;font-weight:800;color:#fff;">' + correctCnt + ' <span style="font-size:0.85rem;color:var(--grey);font-weight:400;">/ ' + totalCnt + '</span></div>' +
+        '</div>' +
+        '<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:16px;text-align:center;">' +
+          '<div style="font-size:0.65rem;color:var(--grey);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px;">Accuracy</div>' +
+          '<div style="font-size:1.6rem;font-weight:800;color:' + (accuracy >= 60 ? 'var(--lime)' : accuracy >= 40 ? '#FF9F43' : 'var(--coral)') + ';">' + accuracy + '%</div>' +
+        '</div>' +
+      '</div>' +
+      '<div style="font-size:0.75rem;color:var(--grey);text-align:center;">Solo session · your score only</div>' +
+    '</div>';
 }
 
 // ════════════════════════════════════════════════════════

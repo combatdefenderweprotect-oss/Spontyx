@@ -1,5 +1,7 @@
 # Spontix — Project State & Developer Handoff
 
+Last updated 2026-04-30 — Multiplayer arena redesign: `multiplayer.html` fully rewritten (761 → 1741 lines). Full-screen desktop layout (no max-width cap), 3-step arena flow. Step 1: 1v1 vs 2v2 format cards with large watermarks + glow selection state. Step 2: full-width two-column split — match browser (left, with search/competition filter/sort toggle) + config panel (right, with half-scope cards + per-half queue count breakdown + 2v2 team options). Step 3: fixed-position waiting room overlay with 4 pulsing concentric lime rings, player vs opponent avatars (searching-pulse → found-pop animations), invite link section for 2v2 share-link mode. Queue count system: two-step Supabase query (match_lobbies → match_lobby_players) aggregated into `queueMap[matchId][halfScope][mode]`. Supabase Realtime subscriptions on `match_lobbies` and `match_lobby_players` keep queue counts live. Direct lobby join via `?join=<lobbyId>`. Migration 030 creates `match_lobbies` + `match_lobby_players` tables (must be run before page works). SpontixStoreAsync lobby methods (`findOrJoinLobby`, `joinLobbyById`, `createLeagueFromLobby`) are inline stubs in the page — functional for MVP, to be promoted to spontix-store.js later.
+
 Last updated 2026-04-29 — play_mode (singleplayer / multiplayer) added to leagues: migration 029 adds `play_mode TEXT NOT NULL DEFAULT 'multiplayer' CHECK (play_mode IN ('singleplayer', 'multiplayer'))` to `leagues`. play_mode is INDEPENDENT of subscription tier — all TIER_LIMITS (liveQuestionsPerMatch, realWorldQuestionsEnabled, leaguesCreatePerWeek, etc.) apply identically in both modes. `spontix-store.js`: `_mapLeagueFromDb` maps `play_mode → playMode`, `_mapLeagueToDb` maps back. `create-league.html`: new Play Experience selector (Multiplayer / Solo cards) with `selectSessionType()` function — Solo locks player slider to 1, hides Team Mode section, enforces `max_members=1` in `launchLeague()`. `applyRealWorldTierGating()` shows Pro+ badge and blocks AI Real World toggle for Starter in both modes. `applySingleplayerLiveCapNotice()` shows coral cap notice when Solo + live/hybrid + Starter. Review step shows "Solo (1 player)" or "Multiplayer". `league.html`: `hydrateLeaguePage()` detects `isSolo`, sets `statMode` to 'Solo', adds Solo tag to meta strip, hides invite card for singleplayer leagues. `docs/TIER_ARCHITECTURE.md` updated to v7 with full "Play Mode vs Subscription Tier" section. Migrations 028 (Realtime publication) and 029 (play_mode column) both applied ✅.
 
 Last updated 2026-04-29 — Realtime subscription replacing polling in league.html: Supabase Realtime channel (`league-{id}`) subscribes to `questions` INSERT/UPDATE/DELETE and `player_answers` UPDATE for the current league. New questions appear instantly (sub-second) instead of waiting up to 15s. Resolved cards flip in real-time when the resolver awards points. Polling downgraded to 30s heartbeat when Realtime is connected (catches reconnect gaps). Falls back to 5s/15s polling if channel errors. Tab visibility handling: pauses channel when hidden, resumes + refreshes on return. `beforeunload` cleanup. Migration 028 enables Realtime publication for both tables — **run `028_enable_realtime.sql` in Supabase SQL editor**.
@@ -1361,6 +1363,9 @@ Spontix/
 ├── battle-royale.html                 ← Battle Royale game mode (ELO integrated ✅)
 ├── trivia.html                        ← Trivia modes (Solo/1v1/Party)
 ├── live.html                          ← Live match prediction game
+├── multiplayer.html                   ← Multiplayer arena: 1v1 / 2v2 lobby matchmaking (Supabase Realtime ✅)
+│                                        Full-screen desktop layout, 3-step flow (Format → Match+Config → Waiting Room)
+│                                        Uses migration 030: match_lobbies + match_lobby_players tables
 ├── br-leaderboard.html                ← BR-specific leaderboard (ELO history tab ✅)
 ├── notifications.html                 ← User notifications
 ├── player-onboarding.html             ← First-time player setup
@@ -1607,6 +1612,7 @@ These are **safe to commit and ship to the browser**. Security comes from RLS po
 - **Cache warming** — all domains auto-refresh 1.5s after page load.
 - **All UI screens** — every `.html` file renders correctly. `profile.html` and `leaderboard.html` use full-width layout.
 - **spontix-scraper-service** — standalone Node.js microservice (separate repo). POST /scrape accepts a URL, renders with headless Chromium (Playwright), extracts clean article text via Mozilla Readability + jsdom fallback. Deployed on Railway at `https://spontyx-scraper-service-production.up.railway.app`. Auth: `x-scraper-key` header. Rate limit: 20 req/min. Stack: Node 20, Express, Playwright, Readability, jsdom. Docker non-root pattern with `/ms-playwright` world-readable browser path.
+- **Multiplayer arena (`multiplayer.html`)** — full-screen desktop matchmaking lobby. 3-step flow: (1) Format selection (1v1 vs 2v2 arena cards), (2) Match browser + config panel side-by-side, (3) Waiting room overlay with cinematic pulsing lime rings. Match list has search, competition filter, sort by time or active players. Config panel shows half-scope options (Full Match / First Half / Second Half) with per-half + per-mode queue counts. 2v2 team options: auto-match queue, invite via share link. Waiting room: player vs opponent avatars with `searching` pulse / `found` pop-in animation, invite link section for 2v2 share-link mode, cancel button. Supabase Realtime subscription on `match_lobbies` + `match_lobby_players` for live queue updates. Direct invite join via `?join=<lobbyId>` URL param. DB: migration 030 (`match_lobbies` + `match_lobby_players` tables). Stub fallbacks built into page script if `SpontixStoreAsync` lobby methods are not yet wired.
 
 ---
 
@@ -1614,6 +1620,8 @@ These are **safe to commit and ship to the browser**. Security comes from RLS po
 
 ### Architecture gaps flagged but not yet addressed
 - **Live gameplay pages** (`live.html`, `battle-royale.html`, `trivia.html`, `venue-live-floor.html`) are **single-player client simulations**. Real multi-user games need server-authoritative state via websockets — a separate sprint.
+- **Multiplayer lobby — `SpontixStoreAsync` lobby methods not yet wired** — `multiplayer.html` has built-in stubs for `findOrJoinLobby()`, `joinLobbyById()`, and `createLeagueFromLobby()` that call Supabase directly from the page. These should eventually be promoted to `spontix-store.js` async methods. The stub implementations in the page script are fully functional for MVP.
+- **Multiplayer — `createLeagueFromLobby()` incomplete** — when all players are present, a `leagues` row is inserted and players are redirected to `league.html`. The lobby-to-league wiring (linking `match_lobbies.league_id` and routing players) is implemented in the page stub but has not been tested end-to-end with real matched players.
 - **Cross-user trophy awarding** — RLS only allows self-insert (`recipient_user_id = auth.uid()`). A venue owner can't award a trophy to a winner yet. Needs a Postgres function or Edge Function.
 - **venue-tonights-events.html** — still a static HTML template with hardcoded event cards.
 - **Public trophy rooms** — `getTrophies(userId)` supports viewing other users' trophies but no UI route exists.
@@ -1785,7 +1793,7 @@ See `supabase/functions/generate-questions/DEPLOY.md` for the full checklist inc
 **Arena venue owned by:** `f901f211-738e-4409-abfd-8e1a9fb4bffb` (utis.richard@gmail.com)
 
 **Resume prompt for a fresh Claude session:**
-> "Continue Spontix development. Read `CLAUDE.md` for full context. Also read `SESSION_CONTINUATION_DESIGN.txt` before working on anything related to live questions, notifications, or the league question feed. Last completed: (1) play_mode (singleplayer/multiplayer) ✅ — migration 029 run, `spontix-store.js` mapping added, `create-league.html` Play Experience selector + `selectSessionType()` + `applyRealWorldTierGating()` + `applySingleplayerLiveCapNotice()` + `launchLeague()` updated, `league.html` Solo tag + invite card hide added, `docs/TIER_ARCHITECTURE.md` v7 updated. play_mode is INDEPENDENT of tier — all TIER_LIMITS apply identically in both modes. (2) Supabase Realtime subscription in league.html ✅ — `realtimeChannel` global, `startRealtime()`/`stopRealtime()` functions, `questions` INSERT/UPDATE/DELETE + `player_answers` UPDATE subscriptions, 30s heartbeat polling safety net, tab visibility + beforeunload handling. (3) Scraper enrichment integrated into REAL_WORLD pipeline ✅ — `enrichArticlesWithScraper()` in generate-questions calls Railway scraper on top 5 candidates before Call 1. All migrations 001–029 run ✅ (028 Realtime publication + 029 play_mode both applied). docs/REAL_WORLD_QUESTION_SYSTEM.md is the authoritative REAL_WORLD reference. Next priorities: (1) Stripe subscriptions replacing forced Elite tier; (2) venue-tonights-events.html dynamic rendering."
+> "Continue Spontix development. Read `CLAUDE.md` for full context. Also read `SESSION_CONTINUATION_DESIGN.txt` before working on anything related to live questions, notifications, or the league question feed. Last completed: (1) play_mode (singleplayer/multiplayer) ✅ — migration 029 run, `spontix-store.js` mapping added, `create-league.html` Play Experience selector + `selectSessionType()` + `applyRealWorldTierGating()` + `applySingleplayerLiveCapNotice()` + `launchLeague()` updated, `league.html` Solo tag + invite card hide added, `docs/TIER_ARCHITECTURE.md` v7 updated. play_mode is INDEPENDENT of tier — all TIER_LIMITS apply identically in both modes. (2) Supabase Realtime subscription in league.html ✅ — `realtimeChannel` global, `startRealtime()`/`stopRealtime()` functions, `questions` INSERT/UPDATE/DELETE + `player_answers` UPDATE subscriptions, 30s heartbeat polling safety net, tab visibility + beforeunload handling. (3) Scraper enrichment integrated into REAL_WORLD pipeline ✅ — `enrichArticlesWithScraper()` in generate-questions calls Railway scraper on top 5 candidates before Call 1. All migrations 001–030 run ✅. (4) Multiplayer arena redesign ✅ — `multiplayer.html` fully rewritten (761 → 1741 lines): full-screen desktop layout, 3-step flow (Format → Match+Config → Waiting Room overlay), 1v1/2v2 arena cards, match list with search/filter/sort, config panel with per-half queue counts, cinematic waiting room with pulsing lime rings + avatar searching/found animations, Supabase Realtime on match_lobbies + match_lobby_players, direct invite join via ?join=lobbyId. SpontixStoreAsync lobby stubs built into page. Migration 030 (match_lobbies + match_lobby_players) must be run in Supabase SQL editor. docs/REAL_WORLD_QUESTION_SYSTEM.md is the authoritative REAL_WORLD reference. Next priorities: (1) Wire SpontixStoreAsync lobby methods into spontix-store.js (currently inline stubs in multiplayer.html); (2) End-to-end test createLeagueFromLobby() and redirect flow; (3) Stripe subscriptions replacing forced Elite tier; (4) venue-tonights-events.html dynamic rendering."
 
 ---
 
@@ -4948,3 +4956,105 @@ ALTER PUBLICATION supabase_realtime ADD TABLE player_answers;
 | Tab hidden | Polling continued (wasted DB queries) | Channel + polling stopped |
 
 **No backend changes.** No DB schema changes beyond the publication. No pipeline, resolver, or scoring changes.
+
+---
+
+### 2026-04-30 — Multiplayer arena redesign (multiplayer.html — full rewrite)
+
+**Goal:** replace the old 4-step mobile-constrained wizard (761 lines, max-width: 960px) with a cinematic full-screen desktop arena experience that feels like entering a live competitive arena rather than filling out a form.
+
+**Design principles applied:**
+- Full viewport (`body { overflow: hidden; height: 100vh }`, no max-width cap) — fills the screen like a desktop app
+- 3 steps only: Format → Match + Config → Waiting Room (no intermediate "configure" step separate from match selection)
+- "Enter the Arena" identity: lime live badge, watermark cards, dark `#080815` background
+- Queue counts on every match row and in the config panel — social proof and matchmaking signal
+
+**Step 1 — Format selection:**
+- Two full-height watermark cards: **1 vs 1** (coral, ⚔️ icon) and **2 vs 2** (lime, 🛡️ icon)
+- Large typographic watermarks (`font-size: 8rem`) tinted at 7% opacity, increasing to 16% on hover/selected
+- Selected state: coloured border + glow box-shadow per format colour
+- Check icon animates in on selection (`.format-check` CSS)
+- Player dots row shows seat count (2 for 1v1, 4 for 2v2)
+- "Find a Match →" CTA button disabled until format is selected
+
+**Step 2 — Match browser + config panel (side-by-side):**
+- Full-width grid: `grid-template-columns: 1fr 380px`; both columns `overflow: hidden` with independent inner scroll
+- **Left — match list:**
+  - Toolbar: text search, competition filter `<select>` (populated from `api_football_fixtures`), sort toggle (By Time / Most Active)
+  - Sort "By Time": live matches first, then ascending by `|kickoff − now|` proximity
+  - Sort "Most Active": highest total queue count first, tie-break by time proximity
+  - Each match row shows: team names, competition badge, status (LIVE dot / kickoff time), total queue count badge (`N in queue`)
+  - Selected match row gets a lime left-border highlight
+- **Right — config panel:**
+  - Placeholder "← Select a match" shown until a match is clicked
+  - Half-scope selector: three cards — Full Match / First Half / Second Half — each showing per-half, per-mode queue count breakdown
+  - Queue breakdown: `"1v1: N  ·  2v2: N"` per half option
+  - **2v2 team options** (shown only when `selectedMode === '2v2'`): Auto-match queue / Invite via link — styled as radio-style option cards
+  - "Enter Arena →" button becomes enabled once a match is selected
+
+**Step 3 — Waiting room (fixed-position overlay):**
+- `position: fixed; inset: 0; z-index: 200` — overlays the entire step-2 split layout; treated as step 3 in the progress bars via `updateStepBars()` checking `#wr-overlay.style.display === 'flex'`
+- **4 concentric pulsing rings** (`@keyframes ring-pulse`): r1=160px, r2=320px, r3=480px, r4=640px; staggered delays 0/1/2/3s; lime tinted, fading opacity from 0.12 → 0
+- **Match context badge** — "Home vs Away · half label · mode"
+- **Avatar row**: "You" (lime ring) vs "??" opponent (purple ring); opponent animates `searching-pulse` (opacity oscillation) until matched, then `found-pop` (scale bounce in) when a match is found
+- **Mode badge** — coral `1v1` or lime `2v2` pill
+- **Status line + bouncing dots** — `"Searching for opponent"` with 3-dot `dot-bounce` animation while searching; switches to lime `"⚡ Opponent found! Starting…"` on match
+- **Invite section** (shown for 2v2 share-link mode): URL input + Copy button, lime-tinted styling
+- Cancel button — leaves lobby and returns to step 2
+
+**Queue count system:**
+```javascript
+async function loadQueueCounts() {
+  // 1. Fetch all waiting lobbies for this match context
+  var { data: waitingLobbies } = await window.sb.from('match_lobbies')
+    .select('id, match_id, half_scope, mode').eq('status', 'waiting');
+  // 2. Count players per lobby
+  var { data: players } = await window.sb.from('match_lobby_players')
+    .select('lobby_id').in('lobby_id', lobbyIds);
+  // 3. Aggregate into queueMap[matchId][halfScope][mode] = playerCount
+}
+```
+- Called on Step 2 load and on every Realtime update to `match_lobbies` / `match_lobby_players`
+- `getMatchQueueTotal(matchId)` — sums all modes/halves for a match (shown on match row badge)
+- `getQueueCount(matchId, half, mode)` — per-half, per-mode count (shown in config panel)
+
+**Lobby system:**
+- `enterLobby()` — calls `SpontixStoreAsync.findOrJoinLobby()` stub (or falls back to direct Supabase upsert); upserts to `match_lobbies` + inserts to `match_lobby_players`; starts Realtime subscription
+- `startLobbyRealtime(lobbyId)` — Supabase Realtime channel on `match_lobbies:id=eq.{lobbyId}` + `match_lobby_players:lobby_id=eq.{lobbyId}`; calls `refreshLobbyUI()` on every change
+- `refreshLobbyUI(lobbyId)` — reads current lobby + player count; transitions avatar from searching → found when lobby reaches required player count; calls `handleLobbyFull()` when full
+- `handleLobbyFull()` — calls `createLeagueFromLobby()` stub to create a `leagues` row and redirect all players to `league.html?id=...`
+- `leaveLobby()` — deletes `match_lobby_players` row; removes Realtime channel; hides waiting room overlay
+- `directJoinLobby(lobbyId)` — handles `?join=<lobbyId>` URL param for 2v2 invite-link joins; reads lobby to infer format/match/half; skips steps 1 and 2 and goes straight to waiting room
+
+**DB (migration 030):**
+- `match_lobbies` — `id UUID PK`, `match_id TEXT`, `half_scope TEXT`, `mode TEXT (1v1|2v2)`, `status TEXT (waiting|ready|active|finished)`, `home/away_team_name`, `kickoff_at`, `api_league_id`, `league_id UUID → leagues`
+- `match_lobby_players` — `PK (lobby_id, user_id)`, `team_number INT (1|2)`, `is_invited BOOL`, `invited_by UUID`
+- Both tables have RLS (authenticated read; own-row insert/delete)
+- Both tables added to `supabase_realtime` publication
+
+**State variables:**
+```javascript
+var currentStep     = 1;       // 1 or 2 (waiting room is overlay, not step 3 in DOM)
+var selectedMode    = null;    // '1v1' | '2v2'
+var selectedMatch   = null;    // match object
+var selectedHalf    = 'full_match'; // 'full_match' | 'first_half' | 'second_half'
+var selected2v2Sub  = 'solo_queue'; // 'solo_queue' | 'invite_link'
+var currentLobbyId  = null;
+var lobbyChannel    = null;
+var allMatches      = [];
+var compMap         = {};
+var filterLeague    = 'all';
+var sortMode        = 'time';  // 'time' | 'active'
+var queueMap        = {};
+var currentUserId   = null;
+var currentUserHandle = null;
+```
+
+**SpontixStoreAsync stubs (built into page script):**
+- `SpontixStoreAsync.findOrJoinLobby({ matchId, halfScope, mode, homeTeamName, awayTeamName, kickoffAt, apiLeagueId })` — finds an existing `waiting` lobby or creates a new one; joins the player
+- `SpontixStoreAsync.joinLobbyById(lobbyId)` — direct join for invite-link flows
+- `SpontixStoreAsync.createLeagueFromLobby(lobbyId, userId)` — creates a `leagues` row bound to the lobby; updates `match_lobbies.league_id`; returns `{ leagueId }`
+
+These stubs operate directly on Supabase and are fully functional. They should be promoted to `spontix-store.js` in a future cleanup sprint.
+
+**No backend changes (beyond migration 030).** No pipeline, resolver, or scoring changes. No other pages affected.
