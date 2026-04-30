@@ -1084,47 +1084,61 @@
     var list = document.getElementById('match-list');
     list.innerHTML = '<div class="match-list-loading">Loading matches…</div>';
 
-    var twoDaysAgo = new Date(Date.now() - 2 * 86400000).toISOString();
+    var nowMinus3h = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
     var fourteenDaysOut = new Date(Date.now() + 14 * 86400 * 1000).toISOString();
 
     var { data: fixtures, error } = await window.sb
       .from('api_football_fixtures')
-      .select('id, home_team_name, away_team_name, kickoff_at, status_short, league_id, league_name, home_team_id, away_team_id')
-      .gte('kickoff_at', twoDaysAgo)
+      .select('fixture_id, home_team_name, away_team_name, kickoff_at, status_short, league_id')
+      .gte('kickoff_at', nowMinus3h)
       .lte('kickoff_at', fourteenDaysOut)
       .order('kickoff_at', { ascending: true })
       .limit(100);
 
-    if (error || !fixtures) {
-      list.innerHTML = '<div class="match-list-empty">Could not load fixtures.<br>Try again later.</div>';
+    if (error) {
+      console.error('[multiplayer] fixture query error:', error);
+      list.innerHTML = '<div class="match-list-empty">Could not load fixtures.<br>' + error.message + '</div>';
       return;
+    }
+    if (!fixtures || !fixtures.length) {
+      list.innerHTML = '<div class="match-list-empty">No upcoming fixtures found.<br>Fixture data syncs every 6 hours.</div>';
+      return;
+    }
+
+    // fetch competition names from sports_competitions
+    var leagueIds = [...new Set(fixtures.map(function(f) { return f.league_id; }).filter(Boolean))];
+    var compById = {};
+    if (leagueIds.length) {
+      var { data: comps } = await window.sb
+        .from('sports_competitions')
+        .select('api_league_id, name')
+        .in('api_league_id', leagueIds);
+      if (comps) comps.forEach(function(c) { compById[c.api_league_id] = c.name; });
     }
 
     allMatches = fixtures.map(function(f) {
       return {
-        matchId: String(f.id),
+        matchId: String(f.fixture_id),
         home: f.home_team_name || 'Home',
         away: f.away_team_name || 'Away',
         kickoff: f.kickoff_at ? new Date(f.kickoff_at) : null,
         statusShort: f.status_short || 'NS',
         compId: f.league_id,
-        compName: f.league_name || 'Football',
-        homeTeamId: f.home_team_id,
-        awayTeamId: f.away_team_id,
+        compName: compById[f.league_id] || 'Football',
       };
     });
 
     // build comp filter
-    var seen = {};
     allMatches.forEach(function(m) {
-      if (m.compId && !seen[m.compId]) {
-        seen[m.compId] = m.compName;
+      if (m.compId && !compMap[String(m.compId)]) {
         compMap[String(m.compId)] = m.compName;
       }
     });
     var sel = document.getElementById('league-filter');
     sel.innerHTML = '<option value="all">All Competitions</option>';
-    Object.keys(compMap).forEach(function(cid) {
+    Object.keys(compMap).sort(function(a,b) {
+      return compMap[a].localeCompare(compMap[b]);
+    }).forEach(function(cid) {
       var opt = document.createElement('option');
       opt.value = cid;
       opt.textContent = compMap[cid];
