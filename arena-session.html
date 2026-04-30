@@ -1,0 +1,1483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Arena Match — Spontix</title>
+  <meta name="view-transition" content="same-origin">
+  <style>html{background:#080815;margin:0;padding:0}</style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    :root {
+      --lime:   #A8E10C;
+      --purple: #7C5CFC;
+      --coral:  #FF6B6B;
+      --teal:   #4ECDC4;
+      --navy:   #080815;
+      --card-bg: rgba(255,255,255,0.05);
+      --border:  rgba(255,255,255,0.08);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 0;
+      background:
+        radial-gradient(ellipse 80% 45% at 50% -5%, rgba(168,225,12,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 55% 40% at 85% 105%, rgba(124,92,252,0.08) 0%, transparent 55%),
+        linear-gradient(175deg, #0d0d24 0%, #090917 40%, #080815 70%, #050510 100%);
+      color: #fff;
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      animation: page-enter 120ms ease;
+    }
+    #app { display: block !important; width: 100% !important; margin-left: 0 !important; }
+    @keyframes page-enter { from { opacity: 0; } to { opacity: 1; } }
+
+    /* ── TOPBAR ── */
+    .as-topbar {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 24px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(8,8,21,0.95);
+      position: sticky; top: 0; z-index: 50;
+      backdrop-filter: blur(12px);
+    }
+    .as-back {
+      display: flex; align-items: center; gap: 6px;
+      background: none; border: none; cursor: pointer;
+      color: rgba(255,255,255,0.5); font-size: 0.78rem; font-weight: 600;
+      font-family: inherit; padding: 6px 10px; border-radius: 20px; transition: all 0.15s;
+    }
+    .as-back:hover { background: rgba(255,255,255,0.06); color: #fff; }
+    .as-back svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2.5; fill: none; }
+
+    .as-match-badge {
+      flex: 1; display: flex; align-items: center; gap: 8px; font-size: 0.82rem; font-weight: 700;
+    }
+    .as-live-dot {
+      width: 7px; height: 7px; border-radius: 50%; background: var(--lime);
+      animation: as-pulse 1.8s infinite;
+    }
+    @keyframes as-pulse { 0%,100%{opacity:1}50%{opacity:0.35} }
+    .as-match-name { color: rgba(255,255,255,0.9); }
+    .as-half-badge {
+      font-size: 0.65rem; font-weight: 700; padding: 3px 8px; border-radius: 10px;
+      background: rgba(168,225,12,0.15); color: var(--lime); text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .as-mode-badge {
+      font-size: 0.65rem; font-weight: 700; padding: 3px 8px; border-radius: 10px;
+      background: rgba(124,92,252,0.15); color: var(--purple);
+    }
+
+    /* ── DUEL HEADER ── */
+    .as-duel-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px 20px;
+      background: rgba(255,255,255,0.02);
+      border-bottom: 1px solid var(--border);
+    }
+    .as-duel-player {
+      display: flex; flex-direction: column; align-items: center; gap: 6px;
+      flex: 0 0 auto; width: 100px;
+    }
+    .as-avatar-ring {
+      position: relative; width: 64px; height: 64px; border-radius: 50%;
+      padding: 3px;
+      background: conic-gradient(rgba(255,255,255,0.1) 0deg, rgba(255,255,255,0.1) 360deg);
+      transition: background 0.4s ease, box-shadow 0.4s ease;
+    }
+    .as-avatar-ring.leading {
+      background: conic-gradient(var(--lime) 0deg, rgba(168,225,12,0.4) 360deg);
+      box-shadow: 0 0 16px rgba(168,225,12,0.3);
+    }
+    .as-avatar-ring.losing {
+      background: conic-gradient(var(--coral) 0deg, rgba(255,107,107,0.4) 360deg);
+      box-shadow: 0 0 12px rgba(255,107,107,0.2);
+    }
+    .as-avatar {
+      width: 100%; height: 100%; border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; font-weight: 900; color: rgba(255,255,255,0.9);
+    }
+    .as-duel-handle {
+      font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.8);
+      max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+      text-align: center;
+    }
+    .as-duel-handle.me { color: var(--lime); }
+    .as-duel-score-block {
+      flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    .as-duel-score {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 3rem; font-weight: 900; letter-spacing: -2px; line-height: 1;
+    }
+    .as-duel-score-me { color: var(--lime); }
+    .as-duel-score-opp { color: rgba(255,255,255,0.85); }
+    .as-duel-score-sep {
+      font-size: 1.8rem; font-weight: 400; color: rgba(255,255,255,0.2); margin: 0 2px;
+    }
+    .as-duel-score-label {
+      font-size: 0.58rem; font-weight: 800; letter-spacing: 0.12em;
+      color: rgba(255,255,255,0.2); text-transform: uppercase;
+    }
+
+    /* ── MAIN LAYOUT ── */
+    .as-body {
+      max-width: 640px; margin: 0 auto;
+      padding: 20px 16px 40px;
+    }
+
+    /* ── QUESTION FEED ── */
+    .as-feed-label {
+      font-size: 0.68rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: rgba(255,255,255,0.35); margin-bottom: 12px;
+    }
+    .as-feed-empty {
+      text-align: center; padding: 48px 24px;
+      color: rgba(255,255,255,0.4); font-size: 0.88rem;
+    }
+    .as-feed-empty svg {
+      width: 36px; height: 36px; stroke: rgba(255,255,255,0.2); fill: none; stroke-width: 1.5;
+      display: block; margin: 0 auto 12px;
+    }
+
+    /* ── HOLDING CARD ── */
+    .as-holding {
+      border: 1px solid var(--border); border-radius: 14px;
+      padding: 24px; text-align: center; margin-bottom: 16px;
+      background: rgba(168,225,12,0.03);
+    }
+    .as-holding-dot {
+      width: 8px; height: 8px; border-radius: 50%; background: var(--lime);
+      margin: 0 auto 12px; animation: as-pulse 1.8s infinite;
+    }
+    .as-holding-title { font-size: 0.9rem; font-weight: 700; margin-bottom: 4px; }
+    .as-holding-sub { font-size: 0.76rem; color: rgba(255,255,255,0.45); }
+
+    /* ── QUESTION CARD ── */
+    .as-qcard {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--border);
+      border-radius: 14px; padding: 18px; margin-bottom: 14px;
+      transition: border-color 0.2s;
+    }
+    .as-qcard.primary {
+      border-color: rgba(168,225,12,0.35);
+      background: rgba(168,225,12,0.04);
+    }
+    .as-qcard.resolved-correct { border-color: rgba(168,225,12,0.4); }
+    .as-qcard.resolved-wrong   { border-color: rgba(255,107,107,0.3); }
+    .as-qcard.voided           { opacity: 0.5; }
+    @keyframes as-glow-correct {
+      0%  { box-shadow: 0 0 0 0 rgba(168,225,12,0); }
+      50% { box-shadow: 0 0 0 6px rgba(168,225,12,0.25); }
+      100%{ box-shadow: 0 0 0 0 rgba(168,225,12,0); }
+    }
+    @keyframes as-shake-wrong {
+      0%,100%{ transform: translateX(0); }
+      25%{ transform: translateX(-4px); }
+      75%{ transform: translateX(4px); }
+    }
+    .as-qcard.glow-correct { animation: as-glow-correct 0.8s ease forwards; }
+    .as-qcard.shake-wrong  { animation: as-shake-wrong 0.4s ease forwards; }
+
+    @keyframes as-card-enter {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .as-qcard { animation: as-card-enter 0.28s ease both; }
+    .as-qcard.clutch-state {
+      border-color: rgba(255,159,67,0.35);
+      background: rgba(255,159,67,0.04);
+      animation: as-card-enter 0.28s ease both, as-clutch-border 2s 0.28s ease infinite;
+    }
+    @keyframes as-clutch-border {
+      0%,100% { border-color: rgba(255,159,67,0.35); }
+      50%     { border-color: rgba(255,159,67,0.65); }
+    }
+
+    .as-qcard-header {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+    }
+    .as-lane-badge {
+      font-size: 0.6rem; font-weight: 800; padding: 3px 7px; border-radius: 8px;
+      letter-spacing: 0.06em; text-transform: uppercase;
+    }
+    .as-lane-badge.live    { background: rgba(255,107,107,0.18); color: var(--coral); }
+    .as-lane-badge.prematch{ background: rgba(168,225,12,0.15); color: var(--lime); }
+    .as-lane-badge.rw      { background: rgba(124,92,252,0.15); color: var(--purple); }
+
+    .as-timer {
+      margin-left: auto; font-size: 0.72rem; font-weight: 700;
+      color: rgba(255,255,255,0.5);
+    }
+    .as-timer.urgent { color: var(--coral); }
+
+    .as-live-window-strip {
+      display: flex; align-items: center; gap: 8px;
+      padding: 6px 10px; border-radius: 8px; margin-bottom: 10px;
+      background: rgba(255,107,107,0.05); border: 1px solid rgba(255,107,107,0.12);
+      font-size: 0.7rem; color: rgba(255,255,255,0.6);
+    }
+
+    .as-question-text {
+      font-size: 1.02rem; font-weight: 700; line-height: 1.4; margin-bottom: 14px;
+    }
+
+    /* ── OPTIONS ── */
+    .as-options { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+    .as-opt {
+      padding: 11px 14px; border-radius: 10px; font-size: 0.88rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s; text-align: left;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.09);
+      color: rgba(255,255,255,0.9); font-family: inherit;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .as-opt:hover:not(:disabled) { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.18); }
+    .as-opt:active:not(:disabled) { transform: scale(0.98); }
+    .as-opt.selected {
+      background: rgba(168,225,12,0.12); border-color: rgba(168,225,12,0.4);
+      color: var(--lime);
+    }
+    .as-opt.correct  { background: rgba(168,225,12,0.15); border-color: var(--lime); color: var(--lime); }
+    .as-opt.wrong    { background: rgba(255,107,107,0.1); border-color: var(--coral); color: var(--coral); }
+    .as-opt.disabled-opt { opacity: 0.45; cursor: default; }
+    .as-opt-icon { width: 14px; height: 14px; flex-shrink: 0; }
+
+    /* ── CARD FOOTER ── */
+    .as-qcard-footer {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 0.7rem; color: rgba(255,255,255,0.4);
+      border-top: 1px solid rgba(255,255,255,0.06); padding-top: 10px;
+    }
+    .as-pts-range { margin-left: auto; color: rgba(255,255,255,0.5); font-weight: 600; }
+    .as-result-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 0.8rem; font-weight: 700;
+    }
+    .as-result-correct { color: var(--lime); }
+    .as-result-wrong   { color: var(--coral); }
+    .as-result-voided  { color: rgba(255,255,255,0.4); }
+
+    /* ── TIMER BAR ── */
+    .as-timer-bar-wrap {
+      height: 5px; border-radius: 3px; background: rgba(255,255,255,0.08);
+      overflow: hidden; margin-bottom: 12px;
+    }
+    .as-timer-bar-fill {
+      height: 100%; border-radius: 3px; background: var(--lime);
+      transition: width 1s linear;
+    }
+    .as-timer-bar-wrap.urgent .as-timer-bar-fill {
+      background: var(--coral);
+      box-shadow: 0 0 6px rgba(255,107,107,0.6);
+      animation: as-urgency-pulse 0.6s ease infinite;
+    }
+    @keyframes as-urgency-pulse {
+      0%,100% { opacity: 1; }
+      50%      { opacity: 0.55; }
+    }
+
+    /* ── ENGAGEMENT BADGES ── */
+    .as-eng-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+    .as-eng-badge {
+      font-size: 0.58rem; font-weight: 800; text-transform: uppercase;
+      letter-spacing: 0.06em; padding: 3px 7px; border-radius: 6px;
+    }
+    .as-eng-badge.hv  { background: rgba(168,225,12,0.15); color: var(--lime); }
+    .as-eng-badge.clutch { background: rgba(255,159,67,0.15); color: #FF9F43; }
+    .as-eng-badge.fast{ background: rgba(255,107,107,0.15); color: var(--coral); }
+    .as-eng-badge.streak { background: rgba(255,159,67,0.18); color: #FF9F43; }
+    .as-eng-badge.hot-streak { background: rgba(255,107,107,0.18); color: var(--coral); animation: as-pulse 1.4s infinite; }
+
+    /* ── SCOREBOARD STREAK BADGE ── */
+    .as-streak-badge {
+      font-size: 0.62rem; font-weight: 700; color: #FF9F43;
+      margin-top: 3px; min-height: 16px;
+    }
+    .as-streak-badge.hot { color: var(--coral); animation: as-pulse 1.4s infinite; }
+
+    /* ── CURRENT PICK LABEL ── */
+    .as-current-pick {
+      font-size: 0.7rem; color: rgba(255,255,255,0.4); margin-top: -4px; margin-bottom: 8px;
+    }
+
+    /* ── SESSION COMPLETE ── */
+    .as-complete-overlay {
+      display: none; position: fixed; inset: 0; z-index: 200;
+      background: rgba(8,8,21,0.97); backdrop-filter: blur(16px);
+      flex-direction: column; align-items: center; justify-content: center;
+      padding: 32px; text-align: center; gap: 0;
+    }
+    .as-complete-overlay.show { display: flex; }
+
+    /* result headline */
+    @keyframes as-result-pop {
+      0%   { opacity: 0; transform: scale(0.8); }
+      70%  { transform: scale(1.06); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+    .as-result-headline {
+      font-size: 2.4rem; font-weight: 900; letter-spacing: -1px; line-height: 1;
+      margin-bottom: 6px;
+      animation: as-result-pop 0.5s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    .as-result-headline.win  { color: var(--lime); }
+    .as-result-headline.draw { color: rgba(255,255,255,0.9); }
+    .as-result-headline.loss { color: var(--coral); }
+    .as-result-subtitle {
+      font-size: 0.82rem; color: rgba(255,255,255,0.45); margin-bottom: 32px;
+      animation: as-result-pop 0.5s 0.05s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+
+    /* duel row */
+    @keyframes as-result-slide {
+      from { opacity: 0; transform: translateY(18px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .as-result-duel {
+      display: flex; align-items: center; gap: 24px; margin-bottom: 28px;
+      animation: as-result-slide 0.45s 0.15s ease both;
+    }
+    .as-result-player { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+    .as-result-ring {
+      position: relative; width: 72px; height: 72px; border-radius: 50%; padding: 3px;
+      background: conic-gradient(rgba(255,255,255,0.1) 0deg, rgba(255,255,255,0.1) 360deg);
+    }
+    @keyframes as-winner-ring {
+      0%,100% { box-shadow: 0 0 16px rgba(168,225,12,0.35); }
+      50%     { box-shadow: 0 0 28px rgba(168,225,12,0.6); }
+    }
+    .as-result-ring.winner {
+      background: conic-gradient(var(--lime) 0deg, rgba(168,225,12,0.5) 360deg);
+      animation: as-winner-ring 1.8s ease infinite;
+    }
+    .as-result-ring.loser {
+      background: conic-gradient(var(--coral) 0deg, rgba(255,107,107,0.3) 360deg);
+    }
+    .as-result-avatar {
+      width: 100%; height: 100%; border-radius: 50%;
+      background: rgba(255,255,255,0.08);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.3rem; font-weight: 900; color: rgba(255,255,255,0.9);
+    }
+    .as-result-handle {
+      font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.7);
+      max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+    .as-result-handle.me { color: var(--lime); }
+    .as-result-final-score {
+      font-size: 2rem; font-weight: 900; color: rgba(255,255,255,0.9); line-height: 1;
+    }
+    .as-result-final-score.winner { color: var(--lime); }
+    .as-result-vs {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    .as-result-vs-sep {
+      font-size: 0.65rem; font-weight: 800; letter-spacing: 0.1em;
+      color: rgba(255,255,255,0.2); text-transform: uppercase;
+    }
+
+    /* stats row */
+    .as-result-stats {
+      display: flex; gap: 16px; margin-bottom: 32px;
+      animation: as-result-slide 0.45s 0.28s ease both;
+    }
+    .as-result-stat {
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px; padding: 12px 20px; min-width: 90px;
+    }
+    .as-result-stat-val { font-size: 1.4rem; font-weight: 900; color: rgba(255,255,255,0.9); }
+    .as-result-stat-val.lime { color: var(--lime); }
+    .as-result-stat-label { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(255,255,255,0.35); margin-top: 2px; }
+
+    .as-xp-earned { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 20px; font-size: 0.68rem; font-weight: 700; background: rgba(168,225,12,0.15); color: var(--lime); letter-spacing: 0.5px; }
+    .as-rating-delta { display: inline-block; margin-top: 6px; padding: 2px 8px; border-radius: 20px; font-size: 0.68rem; font-weight: 700; letter-spacing: 0.5px; }
+    .as-rating-delta.gain { background: rgba(78,205,196,0.15); color: #4ECDC4; }
+    .as-rating-delta.loss { background: rgba(255,107,107,0.15); color: #FF6B6B; }
+    .as-rating-delta.none { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.4); }
+    .as-complete-btn {
+      padding: 14px 40px; border-radius: 50px; border: none; cursor: pointer;
+      font-family: inherit; font-size: 0.9rem; font-weight: 800;
+      background: var(--lime); color: var(--navy); transition: opacity 0.2s;
+      animation: as-result-slide 0.45s 0.4s ease both;
+    }
+    .as-complete-btn:hover { opacity: 0.85; }
+
+    /* ── TOAST ── */
+    .as-toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
+      background: rgba(30,30,50,0.95); border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 50px; padding: 10px 20px; font-size: 0.82rem; font-weight: 600;
+      z-index: 300; opacity: 0; transition: opacity 0.25s; pointer-events: none;
+      white-space: nowrap;
+    }
+    .as-toast.show { opacity: 1; }
+
+    /* ── POINTS NOTIFICATION ── */
+    .as-pts-notif {
+      position: fixed; bottom: 80px; right: 20px;
+      background: rgba(168,225,12,0.15); border: 1px solid rgba(168,225,12,0.3);
+      border-radius: 12px; padding: 8px 16px;
+      font-size: 0.82rem; font-weight: 800; color: var(--lime);
+      transform: translateY(40px); opacity: 0; transition: all 0.35s;
+      pointer-events: none; z-index: 100;
+    }
+    .as-pts-notif.show { transform: translateY(0); opacity: 1; }
+
+    /* ── STREAK NOTIFICATION ── */
+    .as-streak-notif {
+      position: fixed; bottom: 122px; right: 20px;
+      background: rgba(255,159,67,0.15); border: 1px solid rgba(255,159,67,0.35);
+      border-radius: 12px; padding: 8px 16px;
+      font-size: 0.82rem; font-weight: 800; color: #FF9F43;
+      transform: translateY(40px); opacity: 0; transition: all 0.35s;
+      pointer-events: none; z-index: 101;
+    }
+    .as-streak-notif.hot {
+      background: rgba(255,107,107,0.15); border-color: rgba(255,107,107,0.35);
+      color: var(--coral);
+    }
+    .as-streak-notif.show { transform: translateY(0); opacity: 1; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+<!-- TOPBAR -->
+<div class="as-topbar" id="as-topbar">
+  <button class="as-back" onclick="window.location.href='multiplayer.html'">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    Back
+  </button>
+  <div class="as-match-badge">
+    <div class="as-live-dot" id="as-live-dot"></div>
+    <span class="as-match-name" id="as-match-name">Loading match…</span>
+    <span class="as-half-badge" id="as-half-badge"></span>
+    <span class="as-mode-badge" id="as-mode-badge"></span>
+  </div>
+</div>
+
+<!-- DUEL HEADER -->
+<div class="as-duel-header" id="as-scoreboard" style="display:none">
+  <div class="as-duel-player">
+    <div class="as-avatar-ring" id="as-my-ring">
+      <div class="as-avatar" id="as-my-avatar">?</div>
+    </div>
+    <div class="as-duel-handle me" id="as-my-name">You</div>
+    <div id="as-my-correct" style="font-size:0.65rem;color:rgba(255,255,255,0.35)"></div>
+    <div class="as-streak-badge" id="as-my-streak"></div>
+  </div>
+  <div class="as-duel-score-block">
+    <div class="as-duel-score">
+      <span class="as-duel-score-me" id="as-my-score">0</span>
+      <span class="as-duel-score-sep">:</span>
+      <span class="as-duel-score-opp" id="as-opp-score">0</span>
+    </div>
+    <div class="as-duel-score-label">POINTS</div>
+  </div>
+  <div class="as-duel-player">
+    <div class="as-avatar-ring" id="as-opp-ring">
+      <div class="as-avatar" id="as-opp-avatar">?</div>
+    </div>
+    <div class="as-duel-handle" id="as-opp-name">Opponent</div>
+    <div id="as-opp-correct" style="font-size:0.65rem;color:rgba(255,255,255,0.35);text-align:center"></div>
+    <div class="as-streak-badge" id="as-opp-streak" style="text-align:center"></div>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="as-body">
+  <div class="as-feed-label">LIVE QUESTIONS</div>
+  <div id="as-questions-feed">
+    <div class="as-feed-empty">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      Loading arena match…
+    </div>
+  </div>
+</div>
+
+<!-- SESSION COMPLETE OVERLAY -->
+<div class="as-complete-overlay" id="as-complete-overlay">
+  <div class="as-result-headline" id="as-result-headline">Match Over</div>
+  <div class="as-result-subtitle" id="as-result-subtitle">Final Result</div>
+  <div class="as-result-duel" id="as-result-duel"></div>
+  <div class="as-result-stats" id="as-result-stats"></div>
+  <button class="as-complete-btn" onclick="window.location.href='multiplayer.html'">Play Again</button>
+</div>
+
+<!-- TOAST -->
+<div class="as-toast" id="as-toast"></div>
+
+<!-- POINTS NOTIF -->
+<div class="as-pts-notif" id="as-pts-notif"></div>
+
+<!-- STREAK NOTIF -->
+<div class="as-streak-notif" id="as-streak-notif"></div>
+
+</div><!-- #app -->
+
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+<script>
+// ── State ─────────────────────────────────────────────────────────────────
+var currentSessionId  = null;
+var currentUserId     = null;
+var currentUserHandle = null;
+var sessionData       = null;   // arena_sessions row
+var players           = [];     // arena_session_players rows
+var currentQuestions  = [];
+var myAnswers         = {};     // questionId → { answer, is_correct, points_earned }
+var currentMyStreak   = 0;      // consecutive correct answers this session
+var prevMyAnswers     = {};
+var sessionChannel    = null;
+var questionsChannel  = null;
+var playersChannel    = null;
+var pollInterval      = null;
+var timerInterval     = null;
+
+// ── Init ──────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async function() {
+  var params = new URLSearchParams(window.location.search);
+  currentSessionId = params.get('id');
+  if (!currentSessionId) {
+    showToast('No session ID in URL');
+    setTimeout(function(){ window.location.href = 'multiplayer.html'; }, 2000);
+    return;
+  }
+
+  // Wait for Supabase auth
+  if (!window.sb) {
+    setTimeout(init, 500);
+    return;
+  }
+  await init();
+});
+
+async function init() {
+  if (!window.sb) return;
+
+  var { data: { user } } = await window.sb.auth.getUser();
+  if (!user) {
+    window.location.href = 'login.html';
+    return;
+  }
+  currentUserId = user.id;
+
+  // Get handle from public.users
+  try {
+    var { data: profile } = await window.sb
+      .from('users')
+      .select('handle, name')
+      .eq('id', currentUserId)
+      .single();
+    currentUserHandle = (profile && profile.handle) ? profile.handle : (profile && profile.name ? profile.name.split(' ')[0] : 'You');
+  } catch(e) { currentUserHandle = 'You'; }
+
+  document.getElementById('as-my-name').textContent = currentUserHandle;
+
+  await loadSession();
+  await loadQuestions();
+  await loadPlayers();
+
+  if (sessionData && sessionData.status !== 'completed' && sessionData.status !== 'cancelled') {
+    startRealtime();
+    startPoll();
+    startTimerTick();
+  } else if (sessionData && (sessionData.status === 'completed' || sessionData.status === 'cancelled')) {
+    showCompleteOverlay();
+  }
+}
+
+// ── Data Loaders ──────────────────────────────────────────────────────────
+async function loadSession() {
+  if (!window.sb) return;
+  try {
+    var { data } = await window.sb
+      .from('arena_sessions')
+      .select('id, match_id, half_scope, mode, status, home_team_name, away_team_name, kickoff_at, started_at, completed_at, winner_user_id, winning_team_number')
+      .eq('id', currentSessionId)
+      .single();
+    sessionData = data;
+    renderTopbar();
+  } catch(e) { console.warn('[arena] loadSession error:', e); }
+}
+
+async function loadPlayers() {
+  if (!window.sb) return;
+  try {
+    var { data: rows, error: rowErr } = await window.sb
+      .from('arena_session_players')
+      .select('user_id, score, correct_answers, total_answers, team_number')
+      .eq('session_id', currentSessionId);
+    if (rowErr) { console.warn('[arena] loadPlayers rows error:', rowErr); return; }
+
+    var playerRows = rows || [];
+    if (playerRows.length > 0) {
+      var uids = playerRows.map(function(p) { return p.user_id; });
+      var { data: profiles } = await window.sb
+        .from('users')
+        .select('id, handle, name')
+        .in('id', uids);
+      var profileMap = {};
+      (profiles || []).forEach(function(u) { profileMap[u.id] = u; });
+      playerRows.forEach(function(p) {
+        var u = profileMap[p.user_id];
+        p._handle = u ? (u.handle || (u.name ? u.name.split(' ')[0] : null)) : null;
+      });
+    }
+
+    players = playerRows;
+    renderScoreboard();
+  } catch(e) { console.warn('[arena] loadPlayers error:', e); }
+}
+
+async function loadQuestions() {
+  if (!window.sb || !currentSessionId) return;
+  var feed = document.getElementById('as-questions-feed');
+  try {
+    var cols = [
+      'id', 'question_text', 'options', 'question_type', 'event_type', 'source_badge',
+      'match_id', 'visible_from', 'answer_closes_at', 'opens_at', 'deadline', 'resolves_after',
+      'resolution_status', 'resolution_outcome', 'resolution_predicate',
+      'base_value', 'difficulty_multiplier', 'match_minute_at_generation',
+      'created_at'
+    ].join(', ');
+
+    var { data: qs } = await window.sb
+      .from('questions')
+      .select(cols)
+      .eq('arena_session_id', currentSessionId)
+      .order('created_at', { ascending: false })
+      .limit(30);
+
+    var now = new Date();
+    currentQuestions = (qs || []).filter(function(q) {
+      var vf = q.visible_from ? new Date(q.visible_from) : (q.opens_at ? new Date(q.opens_at) : null);
+      return !vf || vf <= now;
+    });
+
+    // Load answers for current user
+    myAnswers = {};
+    if (currentQuestions.length > 0) {
+      var qIds = currentQuestions.map(function(q) { return q.id; });
+      var { data: answers } = await window.sb
+        .from('player_answers')
+        .select('question_id, answer, is_correct, points_earned, multiplier_breakdown')
+        .eq('user_id', currentUserId)
+        .in('question_id', qIds);
+      (answers || []).forEach(function(a) { myAnswers[a.question_id] = a; });
+    }
+
+    // Detect newly-resolved
+    var prev = prevMyAnswers;
+    prevMyAnswers = JSON.parse(JSON.stringify(myAnswers));
+    var hasNewCorrect = false;
+    var hasNewWrong   = false;
+    Object.keys(myAnswers).forEach(function(qid) {
+      var curr = myAnswers[qid];
+      var p    = prev[qid];
+      if (!curr || p && p.is_correct !== null && p.is_correct !== undefined) return;
+      if (curr.is_correct === true  && !(p && p.is_correct === true))  hasNewCorrect = true;
+      if (curr.is_correct === false && !(p && p.is_correct === false)) hasNewWrong   = true;
+      if (curr.is_correct === true  && !(p && p.is_correct === true))  showPtsNotif(curr.points_earned || 0);
+    });
+    if (hasNewCorrect || hasNewWrong) {
+      computeCurrentStreak().then(function(streak) {
+        currentMyStreak = streak;
+        updateStreakUI(streak);
+        if (hasNewCorrect && streak >= 2) showStreakNotif(streak);
+      });
+    }
+
+    renderFeed();
+  } catch(e) {
+    console.warn('[arena] loadQuestions error:', e);
+    if (feed) feed.innerHTML = '<div class="as-feed-empty">Could not load questions — check your connection.</div>';
+  }
+}
+
+// ── Render ────────────────────────────────────────────────────────────────
+function renderTopbar() {
+  if (!sessionData) return;
+  var home  = sessionData.home_team_name || 'Home';
+  var away  = sessionData.away_team_name || 'Away';
+  document.getElementById('as-match-name').textContent = home + ' vs ' + away;
+
+  var halfLabels = { full_match: 'Full Match', first_half: '1st Half', second_half: '2nd Half' };
+  document.getElementById('as-half-badge').textContent = halfLabels[sessionData.half_scope] || sessionData.half_scope;
+  document.getElementById('as-mode-badge').textContent = sessionData.mode || '1v1';
+
+  document.title = home + ' vs ' + away + ' — Arena';
+}
+
+function getInitials(handle) {
+  if (!handle) return '?';
+  var parts = handle.trim().split(/\s+/);
+  if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  return handle.slice(0, 2).toUpperCase();
+}
+
+function renderScoreboard() {
+  var sb = document.getElementById('as-scoreboard');
+  if (!sb) return;
+
+  var me  = players.find(function(p) { return p.user_id === currentUserId; });
+  var opp = players.find(function(p) { return p.user_id !== currentUserId; });
+
+  var myScore    = me  ? (me.score  || 0) : 0;
+  var oppScore   = opp ? (opp.score || 0) : 0;
+  var myCorrect  = me  ? (me.correct_answers  || 0) : 0;
+  var oppCorrect = opp ? (opp.correct_answers || 0) : 0;
+
+  document.getElementById('as-my-score').textContent    = myScore;
+  document.getElementById('as-opp-score').textContent   = oppScore;
+
+  var myCorEl  = document.getElementById('as-my-correct');
+  var oppCorEl = document.getElementById('as-opp-correct');
+  if (myCorEl)  myCorEl.textContent  = myCorrect  + ' correct';
+  if (oppCorEl) oppCorEl.textContent = oppCorrect + ' correct';
+
+  var myHandle  = currentUserHandle || 'You';
+  var oppHandle = opp ? (opp._handle || 'Opponent') : '??';
+  document.getElementById('as-my-name').textContent  = myHandle;
+  document.getElementById('as-opp-name').textContent = oppHandle;
+
+  var myAv  = document.getElementById('as-my-avatar');
+  var oppAv = document.getElementById('as-opp-avatar');
+  if (myAv)  myAv.textContent  = getInitials(myHandle);
+  if (oppAv) oppAv.textContent = getInitials(oppHandle);
+
+  var myRing  = document.getElementById('as-my-ring');
+  var oppRing = document.getElementById('as-opp-ring');
+  if (myRing && oppRing) {
+    myRing.className  = 'as-avatar-ring';
+    oppRing.className = 'as-avatar-ring';
+    if      (myScore > oppScore)  { myRing.classList.add('leading');  oppRing.classList.add('losing'); }
+    else if (oppScore > myScore)  { oppRing.classList.add('leading'); myRing.classList.add('losing'); }
+  }
+
+  sb.style.display = (players.length >= 2) ? 'flex' : 'none';
+  updateStreakUI(currentMyStreak);
+}
+
+function renderFeed() {
+  var feed = document.getElementById('as-questions-feed');
+  if (!feed) return;
+
+  var qs = currentQuestions;
+  if (!qs.length) {
+    feed.innerHTML = '<div class="as-feed-empty">' +
+      '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/>' +
+      '<polyline points="12 6 12 12 16 14"/></svg>' +
+      'No questions yet — they will appear here as the match progresses.</div>';
+    return;
+  }
+
+  // Sort: active (soonest expiry first) → closed → resolved → voided
+  var stateOrder = { active: 0, closed: 1, resolved: 2, voided: 3, upcoming: 4 };
+  qs.sort(function(a, b) {
+    var sa = qState(a), sb2 = qState(b);
+    var d = (stateOrder[sa] || 0) - (stateOrder[sb2] || 0);
+    if (d !== 0) return d;
+    if (sa === 'active') {
+      var ca = qClosesAt(a), cb = qClosesAt(b);
+      if (ca && cb) return ca.getTime() - cb.getTime();
+    }
+    return new Date(b.created_at) - new Date(a.created_at);
+  });
+
+  var hasActive = qs.some(function(q) { return qState(q) === 'active'; });
+  var html = '';
+
+  if (!hasActive && sessionData && sessionData.status === 'active') {
+    html += '<div class="as-holding">' +
+      '<div class="as-holding-dot"></div>' +
+      '<div class="as-holding-title">Next moment dropping soon</div>' +
+      '<div class="as-holding-sub">Live questions appear here as the match unfolds</div>' +
+      '</div>';
+  }
+
+  var isPrimarySet = false;
+  html += qs.map(function(q) {
+    var isPrimary = false;
+    if (!isPrimarySet && qState(q) === 'active') { isPrimary = true; isPrimarySet = true; }
+    return renderCard(q, isPrimary);
+  }).join('');
+
+  feed.innerHTML = html;
+
+  // Animate newly-resolved cards
+  qs.forEach(function(q) {
+    var curr = myAnswers[q.id];
+    var prev = prevMyAnswers[q.id];
+    if (!curr || !prev) return;
+    if (curr.is_correct === true  && !(prev.is_correct === true)) {
+      var el = feed.querySelector('[data-qid="' + q.id + '"]');
+      if (el) { el.classList.add('glow-correct'); setTimeout(function(){ el.classList.remove('glow-correct'); }, 900); }
+    }
+    if (curr.is_correct === false && !(prev.is_correct === false)) {
+      var el2 = feed.querySelector('[data-qid="' + q.id + '"]');
+      if (el2) { el2.classList.add('shake-wrong'); setTimeout(function(){ el2.classList.remove('shake-wrong'); }, 500); }
+    }
+  });
+}
+
+function renderCard(q, isPrimary) {
+  var state = qState(q);
+  var my    = myAnswers[q.id];
+  var opts  = parseOptions(q.options);
+  var now   = new Date();
+
+  // Card classes
+  var cls = 'as-qcard';
+  if (isPrimary) cls += ' primary';
+  if (state === 'resolved' && my) {
+    cls += my.is_correct ? ' resolved-correct' : ' resolved-wrong';
+  }
+  if (state === 'voided') cls += ' voided';
+  if ((q.match_minute_at_generation || 0) >= 70 && state === 'active') cls += ' clutch-state';
+
+  // Lane badge
+  var lane = detectLane(q);
+  var laneHtml = '<span class="as-lane-badge ' + (lane === 'LIVE' ? 'live' : lane === 'PREMATCH' ? 'prematch' : 'rw') + '">' +
+    (lane === 'LIVE' ? '⚡ Live' : lane === 'PREMATCH' ? 'Pre-Match' : 'Real World') + '</span>';
+
+  // Engagement badges
+  var engHtml = '';
+  if (state === 'active') {
+    var badges = [];
+    var bv = q.base_value || 0;
+    if (bv >= 20 || ['goal','penalty','red_card'].indexOf(q.event_type) >= 0) badges.push('<span class="as-eng-badge hv">High Value</span>');
+    if ((q.match_minute_at_generation || 0) >= 70) badges.push('<span class="as-eng-badge clutch">Clutch</span>');
+    var closes = qClosesAt(q);
+    if (closes && (closes - now) < 180000) badges.push('<span class="as-eng-badge fast">Fast</span>');
+    if (currentMyStreak >= 4) badges.push('<span class="as-eng-badge hot-streak">HOT STREAK ×1.3</span>');
+    else if (currentMyStreak === 3) badges.push('<span class="as-eng-badge streak">STREAK ×1.2</span>');
+    else if (currentMyStreak === 2) badges.push('<span class="as-eng-badge streak">STREAK ×1.1</span>');
+    if (badges.length) engHtml = '<div class="as-eng-badges">' + badges.join('') + '</div>';
+  }
+
+  // Timer
+  var timerHtml = '';
+  if (state === 'active') {
+    var closes = qClosesAt(q);
+    if (closes) {
+      var ms = closes - now;
+      var isUrgent = ms < 60000;
+      timerHtml = '<span class="as-timer' + (isUrgent ? ' urgent' : '') +
+        '" data-closes-at="' + closes.toISOString() + '">' + fmtMs(ms) + '</span>';
+    }
+  }
+
+  // Timer bar
+  var barHtml = '';
+  if (state === 'active') {
+    var closes = qClosesAt(q);
+    var opens  = q.visible_from ? new Date(q.visible_from) : (q.opens_at ? new Date(q.opens_at) : null);
+    if (closes && opens) {
+      var total  = closes - opens;
+      var remain = Math.max(0, closes - now);
+      var pct    = total > 0 ? Math.round((remain / total) * 100) : 0;
+      var isUrg  = remain < 60000;
+      barHtml = '<div class="as-timer-bar-wrap' + (isUrg ? ' urgent' : '') +
+        '" data-closes-at="' + closes.toISOString() + '" data-total-ms="' + total + '">' +
+        '<div class="as-timer-bar-fill" style="width:' + pct + '%"></div></div>';
+    }
+  }
+
+  // Live window strip for match_stat_window predicates
+  var windowStripHtml = '';
+  if (state === 'active' && lane === 'LIVE' && q.resolution_predicate) {
+    try {
+      var pred = typeof q.resolution_predicate === 'string' ? JSON.parse(q.resolution_predicate) : q.resolution_predicate;
+      if (pred && pred.resolution_type === 'match_stat_window') {
+        var emoji = pred.field === 'cards' ? '🟨' : '⚽';
+        var winText = pred.anchoring_type === 'match_phase' ? 'Before full-time' :
+                      pred.anchoring_type === 'deadline'    ? 'Before ' + pred.window_end_minute + '\'' :
+                      pred.window_start_minute + '\' – ' + pred.window_end_minute + '\'';
+        windowStripHtml = '<div class="as-live-window-strip">' +
+          emoji + ' ' + winText + ' · 🔒 Closes before ' + pred.window_start_minute + '\'</div>';
+      }
+    } catch(e) {}
+  }
+
+  // Options HTML
+  var optHtml = '<div class="as-options">';
+  opts.forEach(function(opt) {
+    var disabled  = state !== 'active';
+    var sel       = my && my.answer === opt.id;
+    var correct   = state === 'resolved' && opt.id === q.resolution_outcome;
+    var wrong     = state === 'resolved' && sel && opt.id !== q.resolution_outcome;
+    var optCls    = 'as-opt';
+    if (sel && state === 'active') optCls += ' selected';
+    if (correct) optCls += ' correct';
+    if (wrong)   optCls += ' wrong';
+    if (disabled) optCls += ' disabled-opt';
+
+    var icon = '';
+    if (correct) icon = '<svg class="as-opt-icon" viewBox="0 0 24 24" stroke="#A8E10C" stroke-width="2.5" fill="none"><polyline points="20 6 9 17 4 12"/></svg>';
+    if (wrong)   icon = '<svg class="as-opt-icon" viewBox="0 0 24 24" stroke="#FF6B6B" stroke-width="2.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+
+    var click = (!disabled && state === 'active') ?
+      ' onclick="handleAnswer(this, \'' + q.id + '\', \'' + escAttr(opt.id) + '\')"' : '';
+
+    optHtml += '<button class="' + optCls + '"' + (disabled ? ' disabled' : '') + click + '>' +
+      icon + escHtml(opt.label || opt.id) + '</button>';
+  });
+  optHtml += '</div>';
+
+  // Current pick label
+  var pickLabel = '';
+  if (my && my.answer && state === 'active') {
+    pickLabel = '<div class="as-current-pick">Your current pick — tap to change</div>';
+  }
+
+  // Footer
+  var footerHtml = '<div class="as-qcard-footer">';
+  if (state === 'active') {
+    footerHtml += '<span>🕐 ' + (timerHtml || '—') + '</span>';
+    var bv2 = q.base_value || 6;
+    footerHtml += '<span class="as-pts-range">Up to ' + Math.round(bv2 * 1.5 * 1.3 * 1.3 * 1.25) + ' pts</span>';
+  } else if (state === 'closed') {
+    footerHtml += '<span>Awaiting result…</span>';
+  } else if (state === 'resolved' && my) {
+    var res = my.is_correct;
+    if (res === true)  footerHtml += '<span class="as-result-row as-result-correct">✓ Correct · <strong>' + (my.points_earned || 0) + ' pts</strong></span>';
+    if (res === false) footerHtml += '<span class="as-result-row as-result-wrong">✗ Wrong · 0 pts</span>';
+    if (res === null || res === undefined) footerHtml += '<span>Resolved</span>';
+  } else if (state === 'voided') {
+    footerHtml += '<span class="as-result-voided">Voided — did not count</span>';
+  } else {
+    footerHtml += '<span>—</span>';
+  }
+  footerHtml += '</div>';
+
+  return '<div class="' + cls + '" data-qid="' + q.id + '">' +
+    '<div class="as-qcard-header">' + laneHtml + timerHtml + '</div>' +
+    barHtml +
+    engHtml +
+    windowStripHtml +
+    '<div class="as-question-text">' + escHtml(q.question_text) + '</div>' +
+    optHtml + pickLabel + footerHtml +
+    '</div>';
+}
+
+// ── Scoring helpers (ported from league.html) ─────────────────────────────
+
+// Returns the number of consecutive correct answers by the current user
+// in this arena session (most recent resolved answers first).
+async function computeCurrentStreak() {
+  try {
+    // Pull the last 6 resolved answers for this user in this session
+    var { data: recent } = await window.sb
+      .from('player_answers')
+      .select('is_correct, resolved_at')
+      .eq('user_id', currentUserId)
+      .eq('arena_session_id', currentSessionId)
+      .not('is_correct', 'is', null)
+      .order('resolved_at', { ascending: false })
+      .limit(6);
+
+    if (!recent || !recent.length) return 0;
+    var streak = 0;
+    for (var i = 0; i < recent.length; i++) {
+      if (recent[i].is_correct === true) streak++;
+      else break;
+    }
+    return streak;
+  } catch(e) { return 0; }
+}
+
+// Returns the point gap between the current user and the session leader.
+async function computeLeaderGap() {
+  try {
+    // Aggregate correct points per user in this session
+    var { data: rows } = await window.sb
+      .from('player_answers')
+      .select('user_id, points_earned')
+      .eq('arena_session_id', currentSessionId)
+      .eq('is_correct', true);
+
+    if (!rows || !rows.length) return 0;
+    var totals = {};
+    rows.forEach(function(r) {
+      totals[r.user_id] = (totals[r.user_id] || 0) + (r.points_earned || 0);
+    });
+    var leaderScore = Math.max.apply(null, Object.values(totals));
+    var myScore     = totals[currentUserId] || 0;
+    return Math.max(0, leaderScore - myScore);
+  } catch(e) { return 0; }
+}
+
+// ── Answer Submission ─────────────────────────────────────────────────────
+async function handleAnswer(btn, questionId, answer) {
+  if (!currentUserId || !window.sb) { showToast('Sign in to answer'); return; }
+
+  var q = currentQuestions.find(function(x) { return x.id === questionId; });
+  if (!q) { showToast('Question not found'); return; }
+
+  if (qState(q) !== 'active') {
+    showToast('This question is no longer accepting answers');
+    await loadQuestions(); renderFeed();
+    return;
+  }
+
+  // Optimistic UI
+  var siblings = btn.parentElement.querySelectorAll('.as-opt');
+  siblings.forEach(function(s) { s.classList.remove('selected'); });
+  btn.classList.add('selected');
+
+  var hadPrev = !!(myAnswers[questionId] && myAnswers[questionId].answer);
+  myAnswers[questionId] = myAnswers[questionId] || {};
+  myAnswers[questionId].answer = answer;
+
+  // Clutch multiplier from match minute
+  var minute = q.match_minute_at_generation || 0;
+  var clutch = minute >= 70 ? 1.25 : 1.0;
+
+  // Compute streak + leader gap in parallel (best-effort; fall back to 0)
+  var scoringCtx = await Promise.all([computeCurrentStreak(), computeLeaderGap()]);
+  var streakNow  = scoringCtx[0];
+  var gapNow     = scoringCtx[1];
+
+  try {
+    var payload = {
+      question_id:               questionId,
+      user_id:                   currentUserId,
+      arena_session_id:          currentSessionId,
+      answer:                    answer,
+      answered_at:               new Date().toISOString(),
+      clutch_multiplier_at_answer: clutch,
+      leader_gap_at_answer:      gapNow,
+      streak_at_answer:          streakNow,
+    };
+    // Note: no league_id — arena answers use arena_session_id path
+
+    var { error } = await window.sb
+      .from('player_answers')
+      .upsert(payload, { onConflict: 'question_id,user_id' });
+
+    if (error) throw error;
+    if (hadPrev) showToast('Answer updated ✓');
+
+  } catch(e) {
+    console.warn('[arena] handleAnswer error:', e);
+    if (e.code === '23514' || (e.message && e.message.toLowerCase().includes('check'))) {
+      showToast('Answer window just closed');
+      await loadQuestions(); renderFeed();
+    } else {
+      showToast('Could not save — try again');
+    }
+  }
+}
+
+// ── Session Complete Overlay ──────────────────────────────────────────────
+async function showCompleteOverlay() {
+  var overlay = document.getElementById('as-complete-overlay');
+  if (!overlay) return;
+
+  var me  = players.find(function(p) { return p.user_id === currentUserId; });
+  var opp = players.find(function(p) { return p.user_id !== currentUserId; });
+
+  var myScore    = me  ? (me.score  || 0) : 0;
+  var oppScore   = opp ? (opp.score || 0) : 0;
+  var myCorrect  = me  ? (me.correct_answers  || 0) : 0;
+  var oppCorrect = opp ? (opp.correct_answers || 0) : 0;
+
+  var winnerId    = sessionData && sessionData.winner_user_id;
+  var winningTeam = sessionData && sessionData.winning_team_number;
+  var myTeam      = me ? me.team_number : null;
+
+  var iWon, isDraw;
+  if (winnerId) {
+    // 1v1: winner_user_id is authoritative
+    iWon   = (winnerId === currentUserId);
+    isDraw = false;
+  } else if (winningTeam && myTeam) {
+    // 2v2: winning_team_number is authoritative
+    iWon   = (myTeam === winningTeam);
+    isDraw = false;
+  } else {
+    // Fallback: compare scores
+    iWon   = myScore > oppScore;
+    isDraw = myScore === oppScore;
+  }
+
+  var myHandle  = currentUserHandle || 'You';
+  var oppHandle = opp ? (opp._handle || 'Opponent') : 'Opponent';
+
+  // Headline
+  var headlineEl = document.getElementById('as-result-headline');
+  var subtitleEl = document.getElementById('as-result-subtitle');
+  if (headlineEl) {
+    headlineEl.textContent = iWon ? 'YOU WIN!' : isDraw ? 'DRAW' : 'YOU LOSE';
+    headlineEl.className   = 'as-result-headline ' + (iWon ? 'win' : isDraw ? 'draw' : 'loss');
+  }
+  if (subtitleEl) {
+    subtitleEl.textContent = iWon ? 'Outstanding performance' : isDraw ? 'Too close to call' : 'Better luck next time';
+  }
+
+  // Duel row
+  var duelEl = document.getElementById('as-result-duel');
+  if (duelEl) {
+    var myRingCls  = iWon ? 'winner' : (!isDraw ? 'loser' : '');
+    var oppRingCls = !iWon && !isDraw ? 'winner' : (iWon ? 'loser' : '');
+    var myScoreCls  = iWon ? 'as-result-final-score winner' : 'as-result-final-score';
+    var oppScoreCls = (!iWon && !isDraw) ? 'as-result-final-score winner' : 'as-result-final-score';
+    duelEl.innerHTML =
+      '<div class="as-result-player">' +
+        '<div class="as-result-ring ' + myRingCls + '"><div class="as-result-avatar">' + escHtml(getInitials(myHandle)) + '</div></div>' +
+        '<div class="as-result-handle me">' + escHtml(myHandle) + '</div>' +
+        '<div class="' + myScoreCls + '">' + myScore + '</div>' +
+      '</div>' +
+      '<div class="as-result-vs"><div class="as-result-vs-sep">VS</div></div>' +
+      '<div class="as-result-player">' +
+        '<div class="as-result-ring ' + oppRingCls + '"><div class="as-result-avatar">' + escHtml(getInitials(oppHandle)) + '</div></div>' +
+        '<div class="as-result-handle">' + escHtml(oppHandle) + '</div>' +
+        '<div class="' + oppScoreCls + '">' + oppScore + '</div>' +
+      '</div>';
+  }
+
+  // Stats row — shown immediately; XP + rating fill in async
+  function renderStats(myXp, myRatingDelta) {
+    var statsEl = document.getElementById('as-result-stats');
+    if (!statsEl) return;
+
+    var xpHtml = myXp !== null
+      ? '<div class="as-result-stat"><div class="as-result-stat-val lime">+' + myXp + '</div><div class="as-result-stat-label">XP Earned</div></div>'
+      : '<div class="as-result-stat"><div class="as-result-stat-val" style="color:rgba(255,255,255,0.3)">…</div><div class="as-result-stat-label">XP Earned</div></div>';
+
+    var ratingHtml;
+    if (myRatingDelta === undefined) {
+      // still loading
+      ratingHtml = '<div class="as-result-stat"><div class="as-result-stat-val" style="color:rgba(255,255,255,0.3)">…</div><div class="as-result-stat-label">Rating</div></div>';
+    } else if (myRatingDelta === null) {
+      // skipped / not applicable
+      ratingHtml = '';
+    } else {
+      var sign      = myRatingDelta > 0 ? '+' : '';
+      var cls       = myRatingDelta > 0 ? 'gain' : myRatingDelta < 0 ? 'loss' : 'none';
+      ratingHtml =
+        '<div class="as-result-stat">' +
+          '<div class="as-result-stat-val" style="color:' + (myRatingDelta > 0 ? '#4ECDC4' : myRatingDelta < 0 ? '#FF6B6B' : 'rgba(255,255,255,0.5)') + '">' +
+            sign + myRatingDelta +
+          '</div>' +
+          '<div class="as-result-stat-label">Rating</div>' +
+          '<div class="as-rating-delta ' + cls + '">' + sign + myRatingDelta + ' SR</div>' +
+        '</div>';
+    }
+
+    statsEl.innerHTML =
+      '<div class="as-result-stat"><div class="as-result-stat-val lime">' + myCorrect + '</div><div class="as-result-stat-label">Correct</div></div>' +
+      '<div class="as-result-stat"><div class="as-result-stat-val">' + myScore + '</div><div class="as-result-stat-label">Points</div></div>' +
+      xpHtml +
+      ratingHtml;
+  }
+
+  renderStats(null, undefined);  // show immediately with both pending
+  overlay.classList.add('show');
+  stopPoll();
+  stopTimerTick();
+
+  // Award XP and update rating in parallel
+  Promise.all([
+    awardSessionXp(iWon, isDraw),
+    updateArenaRatings()
+  ]).then(function(results) {
+    var xpResult     = results[0];
+    var ratingResult = results[1];
+    var myXp    = xpResult && xpResult.awarded_xp != null ? xpResult.awarded_xp : null;
+    var myDelta = null;
+    if (ratingResult && ratingResult.updated && Array.isArray(ratingResult.players)) {
+      var mine = ratingResult.players.find(function(p) { return p.user_id === currentUserId; });
+      if (mine) myDelta = mine.delta;
+    }
+    renderStats(myXp, myDelta);
+  });
+}
+
+// XP amounts per outcome
+var XP_WIN   = 50;
+var XP_DRAW  = 25;
+var XP_LOSS  = 15;
+
+async function awardSessionXp(iWon, isDraw) {
+  if (!window.sb || !currentUserId || !currentSessionId) return null;
+  try {
+    var eventType = iWon ? 'arena_win' : isDraw ? 'arena_draw' : 'arena_loss';
+    var xpAmount  = iWon ? XP_WIN : isDraw ? XP_DRAW : XP_LOSS;
+    var { data, error } = await window.sb.rpc('award_xp', {
+      p_user_id:     currentUserId,
+      p_xp_amount:   xpAmount,
+      p_event_type:  eventType,
+      p_source_type: 'arena',
+      p_source_id:   currentSessionId,
+      p_metadata:    {}
+    });
+    if (error) {
+      // RPC may not exist yet (migration 035 not applied) — degrade silently
+      console.warn('[arena] award_xp error (migration 035 applied?)', error.message);
+      return null;
+    }
+    if (data && data.duplicate) return null; // already awarded for this session
+    return data;
+  } catch(e) {
+    console.warn('[arena] award_xp exception:', e);
+    return null;
+  }
+}
+
+async function updateArenaRatings() {
+  if (!window.sb || !currentSessionId) return null;
+  try {
+    var { data, error } = await window.sb.rpc('update_arena_ratings', {
+      p_session_id: currentSessionId
+    });
+    if (error) {
+      console.warn('[arena] update_arena_ratings error (migration 036 applied?)', error.message);
+      return null;
+    }
+    if (data && data.skip_reason) {
+      console.log('[arena] rating skip:', data.skip_reason, 'invalid_match:', data.invalid_match);
+    }
+    return data;
+  } catch(e) {
+    console.warn('[arena] update_arena_ratings exception:', e);
+    return null;
+  }
+}
+
+// ── Realtime ──────────────────────────────────────────────────────────────
+function startRealtime() {
+  stopRealtime();
+
+  // Subscribe to session status changes
+  sessionChannel = window.sb.channel('as-session-' + currentSessionId)
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: 'arena_sessions',
+      filter: 'id=eq.' + currentSessionId,
+    }, function(payload) {
+      if (payload.new) {
+        sessionData = Object.assign(sessionData || {}, payload.new);
+        if (sessionData.status === 'completed' || sessionData.status === 'cancelled') {
+          loadPlayers().then(function() { showCompleteOverlay(); });
+          stopRealtime(); stopPoll(); stopTimerTick();
+        }
+      }
+    })
+    .subscribe(function(status) {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        stopPoll(); startPoll(5000);
+      }
+    });
+
+  // Subscribe to questions for this arena session
+  questionsChannel = window.sb.channel('as-questions-' + currentSessionId)
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: 'questions',
+      filter: 'arena_session_id=eq.' + currentSessionId,
+    }, function() {
+      loadQuestions().then(function() { renderFeed(); });
+    })
+    .subscribe(function(status) {
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        stopPoll(); startPoll(5000);
+      }
+    });
+
+  // Subscribe to player score updates
+  playersChannel = window.sb.channel('as-players-' + currentSessionId)
+    .on('postgres_changes', {
+      event: '*', schema: 'public', table: 'arena_session_players',
+      filter: 'session_id=eq.' + currentSessionId,
+    }, function() {
+      loadPlayers().then(function() { renderScoreboard(); });
+    })
+    .subscribe(function(status) {
+      if (status === 'SUBSCRIBED') {
+        // Re-evaluate poll rate when Realtime is active
+        stopPoll(); startPoll(30000);
+      }
+      if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+        stopPoll(); startPoll(5000);
+      }
+    });
+}
+
+function stopRealtime() {
+  if (sessionChannel)   { window.sb.removeChannel(sessionChannel);   sessionChannel   = null; }
+  if (questionsChannel) { window.sb.removeChannel(questionsChannel); questionsChannel = null; }
+  if (playersChannel)   { window.sb.removeChannel(playersChannel);   playersChannel   = null; }
+}
+
+// ── Polling ───────────────────────────────────────────────────────────────
+function startPoll(ms) {
+  stopPoll();
+  ms = ms || 5000;
+  pollInterval = setInterval(function() {
+    loadQuestions().then(function() { renderFeed(); });
+    loadPlayers().then(function() { renderScoreboard(); });
+    loadSession();
+  }, ms);
+}
+
+function stopPoll() {
+  if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
+}
+
+// ── Timer tick ────────────────────────────────────────────────────────────
+function startTimerTick() {
+  stopTimerTick();
+  timerInterval = setInterval(tickTimers, 1000);
+}
+
+function stopTimerTick() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+}
+
+function tickTimers() {
+  var now = Date.now();
+  document.querySelectorAll('.as-timer[data-closes-at]').forEach(function(el) {
+    var ms = new Date(el.dataset.closesAt) - now;
+    el.textContent = fmtMs(ms);
+    if (ms < 60000) el.classList.add('urgent');
+  });
+  document.querySelectorAll('.as-timer-bar-wrap[data-closes-at]').forEach(function(wrap) {
+    var ms    = Math.max(0, new Date(wrap.dataset.closesAt) - now);
+    var total = parseInt(wrap.dataset.totalMs, 10) || 1;
+    var pct   = Math.round((ms / total) * 100);
+    var fill  = wrap.querySelector('.as-timer-bar-fill');
+    if (fill) fill.style.width = pct + '%';
+    if (ms < 60000) wrap.classList.add('urgent');
+  });
+}
+
+// ── Utilities ─────────────────────────────────────────────────────────────
+function qState(q) {
+  var now = new Date();
+  var vf  = q.visible_from ? new Date(q.visible_from) : (q.opens_at ? new Date(q.opens_at) : null);
+  if (vf && vf > now) return 'upcoming';
+  if (q.resolution_status === 'resolved') return 'resolved';
+  if (q.resolution_status === 'voided')   return 'voided';
+  var closes = qClosesAt(q);
+  if (closes && now > closes) return 'closed';
+  return 'active';
+}
+
+function qClosesAt(q) {
+  var t = q.answer_closes_at || q.deadline;
+  return t ? new Date(t) : null;
+}
+
+function detectLane(q) {
+  if (q.question_type === 'CORE_MATCH_LIVE')     return 'LIVE';
+  if (q.question_type === 'CORE_MATCH_PREMATCH') return 'PREMATCH';
+  if (q.question_type === 'REAL_WORLD')          return 'REAL_WORLD';
+  if (q.match_minute_at_generation != null)      return 'LIVE';
+  return 'PREMATCH';
+}
+
+function parseOptions(opts) {
+  if (!opts) return [];
+  var arr = Array.isArray(opts) ? opts : (() => { try { return JSON.parse(opts); } catch(e) { return []; } })();
+  return arr.map(function(o) {
+    if (typeof o === 'string') return { id: o.toLowerCase().replace(/\s+/g, '_'), label: o };
+    return o;
+  });
+}
+
+function fmtMs(ms) {
+  if (ms <= 0) return '0s';
+  var s = Math.floor(ms / 1000);
+  if (s < 60) return s + 's';
+  return Math.floor(s / 60) + 'm ' + (s % 60) + 's';
+}
+
+function escHtml(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function escAttr(s) {
+  return String(s || '').replace(/'/g, '&#39;').replace(/"/g, '&quot;');
+}
+
+function showToast(msg) {
+  var el = document.getElementById('as-toast');
+  if (!el) return;
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(function() { el.classList.remove('show'); }, 3000);
+}
+
+function showPtsNotif(pts) {
+  var el = document.getElementById('as-pts-notif');
+  if (!el) return;
+  el.textContent = '+' + pts + ' pts · Correct answer!';
+  el.classList.add('show');
+  setTimeout(function() { el.classList.remove('show'); }, 3500);
+}
+
+function getStreakBadgeHtml(streak) {
+  if (streak < 2) return '';
+  if (streak >= 4) return '<span class="as-streak-badge hot">🔥 Hot streak · ×1.3</span>';
+  return '<span class="as-streak-badge">' + (streak === 2 ? '🔥 2 in a row' : '🔥 3 in a row') + '</span>';
+}
+
+function updateStreakUI(streak) {
+  var myEl = document.getElementById('as-my-streak');
+  if (myEl) {
+    if (streak >= 2) {
+      myEl.className = 'as-streak-badge' + (streak >= 4 ? ' hot' : '');
+      myEl.textContent = streak >= 4 ? '🔥 Hot streak · ×1.3' : (streak === 2 ? '🔥 2 in a row' : '🔥 3 in a row');
+    } else {
+      myEl.className = 'as-streak-badge';
+      myEl.textContent = '';
+    }
+  }
+  // Opponent streak is never shown — always keep empty
+}
+
+function showStreakNotif(streak) {
+  if (streak < 2) return;
+  var el = document.getElementById('as-streak-notif');
+  if (!el) return;
+  var isHot = streak >= 4;
+  el.className = 'as-streak-notif' + (isHot ? ' hot' : '');
+  if (isHot) {
+    el.textContent = '🔥 Hot streak · ×1.3 multiplier active!';
+  } else if (streak === 3) {
+    el.textContent = '🔥 3 in a row · ×1.2 multiplier active!';
+  } else {
+    el.textContent = '🔥 2 in a row · ×1.1 multiplier active!';
+  }
+  el.classList.add('show');
+  setTimeout(function() { el.classList.remove('show'); }, 3500);
+}
+
+// ── Cleanup ───────────────────────────────────────────────────────────────
+document.addEventListener('visibilitychange', function() {
+  if (document.hidden) {
+    stopRealtime(); stopPoll(); stopTimerTick();
+  } else {
+    Promise.all([loadQuestions(), loadPlayers(), loadSession()]).then(function() {
+      renderFeed(); renderScoreboard();
+      if (sessionData && sessionData.status !== 'completed' && sessionData.status !== 'cancelled') {
+        startRealtime(); startPoll(); startTimerTick();
+      }
+    });
+  }
+});
+
+window.addEventListener('beforeunload', function() {
+  stopRealtime(); stopPoll(); stopTimerTick();
+});
+</script>
+</body>
+</html>
