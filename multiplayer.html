@@ -337,87 +337,93 @@
     #match-list::-webkit-scrollbar-track { background: transparent; }
     #match-list::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
 
+    /* ── Match cards (styled like matches.html) ── */
     .match-row {
-      display: flex; align-items: center;
-      gap: 12px;
-      padding: 11px 20px;
+      display: flex; align-items: center; gap: 14px;
+      padding: 14px 16px;
+      background: var(--navy-card);
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(255,255,255,0.06);
+      margin: 0 12px 8px;
       cursor: pointer;
-      border-left: 3px solid transparent;
-      transition: background 0.12s, border-color 0.12s;
+      transition: border-color 0.15s, transform 0.15s, background 0.15s;
     }
-    .match-row:hover { background: rgba(255,255,255,0.04); }
+    .match-row:hover { border-color: rgba(168,225,12,0.2); transform: translateY(-1px); }
     .match-row.selected {
-      background: rgba(168,225,12,0.06);
-      border-left-color: var(--lime);
+      border-color: var(--lime);
+      background: linear-gradient(135deg, var(--navy-card), rgba(168,225,12,0.04));
     }
-    .match-row.live-row { border-left-color: var(--coral); }
-    .match-row.live-row.selected { border-left-color: var(--lime); }
+    .match-row.live-row { border-color: rgba(255,107,107,0.25); background: linear-gradient(135deg, var(--navy-card), rgba(255,107,107,0.03)); }
+    .match-row.live-row.selected { border-color: var(--lime); background: linear-gradient(135deg, var(--navy-card), rgba(168,225,12,0.04)); }
 
-    .match-row-left { flex: 1; min-width: 0; }
-    .match-row-teams {
-      font-size: 0.85rem; font-weight: 600;
-      color: #fff; white-space: nowrap;
-      overflow: hidden; text-overflow: ellipsis;
-      margin-bottom: 3px;
+    /* Time column */
+    .match-row-time {
+      text-align: center; min-width: 52px; flex-shrink: 0;
     }
-    .match-row-meta {
-      display: flex; align-items: center; gap: 6px;
-      font-size: 0.72rem; color: rgba(255,255,255,0.35);
+    .match-row-time .time-val { font-size: 0.88rem; font-weight: 800; color: var(--off-white); }
+    .match-row-time .time-label { font-size: 0.55rem; color: var(--grey); font-weight: 600; text-transform: uppercase; margin-top: 1px; letter-spacing: 0.04em; }
+    .time-live-badge {
+      display: flex; align-items: center; gap: 4px; justify-content: center;
+      font-size: 0.6rem; font-weight: 800; color: var(--coral); text-transform: uppercase; letter-spacing: 0.04em;
     }
-    .match-live-dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: var(--coral);
-      flex-shrink: 0;
-      animation: pulse-dot 1.2s ease-in-out infinite;
+    .time-live-badge .dot {
+      width: 5px; height: 5px; border-radius: 50%;
+      background: var(--coral); animation: pulse-dot 1.2s ease-in-out infinite;
     }
-    .match-live-label {
-      color: var(--coral); font-weight: 700;
-      font-size: 0.67rem; text-transform: uppercase;
-      letter-spacing: 0.06em;
+
+    /* Teams column */
+    .match-row-teams { flex: 1; min-width: 0; }
+    .match-row-matchup {
+      display: flex; align-items: center; gap: 8px; margin-bottom: 3px;
     }
+    .match-row-name {
+      font-size: 0.85rem; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-width: 130px;
+    }
+    .match-row-vs {
+      font-size: 0.65rem; font-weight: 800; color: var(--grey-dark); flex-shrink: 0;
+    }
+    .match-row-comp { font-size: 0.62rem; color: var(--grey); }
+
+    /* Queue info */
     .match-row-right {
-      display: flex; align-items: center;
-      gap: 8px; flex-shrink: 0;
+      display: flex; flex-direction: column; align-items: flex-end;
+      gap: 5px; flex-shrink: 0;
     }
     .queue-total-badge {
       display: flex; align-items: center; gap: 4px;
-      background: rgba(168,225,12,0.1);
-      border: 1px solid rgba(168,225,12,0.2);
+      background: rgba(168,225,12,0.08);
+      border: 1px solid rgba(168,225,12,0.18);
       border-radius: 20px; padding: 3px 9px;
-      font-size: 0.72rem; font-weight: 700;
+      font-size: 0.68rem; font-weight: 700;
       color: var(--lime); white-space: nowrap;
     }
     .queue-total-badge svg { width: 10px; height: 10px; flex-shrink: 0; }
-    .queue-total-badge.empty {
-      background: rgba(255,255,255,0.04);
-      border-color: rgba(255,255,255,0.08);
-      color: rgba(255,255,255,0.25);
-    }
     .queue-scope-pills {
-      display: flex; flex-wrap: wrap; gap: 4px;
-      margin-top: 5px;
+      display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px;
     }
     .queue-scope-pill {
       display: inline-flex; align-items: center; gap: 3px;
-      background: rgba(168,225,12,0.07);
-      border: 1px solid rgba(168,225,12,0.15);
+      background: rgba(168,225,12,0.06);
+      border: 1px solid rgba(168,225,12,0.12);
       border-radius: 12px; padding: 2px 7px;
-      font-size: 0.65rem; font-weight: 600;
-      color: rgba(168,225,12,0.75); white-space: nowrap;
+      font-size: 0.62rem; font-weight: 600;
+      color: rgba(168,225,12,0.7); white-space: nowrap;
     }
-    .queue-scope-pill .pill-count {
-      font-weight: 800; color: var(--lime);
+    .queue-scope-pill .pill-count { font-weight: 800; color: var(--lime); }
+
+    /* Date group headers */
+    .match-date-header {
+      padding: 14px 16px 6px;
+      font-size: 0.62rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 1.2px;
+      color: var(--grey-dark);
     }
-    .match-row-chevron {
-      color: rgba(255,255,255,0.2);
-      flex-shrink: 0;
-    }
-    .match-row-chevron svg { width: 14px; height: 14px; display: block; }
 
     .match-list-empty {
       padding: 48px 20px; text-align: center;
-      color: rgba(255,255,255,0.3);
-      font-size: 0.88rem;
+      color: rgba(255,255,255,0.3); font-size: 0.88rem;
     }
     .match-list-loading {
       padding: 48px 20px; text-align: center;
@@ -1227,36 +1233,56 @@
       list.innerHTML = '<div class="match-list-empty">No matches found</div>';
       return;
     }
+
+    var SCOPE_LABELS = { full_match: 'Full', first_half: '1st Half', second_half: '2nd Half' };
     var html = '';
+    var lastDateKey = null;
+
     matches.forEach(function(m) {
-      var isLive   = isLiveStatus(m.statusShort);
-      var qTotal   = getMatchQueueTotal(m.matchId);
+      var isLive     = isLiveStatus(m.statusShort);
+      var qTotal     = getMatchQueueTotal(m.matchId);
       var isSelected = selectedMatch && selectedMatch.matchId === m.matchId;
 
-      var timeStr = '';
-      if (isLive) {
-        timeStr = '<span class="match-live-dot"></span><span class="match-live-label">Live</span>';
-      } else if (m.kickoff) {
-        var diff = m.kickoff.getTime() - Date.now();
-        if (diff > 0) {
-          var h = Math.floor(diff / 3600000);
-          var min = Math.floor((diff % 3600000) / 60000);
-          if (h > 24) {
-            timeStr = m.kickoff.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ' ' +
-              m.kickoff.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-          } else if (h > 0) {
-            timeStr = 'In ' + h + 'h ' + min + 'm';
-          } else {
-            timeStr = 'In ' + min + 'm';
-          }
-        } else {
-          timeStr = m.kickoff.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+      // ── Date group header ──────────────────────────────────────────────
+      if (m.kickoff) {
+        var dateKey = m.kickoff.toDateString();
+        if (dateKey !== lastDateKey) {
+          lastDateKey = dateKey;
+          var now = new Date();
+          var tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
+          var label = dateKey === now.toDateString()      ? 'Today'
+                    : dateKey === tomorrow.toDateString() ? 'Tomorrow'
+                    : m.kickoff.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' });
+          html += '<div class="match-date-header">' + label + '</div>';
         }
       }
 
-      // build per-scope breakdown pills
+      // ── Time column ────────────────────────────────────────────────────
+      var timeColHtml;
+      if (isLive) {
+        timeColHtml = '<div class="time-live-badge"><span class="dot"></span>Live</div>';
+      } else if (m.kickoff) {
+        var kickoffTime = m.kickoff.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        var diff = m.kickoff.getTime() - Date.now();
+        var dayLabel = '';
+        if (diff > 86400000) {
+          // already grouped under date header — just show time
+          dayLabel = '';
+        } else if (diff > 3600000) {
+          var hh = Math.floor(diff / 3600000);
+          var mm = Math.floor((diff % 3600000) / 60000);
+          dayLabel = 'in ' + hh + 'h ' + mm + 'm';
+        } else if (diff > 0) {
+          dayLabel = 'in ' + Math.floor(diff / 60000) + 'm';
+        }
+        timeColHtml = '<div class="time-val">' + kickoffTime + '</div>' +
+                      (dayLabel ? '<div class="time-label">' + dayLabel + '</div>' : '');
+      } else {
+        timeColHtml = '<div class="time-val">—</div>';
+      }
+
+      // ── Queue pills ────────────────────────────────────────────────────
       var scopePillsHtml = '';
-      var SCOPE_LABELS = { full_match: 'Full', first_half: '1st Half', second_half: '2nd Half' };
       if (queueMap[m.matchId]) {
         var pills = [];
         ['full_match', 'first_half', 'second_half'].forEach(function(scope) {
@@ -1264,28 +1290,38 @@
           if (queueMap[m.matchId][scope]) {
             ['1v1','2v2'].forEach(function(mo) { count += queueMap[m.matchId][scope][mo] || 0; });
           }
-          if (count > 0) {
-            pills.push('<span class="queue-scope-pill">' + SCOPE_LABELS[scope] + ' <span class="pill-count">' + count + '</span></span>');
-          }
+          if (count > 0) pills.push('<span class="queue-scope-pill">' + SCOPE_LABELS[scope] + ' <span class="pill-count">' + count + '</span></span>');
         });
         if (pills.length) scopePillsHtml = '<div class="queue-scope-pills">' + pills.join('') + '</div>';
       }
 
-      var qBadge = qTotal > 0
+      var qBadgeHtml = qTotal > 0
         ? '<span class="queue-total-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>' + qTotal + ' waiting</span>'
         : '';
 
-      html += '<div class="match-row' + (isSelected ? ' selected' : '') + (isLive ? ' live-row' : '') + '" onclick="selectMatch(\'' + escAttr(m.matchId) + '\')" data-mid="' + escAttr(m.matchId) + '">';
-      html += '<div class="match-row-left">';
-      html += '<div class="match-row-teams">' + escHtml(m.home) + ' vs ' + escHtml(m.away) + '</div>';
-      html += '<div class="match-row-meta">' + (timeStr || '') + (timeStr ? '<span>·</span>' : '') + escHtml(m.compName) + '</div>';
+      // ── Card ───────────────────────────────────────────────────────────
+      html += '<div class="match-row' + (isSelected ? ' selected' : '') + (isLive ? ' live-row' : '') +
+              '" onclick="selectMatch(\'' + escAttr(m.matchId) + '\')" data-mid="' + escAttr(m.matchId) + '">';
+
+      html += '<div class="match-row-time">' + timeColHtml + '</div>';
+
+      html += '<div class="match-row-teams">';
+      html += '<div class="match-row-matchup">';
+      html += '<span class="match-row-name">' + escHtml(m.home) + '</span>';
+      html += '<span class="match-row-vs">vs</span>';
+      html += '<span class="match-row-name">' + escHtml(m.away) + '</span>';
+      html += '</div>';
+      html += '<div class="match-row-comp">' + escHtml(m.compName) + '</div>';
+      html += '</div>';
+
+      html += '<div class="match-row-right">';
+      if (qBadgeHtml) html += qBadgeHtml;
       if (scopePillsHtml) html += scopePillsHtml;
       html += '</div>';
-      html += '<div class="match-row-right">' + qBadge;
-      html += '<span class="match-row-chevron"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>';
-      html += '</div>';
+
       html += '</div>';
     });
+
     list.innerHTML = html;
   }
 
