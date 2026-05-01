@@ -187,6 +187,17 @@
     .as-qcard.glow-correct { animation: as-glow-correct 0.8s ease forwards; }
     .as-qcard.shake-wrong  { animation: as-shake-wrong 0.4s ease forwards; }
 
+    @keyframes as-deep-link-pulse {
+      0%   { box-shadow: 0 0 0 0 rgba(168,225,12,0.6); }
+      70%  { box-shadow: 0 0 0 12px rgba(168,225,12,0); }
+      100% { box-shadow: 0 0 0 0 rgba(168,225,12,0); }
+    }
+    .deep-link-highlight {
+      animation: as-deep-link-pulse 0.7s ease 2;
+      outline: 2px solid rgba(168,225,12,0.7);
+      outline-offset: 2px;
+    }
+
     @keyframes as-card-enter {
       from { opacity: 0; transform: translateY(12px); }
       to   { opacity: 1; transform: translateY(0); }
@@ -715,11 +726,13 @@ var pollInterval      = null;
 var timerInterval     = null;
 var historyOpen       = false;
 var historyHasNewQ    = false;
+var deepLinkQuestionId = null;
 
 // ── Init ──────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async function() {
   var params = new URLSearchParams(window.location.search);
-  currentSessionId = params.get('id');
+  currentSessionId   = params.get('id');
+  deepLinkQuestionId = params.get('question') || null;
   if (!currentSessionId) {
     showToast('No session ID in URL');
     setTimeout(function(){ window.location.href = 'multiplayer.html'; }, 2000);
@@ -739,7 +752,8 @@ async function init() {
 
   var { data: { user } } = await window.sb.auth.getUser();
   if (!user) {
-    window.location.href = 'login.html';
+    var returnUrl = encodeURIComponent(window.location.href);
+    window.location.href = 'login.html?return=' + returnUrl;
     return;
   }
   currentUserId = user.id;
@@ -760,13 +774,62 @@ async function init() {
   await loadQuestions();
   await loadPlayers();
 
+  // Membership guard — fail-closed: non-participants cannot view the session
+  if (sessionData && !players.some(function(p) { return p.user_id === currentUserId; })) {
+    showToast('You are not a participant in this session.');
+    setTimeout(function() { window.location.href = 'multiplayer.html'; }, 2000);
+    return;
+  }
+
   if (sessionData && sessionData.status !== 'completed' && sessionData.status !== 'cancelled') {
     startRealtime();
     startPoll();
     startTimerTick();
+
+    // Deep-link: scroll to a specific question if ?question= is in the URL
+    if (deepLinkQuestionId) {
+      var targetQ      = currentQuestions.find(function(q) { return q.id === deepLinkQuestionId; });
+      var targetActive = targetQ && qState(targetQ) === 'active';
+      if (targetQ && !targetActive) {
+        // Question is in history drawer — open it and wait for render before scrolling
+        openHistory();
+        var histBody = document.getElementById('as-hist-body');
+        if (histBody) {
+          histBody.addEventListener('history-rendered', function onRendered() {
+            histBody.removeEventListener('history-rendered', onRendered);
+            scrollToDeepLinkQuestion();
+          }, { once: true });
+        }
+      }
+      // If active, scrollToDeepLinkQuestion() is called from renderFeed() via setTimeout
+    }
   } else if (sessionData && (sessionData.status === 'completed' || sessionData.status === 'cancelled')) {
-    showCompleteOverlay();
+    showCompleteOverlay(deepLinkQuestionId);
   }
+}
+
+// ── Deep-link helpers ─────────────────────────────────────────────────────
+function highlightElement(el) {
+  if (!el) return;
+  el.classList.add('deep-link-highlight');
+  setTimeout(function() { el.classList.remove('deep-link-highlight'); }, 1500);
+}
+
+function scrollToDeepLinkQuestion() {
+  if (!deepLinkQuestionId) return;
+  var attempts    = 0;
+  var maxAttempts = 5;
+  function tryScroll() {
+    var el = document.querySelector('[data-qid="' + deepLinkQuestionId + '"]');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      highlightElement(el);
+      return;
+    }
+    attempts++;
+    if (attempts < maxAttempts) setTimeout(tryScroll, 300);
+  }
+  requestAnimationFrame(function() { tryScroll(); });
 }
 
 // ── Data Loaders ──────────────────────────────────────────────────────────
@@ -1003,6 +1066,9 @@ function renderFeed() {
   }).join('');
 
   feed.innerHTML = html;
+
+  // Scroll to deep-linked question if present (defer one tick to let DOM paint)
+  setTimeout(function() { scrollToDeepLinkQuestion(); }, 0);
 
   // Animate newly-resolved cards
   qs.forEach(function(q) {
@@ -1282,9 +1348,10 @@ async function handleAnswer(btn, questionId, answer) {
 }
 
 // ── Session Complete Overlay ──────────────────────────────────────────────
-async function showCompleteOverlay() {
+async function showCompleteOverlay(focusId) {
   var overlay = document.getElementById('as-complete-overlay');
   if (!overlay) return;
+  if (overlay.classList.contains('show')) return;
 
   var me  = players.find(function(p) { return p.user_id === currentUserId; });
   var opp = players.find(function(p) { return p.user_id !== currentUserId; });
@@ -1386,7 +1453,7 @@ async function showCompleteOverlay() {
 
   renderStats(null, undefined);  // show immediately with both pending
   overlay.classList.add('show');
-  renderQuestionReview();
+  renderQuestionReview(focusId);
   stopPoll();
   stopTimerTick();
 
@@ -1407,7 +1474,7 @@ async function showCompleteOverlay() {
   });
 }
 
-function renderQuestionReview() {
+function renderQuestionReview(focusId) {
   var el = document.getElementById('as-qreview');
   if (!el) return;
 
@@ -1483,7 +1550,7 @@ function renderQuestionReview() {
     if (ptsHtml) footerParts.push(ptsHtml);
     footerParts = footerParts.concat(tags);
 
-    return '<div class="as-qr-card ' + state + '">'
+    return '<div class="as-qr-card ' + state + '" data-qid="' + escAttr(q.id) + '">'
       + '<div class="as-qr-top">'
       +   '<span class="as-qr-badge ' + state + '">' + badgeLabel + '</span>'
       +   '<span class="as-qr-qtext">' + escHtml(q.question_text || '') + '</span>'
@@ -1497,6 +1564,17 @@ function renderQuestionReview() {
     + '<div class="as-qreview-title">Question Breakdown</div>'
     + cards.join('')
     + '</div>';
+
+  // Scroll to and highlight the deep-linked question in the review list
+  if (focusId) {
+    requestAnimationFrame(function() {
+      var target = el.querySelector('[data-qid="' + focusId + '"]');
+      if (target) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        highlightElement(target);
+      }
+    });
+  }
 }
 
 // ── History drawer ────────────────────────────────────────────────────────
@@ -1599,7 +1677,7 @@ function renderHistory() {
 
     var footerParts = ptsHtml ? [ptsHtml].concat(tags) : tags;
 
-    return '<div class="as-qr-card ' + state + '">'
+    return '<div class="as-qr-card ' + state + '" data-qid="' + escAttr(q.question_id || q.id) + '">'
       + '<div class="as-qr-top">'
       +   '<span class="as-qr-badge ' + state + '">' + badgeLabel + '</span>'
       +   '<span class="as-qr-qtext">' + escHtml(q.question_text || '') + '</span>'
@@ -1610,6 +1688,7 @@ function renderHistory() {
   });
 
   body.innerHTML = cards.join('');
+  body.dispatchEvent(new CustomEvent('history-rendered'));
 }
 
 // XP amounts per outcome

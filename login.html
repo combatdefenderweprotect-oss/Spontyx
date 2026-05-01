@@ -381,7 +381,17 @@
         .eq('id', data.user.id)
         .single();
 
-      const dest = profile && profile.role === 'venue-owner' ? 'venue-dashboard.html' : 'dashboard.html';
+      const params = new URLSearchParams(window.location.search);
+      const returnUrl = params.get('return');
+      let dest;
+      if (returnUrl) {
+        try {
+          if (new URL(returnUrl).origin === window.location.origin) { dest = returnUrl; }
+        } catch(e) {}
+      }
+      if (!dest) {
+        dest = profile && profile.role === 'venue-owner' ? 'venue-dashboard.html' : 'dashboard.html';
+      }
       showAlert('signin', 'ok', 'Signed in. Redirecting…');
       setTimeout(() => { window.location.href = dest; }, 600);
     });
