@@ -609,7 +609,63 @@
       .stats-grid { grid-template-columns: 1fr 1fr; }
       .badges-grid { grid-template-columns: repeat(2, 1fr); }
       .form-row { flex-direction: column; gap: 0; }
-    }</style>
+    }
+
+    /* ── Arena History ── */
+    .ah-card {
+      background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg);
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .ah-card.win  { border-left: 3px solid var(--lime); }
+    .ah-card.loss { border-left: 3px solid var(--coral); }
+    .ah-card.draw { border-left: 3px solid var(--teal); }
+    .ah-result-badge {
+      flex-shrink: 0;
+      width: 40px; height: 40px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+      font-weight: 800;
+    }
+    .ah-card.win  .ah-result-badge { background: rgba(168,225,12,0.15); color: var(--lime); }
+    .ah-card.loss .ah-result-badge { background: rgba(255,107,107,0.15); color: var(--coral); }
+    .ah-card.draw .ah-result-badge { background: rgba(78,205,196,0.15); color: var(--teal); }
+    .ah-body { flex: 1; min-width: 0; }
+    .ah-match { font-size: 0.88rem; font-weight: 700; color: var(--white); margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ah-meta { font-size: 0.72rem; color: var(--grey-mid); margin-bottom: 6px; }
+    .ah-meta span { margin-right: 8px; }
+    .ah-pills { display: flex; flex-wrap: wrap; gap: 6px; }
+    .ah-pill {
+      font-size: 0.68rem; font-weight: 700; padding: 3px 8px;
+      border-radius: 20px; border: 1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.05); color: var(--grey-mid);
+    }
+    .ah-pill.rating-pos { color: var(--lime);  border-color: rgba(168,225,12,0.3); background: rgba(168,225,12,0.08); }
+    .ah-pill.rating-neg { color: var(--coral); border-color: rgba(255,107,107,0.3); background: rgba(255,107,107,0.08); }
+    .ah-pill.rating-neu { color: var(--grey-mid); }
+    .ah-pill.xp-pill    { color: var(--teal);  border-color: rgba(78,205,196,0.3);  background: rgba(78,205,196,0.08); }
+    .ah-right { flex-shrink: 0; text-align: right; }
+    .ah-score { font-size: 1.1rem; font-weight: 800; color: var(--white); }
+    .ah-date  { font-size: 0.65rem; color: var(--grey); margin-top: 3px; }
+    .ah-opponents { font-size: 0.7rem; color: var(--grey-mid); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 90px; }
+    .ah-empty { text-align: center; padding: 48px 20px; }
+    .ah-empty-icon { font-size: 2.8rem; margin-bottom: 10px; }
+    .ah-empty-title { font-size: 1rem; font-weight: 700; color: var(--white); margin-bottom: 6px; }
+    .ah-empty-sub { font-size: 0.8rem; color: var(--grey-mid); }
+    .ah-load-more {
+      display: block; width: 100%; margin-top: 12px;
+      padding: 10px; border-radius: var(--radius-lg);
+      background: transparent; border: 1px solid rgba(255,255,255,0.10);
+      color: var(--grey-mid); font-size: 0.8rem; font-weight: 600;
+      cursor: pointer; text-align: center;
+    }
+    .ah-load-more:hover { border-color: rgba(255,255,255,0.2); color: var(--white); }</style>
 </head>
 <body>
 
@@ -705,6 +761,10 @@
       <button class="profile-tab" onclick="switchTab('badges')">
         <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="5" fill="none"/><path d="M12 13l-3 7h6l-3-7z"/></svg>
         Badges
+      </button>
+      <button class="profile-tab" onclick="switchTab('arena')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        Arena
       </button>
       <button class="profile-tab" onclick="switchTab('subscription')">
         <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>
@@ -917,6 +977,18 @@
       </div>
       <div class="badges-grid" id="badgesGrid">
         <!-- Dynamically populated -->
+      </div>
+    </div>
+
+    <!-- ═══ TAB: ARENA HISTORY ═══ -->
+    <div class="tab-panel" id="tab-arena">
+      <div id="ah-list">
+        <!-- populated by loadArenaHistory() -->
+        <div class="ah-empty">
+          <div class="ah-empty-icon">⚔️</div>
+          <div class="ah-empty-title">No arena sessions yet</div>
+          <div class="ah-empty-sub">Complete a 1v1 or 2v2 match to see your history here.</div>
+        </div>
       </div>
     </div>
 
@@ -1257,6 +1329,7 @@ function switchTab(tab) {
   var panel = document.getElementById('tab-' + tab);
   if (panel) panel.classList.add('active');
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (tab === 'arena' && !arenaHistoryLoaded) loadArenaHistory(false);
 }
 // Handle hash-based tab navigation (e.g. profile.html#badges)
 (function() {
@@ -1434,6 +1507,179 @@ function hydrateProfile() {
     `;
     historyList.appendChild(historyItem);
   });
+}
+
+// ══ ARENA HISTORY ══
+var arenaHistoryLoaded = false;
+var arenaHistoryOffset = 0;
+var ARENA_HISTORY_PAGE = 20;
+
+async function loadArenaHistory(append) {
+  if (!window.sb) return;
+  var uid = viewingUserId || (SpontixStore.Session.getCurrentUser() || {}).userId;
+  if (!uid) return;
+
+  var list = document.getElementById('ah-list');
+  if (!append) {
+    list.innerHTML = '<div style="text-align:center;padding:32px;color:var(--grey-mid);font-size:0.82rem;">Loading…</div>';
+    arenaHistoryOffset = 0;
+  }
+
+  // 1. Fetch completed sessions this user participated in
+  var { data: playerRows, error: pErr } = await window.sb
+    .from('arena_session_players')
+    .select('session_id, score, correct_answers, total_answers, team_number, arena_rating_before, arena_rating_after, arena_rating_delta')
+    .eq('user_id', uid)
+    .range(arenaHistoryOffset, arenaHistoryOffset + ARENA_HISTORY_PAGE - 1);
+
+  if (pErr || !playerRows || playerRows.length === 0) {
+    if (!append) list.innerHTML = renderArenaHistoryEmpty();
+    return;
+  }
+
+  var sessionIds = playerRows.map(function(r) { return r.session_id; });
+
+  // 2. Fetch session details + opponent player rows — in parallel
+  var [sessRes, oppRes] = await Promise.all([
+    window.sb.from('arena_sessions')
+      .select('id, mode, half_scope, home_team_name, away_team_name, winner_user_id, winning_team_number, completed_at, status')
+      .in('id', sessionIds)
+      .eq('status', 'completed'),
+    window.sb.from('arena_session_players')
+      .select('session_id, user_id, score')
+      .in('session_id', sessionIds)
+      .neq('user_id', uid)
+  ]);
+
+  var sessions = (sessRes.data || []);
+  var oppPlayers = (oppRes.data || []);
+
+  // Fetch opponent handles
+  var oppUids = [...new Set(oppPlayers.map(function(o) { return o.user_id; }))];
+  var handleMap = {};
+  if (oppUids.length > 0) {
+    var { data: handles } = await window.sb.from('users').select('id, handle, name').in('id', oppUids);
+    (handles || []).forEach(function(u) { handleMap[u.id] = u.handle || u.name || 'Unknown'; });
+  }
+
+  // Build lookup maps
+  var sessionMap = {};
+  sessions.forEach(function(s) { sessionMap[s.id] = s; });
+
+  var oppsBySession = {};
+  oppPlayers.forEach(function(o) {
+    if (!oppsBySession[o.session_id]) oppsBySession[o.session_id] = [];
+    oppsBySession[o.session_id].push({ userId: o.user_id, score: o.score, handle: handleMap[o.user_id] || 'Unknown' });
+  });
+
+  // Sort by completed_at desc
+  var sorted = playerRows.slice().sort(function(a, b) {
+    var sa = sessionMap[a.session_id];
+    var sb2 = sessionMap[b.session_id];
+    if (!sa || !sb2) return 0;
+    return new Date(sb2.completed_at) - new Date(sa.completed_at);
+  });
+
+  if (!append) list.innerHTML = '';
+  sorted.forEach(function(row) {
+    var session = sessionMap[row.session_id];
+    if (!session) return;
+    var opps = oppsBySession[row.session_id] || [];
+    list.innerHTML += renderArenaHistoryCard(row, session, opps, uid);
+  });
+
+  arenaHistoryOffset += playerRows.length;
+
+  // Load more button
+  var existing = list.querySelector('.ah-load-more');
+  if (existing) existing.remove();
+  if (playerRows.length === ARENA_HISTORY_PAGE) {
+    var btn = document.createElement('button');
+    btn.className = 'ah-load-more';
+    btn.textContent = 'Load more';
+    btn.onclick = function() { loadArenaHistory(true); };
+    list.appendChild(btn);
+  }
+
+  arenaHistoryLoaded = true;
+}
+
+function renderArenaHistoryCard(playerRow, session, opps, currentUid) {
+  // Determine result
+  var result = 'draw';
+  if (session.winner_user_id) {
+    result = session.winner_user_id === currentUid ? 'win' : 'loss';
+  } else if (session.winning_team_number != null) {
+    var myTeam = playerRow.team_number;
+    result = myTeam === session.winning_team_number ? 'win' : 'loss';
+  }
+
+  var resultIcon = result === 'win' ? 'W' : result === 'loss' ? 'L' : 'D';
+  var resultLabel = result === 'win' ? 'Win' : result === 'loss' ? 'Loss' : 'Draw';
+
+  // Match label
+  var matchLabel = (session.home_team_name || '?') + ' vs ' + (session.away_team_name || '?');
+  var modeLabel = (session.mode || '1v1').toUpperCase();
+  var halfLabel = session.half_scope === 'first_half' ? '1st Half' : session.half_scope === 'second_half' ? '2nd Half' : 'Full Match';
+
+  // Date
+  var dateStr = '';
+  if (session.completed_at) {
+    var d = new Date(session.completed_at);
+    dateStr = d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  // Rating pill
+  var ratingPill = '';
+  if (playerRow.arena_rating_delta != null) {
+    var delta = playerRow.arena_rating_delta;
+    var cls = delta > 0 ? 'rating-pos' : delta < 0 ? 'rating-neg' : 'rating-neu';
+    var sign = delta > 0 ? '+' : '';
+    ratingPill = '<span class="ah-pill ' + cls + '">' + sign + delta + ' Rating</span>';
+  }
+
+  // XP pill — derived from result (no xp_awarded column in schema)
+  var xp = result === 'win' ? 50 : result === 'draw' ? 25 : 15;
+  var xpPill = '<span class="ah-pill xp-pill">+' + xp + ' XP</span>';
+
+  // Correct answers pill
+  var correctPill = '';
+  if (playerRow.correct_answers != null) {
+    var total = playerRow.total_answers || '?';
+    correctPill = '<span class="ah-pill">' + playerRow.correct_answers + '/' + total + ' correct</span>';
+  }
+
+  // Opponents
+  var oppStr = opps.length > 0 ? 'vs ' + opps.map(function(o) { return o.handle; }).join(', ') : '';
+
+  return '<div class="ah-card ' + result + '">' +
+    '<div class="ah-result-badge">' + resultIcon + '</div>' +
+    '<div class="ah-body">' +
+      '<div class="ah-match">' + escapeHtml(matchLabel) + '</div>' +
+      '<div class="ah-meta">' +
+        '<span>' + modeLabel + '</span><span>' + halfLabel + '</span>' +
+        (resultLabel ? '<span style="font-weight:700;color:' + (result==='win'?'var(--lime)':result==='loss'?'var(--coral)':'var(--teal)') + ';">' + resultLabel + '</span>' : '') +
+      '</div>' +
+      '<div class="ah-pills">' + ratingPill + xpPill + correctPill + '</div>' +
+    '</div>' +
+    '<div class="ah-right">' +
+      '<div class="ah-score">' + (playerRow.score || 0) + ' pts</div>' +
+      (dateStr ? '<div class="ah-date">' + dateStr + '</div>' : '') +
+      (oppStr ? '<div class="ah-opponents">' + escapeHtml(oppStr) + '</div>' : '') +
+    '</div>' +
+  '</div>';
+}
+
+function renderArenaHistoryEmpty() {
+  return '<div class="ah-empty">' +
+    '<div class="ah-empty-icon">⚔️</div>' +
+    '<div class="ah-empty-title">No arena sessions yet</div>' +
+    '<div class="ah-empty-sub">Complete a 1v1 or 2v2 match to see your history here.</div>' +
+  '</div>';
+}
+
+function escapeHtml(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
 // Helper for ordinal suffixes (1st, 2nd, 3rd, 4th...)
