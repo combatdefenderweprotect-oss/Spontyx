@@ -48,6 +48,16 @@ function toPromptMode(mode: string): string {
   return mode; // pass through live_event, live_gap directly
 }
 
+// ── Arena session game context (optional, passed only from arena loop) ─
+export interface GameContext {
+  source:             'arena_session' | 'league';
+  arenaSessionId?:    string;
+  mode?:              string;         // '1v1' | '2v2'
+  halfScope?:         string;         // 'full_match' | 'first_half' | 'second_half'
+  playerCount?:       number;
+  competitive_format: boolean;
+}
+
 // ── Build the full context packet string for OpenAI Call 1 (v1.2) ────
 
 export function buildContextPacket(params: {
@@ -65,6 +75,7 @@ export function buildContextPacket(params: {
   activeQuestionCount?: number;
   maxActiveQuestions?: number;
   matchMinute?: number | null;   // current match minute — null for prematch, integer for live
+  gameContext?: GameContext;     // arena session metadata — undefined for league callers
 }): string {
   const {
     league, classification, sportsCtx, newsItems, recentQuestions, questionsToGenerate,
@@ -76,6 +87,7 @@ export function buildContextPacket(params: {
     activeQuestionCount = 0,
     maxActiveQuestions = 3,
     matchMinute = null,
+    gameContext,
   } = params;
   const { generationMode, hoursUntilKickoff } = classification;
 
@@ -340,6 +352,45 @@ export function buildContextPacket(params: {
     sections.push(rqLines.join('\n'));
   }
 
+  // ── Arena session rules (injected only for arena loops) ──────────
+  if (gameContext?.source === 'arena_session') {
+    const halfScope    = gameContext.halfScope ?? 'full_match';
+    const mode         = gameContext.mode      ?? '1v1';
+    const playerCount  = gameContext.playerCount ?? 2;
+
+    const clutchPhrase = halfScope === 'first_half'
+      ? 'minute >= 35 for first half'
+      : 'minute >= 80 for second half / full match';
+
+    const densityTarget = halfScope === 'full_match' ? '9–14' : '5–8';
+    const densityLine   = `target ${densityTarget} questions for this ${halfScope.replace('_', ' ')} scope`;
+
+    sections.push([
+      'ARENA SESSION RULES',
+      '-------------------',
+      `source: arena_session`,
+      `format: ${mode}  players: ${playerCount}  scope: ${halfScope}`,
+      `competitive_format: true`,
+      '',
+      'QUESTION STYLE:',
+      '- Players compete head-to-head right now — questions must feel urgent and immediately relevant',
+      '- Prefer outcome-based triggers: next goal, card before minute X, which team leads at Y',
+      '- Prefer binary YES/NO — avoid multi-step or conditional framings',
+      '- Tone: tension and excitement, not information delivery',
+      '',
+      'ANSWER WINDOW TARGETS (arena pace — faster than league):',
+      '- time_driven questions:  60–120 seconds',
+      '- event_driven questions: 90–150 seconds',
+      `- clutch phase (${clutchPhrase}): 45–90 seconds maximum`,
+      '',
+      `DENSITY GUIDANCE (${densityLine}):`,
+      'Questions should spread evenly across the session scope.',
+      'Do not cluster all questions in one phase.',
+      '',
+      'DIVERSITY: No two consecutive questions of the same predicate type or stat focus.',
+    ].join('\n'));
+  }
+
   return sections.filter(Boolean).join('\n\n');
 }
 
@@ -470,6 +521,7 @@ export async function buildLiveContext(
   leagueId: string,
   matchId: string,
   fixtureRow: any,  // row from api_football_fixtures
+  arenaSessionId?: string,  // when set, filter questions by arena_session_id instead of league_id
 ): Promise<LiveMatchContext | null> {
 
   // ── 1. Read live match stats ────────────────────────────────────────
@@ -496,10 +548,13 @@ export async function buildLiveContext(
   else                       matchPhase = 'late';
 
   // ── 2. Most recent LIVE question for this league+match ──────────────
+  const ownerCol = arenaSessionId ? 'arena_session_id' : 'league_id';
+  const ownerId  = arenaSessionId ?? leagueId;
+
   const { data: recentLiveRows } = await sb
     .from('questions')
     .select('match_minute_at_generation, created_at')
-    .eq('league_id', leagueId)
+    .eq(ownerCol, ownerId)
     .eq('match_id', matchId)
     .eq('question_type', 'CORE_MATCH_LIVE')
     .order('created_at', { ascending: false })
@@ -555,7 +610,7 @@ export async function buildLiveContext(
   const { data: activeQRows } = await sb
     .from('questions')
     .select('resolution_predicate, answer_closes_at')
-    .eq('league_id', leagueId)
+    .eq(ownerCol, ownerId)
     .eq('match_id', matchId)
     .eq('question_type', 'CORE_MATCH_LIVE')
     .eq('resolution_status', 'pending')

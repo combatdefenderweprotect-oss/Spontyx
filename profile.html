@@ -185,6 +185,23 @@
     .profile-meta-item { font-size: 0.75rem; color: var(--grey); display: flex; align-items: center; gap: 5px; }
     .profile-meta-item svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none; }
     .profile-meta-item strong { color: var(--off-white); font-weight: 700; }
+    .xp-bar-wrap { margin-top: 10px; display: flex; align-items: center; gap: 8px; }
+    .arena-rating-row { margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+    .arena-rating-badge { flex-shrink: 0; padding: 2px 9px; border-radius: 20px; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+    .arena-tier-rookie    { background: rgba(255,255,255,0.07);  color: rgba(255,255,255,0.5); }
+    .arena-tier-bronze    { background: rgba(205,127,50,0.15);   color: #CD7F32; }
+    .arena-tier-silver    { background: rgba(192,192,192,0.15);  color: #C0C0C0; }
+    .arena-tier-gold      { background: rgba(255,215,0,0.15);    color: #FFD700; }
+    .arena-tier-platinum  { background: rgba(78,205,196,0.15);   color: #4ECDC4; }
+    .arena-tier-diamond   { background: rgba(100,149,237,0.15);  color: #6495ED; }
+    .arena-tier-master    { background: rgba(168,225,12,0.15);   color: #A8E10C; }
+    .arena-tier-grandmaster { background: rgba(255,107,107,0.15); color: #FF6B6B; }
+    .arena-tier-legend    { background: rgba(124,92,252,0.2);    color: #7C5CFC; }
+    .arena-rating-num { font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.55); }
+    .xp-level-badge { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, var(--lime), var(--teal)); display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 900; color: var(--navy); }
+    .xp-bar-track { flex: 1; height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+    .xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--lime), var(--teal)); border-radius: 3px; transition: width 0.6s ease; }
+    .xp-bar-label { flex-shrink: 0; font-size: 0.6rem; color: var(--grey); white-space: nowrap; }
     .profile-header-actions { display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
     .profile-edit-btn {
       padding: 9px 20px; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.12);
@@ -652,6 +669,15 @@
             <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             Joined <strong>Mar 2026</strong>
           </div>
+        </div>
+        <div class="xp-bar-wrap" id="prof-xp-bar-wrap" style="display:none;">
+          <div class="xp-level-badge" id="prof-xp-level">1</div>
+          <div class="xp-bar-track"><div class="xp-bar-fill" id="prof-xp-fill" style="width:0%"></div></div>
+          <div class="xp-bar-label" id="prof-xp-label">0 / 100 XP</div>
+        </div>
+        <div class="arena-rating-row" id="prof-arena-rating-row" style="display:none;">
+          <div class="arena-rating-badge arena-tier-rookie" id="prof-arena-tier">Rookie</div>
+          <div class="arena-rating-num" id="prof-arena-rating-num">500 SR</div>
         </div>
       </div>
       <div class="profile-header-actions">
@@ -1291,6 +1317,45 @@ if (isPublicView) {
   document.title = 'Trophy Room — Spontyx';
 }
 
+function renderXpBar(totalXp, level) {
+  const wrap = document.getElementById('prof-xp-bar-wrap');
+  if (!wrap) return;
+  const lvl = level || 1;
+  let cumulative = 0;
+  for (let k = 1; k < lvl; k++) cumulative += Math.floor(100 * Math.pow(k, 1.5));
+  const xpInLevel = (totalXp || 0) - cumulative;
+  const xpForNext = Math.floor(100 * Math.pow(lvl, 1.5));
+  const pct = Math.min(100, Math.round((xpInLevel / Math.max(xpForNext, 1)) * 100));
+  document.getElementById('prof-xp-level').textContent = lvl;
+  document.getElementById('prof-xp-fill').style.width  = pct + '%';
+  document.getElementById('prof-xp-label').textContent = xpInLevel + ' / ' + xpForNext + ' XP';
+  wrap.style.display = 'flex';
+}
+
+function getArenaTier(rating) {
+  if (rating >= 3000) return { label: 'Legend',      cls: 'arena-tier-legend' };
+  if (rating >= 2600) return { label: 'Grandmaster', cls: 'arena-tier-grandmaster' };
+  if (rating >= 2200) return { label: 'Master',      cls: 'arena-tier-master' };
+  if (rating >= 1900) return { label: 'Diamond',     cls: 'arena-tier-diamond' };
+  if (rating >= 1700) return { label: 'Platinum',    cls: 'arena-tier-platinum' };
+  if (rating >= 1400) return { label: 'Gold',        cls: 'arena-tier-gold' };
+  if (rating >= 1100) return { label: 'Silver',      cls: 'arena-tier-silver' };
+  if (rating >= 800)  return { label: 'Bronze',      cls: 'arena-tier-bronze' };
+  return                       { label: 'Rookie',    cls: 'arena-tier-rookie' };
+}
+
+function renderArenaRating(rating, gamesPlayed) {
+  const row = document.getElementById('prof-arena-rating-row');
+  if (!row || rating == null) return;
+  const tier = getArenaTier(rating);
+  const badge = document.getElementById('prof-arena-tier');
+  badge.textContent = tier.label;
+  badge.className   = 'arena-rating-badge ' + tier.cls;
+  document.getElementById('prof-arena-rating-num').textContent =
+    rating + ' SR' + (gamesPlayed > 0 ? ' · ' + gamesPlayed + ' played' : '');
+  row.style.display = 'flex';
+}
+
 // ══ HYDRATE PROFILE FROM STORE ══
 function hydrateProfile() {
   const player = isPublicView ? (window._publicProfile || SpontixStore.getPlayer()) : SpontixStore.getPlayer();
@@ -1300,6 +1365,8 @@ function hydrateProfile() {
   renderProfileAvatar(player);
   document.querySelector('.profile-header-name').textContent = player.name;
   document.querySelector('.profile-header-handle').textContent = player.handle;
+  if (player.total_xp != null) renderXpBar(player.total_xp, player.level);
+  if (player.arena_rating != null) renderArenaRating(player.arena_rating, player.arena_games_played);
 
   // ── Profile Meta Stats ──
   const metaItems = document.querySelectorAll('.profile-meta-item');

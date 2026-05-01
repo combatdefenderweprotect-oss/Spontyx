@@ -312,10 +312,15 @@
     .as-complete-overlay {
       display: none; position: fixed; inset: 0; z-index: 200;
       background: rgba(8,8,21,0.97); backdrop-filter: blur(16px);
-      flex-direction: column; align-items: center; justify-content: center;
-      padding: 32px; text-align: center; gap: 0;
+      flex-direction: column; align-items: center;
+      overflow-y: auto; padding: 0; text-align: center;
     }
     .as-complete-overlay.show { display: flex; }
+    .as-complete-inner {
+      display: flex; flex-direction: column; align-items: center;
+      width: 100%; max-width: 520px; padding: 32px 20px 40px;
+      gap: 0; box-sizing: border-box;
+    }
 
     /* result headline */
     @keyframes as-result-pop {
@@ -409,6 +414,131 @@
       animation: as-result-slide 0.45s 0.4s ease both;
     }
     .as-complete-btn:hover { opacity: 0.85; }
+
+    /* ── QUESTION REVIEW ── */
+    .as-qreview-section {
+      width: 100%; margin-top: 28px; text-align: left;
+    }
+    .as-qreview-title {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: rgba(255,255,255,0.4);
+      margin-bottom: 12px; padding-left: 2px;
+    }
+    .as-qr-card {
+      background: rgba(255,255,255,0.04); border-radius: 10px;
+      border-left: 3px solid rgba(255,255,255,0.12);
+      padding: 12px 14px; margin-bottom: 8px;
+    }
+    .as-qr-card.correct  { border-left-color: var(--lime); }
+    .as-qr-card.wrong    { border-left-color: var(--coral); }
+    .as-qr-card.missed   { border-left-color: rgba(255,255,255,0.18); opacity: 0.65; }
+    .as-qr-card.pending  { border-left-color: rgba(255,200,80,0.5); }
+    .as-qr-top { display: flex; align-items: flex-start; gap: 8px; margin-bottom: 8px; }
+    .as-qr-badge {
+      flex-shrink: 0; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.06em;
+      text-transform: uppercase; padding: 3px 8px; border-radius: 20px;
+      margin-top: 1px;
+    }
+    .as-qr-badge.correct { background: rgba(168,225,12,0.15); color: var(--lime); }
+    .as-qr-badge.wrong   { background: rgba(255,107,107,0.15); color: var(--coral); }
+    .as-qr-badge.missed  { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.45); }
+    .as-qr-badge.pending { background: rgba(255,200,80,0.12); color: rgba(255,200,80,0.9); }
+    .as-qr-qtext {
+      font-size: 0.82rem; font-weight: 600; color: rgba(255,255,255,0.88); line-height: 1.4;
+    }
+    .as-qr-answers { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; }
+    .as-qr-answer-row { display: flex; gap: 6px; font-size: 0.75rem; align-items: baseline; }
+    .as-qr-answer-label {
+      color: rgba(255,255,255,0.4); font-weight: 600; font-size: 0.68rem;
+      text-transform: uppercase; letter-spacing: 0.05em; flex-shrink: 0; min-width: 52px;
+    }
+    .as-qr-answer-val { color: rgba(255,255,255,0.75); font-weight: 500; }
+    .as-qr-answer-val.highlight-correct { color: var(--lime); font-weight: 700; }
+    .as-qr-answer-val.highlight-wrong   { color: var(--coral); font-weight: 700; }
+    .as-qr-footer { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .as-qr-pts {
+      font-size: 0.72rem; font-weight: 800; color: var(--lime);
+      background: rgba(168,225,12,0.1); border-radius: 20px; padding: 2px 9px;
+    }
+    .as-qr-pts.zero { color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.05); }
+    .as-qr-tag {
+      font-size: 0.62rem; font-weight: 700; padding: 2px 7px; border-radius: 20px;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .as-qr-tag.clutch   { background: rgba(255,107,107,0.12); color: var(--coral); }
+    .as-qr-tag.streak   { background: rgba(168,225,12,0.1);   color: var(--lime); }
+    .as-qr-tag.comeback { background: rgba(78,205,196,0.12);  color: var(--teal); }
+    .as-qr-tag.diff     { background: rgba(124,92,252,0.12);  color: var(--purple); }
+    .as-qreview-empty {
+      font-size: 0.8rem; color: rgba(255,255,255,0.3); padding: 12px 0; text-align: center;
+    }
+
+    /* ── HISTORY DRAWER ── */
+    @keyframes as-hist-slide {
+      from { transform: translateY(100%); }
+      to   { transform: translateY(0); }
+    }
+    .as-hist-btn {
+      position: fixed; right: 16px;
+      bottom: max(18px, env(safe-area-inset-bottom));
+      z-index: 160;
+      display: flex; align-items: center; gap: 6px;
+      padding: 9px 16px; border-radius: 50px; border: 1px solid rgba(255,255,255,0.15);
+      background: rgba(26,26,46,0.92); backdrop-filter: blur(10px);
+      font-family: inherit; font-size: 0.78rem; font-weight: 700;
+      color: rgba(255,255,255,0.7); cursor: pointer; transition: border-color 0.2s, color 0.2s;
+    }
+    .as-hist-btn:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
+    .as-hist-btn.has-new { border-color: var(--lime); color: var(--lime); }
+    .as-hist-btn .as-hist-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--lime);
+      display: none;
+    }
+    .as-hist-btn.has-new .as-hist-dot { display: block; animation: as-pulse 1.4s ease infinite; }
+    .as-hist-overlay {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 155;
+      max-height: 75vh; display: flex; flex-direction: column;
+      background: #0f0f1e; border-top: 1px solid rgba(255,255,255,0.1);
+      border-radius: 16px 16px 0 0;
+      transform: translateY(100%); transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
+      pointer-events: none;
+    }
+    .as-hist-overlay.open { transform: translateY(0); pointer-events: all; }
+    .as-hist-handle {
+      width: 36px; height: 4px; border-radius: 2px; background: rgba(255,255,255,0.2);
+      margin: 10px auto 0; flex-shrink: 0;
+    }
+    .as-hist-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 12px 16px 8px; flex-shrink: 0;
+    }
+    .as-hist-title {
+      font-size: 0.72rem; font-weight: 800; letter-spacing: 0.08em;
+      text-transform: uppercase; color: rgba(255,255,255,0.5);
+    }
+    .as-hist-close {
+      background: none; border: none; cursor: pointer; padding: 4px;
+      color: rgba(255,255,255,0.4); font-size: 1rem; line-height: 1;
+      transition: color 0.15s;
+    }
+    .as-hist-close:hover { color: #fff; }
+    .as-hist-new-banner {
+      display: none; align-items: center; justify-content: space-between;
+      margin: 0 12px 8px; padding: 9px 14px; border-radius: 8px;
+      background: rgba(168,225,12,0.1); border: 1px solid rgba(168,225,12,0.25);
+      font-size: 0.75rem; font-weight: 700; color: var(--lime); cursor: pointer;
+      gap: 8px; flex-shrink: 0;
+    }
+    .as-hist-new-banner.show { display: flex; }
+    .as-hist-new-banner span { flex: 1; }
+    .as-hist-new-banner .as-hist-arrow { font-size: 0.9rem; }
+    .as-hist-body {
+      flex: 1; overflow-y: auto; padding: 0 12px 24px; -webkit-overflow-scrolling: touch;
+    }
+    .as-hist-empty {
+      text-align: center; color: rgba(255,255,255,0.3);
+      font-size: 0.8rem; padding: 32px 16px;
+    }
 
     /* ── TOAST ── */
     .as-toast {
@@ -523,11 +653,32 @@
 
 <!-- SESSION COMPLETE OVERLAY -->
 <div class="as-complete-overlay" id="as-complete-overlay">
-  <div class="as-result-headline" id="as-result-headline">Match Over</div>
-  <div class="as-result-subtitle" id="as-result-subtitle">Final Result</div>
-  <div class="as-result-duel" id="as-result-duel"></div>
-  <div class="as-result-stats" id="as-result-stats"></div>
-  <button class="as-complete-btn" onclick="window.location.href='multiplayer.html'">Play Again</button>
+  <div class="as-complete-inner">
+    <div class="as-result-headline" id="as-result-headline">Match Over</div>
+    <div class="as-result-subtitle" id="as-result-subtitle">Final Result</div>
+    <div class="as-result-duel" id="as-result-duel"></div>
+    <div class="as-result-stats" id="as-result-stats"></div>
+    <div id="as-qreview"></div>
+    <button class="as-complete-btn" onclick="window.location.href='multiplayer.html'">Play Again</button>
+  </div>
+</div>
+
+<!-- HISTORY BUTTON + DRAWER -->
+<button class="as-hist-btn" id="as-hist-btn" onclick="openHistory()">
+  <span class="as-hist-dot"></span>
+  ≡ History
+</button>
+<div class="as-hist-overlay" id="as-hist-overlay">
+  <div class="as-hist-handle"></div>
+  <div class="as-hist-header">
+    <span class="as-hist-title">Question History</span>
+    <button class="as-hist-close" onclick="closeHistory()">✕</button>
+  </div>
+  <div class="as-hist-new-banner" id="as-hist-new-banner" onclick="closeHistory()">
+    <span>⚡ Live question available — close to answer</span>
+    <span class="as-hist-arrow">→</span>
+  </div>
+  <div class="as-hist-body" id="as-hist-body"></div>
 </div>
 
 <!-- TOAST -->
@@ -562,6 +713,8 @@ var questionsChannel  = null;
 var playersChannel    = null;
 var pollInterval      = null;
 var timerInterval     = null;
+var historyOpen       = false;
+var historyHasNewQ    = false;
 
 // ── Init ──────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async function() {
@@ -690,7 +843,7 @@ async function loadQuestions() {
       var qIds = currentQuestions.map(function(q) { return q.id; });
       var { data: answers } = await window.sb
         .from('player_answers')
-        .select('question_id, answer, is_correct, points_earned, multiplier_breakdown')
+        .select('question_id, answer, is_correct, points_earned, multiplier_breakdown, is_clutch, streak_at_answer, leader_gap_at_answer')
         .eq('user_id', currentUserId)
         .in('question_id', qIds);
       (answers || []).forEach(function(a) { myAnswers[a.question_id] = a; });
@@ -718,6 +871,22 @@ async function loadQuestions() {
     }
 
     renderFeed();
+
+    // History new-question indicator
+    if (historyOpen) {
+      var now2 = new Date();
+      var hasActive = (currentQuestions || []).some(function(q) {
+        return q.answer_closes_at && new Date(q.answer_closes_at) > now2;
+      });
+      if (hasActive && !historyHasNewQ) {
+        historyHasNewQ = true;
+        var _hBanner = document.getElementById('as-hist-new-banner');
+        var _hBtn    = document.getElementById('as-hist-btn');
+        if (_hBanner) _hBanner.classList.add('show');
+        if (_hBtn)    _hBtn.classList.add('has-new');
+      }
+    }
+
   } catch(e) {
     console.warn('[arena] loadQuestions error:', e);
     if (feed) feed.innerHTML = '<div class="as-feed-empty">Could not load questions — check your connection.</div>';
@@ -1217,6 +1386,7 @@ async function showCompleteOverlay() {
 
   renderStats(null, undefined);  // show immediately with both pending
   overlay.classList.add('show');
+  renderQuestionReview();
   stopPoll();
   stopTimerTick();
 
@@ -1235,6 +1405,211 @@ async function showCompleteOverlay() {
     }
     renderStats(myXp, myDelta);
   });
+}
+
+function renderQuestionReview() {
+  var el = document.getElementById('as-qreview');
+  if (!el) return;
+
+  // Sort questions chronologically
+  var qs = (currentQuestions || []).slice().sort(function(a, b) {
+    return new Date(a.created_at) - new Date(b.created_at);
+  });
+
+  if (!qs.length) { el.innerHTML = ''; return; }
+
+  function getAnswerLabel(opts, answerId) {
+    if (!answerId) return null;
+    var norm = parseOptions(opts);
+    var match = norm.find(function(o) { return o.id === answerId; });
+    return match ? match.label : answerId;
+  }
+
+  var cards = qs.map(function(q, idx) {
+    var a       = myAnswers[q.id];
+    var status  = q.resolution_status;
+    var outcome = q.resolution_outcome;
+
+    // Determine card state
+    var state;
+    if (status !== 'resolved' && status !== 'voided') {
+      state = a ? 'pending' : 'missed';
+    } else if (status === 'voided') {
+      state = 'missed';
+    } else if (!a) {
+      state = 'missed';
+    } else {
+      state = a.is_correct ? 'correct' : 'wrong';
+    }
+
+    var badgeLabel = { correct: 'Correct', wrong: 'Wrong', missed: 'Missed', pending: 'Pending' }[state];
+
+    // Answers row
+    var myAnswerLabel   = a ? getAnswerLabel(q.options, a.answer) : null;
+    var corrAnswerLabel = outcome ? getAnswerLabel(q.options, outcome) : null;
+
+    var answersHtml = '';
+    if (myAnswerLabel) {
+      var myValClass = state === 'correct' ? 'highlight-correct' : (state === 'wrong' ? 'highlight-wrong' : '');
+      answersHtml += '<div class="as-qr-answer-row">'
+        + '<span class="as-qr-answer-label">Your pick</span>'
+        + '<span class="as-qr-answer-val ' + myValClass + '">' + escHtml(myAnswerLabel) + '</span>'
+        + '</div>';
+    }
+    if (corrAnswerLabel && state !== 'pending') {
+      answersHtml += '<div class="as-qr-answer-row">'
+        + '<span class="as-qr-answer-label">Answer</span>'
+        + '<span class="as-qr-answer-val highlight-correct">' + escHtml(corrAnswerLabel) + '</span>'
+        + '</div>';
+    }
+
+    // Points
+    var pts     = a && a.points_earned != null ? a.points_earned : 0;
+    var ptsHtml = '';
+    if (state === 'correct' && pts > 0) {
+      ptsHtml = '<span class="as-qr-pts">+' + pts + ' pts</span>';
+    } else if (state === 'wrong' || (state === 'correct' && pts === 0)) {
+      ptsHtml = '<span class="as-qr-pts zero">0 pts</span>';
+    }
+
+    // Tags
+    var tags = [];
+    if (a && a.is_clutch)                                           tags.push('<span class="as-qr-tag clutch">Clutch</span>');
+    if (a && a.streak_at_answer >= 3)                               tags.push('<span class="as-qr-tag streak">Streak ×' + a.streak_at_answer + '</span>');
+    if (a && a.leader_gap_at_answer > 20)                           tags.push('<span class="as-qr-tag comeback">Comeback</span>');
+    if (q.difficulty_multiplier && q.difficulty_multiplier > 1.1)  tags.push('<span class="as-qr-tag diff">Hard</span>');
+
+    var footerParts = [];
+    if (ptsHtml) footerParts.push(ptsHtml);
+    footerParts = footerParts.concat(tags);
+
+    return '<div class="as-qr-card ' + state + '">'
+      + '<div class="as-qr-top">'
+      +   '<span class="as-qr-badge ' + state + '">' + badgeLabel + '</span>'
+      +   '<span class="as-qr-qtext">' + escHtml(q.question_text || '') + '</span>'
+      + '</div>'
+      + (answersHtml ? '<div class="as-qr-answers">' + answersHtml + '</div>' : '')
+      + (footerParts.length ? '<div class="as-qr-footer">' + footerParts.join('') + '</div>' : '')
+      + '</div>';
+  });
+
+  el.innerHTML = '<div class="as-qreview-section">'
+    + '<div class="as-qreview-title">Question Breakdown</div>'
+    + cards.join('')
+    + '</div>';
+}
+
+// ── History drawer ────────────────────────────────────────────────────────
+function openHistory() {
+  historyOpen = true;
+  var overlay = document.getElementById('as-hist-overlay');
+  if (overlay) overlay.classList.add('open');
+  renderHistory();
+}
+
+function closeHistory() {
+  historyOpen = false;
+  historyHasNewQ = false;
+  var overlay = document.getElementById('as-hist-overlay');
+  var banner  = document.getElementById('as-hist-new-banner');
+  var btn     = document.getElementById('as-hist-btn');
+  if (overlay) overlay.classList.remove('open');
+  if (banner)  banner.classList.remove('show');
+  if (btn)     btn.classList.remove('has-new');
+}
+
+function renderHistory() {
+  var body = document.getElementById('as-hist-body');
+  if (!body) return;
+
+  var now = new Date();
+
+  // Exclude questions whose answer window is still open (active)
+  var past = (currentQuestions || []).filter(function(q) {
+    var closes = q.answer_closes_at ? new Date(q.answer_closes_at) : null;
+    return !closes || closes <= now;
+  });
+
+  // Newest first
+  past.sort(function(a, b) {
+    return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+  });
+
+  if (!past.length) {
+    body.innerHTML = '<div class="as-hist-empty">No past questions yet.<br>Answered questions will appear here.</div>';
+    return;
+  }
+
+  var cards = past.map(function(q) {
+    var a     = myAnswers[q.question_id] || myAnswers[q.id];
+    var opts  = parseOptions(q.options);
+
+    // Determine state
+    var state;
+    if (!a) {
+      state = q.resolution_status === 'resolved' ? 'missed' : 'pending';
+    } else if (a.is_correct === true)  { state = 'correct'; }
+    else if (a.is_correct === false)   { state = 'wrong'; }
+    else                               { state = 'pending'; }
+
+    var badgeLabel = state === 'correct' ? '✓ Correct'
+                   : state === 'wrong'   ? '✗ Wrong'
+                   : state === 'missed'  ? '— Missed'
+                   : '… Awaiting';
+
+    // Answer labels
+    var myAnswerLabel   = '';
+    var corrAnswerLabel = '';
+
+    if (a && a.answer) {
+      var myOpt = opts.find(function(o) { return o.id === a.answer || o.label === a.answer; });
+      myAnswerLabel = myOpt ? myOpt.label : a.answer;
+    }
+    if (q.resolution_outcome) {
+      var corrOpt = opts.find(function(o) { return o.id === q.resolution_outcome || o.label === q.resolution_outcome; });
+      corrAnswerLabel = corrOpt ? corrOpt.label : q.resolution_outcome;
+    }
+
+    var myValClass = state === 'correct' ? 'highlight-correct' : state === 'wrong' ? 'highlight-wrong' : '';
+
+    var answersHtml = '';
+    if (myAnswerLabel) {
+      answersHtml += '<div class="as-qr-answer-row">'
+        + '<span class="as-qr-answer-label">Your pick</span>'
+        + '<span class="as-qr-answer-val ' + myValClass + '">' + escHtml(myAnswerLabel) + '</span>'
+        + '</div>';
+    }
+    if (corrAnswerLabel && state !== 'pending') {
+      answersHtml += '<div class="as-qr-answer-row">'
+        + '<span class="as-qr-answer-label">Answer</span>'
+        + '<span class="as-qr-answer-val highlight-correct">' + escHtml(corrAnswerLabel) + '</span>'
+        + '</div>';
+    }
+
+    var pts     = a && a.points_earned != null ? a.points_earned : 0;
+    var ptsHtml = '';
+    if (state === 'correct' && pts > 0)                       { ptsHtml = '<span class="as-qr-pts">+' + pts + ' pts</span>'; }
+    else if (state === 'wrong' || (state === 'correct' && pts === 0)) { ptsHtml = '<span class="as-qr-pts zero">0 pts</span>'; }
+
+    var tags = [];
+    if (a && a.is_clutch)                                           tags.push('<span class="as-qr-tag clutch">Clutch</span>');
+    if (a && a.streak_at_answer >= 3)                               tags.push('<span class="as-qr-tag streak">Streak ×' + a.streak_at_answer + '</span>');
+    if (a && a.leader_gap_at_answer > 20)                           tags.push('<span class="as-qr-tag comeback">Comeback</span>');
+    if (q.difficulty_multiplier && q.difficulty_multiplier > 1.1)  tags.push('<span class="as-qr-tag diff">Hard</span>');
+
+    var footerParts = ptsHtml ? [ptsHtml].concat(tags) : tags;
+
+    return '<div class="as-qr-card ' + state + '">'
+      + '<div class="as-qr-top">'
+      +   '<span class="as-qr-badge ' + state + '">' + badgeLabel + '</span>'
+      +   '<span class="as-qr-qtext">' + escHtml(q.question_text || '') + '</span>'
+      + '</div>'
+      + (answersHtml ? '<div class="as-qr-answers">' + answersHtml + '</div>' : '')
+      + (footerParts.length ? '<div class="as-qr-footer">' + footerParts.join('') + '</div>' : '')
+      + '</div>';
+  });
+
+  body.innerHTML = cards.join('');
 }
 
 // XP amounts per outcome

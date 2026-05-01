@@ -1,6 +1,28 @@
 # Spontix — Project State & Developer Handoff
 
-Last updated 2026-04-30 — Multiplayer arena redesign: `multiplayer.html` fully rewritten (761 → 1741 lines). Full-screen desktop layout (no max-width cap), 3-step arena flow. Step 1: 1v1 vs 2v2 format cards with large watermarks + glow selection state. Step 2: full-width two-column split — match browser (left, with search/competition filter/sort toggle) + config panel (right, with half-scope cards + per-half queue count breakdown + 2v2 team options). Step 3: fixed-position waiting room overlay with 4 pulsing concentric lime rings, player vs opponent avatars (searching-pulse → found-pop animations), invite link section for 2v2 share-link mode. Queue count system: two-step Supabase query (match_lobbies → match_lobby_players) aggregated into `queueMap[matchId][halfScope][mode]`. Supabase Realtime subscriptions on `match_lobbies` and `match_lobby_players` keep queue counts live. Direct lobby join via `?join=<lobbyId>`. Migration 030 creates `match_lobbies` + `match_lobby_players` tables (must be run before page works). SpontixStoreAsync lobby methods (`findOrJoinLobby`, `joinLobbyById`, `createLeagueFromLobby`) are inline stubs in the page — functional for MVP, to be promoted to spontix-store.js later.
+Last updated 2026-05-01 — Arena in-session Question History panel live in `arena-session.html`. Floating `≡ History` pill button (fixed bottom-right, `bottom: max(18px, env(safe-area-inset-bottom))` for mobile safe areas) opens a 75vh bottom-sheet drawer. Drawer shows all past questions (closed answer window) newest-first, reusing `.as-qr-card` styles from the completion overlay. Cards display correct/wrong/missed/pending state, player's answer, correct answer, points earned, and tags (Clutch/Streak/Comeback/Hard). New-question indicator: lime `"⚡ Live question available — close to answer"` banner appears inside the open drawer when `loadQuestions()` detects an active question; button gains lime border + dot. Tapping the banner or the close button clears the indicator and restores the feed. `openHistory()`, `closeHistory()`, `renderHistory()` JS functions added. New-question hook inserted after `renderFeed()` in `loadQuestions()`. Global `historyOpen` + `historyHasNewQ` flags. Display-only — no backend, schema, or scoring changes.
+
+Last updated 2026-05-01 — Arena completion overlay Question Results Breakdown live in `arena-session.html`. Scrollable per-question review section (`#as-qreview`) rendered inside the completion overlay by `renderQuestionReview()` after `showCompleteOverlay()` fires. Each question shows: result badge (✓ Correct / ✗ Wrong / — Missed / … Awaiting), player's answer vs correct answer (colour-coded), points earned pill, and optional tags (Clutch, Streak ×N when ≥3, Comeback when gap >20, Hard when difficulty >1.1). Questions sorted ascending by `created_at`. `player_answers` SELECT extended to include `multiplier_breakdown`, `is_clutch`, `streak_at_answer`, `leader_gap_at_answer`. Dark navy `.as-qr-card` cards with lime/coral/grey colour variants. No backend, schema, or scoring changes.
+
+Last updated 2026-05-01 — Arena Leaderboard tab live in `leaderboard.html`. New 4th tab "Arena" (after Global/My Leagues/Friends) loads `users WHERE arena_games_played > 0 ORDER BY arena_rating DESC LIMIT 100` directly from Supabase. UI: hero banner (title + "1v1 / 2v2" badge), top-3 podium (slots ordered 2nd/1st/3rd), full ranked table with columns `#`, Player, Tier, Arena Rating, Games. `getArenaTier(rating)` maps rating → 9 tier labels + CSS classes (Rookie ≥500, Bronze ≥800, Silver ≥1100, Gold ≥1400, Platinum ≥1700, Diamond ≥1900, Master ≥2200, Grandmaster ≥2600, Legend ≥3000). Lazy-load on first tab click (`arenaLoaded` flag — no re-fetch on repeated clicks). Current user rows highlighted with `you-row` + `(You)` tag. Sticky card (`#ar-sticky-you`) slides up from bottom when current user is ranked #11 or lower. Empty state links to `multiplayer.html` with "Enter Arena" CTA. `switchView()` updated with arena branch (hides sticky card when switching away). No backend, schema, or rating changes — all data from migration 036 `arena_rating`/`arena_games_played` columns already on `users`.
+
+Last updated 2026-05-01 — Resolver arena session safety: `resolve-questions/index.ts` now verifies arena session status before resolving any arena-session-bound question. Pre-load block runs once per batch: collects distinct `arena_session_id` values from the pending questions list, queries `arena_sessions WHERE id IN (...)` in a single round-trip, builds `arenaSessionStatusMap: Map<string, string>`. If the DB query errors, `arenaStatusLookupFailed = true` (fail-closed). Per-question guard at the top of each question's try block: if `q.arena_session_id` is set and `arenaStatusLookupFailed` → void with reason `arena_session_status_lookup_failed`; if session status ≠ `'active'` → void with reason `arena_session_not_active`. League questions (no `arena_session_id`) are completely unaffected. Deployed to `hdulhffpmuqepoqstsor`. Also includes migration 037: `increment_arena_player_score(p_session_id, p_user_id, p_points)` SECURITY DEFINER RPC — atomic `score = score + N` update on `arena_session_players`, avoiding race window from the JS client; also increments `correct_answers`. GRANT to `authenticated` + `service_role`. All migrations 001–037 applied ✅.
+
+Last updated 2026-04-30 — Arena UI polish: Streak, Comeback, and Clutch display all live in `arena-session.html`. Streak badge + streak notif show current correct-answer run in the scoreboard and on answer. Comeback badge + scoreboard line + popup notif read live arena scores from `players[]` and show ×1.1/×1.2/×1.3 multiplier tiers (gaps 21–50/51–100/100+). Clutch badge now mirrors the backend `isClutchAnswer()` definition exactly: LIVE questions only, half-scope-aware minute window (first_half ≥ 35, else ≥ 80), competitive signal from `clutch_context.homeScore/awayScore` (gap ≤ 1) or arena score gap (≤ 20, only when both players present) — missing data hides safely. `clutch_context` added to `loadQuestions()` SELECT. All three are display-only with no backend, schema, or scoring changes.
+
+Last updated 2026-04-30 — Phase 3: Arena Rating ELO live ✅. Migration 036 applied. `update_arena_ratings(p_session_id UUID)` SECURITY DEFINER RPC: ELO formula with K-factor tiers (K=32 <10 games, K=24 10–29, K=20 ≥30), 2v2 team average, rating floor 500, repeat-opponent rolling-24h penalty (×0.5 before clamp, minimum ±1 on non-zero delta), strict player-count validation (invalid 2v2 = `invalid_match:true`, no fallback), idempotency via `arena_rating_before IS NOT NULL`. `arena_session_players` gains `arena_rating_before/after/delta` snapshot columns. `users` gains `arena_rating` (DEFAULT 500), `arena_games_played`, `arena_rating_updated_at`. Leaderboard index on `(arena_rating DESC) WHERE arena_games_played > 0`. `arena-session.html` `showCompleteOverlay()` calls `update_arena_ratings()` in `Promise.all` with `award_xp()`; shows colored `±N SR` delta pill. 9 visual tiers (Rookie → Legend) with CSS classes rendered on `profile.html` header and `dashboard.html` profile preview card. `spontix-store.js` `_mapUserFromDb()` maps `arena_rating` + `arena_games_played`. All migrations 001–037 applied ✅.
+
+Last updated 2026-04-30 — Phase 2: Global XP system live ✅. Migration 035 applied. `arena-session.html` `showCompleteOverlay()` now authoritative on `winner_user_id` (falls back to score comparison only when null); calls `award_xp()` RPC at session end (win=50XP, draw=25XP, loss=15XP, `source_id=sessionId` for idempotency); shows `+N XP` pill in the score card. `spontix-store.js` `_mapUserFromDb()` now maps `total_xp` and `level` through to the JS profile object. XP bar + level badge added to `dashboard.html` (profile preview card) and `profile.html` (profile header) — hidden until `total_xp` is non-null, formula mirrors the DB `get_level_number()` function in JS (XP to advance level N = floor(100 × N^1.5)). All async profile refresh paths wired.
+
+Last updated 2026-04-30 — Arena Session system Phase 1 (migrations 033 + 034): `arena_sessions` + `arena_session_players` tables; dual FK on `questions` (league_id OR arena_session_id, CHECK constraint); `leagues.session_type` (`league|solo_match`); dual-path player_answers RLS (PATH A: league member, PATH B: arena participant); both tables in Realtime publication. `generate-questions/index.ts`: `live_only=1` URL param, `solo_match` REAL_WORLD guard, full arena session live generation loop (mirrors league live but writes `arena_session_id`). `live-stats-poller/index.ts`: fires `generate-questions?live_only=1` after each fixture upsert (fire-and-forget). `multiplayer.html`: `createArenaSession()` replaces `createLeagueFromLobby()` — inserts arena_sessions + arena_session_players + updates lobby.arena_session_id, redirects to `arena-session.html?id=`. New `arena-session.html`: 1,035-line gameplay page, questions filtered by arena_session_id, answers submitted with arena_session_id (no league_id), three Realtime channels, complete overlay with per-player handles. `arena-session.html` fix: `loadPlayers()` joins `users(handle, name)` so opponent handles display correctly in scoreboard and complete overlay. Migration 033 bug fixed: removed dead `UPDATE game_history SET game_mode = game_type` backfill (game_type column does not exist). Migrations 033 + 034 applied ✅. Both Edge Functions redeployed ✅.
+
+Last updated 2026-04-30 — Clutch Answer system (migration 032): Clutch = correct answer to CORE_MATCH_LIVE question where (1) match is in clutch window (minute ≥ 35 for first_half, ≥ 80 for full_match/second_half) AND (2) match is competitive (goal diff ≤ 1 OR leader_gap ≤ 20 pts). New migration 032 adds: `clutch_context JSONB` on `questions` (snapshot: minute + score at generation), `is_clutch BOOLEAN` on `player_answers`, `clutch_answers INTEGER` counter on `users`, `player_xp_events` table (XP audit trail), and `increment_clutch_answers()` SECURITY DEFINER RPC. `generate-questions/index.ts`: live question insert now writes `clutch_context` from `liveCtx.matchMinute/homeScore/awayScore`. `resolve-questions/lib/clutch-detector.ts`: new `isClutchAnswer()` helper — pure function, no DB calls. `resolve-questions/index.ts`: `markCorrectAnswers()` now calls `isClutchAnswer()`, writes `is_clutch` to `player_answers`, and calls `awardClutchXp()` for clutch answers (+15 XP, counter increment, milestone log at 1/10/50/100). The existing `clutch_multiplier_at_answer` (1.0×/1.25×) scoring factor is untouched — this system adds XP only, no second score multiplier. ⚠️ Run migration 032 in Supabase SQL editor then redeploy both Edge Functions.
+
+Last updated 2026-04-30 — Multiplayer sport filter: `multiplayer.html` match toolbar now has a Sport dropdown before the Competition dropdown. Selecting a sport cascades the competition dropdown to show only competitions for that sport. `onSportFilterChange()` rebuilds competition options from `allMatches` filtered by selected sport; `applyFilters()` checks sport before competition. Each match object now includes `sport` field from `compById[league_id].sport` (loaded from `sports_competitions`). State: `filterSport = 'all'`.
+
+Last updated 2026-04-30 — Multiplayer match card interest signals: live activity signals added to each match card in `multiplayer.html`. Priority logic: 👥 Ready (lime) → ⚡ Trending (teal) → 🔥 N in queue (coral) → nothing. Ready = any lobby 1 player away from full. Trending = 5+ joins in last 2 min (configurable `TRENDING_THRESHOLD`). Queue = 2+ total players waiting. Never shows zero/empty states. `loadQueueCounts()` extended with second lightweight query on `match_lobby_players` for trending data; `readyMap` computed from per-lobby `player_count` vs mode capacity. `getMatchSignal(matchId)` helper enforces priority order. CSS variants `.match-signal.ready/.trending/.queue`. Migration 031 adds denormalized `player_count` to `match_lobbies` with a DB trigger on `match_lobby_players` INSERT/DELETE — eliminates per-player row fetches, scales to any number of players.
+
+Last updated 2026-04-30 — Multiplayer arena redesign: `multiplayer.html` fully rewritten (761 → 1741 lines). Full-screen desktop layout (no max-width cap), 3-step arena flow. Step 1: 1v1 vs 2v2 format cards with large watermarks + glow selection state. Step 2: full-width two-column split — match browser (left, with search/competition filter/sort toggle) + config panel (right, with half-scope cards + per-half queue count breakdown + 2v2 team options). Step 3: fixed-position waiting room overlay with 4 pulsing concentric lime rings, player vs opponent avatars (searching-pulse → found-pop animations), invite link section for 2v2 share-link mode. Queue count system: denormalized `player_count` on `match_lobbies` (migration 031 trigger) aggregated into `queueMap[matchId][halfScope][mode]`. Supabase Realtime subscriptions on `match_lobbies` and `match_lobby_players` keep queue counts live. Direct lobby join via `?join=<lobbyId>`. Migration 030 creates `match_lobbies` + `match_lobby_players` tables (must be run before page works). SpontixStoreAsync lobby methods (`findOrJoinLobby`, `joinLobbyById`, `createLeagueFromLobby`) are inline stubs in the page — functional for MVP, to be promoted to spontix-store.js later.
 
 Last updated 2026-04-29 — play_mode (singleplayer / multiplayer) added to leagues: migration 029 adds `play_mode TEXT NOT NULL DEFAULT 'multiplayer' CHECK (play_mode IN ('singleplayer', 'multiplayer'))` to `leagues`. play_mode is INDEPENDENT of subscription tier — all TIER_LIMITS (liveQuestionsPerMatch, realWorldQuestionsEnabled, leaguesCreatePerWeek, etc.) apply identically in both modes. `spontix-store.js`: `_mapLeagueFromDb` maps `play_mode → playMode`, `_mapLeagueToDb` maps back. `create-league.html`: new Play Experience selector (Multiplayer / Solo cards) with `selectSessionType()` function — Solo locks player slider to 1, hides Team Mode section, enforces `max_members=1` in `launchLeague()`. `applyRealWorldTierGating()` shows Pro+ badge and blocks AI Real World toggle for Starter in both modes. `applySingleplayerLiveCapNotice()` shows coral cap notice when Solo + live/hybrid + Starter. Review step shows "Solo (1 player)" or "Multiplayer". `league.html`: `hydrateLeaguePage()` detects `isSolo`, sets `statMode` to 'Solo', adds Solo tag to meta strip, hides invite card for singleplayer leagues. `docs/TIER_ARCHITECTURE.md` updated to v7 with full "Play Mode vs Subscription Tier" section. Migrations 028 (Realtime publication) and 029 (play_mode column) both applied ✅.
 
@@ -109,7 +131,7 @@ Stable, deployed, production-critical. Targeted bug fixes only.
 |---|---|---|
 | Generation pipeline | `generate-questions/index.ts` + `lib/` | Do not refactor — stable and deployed |
 | Resolver pipeline | `resolve-questions/index.ts` | Do not redesign — only safe targeted changes |
-| Database schema | `backend/migrations/001–023` | Do not drop columns, tables, or constraints |
+| Database schema | `backend/migrations/001–034` | Do not drop columns, tables, or constraints |
 | Timing model | `visible_from`, `answer_closes_at`, `resolves_after` | Always populate all three on every question |
 | Pool system | `lib/pool-manager.ts` | Do not redesign — race-safe, deployed |
 | 4-stage validator | `lib/predicate-validator.ts` | Do not weaken — all four stages must run |
@@ -1365,7 +1387,19 @@ Spontix/
 ├── live.html                          ← Live match prediction game
 ├── multiplayer.html                   ← Multiplayer arena: 1v1 / 2v2 lobby matchmaking (Supabase Realtime ✅)
 │                                        Full-screen desktop layout, 3-step flow (Format → Match+Config → Waiting Room)
-│                                        Uses migration 030: match_lobbies + match_lobby_players tables
+│                                        Match cards show live interest signals (Ready/Trending/queue count)
+│                                        createArenaSession() creates arena_sessions row + redirects to arena-session.html
+│                                        Uses migrations 030 + 031 + 034: match_lobbies + player_count trigger + arena_session_id FK
+├── arena-session.html                 ← Live Multiplayer gameplay page (arena sessions only, NOT leagues)
+│                                        Questions filtered by arena_session_id; answers submitted with arena_session_id
+│                                        Three Realtime channels: session status, questions, player scores
+│                                        Complete overlay: winner/draw/loss + per-player scores + handles + Question Results Breakdown
+│                                          renderQuestionReview() — scrollable per-question cards (correct/wrong/missed/awaiting),
+│                                          answer rows, pts pill, tags (Clutch/Streak/Comeback/Hard); sorted ascending by created_at
+│                                        In-session History drawer: floating ≡ History button (safe-area aware), 75vh bottom-sheet,
+│                                          past questions newest-first; new-question lime banner when active question exists
+│                                        loadPlayers() two-step query (arena_session_players → public.users by UUID list)
+│                                        parseOptions() normalises plain strings → {id,label} objects for button rendering
 ├── br-leaderboard.html                ← BR-specific leaderboard (ELO history tab ✅)
 ├── notifications.html                 ← User notifications
 ├── player-onboarding.html             ← First-time player setup
@@ -1612,7 +1646,7 @@ These are **safe to commit and ship to the browser**. Security comes from RLS po
 - **Cache warming** — all domains auto-refresh 1.5s after page load.
 - **All UI screens** — every `.html` file renders correctly. `profile.html` and `leaderboard.html` use full-width layout.
 - **spontix-scraper-service** — standalone Node.js microservice (separate repo). POST /scrape accepts a URL, renders with headless Chromium (Playwright), extracts clean article text via Mozilla Readability + jsdom fallback. Deployed on Railway at `https://spontyx-scraper-service-production.up.railway.app`. Auth: `x-scraper-key` header. Rate limit: 20 req/min. Stack: Node 20, Express, Playwright, Readability, jsdom. Docker non-root pattern with `/ms-playwright` world-readable browser path.
-- **Multiplayer arena (`multiplayer.html`)** — full-screen desktop matchmaking lobby. 3-step flow: (1) Format selection (1v1 vs 2v2 arena cards), (2) Match browser + config panel side-by-side, (3) Waiting room overlay with cinematic pulsing lime rings. Match list has search, competition filter, sort by time or active players. Config panel shows half-scope options (Full Match / First Half / Second Half) with per-half + per-mode queue counts. 2v2 team options: auto-match queue, invite via share link. Waiting room: player vs opponent avatars with `searching` pulse / `found` pop-in animation, invite link section for 2v2 share-link mode, cancel button. Supabase Realtime subscription on `match_lobbies` + `match_lobby_players` for live queue updates. Direct invite join via `?join=<lobbyId>` URL param. DB: migration 030 (`match_lobbies` + `match_lobby_players` tables). Stub fallbacks built into page script if `SpontixStoreAsync` lobby methods are not yet wired.
+- **Multiplayer arena (`multiplayer.html`)** — full-screen desktop matchmaking lobby. 3-step flow: (1) Format selection (1v1 vs 2v2 arena cards), (2) Match browser + config panel side-by-side, (3) Waiting room overlay with cinematic pulsing lime rings. Match list has search, competition filter, sort by time or active players. Each match card shows a live interest signal (👥 Ready / ⚡ Trending / 🔥 N in queue) — only highest-priority signal shown, never empty states; signals update in real-time via Realtime. Config panel shows half-scope options (Full Match / First Half / Second Half) with per-half + per-mode queue counts. 2v2 team options: auto-match queue, invite via share link. Waiting room: player vs opponent avatars with `searching` pulse / `found` pop-in animation, invite link section for 2v2 share-link mode, cancel button. DB: migration 030 (`match_lobbies` + `match_lobby_players`) + migration 031 (denormalized `player_count` with DB trigger — scales to any player count). Stub fallbacks built into page script if `SpontixStoreAsync` lobby methods are not yet wired.
 
 ---
 
@@ -1752,7 +1786,26 @@ See `supabase/functions/generate-questions/DEPLOY.md` for the full checklist inc
 - `cron.schedule('live-stats-every-minute', '* * * * *', ...)` — job 8 active ✅
 - `league.html` — Stats tab added (between Leaderboard and Schedule): SVG pitch, events, team stats bars, player cards, predictions, H2H
 
-### 7. Wire Stripe for real tier subscriptions
+### 7. ✅ DONE — Arena Session system Phase 1 end-to-end verified
+- `arena-session.html` bug fixes: `parseOptions()` normalised (plain strings → `{id,label}` objects); `loadPlayers()` two-step query (replaces broken FK join)
+- Full flow confirmed: options render ✅, answer submission ✅, scoreboard with both handles ✅, Realtime fires complete overlay automatically on `status='completed'` ✅
+- Migration 035 (Global XP system) written — `users.total_xp + level`, `player_xp_events` extended, `get_level_number()` + `get_level_info()` IMMUTABLE helpers, `award_xp()` SECURITY DEFINER RPC. ⚠️ Not yet applied.
+
+### 8. ✅ DONE — Phase 2: XP system
+- Migration 035 applied ✅
+- `award_xp()` wired in `arena-session.html` `showCompleteOverlay()` — win=50XP, draw=25XP, loss=15XP; idempotent via `source_id=sessionId`; `+N XP` pill rendered in score card
+- `winner_user_id` now authoritative for win/loss determination in overlay (score fallback for null only)
+- `spontix-store.js` `_mapUserFromDb()` maps `total_xp` + `level` through to JS profile object
+- XP bar + level badge added to `dashboard.html` and `profile.html` — hidden until data present
+
+### 9. ✅ DONE — Phase 3: Arena Rating ELO
+- Migration 036 applied ✅ — `arena_rating` (DEFAULT 500), `arena_games_played`, `arena_rating_updated_at` on `users`; `arena_rating_before/after/delta` snapshot columns on `arena_session_players`; leaderboard index
+- `update_arena_ratings()` SECURITY DEFINER RPC — K-factor tiers (32/24/20), 2v2 team average, floor 500, repeat-opponent 24h penalty ×0.5 before clamp (minimum ±1), strict 2v2 validation (invalid_match:true), idempotent
+- `arena-session.html` `showCompleteOverlay()` calls RPC via `Promise.all` with `award_xp()`; shows colored `±N SR` pill
+- 9 visual tiers (Rookie/Bronze/Silver/Gold/Platinum/Diamond/Master/Grandmaster/Legend) displayed on `profile.html` and `dashboard.html`
+- `spontix-store.js` `_mapUserFromDb()` maps `arena_rating` + `arena_games_played`
+
+### 10. Wire Stripe for real tier subscriptions
 - Enable Stripe in Supabase Edge Functions
 - Add `subscriptions` table mirroring Stripe state
 - Add webhook handler that updates `users.tier`
@@ -1793,7 +1846,7 @@ See `supabase/functions/generate-questions/DEPLOY.md` for the full checklist inc
 **Arena venue owned by:** `f901f211-738e-4409-abfd-8e1a9fb4bffb` (utis.richard@gmail.com)
 
 **Resume prompt for a fresh Claude session:**
-> "Continue Spontix development. Read `CLAUDE.md` for full context. Also read `SESSION_CONTINUATION_DESIGN.txt` before working on anything related to live questions, notifications, or the league question feed. Last completed: (1) play_mode (singleplayer/multiplayer) ✅ — migration 029 run, `spontix-store.js` mapping added, `create-league.html` Play Experience selector + `selectSessionType()` + `applyRealWorldTierGating()` + `applySingleplayerLiveCapNotice()` + `launchLeague()` updated, `league.html` Solo tag + invite card hide added, `docs/TIER_ARCHITECTURE.md` v7 updated. play_mode is INDEPENDENT of tier — all TIER_LIMITS apply identically in both modes. (2) Supabase Realtime subscription in league.html ✅ — `realtimeChannel` global, `startRealtime()`/`stopRealtime()` functions, `questions` INSERT/UPDATE/DELETE + `player_answers` UPDATE subscriptions, 30s heartbeat polling safety net, tab visibility + beforeunload handling. (3) Scraper enrichment integrated into REAL_WORLD pipeline ✅ — `enrichArticlesWithScraper()` in generate-questions calls Railway scraper on top 5 candidates before Call 1. All migrations 001–030 run ✅. (4) Multiplayer arena redesign ✅ — `multiplayer.html` fully rewritten (761 → 1741 lines): full-screen desktop layout, 3-step flow (Format → Match+Config → Waiting Room overlay), 1v1/2v2 arena cards, match list with search/filter/sort, config panel with per-half queue counts, cinematic waiting room with pulsing lime rings + avatar searching/found animations, Supabase Realtime on match_lobbies + match_lobby_players, direct invite join via ?join=lobbyId. SpontixStoreAsync lobby stubs built into page. Migration 030 (match_lobbies + match_lobby_players) must be run in Supabase SQL editor. docs/REAL_WORLD_QUESTION_SYSTEM.md is the authoritative REAL_WORLD reference. Next priorities: (1) Wire SpontixStoreAsync lobby methods into spontix-store.js (currently inline stubs in multiplayer.html); (2) End-to-end test createLeagueFromLobby() and redirect flow; (3) Stripe subscriptions replacing forced Elite tier; (4) venue-tonights-events.html dynamic rendering."
+> "Continue Spontix development. Read `CLAUDE.md` for full context. Also read `SESSION_CONTINUATION_DESIGN.txt` before working on anything related to live questions, notifications, or the league question feed. Last completed: Arena Question History panel + completion overlay Question Results Breakdown ✅ — `arena-session.html` has a floating `≡ History` bottom-sheet drawer (past questions, newest-first, `.as-qr-card` style, new-question lime banner), and the completion overlay now shows a full per-question breakdown via `renderQuestionReview()` (result badge, answer rows, pts pill, Clutch/Streak/Comeback/Hard tags). All migrations 001–037 applied ✅. docs/REAL_WORLD_QUESTION_SYSTEM.md is the authoritative REAL_WORLD reference. Next priorities: (1) Stripe subscriptions (wire real tier reads, replace authGate() Elite forcing); (2) `resolve-questions/index.ts` call `increment_arena_player_score()` after awarding points to keep live scoreboard in sync."
 
 ---
 
@@ -4174,7 +4227,7 @@ FROM analytics_realworld_questions WHERE has_context = false;
 - Kept (reframed as permanent operational rules): 3-timestamp model, max 2 active questions, rate limits, fallback rules, resolver idempotency, answer submission uniqueness, football-only guard, graceful degradation, logging requirements
 - LIVE system status table updated: all five components ✅ Complete
 - Scoring formula table updated: all six multipliers active
-- Protected systems table updated: migrations 001–025
+- Protected systems table updated: migrations 001–036
 
 ---
 
@@ -5058,3 +5111,359 @@ var currentUserHandle = null;
 These stubs operate directly on Supabase and are fully functional. They should be promoted to `spontix-store.js` in a future cleanup sprint.
 
 **No backend changes (beyond migration 030).** No pipeline, resolver, or scoring changes. No other pages affected.
+
+---
+
+### 2026-04-30 — Arena Session system: Live Multiplayer game-mode separation (Phase 1)
+
+**Core architectural rule:** `leagues` = persistent long-term competition. `arena_sessions` = short live competitive sessions (Live Multiplayer). They must NEVER be mixed.
+
+**Goal:** build the full arena session architecture — DB schema, generation pipeline separation, gameplay page — so Live Multiplayer games run in isolated sessions rather than shared league tables.
+
+---
+
+**New migration: `backend/migrations/033_arena_sessions.sql`** — ⚠️ run before deploying Edge Functions:
+- `arena_sessions` table — one per matchmaking lobby game. Fields: `lobby_id`, `match_id`, `half_scope`, `mode (1v1|2v2)`, `status (waiting→active→completed→cancelled)`, `home/away_team_name`, `kickoff_at`, `api_league_id`, `winner_user_id`, `winning_team_number`, `started_at`, `completed_at`. Indexes on `(status, created_at)` and `(match_id, status)`.
+- `arena_session_players` table — per-player state. Fields: `session_id`, `user_id`, `team_number`, `score`, `correct_answers`, `total_answers`, `joined_at`. PK `(session_id, user_id)`. Index on `(user_id, joined_at)`.
+- `questions.league_id` — made nullable (was NOT NULL). `questions.arena_session_id` — new FK to `arena_sessions`. CHECK constraint: exactly one of `league_id` / `arena_session_id` must be set.
+- `leagues.session_type` — `'league' | 'solo_match'`. Index on `solo_match` value.
+- `game_history` discriminator columns — `game_mode`, `rating_type`, `source_session_id`.
+- `player_answers.league_id` — made nullable. `player_answers.arena_session_id` — new FK. Index.
+- RLS: `arena_sessions` — authenticated read + insert + update. `arena_session_players` — read all; insert/delete own rows. `player_answers pa_insert_self` — dual-path: PATH A (league member) OR PATH B (arena session participant). `pa_select_member` — union of own + league members + arena session participants.
+- Realtime: both `arena_sessions` and `arena_session_players` added to `supabase_realtime` publication.
+
+**New migration: `backend/migrations/034_match_lobbies_arena_session_id.sql`** — ⚠️ run after 033:
+- Adds `arena_session_id UUID REFERENCES arena_sessions(id) ON DELETE SET NULL` to `match_lobbies` — forward reference from lobby to the session it spawned. Used by `multiplayer.html`'s `createArenaSession()` to detect already-created sessions and redirect late-joining players rather than creating duplicates.
+
+---
+
+**`supabase/functions/generate-questions/lib/context-builder.ts`:**
+- `buildLiveContext(sb, leagueId, matchId, fixtureRow, arenaSessionId?)` — 5th param added. `ownerCol` / `ownerId` discriminator: when `arenaSessionId` is set, all question queries use `arena_session_id` filter; otherwise `league_id`. Rate-limit query and active-window extraction both respect this.
+
+**`supabase/functions/generate-questions/index.ts`:**
+- `live_only` URL param: `url.searchParams.get('live_only') === '1'` skips prematch and REAL_WORLD loops entirely; used by the `live-stats-poller` fire-and-forget call.
+- `session_type` added to leagues SELECT — `solo_match` leagues blocked from REAL_WORLD generation.
+- **Arena session live generation loop** added after the league live loop (before REAL_WORLD):
+  - Fetches all `arena_sessions WHERE status='active'`
+  - Cross-references `live_match_stats` (status IN `1H|2H|ET`) — skips sessions whose match isn't live
+  - HT skip, `buildLiveContext` with `arenaSessionId`, ≥89 hard reject, 3-question active cap, 3-min rate limit (time_driven only; event_driven bypasses)
+  - Builds a `fakeLeague` object and `SportsContext` from session data — re-uses all existing generation infrastructure
+  - Appends `LIVE MATCH STATE` section to context packet (score, isCloseGame, isBlowout, trigger, last event, active windows)
+  - Calls `generateQuestions()` + `convertToPredicate()` + `validateQuestion()` — same 5-stage validation as league live
+  - Inserts with `arena_session_id: session.id` — `league_id` intentionally omitted (CHECK constraint enforces exactly one)
+  - `question_type: 'CORE_MATCH_LIVE'`, `source_badge: 'LIVE'`, `reuse_scope: 'live_safe'`
+  - `clutch_context` JSONB includes `session_scope` (half_scope value)
+  - Log prefix: `[arena-gen]`
+
+**`supabase/functions/live-stats-poller/index.ts`:**
+- After completing successful fixture upserts, fires `fetch(generateQuestionsUrl + '?live_only=1', ...)` as a fire-and-forget call (no `await`). Allows the live question generator to run immediately after fresh stats land, without waiting for the 6h cron cycle. Never blocks the poller — errors logged but ignored.
+
+---
+
+**`multiplayer.html` — `createArenaSession()` stub rewritten:**
+- Replaces the old `createLeagueFromLobby()` approach entirely — no `leagues` row created.
+- Reads `lobby.arena_session_id` first: if set, redirect to the already-created session (prevents duplicate sessions when multiple players reach full capacity simultaneously).
+- Inserts `arena_sessions` row: `lobby_id`, `match_id`, `half_scope`, `mode`, `home/away_team_name`, `kickoff_at`, `api_league_id`, `status: 'waiting'`.
+- Inserts all current lobby players into `arena_session_players` in a batch.
+- Updates `match_lobbies.arena_session_id` to the new session's UUID (migration 034 column).
+- Updates `match_lobbies.status` to `'active'`.
+- After 1.6s animation delay, redirects all players to `arena-session.html?id=<sessionUUID>`.
+
+---
+
+**New file: `arena-session.html`** — the complete Live Multiplayer gameplay page (1,032 lines).
+
+*Init flow:*
+- Parses `?id=<sessionId>` from URL → Supabase auth check → loads user handle from `users` → `loadSession() + loadQuestions() + loadPlayers()` in parallel → starts Realtime + 5s poll + 1s timer tick.
+
+*Data loading:*
+- `loadSession()` — `arena_sessions WHERE id = sessionId`. Sets `sessionData`, calls `renderTopbar()` and `renderScoreboard()`.
+- `loadPlayers()` — `arena_session_players WHERE session_id = sessionId` joined with `users(handle, name)`. Attaches `_handle` to each player row for display.
+- `loadQuestions()` — `questions WHERE arena_session_id = sessionId`. Filters by `visible_from`. Loads `player_answers` for current user. Detects newly-resolved correct answers → `showPtsNotif()`.
+
+*Answer submission (`handleAnswer()`):*
+```javascript
+var payload = {
+  question_id:                questionId,
+  user_id:                    currentUserId,
+  arena_session_id:           currentSessionId,  // ← no league_id
+  answer:                     answer,
+  answered_at:                new Date().toISOString(),
+  clutch_multiplier_at_answer: minute >= 70 ? 1.25 : 1.0,
+  leader_gap_at_answer:       0,
+  streak_at_answer:           0,
+};
+await window.sb.from('player_answers').upsert(payload, { onConflict: 'question_id,user_id' });
+```
+
+*Three Realtime subscriptions:*
+1. `arena_sessions` filtered `id=eq.{sessionId}` — `completed`/`cancelled` status → `loadPlayers()` → `showCompleteOverlay()`
+2. `questions` filtered `arena_session_id=eq.{sessionId}` — new questions → `loadQuestions()`
+3. `arena_session_players` filtered `session_id=eq.{sessionId}` — score updates → `loadPlayers()` → `renderScoreboard()`
+
+*Complete overlay (`showCompleteOverlay()`):*
+- Reads final `players` state. Determines winner/draw/loss. Shows 🏆/🤝/💪 icon + result text + per-player score rows with handles (from `players[i]._handle`) and correct answer counts.
+
+*Question cards (`renderCard(q, isPrimary)`):*
+- Full lane badge (LIVE/PREMATCH/REAL_WORLD via `detectLane()`), engagement badges (HIGH VALUE/CLUTCH/FAST), timer bar with 1s tick, option buttons with correct/wrong state, footer with pts earned.
+- Live window strip for `match_stat_window` predicates.
+
+*State management:*
+- When Realtime is active: poll interval = 30s heartbeat. On `CHANNEL_ERROR`/`TIMED_OUT`: poll switches back to 5s.
+- Tab visibility: pauses all channels + polls when hidden; resumes with fresh load on focus.
+- `beforeunload`: clean teardown.
+
+*CSS highlights:* `--navy: #080815`; lime score ring for current user; `glow-correct` / `shake-wrong` card animations; timer bar drains with CSS transition; live dot pulse; `page-enter` fade-in.
+
+**Deploy order (MANDATORY):**
+1. Run `033_arena_sessions.sql` in Supabase SQL editor
+2. Run `034_match_lobbies_arena_session_id.sql`
+3. `supabase functions deploy generate-questions --no-verify-jwt`
+4. `supabase functions deploy live-stats-poller --no-verify-jwt`
+
+---
+
+### 2026-04-30 — Arena Session Phase 1 end-to-end validation + two bug fixes
+
+**Goal:** full end-to-end test of the arena session flow: lobby → `createArenaSession()` → `arena-session.html` → questions with answer buttons → answer submission → Realtime complete overlay.
+
+**Bug fix 1 — `parseOptions()` normalisation (`arena-session.html`):**
+- **Root cause:** `parseOptions` returned plain string items (`["Yes","No"]`) unchanged when the input was already a parsed array. The card renderer at line 712 calls `opt.id` and `opt.label` — both `undefined` on a plain string — producing an empty button (invisible/zero-height). Answer buttons were never rendered.
+- **Fix:** normalise plain strings to `{id, label}` objects:
+  ```javascript
+  return arr.map(function(o) {
+    if (typeof o === 'string') return { id: o.toLowerCase().replace(/\s+/g, '_'), label: o };
+    return o;
+  });
+  ```
+- Also applied: test question was inserted with `options = '[]'` (the JSONB default). Fixed via SQL `UPDATE` to set `[{"id":"yes","label":"Yes"},{"id":"no","label":"No"}]` with refreshed timestamps (`answer_closes_at + deadline + resolves_after`) — required because the `timing_order` CHECK constraint rejects `answer_closes_at > resolves_after` if only some timestamps are updated.
+
+**Bug fix 2 — `loadPlayers()` two-step query (`arena-session.html`):**
+- **Root cause:** `arena_session_players.user_id` has a FK to `auth.users(id)` (Supabase Auth), not `public.users(id)`. Supabase PostgREST cannot resolve `.select('..., users(handle, name)')` across the Auth/public boundary — query silently returned rows without the join data, so `players = []`, and `renderScoreboard()` hid the scoreboard because `players.length < 2`.
+- **Fix:** two-step query:
+  1. Fetch `arena_session_players` rows (no join)
+  2. Extract `user_id` UUIDs → query `public.users WHERE id IN (uids)`
+  3. Build `profileMap` → merge `_handle` onto each player row in JS
+- Both scoreboard and complete overlay now correctly display player handles.
+
+**End-to-end test results (all checkpoints passed ✅):**
+
+| Check | Result |
+|---|---|
+| Questions load with correct options | ✅ |
+| Answer buttons (Yes/No) render and are clickable | ✅ |
+| Answer submission writes to `player_answers` with `arena_session_id` | ✅ |
+| Scoreboard shows both player handles | ✅ |
+| Realtime fires complete overlay automatically on `status='completed'` | ✅ |
+| Complete overlay shows correct player handles and scores | ✅ |
+| Play Again button present | ✅ |
+
+**Note on complete overlay winner/draw logic:** `showCompleteOverlay()` determines winner/draw by comparing `players[i].score` (from `arena_session_players.score`). Since `arena_session_players.score` is only updated by the resolver awarding `points_earned`, both scores were 0 in the test → displayed as draw even though `winner_user_id` was set. Once the resolver starts updating scores, winner/loss display will work correctly. `winner_user_id` is not currently used by the overlay — it's set on the session row but the overlay reads live scores.
+
+**Migration 035 — Global XP system (`backend/migrations/035_xp_system.sql`):** Written this session. ⚠️ **Not yet applied.**
+- `users.total_xp INTEGER NOT NULL DEFAULT 0` + `users.level INTEGER NOT NULL DEFAULT 1`
+- `player_xp_events` extended: `source_type TEXT`, `source_id UUID`, `metadata JSONB NOT NULL DEFAULT '{}'`
+- Partial unique index `(user_id, event_type, source_id) WHERE source_id IS NOT NULL` — idempotency
+- `get_level_number(p_xp INTEGER)` IMMUTABLE — XP → level integer. Formula: XP to advance level N = `floor(100 × N^1.5)`
+- `get_level_info(p_xp INTEGER)` IMMUTABLE — returns `{level, xp_in_level, xp_for_next, progress_pct}` JSONB
+- `award_xp(p_user_id, p_xp_amount, p_event_type, p_source_type, p_source_id?, p_metadata?)` SECURITY DEFINER RPC:
+  - Auth guard: service role (null `auth.uid()`) may award for any user; authenticated callers may only award for themselves
+  - Arena validation: if `source_type='arena'`, verifies `arena_sessions.status='completed'` and user is in `arena_session_players`
+  - Daily soft cap: `≥20 distinct source_ids today → 0.5×`; `≥10 → 0.7×`
+  - Repeat opponent penalty: `≥3 unique sessions vs same opponent_id today → 0.5×` (stacks multiplicatively)
+  - Idempotent: ON CONFLICT DO NOTHING on the partial unique index → returns `{awarded_xp:0, duplicate:true}`
+  - Returns `{awarded_xp, new_total_xp, new_level, multiplier, duplicate:false}` on success
+- Backfill: `total_xp` from existing `player_xp_events`; `level` from `total_xp`
+- GRANT EXECUTE to `authenticated` + `service_role`
+
+**Deploy order for Phase 2:**
+1. Run `035_xp_system.sql` in Supabase SQL editor ✅
+2. Wire `award_xp()` in `arena-session.html` `showCompleteOverlay()` ✅
+3. Add XP bar + level badge to `dashboard.html` and `profile.html` ✅
+
+---
+
+### 2026-04-30 — Phase 2: Global XP system wired end-to-end
+
+**Goal:** make XP awards and the level bar visible to users following an arena session, and surface the level/progress on the two main player-facing pages.
+
+**`arena-session.html`:**
+- `showCompleteOverlay()` made `async`
+- `winner_user_id` from `sessionData` is now the authoritative win/loss signal. Score comparison (`myScore > oppScore`) is only the fallback when `winner_user_id` is null (2v2 sessions where `winning_team_number` is used instead)
+- `awardSessionXp(iWon, isDraw)` helper added — calls `window.sb.rpc('award_xp', {...})` with: `p_event_type = 'arena_win' | 'arena_draw' | 'arena_loss'`, `p_xp_amount = 50 | 25 | 15`, `p_source_type = 'arena'`, `p_source_id = currentSessionId`. Idempotent — duplicate calls return `{duplicate:true}` and are silently ignored
+- `renderScores(myXp)` extracted as an inner function — called immediately with `null` (overlay appears at once without waiting for the RPC), then called again with the real `awarded_xp` once the RPC resolves
+- `+N XP` pill (`.as-xp-earned`) rendered in the "You" score card when XP is returned; hidden for the opponent
+- `XP_WIN = 50, XP_DRAW = 25, XP_LOSS = 15` constants added
+- Graceful degradation: `awardSessionXp()` catches all errors and returns `null` — overlay is never blocked
+
+**`spontix-store.js`:**
+- `_mapUserFromDb()` extended: `total_xp: row.total_xp != null ? row.total_xp : null` and `level: row.level != null ? row.level : null` added. Both fields were previously dropped by the mapper even though `getProfile()` uses `select('*')` which retrieves them
+
+**`dashboard.html`:**
+- CSS: `.xp-bar-wrap`, `.xp-level-badge`, `.xp-bar-track`, `.xp-bar-fill`, `.xp-bar-label` added
+- HTML: `<div id="dash-xp-bar-wrap" style="display:none">` injected inside `.profile-preview-info` after the tier badge
+- `renderXpBar(totalXp, level)` function added — mirrors the DB `get_level_number()` formula in JS (`XP to advance level N = floor(100 × N^1.5)`); computes `xpInLevel`, `xpForNext`, progress %
+- `applyRealProfile()` calls `renderXpBar(profile.total_xp, profile.level)` when `total_xp != null`
+
+**`profile.html`:**
+- Same CSS classes added (after `.profile-meta-item strong`)
+- HTML: `<div id="prof-xp-bar-wrap" style="display:none">` injected inside `.profile-header-info` after `.profile-header-meta`
+- `renderXpBar(totalXp, level)` function added (identical formula, uses `prof-xp-*` IDs)
+- `hydrateProfile()` calls `renderXpBar(player.total_xp, player.level)` when `total_xp != null`
+- All async refresh paths (`spontix-profile-refreshed` event, public profile load, game-history refresh) go through `hydrateProfile()` — all wired
+
+**XP bar display rules:**
+- Hidden (`display:none`) until `total_xp` is non-null — no broken UI for pre-migration rows or users with no XP yet
+- Level badge: circular gradient (lime → teal), shows level number
+- Progress bar: fills left-to-right, lime → teal gradient, 0.6s ease transition
+- Label: `"xpInLevel / xpForNext XP"`
+- Level cap: formula runs to level 99 (same as DB `get_level_number()` hard cap at 100)
+
+---
+
+### 2026-04-30 — Arena Streak UI
+
+**Goal:** surface the current correct-answer streak visually inside the arena session so players are aware of their multiplier status without reading a number.
+
+**`arena-session.html`:**
+- `currentMyStreak` global var tracks the live streak count (incremented on correct answer resolution, reset on wrong)
+- `updateStreakUI(streak)` — updates the streak badge in the scoreboard; badge hidden when streak = 0; shows "🔥 N" when active
+- Streak notif — pops up from the bottom-right when a new streak milestone is crossed (2, 3, 4+); auto-dismisses in 2.5s
+- `renderScoreboard()` calls `updateStreakUI(currentMyStreak)` on every refresh
+- `loadQuestions()` computes `currentMyStreak` from resolved correct answers in `myAnswers` (already loaded; no extra DB query)
+
+**Design rules:**
+- Display-only — reads existing `streak_at_answer` concept but does not write any new DB columns
+- No backend, resolver, or scoring changes
+
+---
+
+### 2026-04-30 — Arena Comeback UI
+
+**Goal:** show players when they are in a comeback scoring window and which multiplier tier is active (×1.1 / ×1.2 / ×1.3), matching the backend `computeComebackMultiplier()` tiers exactly.
+
+**`arena-session.html` — CSS:**
+- `.as-eng-badge.comeback` — teal (`#4ECDC4`) tinted badge for standard comeback tiers
+- `.as-eng-badge.comeback-max` — same teal + `as-pulse` animation for 100+ gap (×1.3 cap)
+- `.as-comeback-line` — small secondary line under the scoreboard score showing comeback status
+- `.as-comeback-notif` — fixed-position popup (bottom-right, above streak notif) that slides in on answer submission
+
+**`arena-session.html` — HTML:**
+- `<div class="as-comeback-line" id="as-my-comeback">` injected in scoreboard after `#as-my-streak`
+- `<div class="as-comeback-notif" id="as-comeback-notif">` injected after `#as-streak-notif`
+
+**`arena-session.html` — JS:**
+- `getComeback(myScore, oppScore)` — returns `null` when gap ≤ 20 (no bonus), otherwise `{ gap, multLabel, copyLabel, popupLabel, isMax }` per tier:
+  - Gap 21–50 → ×1.1, "Comeback window"
+  - Gap 51–100 → ×1.2, "Big comeback window"
+  - Gap 100+ → ×1.3, "Massive comeback window", `isMax: true`
+- `updateComebackUI(myScore, oppScore)` — updates `#as-my-comeback` text; clears when no comeback
+- `showComebackNotif(myScore, oppScore)` — shows popup with tier label; auto-dismisses in 3.5s
+- `renderScoreboard()` calls `updateComebackUI(myScore, oppScore)` on every refresh
+- `renderCard()` pushes comeback badge when `me` and `opp` both found in `players[]` and gap qualifies
+- `handleAnswer()` calls `showComebackNotif()` on first answer only (not on answer change)
+
+**Design rules:**
+- Gap read from live `players[]` scores at render time — no extra DB queries
+- Wording is positive ("Comeback window" not "You are losing") — avoids negativity
+- Card badge shows the multiplier label inline: `COMEBACK ×1.1` etc.
+- Display-only — no backend, resolver, schema, or scoring changes
+
+---
+
+### 2026-04-30 — Arena Clutch UI accuracy fix
+
+**Goal:** make the CLUTCH badge in `arena-session.html` mirror the backend `isClutchAnswer()` definition exactly, rather than using the simpler `match_minute_at_generation >= 70` proxy which was incorrect for `first_half` sessions and ignored match competitiveness entirely.
+
+**Backend definition (source of truth, not changed):**
+- `isClutchAnswer()` in `resolve-questions/lib/clutch-detector.ts`: CLUTCH = (1) match in clutch window AND (2) match is competitive (goal diff ≤ 1 OR leader_gap ≤ 20)
+- Clutch window: `first_half` → minute ≥ 35; `second_half` / `full_match` → minute ≥ 80
+
+**`arena-session.html` changes:**
+
+*`loadQuestions()` SELECT:*
+- `'clutch_context'` added to the `cols` array — fetches the JSONB snapshot (`{ matchMinute, homeScore, awayScore }`) written by the generator at question creation time
+
+*`isDisplayClutch(q)` helper (new function before Cleanup section):*
+```
+1. LIVE questions only (question_type === 'CORE_MATCH_LIVE')
+2. match_minute_at_generation present + in clutch window
+   - half_scope === 'first_half' → minute >= 35
+   - all others → minute >= 80
+3A. clutch_context present with homeScore + awayScore → show if |diff| <= 1
+3B. Both players present in players[] → show if |me.score - opp.score| <= 20
+    (ONLY if both found — missing opponent data never defaults to close)
+4. Any required signal missing → return false (hide safely)
+```
+
+*`renderCard()` — two replacements:*
+- Card `.clutch-state` class: `(q.match_minute_at_generation || 0) >= 70` → `isDisplayClutch(q)`
+- Clutch badge push: same replacement
+
+**What was NOT changed:**
+- Backend `isClutchAnswer()`, `clutch_multiplier_at_answer`, scoring formula, `clutch_context` JSONB schema, DB, resolver, XP system — none touched
+
+---
+
+### 2026-05-01 — Arena completion overlay: Question Results Breakdown
+
+**Goal:** give players a full post-game review of every question in the session so they can understand their score and learn from mistakes.
+
+**`arena-session.html`:**
+- `player_answers` SELECT extended: `multiplier_breakdown`, `is_clutch`, `streak_at_answer`, `leader_gap_at_answer` added alongside existing columns
+- `renderQuestionReview()` new function — called from `showCompleteOverlay()` after the overlay becomes visible:
+  - Reads `currentQuestions` + `myAnswers`; sorts questions ascending by `created_at`
+  - Per question: determines state (`correct` / `wrong` / `missed` / `pending`) from `myAnswers[q.id].is_correct` + `q.resolution_status`
+  - Badge labels: `✓ Correct` / `✗ Wrong` / `— Missed` / `… Awaiting`
+  - Answer rows: "Your pick" (colour-coded `highlight-correct` / `highlight-wrong`) + "Answer" (always lime) when resolved
+  - Points pill: `+N pts` (lime) when correct + points > 0; `0 pts` (grey) otherwise
+  - Tags: `Clutch` (from `a.is_clutch`), `Streak ×N` (when `streak_at_answer >= 3`), `Comeback` (when `leader_gap_at_answer > 20`), `Hard` (when `difficulty_multiplier > 1.1`)
+  - Writes to `#as-qreview` inside `.as-complete-inner`
+
+**New CSS (`.as-qr-*` prefix):**
+- `.as-qreview-section`, `.as-qreview-title`, `.as-qr-card` (correct/wrong/missed/pending variants)
+- `.as-qr-top`, `.as-qr-badge`, `.as-qr-qtext`, `.as-qr-answers`, `.as-qr-answer-row`
+- `.as-qr-answer-label`, `.as-qr-answer-val` (`.highlight-correct` / `.highlight-wrong`)
+- `.as-qr-footer`, `.as-qr-pts` (`.zero` variant), `.as-qr-tag` (clutch/streak/comeback/diff)
+- `.as-qreview-empty` — shown when no questions to review
+
+**Overlay layout change:** `.as-complete-overlay` made `overflow-y: auto` so the question list is scrollable without the overlay itself being scroll-clipped.
+
+**No backend changes.** No DB schema changes. No resolver or scoring changes.
+
+---
+
+### 2026-05-01 — Arena in-session Question History panel
+
+**Goal:** let players review past questions without leaving the live session feed, and surface a notification when a new live question drops while the drawer is open.
+
+**`arena-session.html`:**
+
+*New global state:*
+- `var historyOpen = false;` — tracks drawer open state
+- `var historyHasNewQ = false;` — tracks whether the new-question indicator is active; cleared on close
+
+*New functions:*
+- `openHistory()` — adds `.open` to `#as-hist-overlay`; calls `renderHistory()`
+- `closeHistory()` — removes `.open`; clears `historyHasNewQ`; removes `.has-new` + banner `.show`
+- `renderHistory()` — filters `currentQuestions` to exclude questions with open answer window (`answer_closes_at > now`); sorts remaining newest-first; builds card HTML using the same `.as-qr-card` pattern as `renderQuestionReview()`; writes to `#as-hist-body`. Shows `.as-hist-empty` when no past questions yet.
+
+*New-question hook (inside `loadQuestions()`, after `renderFeed()`):*
+- When `historyOpen` and an active question exists and `historyHasNewQ` is false: sets flag, adds `.show` to `#as-hist-new-banner`, adds `.has-new` to `#as-hist-btn`
+
+*Floating `≡ History` button (`.as-hist-btn`):*
+- `position: fixed; right: 16px; bottom: max(18px, env(safe-area-inset-bottom))` — never overlaps iPhone home bar
+- Default: semi-transparent dark pill. When `.has-new`: lime border + lime text + pulsing dot
+
+*Bottom-sheet drawer (`.as-hist-overlay`):*
+- `position: fixed; bottom: 0; max-height: 75vh` — slides up via CSS transform on `.open`
+- Handle bar + header ("Question History" title + ✕ close button)
+- Lime `"⚡ Live question available — close to answer"` banner (`#as-hist-new-banner`) — tapping it calls `closeHistory()` so the player can answer immediately
+- Scrollable body (`#as-hist-body`) — question cards identical in structure to completion overlay breakdown
+
+*z-index layering:* history button at 160, history overlay at 155, complete overlay at 200 (history never overlaps game-over screen).
+
+**New CSS (`.as-hist-*` prefix):**
+`@keyframes as-hist-slide`, `.as-hist-btn` (with `.has-new` variant), `.as-hist-dot`, `.as-hist-overlay` (with `.open` variant), `.as-hist-handle`, `.as-hist-header`, `.as-hist-title`, `.as-hist-close`, `.as-hist-new-banner` (with `.show` variant), `.as-hist-body`, `.as-hist-empty`
+
+**No backend changes.** No DB schema changes. No resolver or scoring changes.

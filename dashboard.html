@@ -268,6 +268,23 @@
     }
     .profile-preview-link:hover { border-color: rgba(168,225,12,0.3); color: var(--off-white); }
     .profile-preview-link svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none; }
+    .xp-bar-wrap { margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+    .xp-level-badge { flex-shrink: 0; width: 26px; height: 26px; border-radius: 50%; background: linear-gradient(135deg, var(--lime), var(--teal)); display: flex; align-items: center; justify-content: center; font-size: 0.6rem; font-weight: 900; color: var(--navy); }
+    .xp-bar-track { flex: 1; height: 5px; background: rgba(255,255,255,0.08); border-radius: 3px; overflow: hidden; }
+    .xp-bar-fill { height: 100%; background: linear-gradient(90deg, var(--lime), var(--teal)); border-radius: 3px; transition: width 0.6s ease; }
+    .xp-bar-label { flex-shrink: 0; font-size: 0.6rem; color: var(--grey); white-space: nowrap; }
+    .arena-rating-row { margin-top: 8px; display: flex; align-items: center; gap: 8px; }
+    .arena-rating-badge { flex-shrink: 0; padding: 2px 9px; border-radius: 20px; font-size: 0.62rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; }
+    .arena-tier-rookie    { background: rgba(255,255,255,0.07);  color: rgba(255,255,255,0.5); }
+    .arena-tier-bronze    { background: rgba(205,127,50,0.15);   color: #CD7F32; }
+    .arena-tier-silver    { background: rgba(192,192,192,0.15);  color: #C0C0C0; }
+    .arena-tier-gold      { background: rgba(255,215,0,0.15);    color: #FFD700; }
+    .arena-tier-platinum  { background: rgba(78,205,196,0.15);   color: #4ECDC4; }
+    .arena-tier-diamond   { background: rgba(100,149,237,0.15);  color: #6495ED; }
+    .arena-tier-master    { background: rgba(168,225,12,0.15);   color: #A8E10C; }
+    .arena-tier-grandmaster { background: rgba(255,107,107,0.15); color: #FF6B6B; }
+    .arena-tier-legend    { background: rgba(124,92,252,0.2);    color: #7C5CFC; }
+    .arena-rating-num { font-size: 0.72rem; font-weight: 700; color: rgba(255,255,255,0.55); }
 
     @media (max-width: 700px) {
       .profile-preview { flex-wrap: wrap; }
@@ -322,6 +339,15 @@
         <div class="profile-preview-name">Bran</div>
         <div class="profile-preview-handle">@bran_predicts</div>
         <span class="profile-preview-tier">Pro (Trial)</span>
+        <div class="xp-bar-wrap" id="dash-xp-bar-wrap" style="display:none;">
+          <div class="xp-level-badge" id="dash-xp-level">1</div>
+          <div class="xp-bar-track"><div class="xp-bar-fill" id="dash-xp-fill" style="width:0%"></div></div>
+          <div class="xp-bar-label" id="dash-xp-label">0 / 100 XP</div>
+        </div>
+        <div class="arena-rating-row" id="dash-arena-rating-row" style="display:none;">
+          <div class="arena-rating-badge arena-tier-rookie" id="dash-arena-tier">Rookie</div>
+          <div class="arena-rating-num" id="dash-arena-rating-num">500 SR</div>
+        </div>
       </div>
       <div class="pp-divider"></div>
       <div class="profile-preview-stats">
@@ -492,6 +518,49 @@
     // Sidebar also uses username
     var sidebarName = document.querySelector('.sidebar-profile-name');
     if (sidebarName) sidebarName.textContent = displayName;
+    // XP bar — populate from profile if columns exist
+    if (profile.total_xp != null) renderXpBar(profile.total_xp, profile.level);
+    if (profile.arena_rating != null) renderArenaRating(profile.arena_rating, profile.arena_games_played);
+  }
+
+  function renderXpBar(totalXp, level) {
+    var wrap = document.getElementById('dash-xp-bar-wrap');
+    if (!wrap) return;
+    // Compute xp_in_level and xp_for_next using the same formula as get_level_number()
+    var lvl = level || 1;
+    var cumulative = 0;
+    for (var k = 1; k < lvl; k++) cumulative += Math.floor(100 * Math.pow(k, 1.5));
+    var xpInLevel  = (totalXp || 0) - cumulative;
+    var xpForNext  = Math.floor(100 * Math.pow(lvl, 1.5));
+    var pct        = Math.min(100, Math.round((xpInLevel / Math.max(xpForNext, 1)) * 100));
+    document.getElementById('dash-xp-level').textContent = lvl;
+    document.getElementById('dash-xp-fill').style.width  = pct + '%';
+    document.getElementById('dash-xp-label').textContent = xpInLevel + ' / ' + xpForNext + ' XP';
+    wrap.style.display = 'flex';
+  }
+
+  function getArenaTier(rating) {
+    if (rating >= 3000) return { label: 'Legend',      cls: 'arena-tier-legend' };
+    if (rating >= 2600) return { label: 'Grandmaster', cls: 'arena-tier-grandmaster' };
+    if (rating >= 2200) return { label: 'Master',      cls: 'arena-tier-master' };
+    if (rating >= 1900) return { label: 'Diamond',     cls: 'arena-tier-diamond' };
+    if (rating >= 1700) return { label: 'Platinum',    cls: 'arena-tier-platinum' };
+    if (rating >= 1400) return { label: 'Gold',        cls: 'arena-tier-gold' };
+    if (rating >= 1100) return { label: 'Silver',      cls: 'arena-tier-silver' };
+    if (rating >= 800)  return { label: 'Bronze',      cls: 'arena-tier-bronze' };
+    return                       { label: 'Rookie',    cls: 'arena-tier-rookie' };
+  }
+
+  function renderArenaRating(rating, gamesPlayed) {
+    var row = document.getElementById('dash-arena-rating-row');
+    if (!row || rating == null) return;
+    var tier = getArenaTier(rating);
+    var badge = document.getElementById('dash-arena-tier');
+    badge.textContent = tier.label;
+    badge.className   = 'arena-rating-badge ' + tier.cls;
+    document.getElementById('dash-arena-rating-num').textContent =
+      rating + ' SR' + (gamesPlayed > 0 ? ' · ' + gamesPlayed + ' played' : '');
+    row.style.display = 'flex';
   }
 
   function escHtml(s) {

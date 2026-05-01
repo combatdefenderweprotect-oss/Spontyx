@@ -502,6 +502,20 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  // ── Trigger live question generation if any live fixtures were updated ──────
+  // Fire-and-forget — don't await; poller response must return quickly.
+  // Only triggers when at least one live fixture was successfully polled so we
+  // don't burn OpenAI quota on runs where nothing was updated.
+  if (stats.polled > 0) {
+    const genUrl = `${SUPABASE_URL}/functions/v1/generate-questions?live_only=1`
+    fetch(genUrl, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${CRON_SECRET}` },
+    }).catch((err) => {
+      console.warn('[live-stats-poller] live generation trigger failed:', err)
+    })
+  }
+
   return new Response(
     JSON.stringify({ ok: true, fixtures: fixtureIds.size, ...stats }),
     { status: 200, headers: { 'Content-Type': 'application/json' } }

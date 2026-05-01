@@ -3,6 +3,8 @@ import { fetchMatchStats, needsPlayerStats } from './lib/stats-fetcher/index.ts'
 import { evaluatePredicate }                 from './lib/predicate-evaluator.ts';
 import type { MatchStats }                   from './lib/predicate-evaluator.ts';
 import { verifyRealWorldOutcome, isAiResultResolvable } from './lib/ai-verifier.ts';
+import { isClutchAnswer, CLUTCH_XP, CLUTCH_MILESTONES } from './lib/clutch-detector.ts';
+import type { ClutchContext } from './lib/clutch-detector.ts';
 
 // ── Environment ───────────────────────────────────────────────────────
 const SUPABASE_URL     = Deno.env.get('SUPABASE_URL')!;
@@ -32,7 +34,7 @@ Deno.serve(async (req: Request) => {
   const { data: questions, error: fetchErr } = await sb
     .from('questions')
     .select([
-      'id', 'league_id', 'type', 'question_type', 'sport', 'options', 'resolution_predicate',
+      'id', 'league_id', 'arena_session_id', 'type', 'question_type', 'sport', 'options', 'resolution_predicate',
       // Scoring metadata (added by migration 006)
       'base_value', 'difficulty_multiplier',
       'answer_closes_at', 'deadline',
@@ -40,6 +42,8 @@ Deno.serve(async (req: Request) => {
       'resolution_deadline', 'confidence_level',
       // AI fallback resolution fields
       'question_text', 'resolution_condition',
+      // Clutch detection (added by migration 032)
+      'clutch_context',
     ].join(', '))
     .eq('resolution_status', 'pending')
     .lt('resolves_after', new Date().toISOString())
@@ -54,6 +58,35 @@ Deno.serve(async (req: Request) => {
 
   if (!questions || questions.length === 0) {
     return new Response(JSON.stringify({ ok: true, resolved: 0, voided: 0, skipped: 0 }), { status: 200 });
+  }
+
+  // ── Pre-load arena session statuses ──────────────────────────────────
+  // One query for the whole batch; O(1) lookup per question in the loop.
+  // If the query fails we must NOT allow arena questions to resolve with
+  // unverified session state — fail safe by voiding them all.
+  const arenaSessionIds = [...new Set(
+    questions
+      .map((q: any) => q.arena_session_id)
+      .filter(Boolean),
+  )] as string[];
+
+  const arenaSessionStatusMap = new Map<string, string>();
+  let   arenaStatusLookupFailed = false;
+
+  if (arenaSessionIds.length > 0) {
+    const { data: arenaSessions, error: arenaErr } = await sb
+      .from('arena_sessions')
+      .select('id, status')
+      .in('id', arenaSessionIds);
+
+    if (arenaErr) {
+      console.error('[resolve] arena_session_status_lookup_error:', arenaErr.message);
+      arenaStatusLookupFailed = true;
+    } else {
+      for (const s of (arenaSessions ?? [])) {
+        arenaSessionStatusMap.set(s.id, s.status);
+      }
+    }
   }
 
   // ── Cache match stats by (sport:matchId) to avoid duplicate API calls ─
@@ -71,6 +104,27 @@ Deno.serve(async (req: Request) => {
     const matchId = pred.match_id ? String(pred.match_id) : null;
 
     try {
+      // ── Arena session guard ───────────────────────────────────────────
+      // Arena questions resolve only when their session is active.
+      // If the status lookup failed entirely, void all arena questions in
+      // this batch rather than risk scoring against a dead session.
+      if (q.arena_session_id) {
+        if (arenaStatusLookupFailed) {
+          console.log(`[resolve] arena_session_status_lookup_failed question=${q.id} arena_session_id=${q.arena_session_id}`);
+          await voidQuestion(sb, q.id, 'arena_session_status_lookup_failed');
+          runStats.voided++;
+          continue;
+        }
+
+        const sessionStatus = arenaSessionStatusMap.get(q.arena_session_id);
+        if (sessionStatus !== 'active') {
+          console.log(`[resolve] arena_question_voided_session_not_active question=${q.id} arena_session_id=${q.arena_session_id} session_status=${sessionStatus ?? 'not_found'}`);
+          await voidQuestion(sb, q.id, 'arena_session_not_active');
+          runStats.voided++;
+          continue;
+        }
+      }
+
       // ── REAL_WORLD deadline auto-void ─────────────────────────────────
       // If resolution_deadline has passed (+ 1-hour grace), void the question.
       // This covers both manual_review and match_lineup questions that were
@@ -365,7 +419,8 @@ function computeComebackMultiplier(leaderGapAtAnswer: number | null): number {
 }
 
 // Mark each player_answer row as correct or incorrect and award points
-// using the full multi-factor scoring formula.
+// using the full multi-factor scoring formula. Also runs clutch detection
+// for CORE_MATCH_LIVE correct answers and awards XP when earned.
 async function markCorrectAnswers(
   sb:      any,
   q:       any,      // full question row including scoring metadata
@@ -392,14 +447,15 @@ async function markCorrectAnswers(
   const closesAt   = (q.answer_closes_at as string | null) ?? null;
   const deadlineFb = (q.deadline as string | null) ?? null;
 
+  const clutchCtx = (q.clutch_context ?? null) as ClutchContext | null;
   const now = new Date().toISOString();
 
-  const updates = answers.map((a: any) => {
+  for (const a of answers) {
     const isCorrect = (a.answer === outcome);
 
     if (!isCorrect) {
       // Wrong answer: 0 points, no streak penalty here (streak reset happens at next answer)
-      return sb.from('player_answers').update({
+      await sb.from('player_answers').update({
         is_correct:           false,
         points_earned:        0,
         resolved_at:          now,
@@ -414,6 +470,7 @@ async function markCorrectAnswers(
           note:          'wrong_answer',
         },
       }).eq('id', a.id);
+      continue;
     }
 
     // ── Correct answer: apply formula ─────────────────────────────────
@@ -428,10 +485,19 @@ async function markCorrectAnswers(
       Math.round(baseValue * timePressure * difficulty * streak * comeback * clutch),
     );
 
-    return sb.from('player_answers').update({
+    // ── Clutch detection ──────────────────────────────────────────────
+    const clutchResult = isClutchAnswer({
+      questionType:      q.question_type ?? null,
+      isCorrect:         true,
+      clutchContext:     clutchCtx,
+      leaderGapAtAnswer: a.leader_gap_at_answer ?? null,
+    });
+
+    await sb.from('player_answers').update({
       is_correct:    true,
       points_earned: finalPts,
       resolved_at:   now,
+      is_clutch:     clutchResult.isClutch,
       multiplier_breakdown: {
         base_value:    baseValue,
         time_pressure: timePressure,
@@ -440,9 +506,78 @@ async function markCorrectAnswers(
         comeback,
         clutch,
         total:         finalPts,
+        is_clutch:     clutchResult.isClutch,
       },
     }).eq('id', a.id);
+
+    // ── Propagate score to arena_session_players (arena sessions only) ──
+    // arena_session_players.score drives the live scoreboard and the
+    // update_arena_ratings() ELO function; must be kept in sync atomically.
+    if (q.arena_session_id && finalPts > 0) {
+      const { error: arenaScoreErr } = await sb.rpc('increment_arena_player_score', {
+        p_session_id: q.arena_session_id,
+        p_user_id:    a.user_id,
+        p_points:     finalPts,
+      });
+      if (arenaScoreErr) {
+        console.warn('[resolve-questions] arena score increment failed:', arenaScoreErr.message,
+          'session:', q.arena_session_id, 'user:', a.user_id);
+      }
+    }
+
+    // ── Clutch XP + achievement hooks ─────────────────────────────────
+    if (clutchResult.isClutch) {
+      await awardClutchXp(sb, a.user_id, q.id, q.resolution_predicate?.match_id ?? null);
+    }
+  }
+}
+
+// Award +15 XP for a clutch answer, increment counter, fire achievement hooks.
+// Routes through award_xp RPC for idempotency (source_id = questionId), anti-abuse,
+// and atomic users.total_xp update. The unique index on (user_id, event_type, source_id)
+// prevents double-awarding if the resolver is re-run.
+async function awardClutchXp(
+  sb:         any,
+  userId:     string,
+  questionId: string,
+  matchId:    string | null,
+) {
+  const { data: xpResult, error: xpErr } = await sb.rpc('award_xp', {
+    p_user_id:     userId,
+    p_xp_amount:   CLUTCH_XP,
+    p_event_type:  'clutch_answer',
+    p_source_type: 'question',
+    p_source_id:   questionId,
+    p_metadata:    matchId ? { match_id: matchId, question_id: questionId } : { question_id: questionId },
   });
 
-  await Promise.all(updates);
+  if (xpErr) {
+    console.warn(`[resolve] clutch XP award_xp failed for user ${userId} question ${questionId}:`, xpErr.message);
+    return;
+  }
+
+  if (xpResult?.duplicate) {
+    // Already awarded in a prior resolver run — idempotent, no action needed.
+    return;
+  }
+
+  // Increment users.clutch_answers and read the new value for achievement check
+  const { data: updated, error: incErr } = await sb.rpc('increment_clutch_answers', { p_user_id: userId });
+  if (incErr) {
+    console.warn(`[resolve] clutch_answers increment failed for user ${userId}:`, incErr.message);
+    return;
+  }
+
+  const newCount: number = updated ?? 0;
+
+  console.log(
+    `[resolve] clutch_answer awarded — user=${userId} question=${questionId} ` +
+    `xp=+${xpResult?.awarded_xp ?? CLUTCH_XP} new_total_xp=${xpResult?.new_total_xp} ` +
+    `level=${xpResult?.new_level} total_clutch=${newCount}`,
+  );
+
+  if (CLUTCH_MILESTONES.has(newCount)) {
+    console.log(`[resolve] clutch_milestone reached — user=${userId} milestone=${newCount}`);
+    // Achievement hook placeholder — badge/notification system wired here post-MVP
+  }
 }

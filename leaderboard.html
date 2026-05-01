@@ -221,7 +221,104 @@
       .content { padding: 20px 16px; }
       .lb-table th:nth-child(4), .lb-table td:nth-child(4),
       .lb-table th:nth-child(5), .lb-table td:nth-child(5) { display: none; }
-    }</style>
+    }
+
+    /* ══ ARENA LEADERBOARD ══ */
+    .ar-hero {
+      background: linear-gradient(135deg, rgba(168,225,12,0.06) 0%, rgba(78,205,196,0.04) 100%);
+      border: 1px solid rgba(168,225,12,0.12); border-radius: var(--radius-lg);
+      padding: 24px 28px; margin-bottom: 24px; display: flex; align-items: center; gap: 20px;
+    }
+    .ar-hero-icon {
+      width: 52px; height: 52px; border-radius: var(--radius-md); flex-shrink: 0;
+      background: rgba(168,225,12,0.1); display: flex; align-items: center; justify-content: center;
+    }
+    .ar-hero-icon svg { width: 26px; height: 26px; stroke: var(--lime); stroke-width: 2; fill: none; }
+    .ar-hero-info { flex: 1; }
+    .ar-hero-title { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.3px; }
+    .ar-hero-sub { font-size: 0.78rem; color: var(--grey); margin-top: 3px; }
+    .ar-hero-badge {
+      padding: 5px 14px; border-radius: var(--radius-pill);
+      background: rgba(168,225,12,0.1); color: var(--lime); font-size: 0.72rem; font-weight: 700;
+      border: 1px solid rgba(168,225,12,0.2); white-space: nowrap;
+    }
+    .ar-tier-badge {
+      display: inline-block; padding: 3px 10px; border-radius: var(--radius-pill);
+      font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.4px;
+    }
+    .ar-tier-rookie      { background: rgba(120,120,140,0.15); color: #8888A0; }
+    .ar-tier-bronze      { background: rgba(205,127,50,0.15);  color: #CD7F32; }
+    .ar-tier-silver      { background: rgba(168,168,179,0.15); color: #A8A8B3; }
+    .ar-tier-gold        { background: rgba(255,215,0,0.15);   color: #FFD700; }
+    .ar-tier-platinum    { background: rgba(78,205,196,0.15);  color: var(--teal); }
+    .ar-tier-diamond     { background: rgba(124,92,252,0.15);  color: var(--purple); }
+    .ar-tier-master      { background: rgba(192,132,252,0.15); color: #C084FC; }
+    .ar-tier-grandmaster { background: rgba(224,110,255,0.15); color: #E06EFF; }
+    .ar-tier-legend      { background: rgba(168,225,12,0.12);  color: var(--lime); }
+    .ar-podium { display: flex; align-items: flex-end; justify-content: center; gap: 12px; margin-bottom: 28px; padding: 20px 0; }
+    .ar-podium-card { display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .ar-podium-avatar {
+      width: 56px; height: 56px; border-radius: 50%; display: flex;
+      align-items: center; justify-content: center; font-weight: 800;
+      font-size: 0.9rem; margin-bottom: 8px; position: relative;
+    }
+    .ar-podium-card.first .ar-podium-avatar {
+      width: 68px; height: 68px; font-size: 1.1rem;
+      box-shadow: 0 0 24px rgba(168,225,12,0.3);
+    }
+    .ar-podium-name  { font-size: 0.82rem; font-weight: 700; margin-bottom: 2px; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ar-podium-rating { font-size: 0.7rem; font-weight: 700; color: var(--lime); margin-bottom: 4px; }
+    .ar-podium-tier  { margin-bottom: 6px; }
+    .ar-podium-bar   { width: 80px; border-radius: 8px 8px 0 0; margin-top: 8px; }
+    .ar-podium-card.first  .ar-podium-bar { height: 100px; background: linear-gradient(180deg, var(--lime), rgba(168,225,12,0.3)); }
+    .ar-podium-card.second .ar-podium-bar { height: 72px;  background: linear-gradient(180deg, var(--purple), rgba(124,92,252,0.25)); }
+    .ar-podium-card.third  .ar-podium-bar { height: 52px;  background: linear-gradient(180deg, var(--teal), rgba(78,205,196,0.25)); }
+    .ar-podium-rank {
+      font-size: 0.65rem; font-weight: 800; color: var(--navy); width: 22px; height: 22px;
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      margin-top: -11px; position: relative; z-index: 1;
+    }
+    .ar-podium-card.first  .ar-podium-rank { background: var(--lime); }
+    .ar-podium-card.second .ar-podium-rank { background: var(--purple); color: #fff; }
+    .ar-podium-card.third  .ar-podium-rank { background: var(--teal); }
+    .ar-table { width: 100%; border-collapse: collapse; margin-bottom: 80px; }
+    .ar-table th {
+      text-align: left; font-size: 0.68rem; font-weight: 700; color: var(--grey-dark);
+      text-transform: uppercase; letter-spacing: 0.5px; padding: 10px 14px;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+    .ar-table th:first-child { width: 50px; text-align: center; }
+    .ar-table td { padding: 12px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 0.85rem; }
+    .ar-table tr { transition: background 0.1s; }
+    .ar-table tr:hover { background: rgba(255,255,255,0.02); }
+    .ar-table tr.you-row { background: var(--lime-dim); }
+    .ar-table tr.you-row td { font-weight: 700; }
+    .ar-loading { padding: 60px 20px; text-align: center; color: var(--grey); font-size: 0.85rem; }
+    .ar-empty { padding: 60px 20px; text-align: center; }
+    .ar-empty-icon { width: 64px; height: 64px; border-radius: 50%; background: rgba(168,225,12,0.08); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+    .ar-empty-icon svg { width: 28px; height: 28px; stroke: var(--lime); stroke-width: 1.8; fill: none; }
+    .ar-empty-title { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
+    .ar-empty-sub   { font-size: 0.82rem; color: var(--grey); margin-bottom: 20px; }
+    .ar-empty-btn {
+      display: inline-block; padding: 10px 24px; border-radius: var(--radius-pill);
+      background: var(--lime); color: var(--navy); font-weight: 700; font-size: 0.82rem;
+      text-decoration: none; transition: opacity 0.15s;
+    }
+    .ar-empty-btn:hover { opacity: 0.85; }
+    .ar-sticky-you {
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(120px);
+      background: var(--navy-card); border: 1px solid rgba(168,225,12,0.3);
+      border-radius: var(--radius-lg); padding: 12px 20px;
+      display: flex; align-items: center; gap: 14px;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 100;
+      transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1); min-width: 280px;
+    }
+    .ar-sticky-you.visible { transform: translateX(-50%) translateY(0); }
+    .ar-sticky-rank { font-size: 0.68rem; font-weight: 700; color: var(--grey); min-width: 36px; text-align: center; }
+    .ar-sticky-rank strong { font-size: 1rem; color: var(--lime); display: block; line-height: 1.1; }
+    .ar-sticky-name  { flex: 1; font-size: 0.85rem; font-weight: 700; }
+    .ar-sticky-rating { font-size: 0.85rem; font-weight: 800; color: var(--lime); white-space: nowrap; }
+    </style>
 </head>
 <body>
 
@@ -266,6 +363,10 @@
       <button class="view-tab" onclick="switchView('friends')">
         <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
         Friends
+      </button>
+      <button class="view-tab" onclick="switchView('arena')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9 12 2"/></svg>
+        Arena
       </button>
     </div>
 
@@ -561,9 +662,26 @@
       </table>
     </div>
 
+    <!-- ═══ ARENA VIEW ═══ -->
+    <div class="view-panel" id="view-arena">
+      <div class="ar-hero">
+        <div class="ar-hero-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9 12 2"/></svg>
+        </div>
+        <div class="ar-hero-info">
+          <div class="ar-hero-title">Arena Rankings</div>
+          <div class="ar-hero-sub">Live Multiplayer skill leaderboard · Earn Arena Rating in 1v1 &amp; 2v2 matches</div>
+        </div>
+        <div class="ar-hero-badge">1v1 / 2v2</div>
+      </div>
+      <div id="ar-podium-section"></div>
+      <div id="ar-table-section"></div>
+    </div>
+
   </div>
 </div>
 
+<div class="ar-sticky-you" id="ar-sticky-you"></div>
 <div class="toast" id="toast"></div>
 
 <script src="utils.js"></script>
@@ -634,6 +752,178 @@ async function loadLeaderboardData() {
   SpontixStore.applyAvatarsToPage();
 }
 
+// ── Arena leaderboard ──────────────────────────────────────────────────
+function getArenaTier(rating) {
+  if (rating >= 3000) return { label: 'Legend',      cls: 'ar-tier-legend'      };
+  if (rating >= 2600) return { label: 'Grandmaster', cls: 'ar-tier-grandmaster' };
+  if (rating >= 2200) return { label: 'Master',      cls: 'ar-tier-master'      };
+  if (rating >= 1900) return { label: 'Diamond',     cls: 'ar-tier-diamond'     };
+  if (rating >= 1700) return { label: 'Platinum',    cls: 'ar-tier-platinum'    };
+  if (rating >= 1400) return { label: 'Gold',        cls: 'ar-tier-gold'        };
+  if (rating >= 1100) return { label: 'Silver',      cls: 'ar-tier-silver'      };
+  if (rating >=  800) return { label: 'Bronze',      cls: 'ar-tier-bronze'      };
+  return                     { label: 'Rookie',      cls: 'ar-tier-rookie'      };
+}
+
+let arenaLoaded = false;
+let arenaData   = [];
+
+async function loadArenaLeaderboard() {
+  const podiumEl = document.getElementById('ar-podium-section');
+  const tableEl  = document.getElementById('ar-table-section');
+  if (podiumEl) podiumEl.innerHTML = '<div class="ar-loading">Loading arena rankings…</div>';
+  if (tableEl)  tableEl.innerHTML  = '';
+  try {
+    const { data, error } = await window.sb
+      .from('users')
+      .select('id, handle, name, arena_rating, arena_games_played')
+      .gt('arena_games_played', 0)
+      .order('arena_rating', { ascending: false })
+      .limit(100);
+    if (error) throw error;
+    arenaData = data || [];
+  } catch (e) {
+    console.warn('[leaderboard] arena load error', e);
+    arenaData = [];
+  }
+  arenaLoaded = true;
+  renderArenaLeaderboard(arenaData);
+}
+
+function renderArenaLeaderboard(data) {
+  const uid = SpontixStore.Session.getCurrentUserId();
+  const podiumEl = document.getElementById('ar-podium-section');
+  const tableEl  = document.getElementById('ar-table-section');
+  if (!podiumEl || !tableEl) return;
+
+  if (!data || data.length === 0) {
+    podiumEl.innerHTML = '';
+    tableEl.innerHTML = `<div class="ar-empty">
+      <div class="ar-empty-icon"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg></div>
+      <div class="ar-empty-title">No Arena rankings yet</div>
+      <div class="ar-empty-sub">Play your first Live Multiplayer match to enter the leaderboard.</div>
+      <a href="multiplayer.html" class="ar-empty-btn">Enter Arena</a>
+    </div>`;
+    hideArenaStickyCard();
+    return;
+  }
+
+  const avColors = [
+    'background:linear-gradient(135deg,var(--lime),var(--teal));color:var(--navy);',
+    'background:var(--purple);color:#fff;',
+    'background:var(--coral);color:#fff;',
+    'background:var(--teal);color:var(--navy);',
+    'background:rgba(124,92,252,0.2);color:var(--purple);',
+    'background:rgba(78,205,196,0.15);color:var(--teal);',
+    'background:rgba(255,107,107,0.15);color:var(--coral);',
+    'background:rgba(168,225,12,0.15);color:var(--lime);',
+  ];
+
+  function getInitials(name) {
+    if (!name) return '?';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return name.slice(0, 2).toUpperCase();
+  }
+
+  function getAvStyle(p, i) {
+    if (p.id === uid) return 'background:var(--lime);color:var(--navy);';
+    return avColors[i % avColors.length];
+  }
+
+  // Podium top-3: order is second, first, third
+  const podiumSlots = [
+    { p: data[1], cls: 'second', rank: 2 },
+    { p: data[0], cls: 'first',  rank: 1 },
+    { p: data[2], cls: 'third',  rank: 3 },
+  ];
+  podiumEl.innerHTML = `<div class="ar-podium">${podiumSlots.map(({ p, cls, rank }) => {
+    if (!p) return '';
+    const initials = getInitials(p.name);
+    const isYou = p.id === uid;
+    const tier = getArenaTier(p.arena_rating);
+    const avIdx = data.indexOf(p);
+    const avStyle = getAvStyle(p, avIdx);
+    const avCls = isYou ? 'ar-podium-avatar av-self' : 'ar-podium-avatar av-user';
+    const avAttr = isYou ? '' : ` data-name="${initials}"`;
+    const crown = cls === 'first' ? '<span class="podium-crown"><svg viewBox="0 0 24 24"><path d="M2 20h20L18 8l-4 5-2-9-2 9-4-5z"/></svg></span>' : '';
+    const youTag = isYou ? ' <span style="font-size:0.6rem;color:var(--lime);font-weight:700;">(You)</span>' : '';
+    return `<div class="ar-podium-card ${cls}">
+      <div class="${avCls}"${avAttr} style="${avStyle}">${crown}${initials}</div>
+      <div class="ar-podium-name">${p.name || p.handle || '—'}${youTag}</div>
+      <div class="ar-podium-rating">${p.arena_rating.toLocaleString()} Arena Rating</div>
+      <div class="ar-podium-tier"><span class="ar-tier-badge ${tier.cls}">${tier.label}</span></div>
+      <div class="ar-podium-bar"></div>
+      <div class="ar-podium-rank">${rank}</div>
+    </div>`;
+  }).join('')}</div>`;
+
+  let myRank = -1;
+  const tableRows = data.map((p, i) => {
+    const initials = getInitials(p.name);
+    const isYou = p.id === uid;
+    if (isYou) myRank = i + 1;
+    const tier = getArenaTier(p.arena_rating);
+    const avStyle = getAvStyle(p, i);
+    const avCls = isYou ? 'lb-avatar av-self' : 'lb-avatar av-user';
+    const avAttr = isYou ? '' : ` data-name="${initials}"`;
+    const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : 'normal';
+    const youTag = isYou ? ' <span style="font-size:0.65rem;color:var(--lime);font-weight:700;">(You)</span>' : '';
+    const displayName = p.name || p.handle || '—';
+    const handleText = p.handle ? '@' + p.handle : '—';
+    return `<tr${isYou ? ' class="you-row"' : ''}>
+      <td><div class="lb-rank ${rankClass}">${i + 1}</div></td>
+      <td><div class="lb-player">
+        <div class="${avCls}"${avAttr} style="${avStyle}">${initials}</div>
+        <div class="lb-player-info">
+          <div class="lb-player-name">${displayName}${youTag}</div>
+          <div class="lb-player-handle">${handleText}</div>
+        </div>
+      </div></td>
+      <td><span class="ar-tier-badge ${tier.cls}">${tier.label}</span></td>
+      <td class="lb-stat lime">${p.arena_rating.toLocaleString()}</td>
+      <td style="color:var(--grey);font-size:0.8rem;">${p.arena_games_played}</td>
+    </tr>`;
+  }).join('');
+
+  tableEl.innerHTML = `<table class="ar-table">
+    <thead><tr>
+      <th>#</th><th>Player</th><th>Tier</th><th>Arena Rating</th><th>Games</th>
+    </tr></thead>
+    <tbody>${tableRows}</tbody>
+  </table>`;
+
+  SpontixStore.applyAvatarsToPage();
+
+  if (myRank > 10) {
+    showArenaStickyCard(myRank, data[myRank - 1]);
+  } else {
+    hideArenaStickyCard();
+  }
+}
+
+function showArenaStickyCard(rank, player) {
+  const card = document.getElementById('ar-sticky-you');
+  if (!card) return;
+  const parts = (player.name || '').trim().split(/\s+/);
+  const initials = parts.length >= 2
+    ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
+    : (player.name || '?').slice(0, 2).toUpperCase();
+  const displayName = player.name || player.handle || '—';
+  card.innerHTML = `
+    <div class="ar-sticky-rank">RANK<strong>#${rank}</strong></div>
+    <div class="lb-avatar av-self" style="background:var(--lime);color:var(--navy);width:32px;height:32px;font-size:0.6rem;flex-shrink:0;">${initials}</div>
+    <div class="ar-sticky-name">${displayName} <span style="font-size:0.65rem;color:var(--lime);font-weight:700;">(You)</span></div>
+    <div class="ar-sticky-rating">${player.arena_rating.toLocaleString()} Arena Rating</div>
+  `;
+  requestAnimationFrame(() => card.classList.add('visible'));
+}
+
+function hideArenaStickyCard() {
+  const card = document.getElementById('ar-sticky-you');
+  if (card) card.classList.remove('visible');
+}
+
 // ── View / chip handlers ───────────────────────────────────────────────
 function switchView(view) {
   document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
@@ -642,7 +932,12 @@ function switchView(view) {
   currentView = view;
   const panel = document.getElementById('view-' + view);
   if (panel) panel.classList.add('active');
-  renderLeaderboard();
+  if (view === 'arena') {
+    if (!arenaLoaded) loadArenaLeaderboard();
+  } else {
+    hideArenaStickyCard();
+    renderLeaderboard();
+  }
 }
 
 function selectTime(chip) {

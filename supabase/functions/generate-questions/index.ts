@@ -58,6 +58,46 @@ const CATEGORY_EVENT_TYPE: Record<string, string> = {
   low_value_filler: 'time_window',
 };
 
+// ── Live difficulty multiplier ────────────────────────────────────────
+// Returns 1.0 / 1.2 / 1.5 based on category + predicate + live context.
+// Only used for CORE_MATCH_LIVE arena session inserts — never prematch.
+// HARD (1.5): genuinely rare — player-specific, red card, penalty, player_stat predicate.
+// MEDIUM (1.2): next-goal/next-scorer outcome, close-game state, high_value_event that isn't rare.
+// EASY (1.0): broad time-window fillers, unclear or unclassifiable signals.
+
+function getLiveDifficultyMultiplier(
+  raw: any,
+  predicate: any,
+  liveCtx: { isCloseGame: boolean; lastEventType: string | null },
+): 1.0 | 1.2 | 1.5 {
+  try {
+    const category     = (raw.question_category as string) ?? '';
+    const predType     = (predicate?.resolution_type  as string) ?? '';
+    const lastEvent    = (liveCtx.lastEventType       as string) ?? '';
+    const hasPlayerId  = !!(predicate?.player_id);
+
+    // ── HARD — genuinely rare ─────────────────────────────────────────
+    if (category === 'player_specific')         return 1.5;
+    if (hasPlayerId)                             return 1.5;
+    if (predType === 'player_stat')              return 1.5;
+    if (lastEvent === 'red_card')                return 1.5;
+    if (lastEvent === 'penalty')                 return 1.5;
+
+    // ── MEDIUM — specific + contextual ───────────────────────────────
+    // Next-goal / next-scorer outcome (outcome_state + close game)
+    if (category === 'outcome_state' && liveCtx.isCloseGame) return 1.2;
+    // High-value event in a close game (e.g. "will there be another goal?")
+    if (category === 'high_value_event' && liveCtx.isCloseGame) return 1.2;
+    // Medium stat question in a close game
+    if (category === 'medium_stat' && liveCtx.isCloseGame) return 1.2;
+
+    // ── EASY — default ────────────────────────────────────────────────
+    return 1.0;
+  } catch {
+    return 1.0;
+  }
+}
+
 // ── Environment variables ─────────────────────────────────────────────
 const SUPABASE_URL      = Deno.env.get('SUPABASE_URL')!;
 const SERVICE_ROLE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -85,6 +125,11 @@ Deno.serve(async (req: Request) => {
   const sb = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
   const triggerType = req.method === 'POST' ? 'manual' : 'scheduled';
 
+  // ?live_only=1 — called by live-stats-poller every minute after live fixture upserts.
+  // Skips prematch loop and REAL_WORLD loop; runs only the league + arena session live passes.
+  const url      = new URL(req.url);
+  const liveOnly = url.searchParams.get('live_only') === '1';
+
   // ── Create run record ───────────────────────────────────────────────
   const { data: runData, error: runErr } = await sb
     .from('generation_runs')
@@ -105,7 +150,7 @@ Deno.serve(async (req: Request) => {
     const { data: leagues, error: leagueErr } = await sb
       .from('leagues')
       .select(`
-        id, name, sport, scope,
+        id, name, sport, scope, session_type,
         scoped_team_id, scoped_team_name,
         api_sports_league_id, api_sports_team_id, api_sports_season,
         ai_weekly_quota, ai_total_quota,
@@ -151,8 +196,9 @@ Deno.serve(async (req: Request) => {
     // Sort highest priority first
     const sorted = sortLeaguesByPriority(classifications);
 
-    // ── Process each league ───────────────────────────────────────────
-    for (const cls of sorted) {
+    // ── Process each league (prematch pass) ──────────────────────────
+    // Skipped when live_only=1 (called from live-stats-poller every minute)
+    if (!liveOnly) for (const cls of sorted) {
       const leagueStart = Date.now();
       const { league } = cls;
       const result: LeagueRunResult = {
@@ -992,6 +1038,14 @@ Deno.serve(async (req: Request) => {
           answer_closes_at:           raw.answer_closes_at,
           match_minute_at_generation: liveCtx.matchMinute,
           generation_trigger:         liveCtx.generationTrigger,
+          // Snapshot of match state at generation time — used by resolver
+          // for clutch answer detection (migration 032).
+          clutch_context: {
+            match_minute_at_generation:  liveCtx.matchMinute,
+            home_goals_at_generation:    liveCtx.homeScore,
+            away_goals_at_generation:    liveCtx.awayScore,
+            session_scope:               'full_match',
+          },
         };
 
         const { error: insertErr } = await sb.from('questions').insert(liveQuestion);
@@ -1012,7 +1066,309 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // ── Arena session live generation pass ────────────────────────────
+    // Runs for active arena_sessions (Live Multiplayer games).
+    // Mirrors the league live loop but uses arena_session_id instead of league_id.
+    // Questions go directly into `questions.arena_session_id` with no league_id.
+    {
+      // Fetch all active arena sessions
+      const { data: activeSessions } = await sb
+        .from('arena_sessions')
+        .select('id, match_id, half_scope, mode, kickoff_at, api_league_id')
+        .eq('status', 'active');
+
+      if (activeSessions && activeSessions.length > 0) {
+        // Get the set of currently live fixture IDs so we can cross-reference
+        const { data: liveFixtures } = await sb
+          .from('live_match_stats')
+          .select('fixture_id, status, minute, home_score, away_score, home_team_id, away_team_id, kickoff_at')
+          .in('status', ['1H', '2H', 'ET']);
+
+        const liveFixtureMap = new Map<string, any>();
+        for (const f of liveFixtures ?? []) {
+          liveFixtureMap.set(String(f.fixture_id), f);
+        }
+
+        for (const session of activeSessions) {
+          const sessionMatchId = String(session.match_id);
+          const fixture = liveFixtureMap.get(sessionMatchId);
+
+          // Skip if the match isn't currently live in the poller cache
+          if (!fixture) continue;
+          if (fixture.status === 'HT') continue;
+
+          // Build live context scoped to this arena session
+          let sessionLiveCtx;
+          try {
+            sessionLiveCtx = await buildLiveContext(sb, '', sessionMatchId, fixture, session.id);
+          } catch (err) {
+            console.warn(`[arena-gen] buildLiveContext failed for session ${session.id}:`, err);
+            continue;
+          }
+
+          if (!sessionLiveCtx) continue;
+          if (sessionLiveCtx.matchMinute >= 89) continue;
+          if (sessionLiveCtx.activeQuestionCount >= MVP_MAX_ACTIVE_LIVE) continue;
+          // TODO: enforce arena density per half_scope with session question counters in future sprint
+
+          // Rate limit for time-driven (event-driven bypasses)
+          if (sessionLiveCtx.generationTrigger === 'time_driven') {
+            const rateLimitCutoff = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+            const { data: recentLiveQ } = await sb
+              .from('questions')
+              .select('id')
+              .eq('arena_session_id', session.id)
+              .eq('question_type', 'CORE_MATCH_LIVE')
+              .gte('created_at', rateLimitCutoff)
+              .limit(1);
+
+            if (recentLiveQ && recentLiveQ.length > 0) continue;
+          }
+
+          // Fetch player count for arena context (best-effort — defaults to 2 on error)
+          const { count: arenaPlayerCount } = await sb
+            .from('arena_session_players')
+            .select('*', { count: 'exact', head: true })
+            .eq('session_id', session.id);
+
+          const generationMode: GenerationMode =
+            sessionLiveCtx.generationTrigger === 'event_driven' ? 'live_event' : 'live_gap';
+
+          const sessionSportsCtx: SportsContext = {
+            upcomingMatches: [{
+              id:          sessionMatchId,
+              sport:       'football',
+              homeTeam:    { id: sessionLiveCtx.homeTeamId, name: sessionLiveCtx.homeTeamName },
+              awayTeam:    { id: sessionLiveCtx.awayTeamId, name: sessionLiveCtx.awayTeamName },
+              kickoff:     sessionLiveCtx.kickoff,
+              competition: String(session.api_league_id ?? ''),
+              status:      'in_progress',
+            }],
+            standings:          [],
+            form:               [],
+            keyPlayers:         [],
+            narrativeHooks:     [],
+            playerAvailability: [],
+          };
+
+          // Use a minimal league-like object for buildContextPacket
+          const fakeLeague: LeagueWithConfig = {
+            id:                    session.id,
+            name:                  `Arena Session ${session.id.slice(0, 8)}`,
+            sport:                 'football',
+            scope:                 'full_league',
+            scoped_team_id:        null,
+            scoped_team_name:      null,
+            api_sports_league_id:  session.api_league_id ?? null,
+            api_sports_team_id:    null,
+            api_sports_season:     null,
+            ai_weekly_quota:       -1,
+            ai_total_quota:        -1,
+            league_start_date:     null,
+            league_end_date:       null,
+            owner_id:              null,
+            prematch_question_budget: 0,
+            live_question_budget:  20,
+            prematch_generation_mode: 'automatic',
+            prematch_publish_offset_hours: 24,
+            created_at:            null,
+          } as any;
+
+          const sessionCls: LeagueClassification = {
+            league:            fakeLeague,
+            classification:    'IMMINENT',
+            priorityScore:     5, // arena sessions get highest priority
+            earliestKickoff:   sessionLiveCtx.kickoff,
+            hoursUntilKickoff: 0,
+            generationMode,
+          };
+
+          const activeWindowsStr = sessionLiveCtx.activeWindows.length > 0
+            ? sessionLiveCtx.activeWindows.map((w) => `${w.start}–${w.end}`).join(', ')
+            : 'none';
+
+          const arenaGameContext = {
+            source:             'arena_session' as const,
+            arenaSessionId:     session.id,
+            mode:               session.mode      as string,
+            halfScope:          (session.half_scope ?? 'full_match') as string,
+            playerCount:        arenaPlayerCount ?? 2,
+            competitive_format: true,
+          };
+
+          const baseContextPacket = buildContextPacket({
+            league:              fakeLeague,
+            classification:      sessionCls,
+            sportsCtx:           sessionSportsCtx,
+            newsItems:           [],
+            recentQuestions:     [],
+            questionsToGenerate: 1,
+            existingQuestionCount: sessionLiveCtx.activeQuestionCount,
+            recentCategories:    [],
+            recentStatFocus:     [],
+            matchPhase:          sessionLiveCtx.matchPhase,
+            lastEventType:       sessionLiveCtx.lastEventType,
+            activeQuestionCount: sessionLiveCtx.activeQuestionCount,
+            maxActiveQuestions:  MVP_MAX_ACTIVE_LIVE,
+            matchMinute:         sessionLiveCtx.matchMinute,
+            gameContext:         arenaGameContext,
+          });
+
+          const liveStateSuffix = [
+            'LIVE MATCH STATE',
+            '-----------------',
+            `current_score: ${sessionLiveCtx.homeScore}–${sessionLiveCtx.awayScore} (home–away)`,
+            `is_close_game: ${sessionLiveCtx.isCloseGame}`,
+            `is_blowout: ${sessionLiveCtx.isBlowout}`,
+            `generation_trigger: ${sessionLiveCtx.generationTrigger}`,
+            `last_event_type: ${sessionLiveCtx.lastEventType}`,
+            sessionLiveCtx.lastEventMinute != null
+              ? `last_event_minute: ${sessionLiveCtx.lastEventMinute}`
+              : 'last_event_minute: null',
+            `active_prediction_windows: [${activeWindowsStr}]`,
+          ].join('\n');
+
+          const fullContextPacket = baseContextPacket + '\n\n' + liveStateSuffix;
+
+          let rawQuestions;
+          try {
+            rawQuestions = await generateQuestions(fullContextPacket, OPENAI_API_KEY);
+          } catch (err) {
+            console.warn(`[arena-gen] generateQuestions failed for session ${session.id}:`, err);
+            continue;
+          }
+
+          if (!rawQuestions.length) continue;
+
+          const raw = rawQuestions[0];
+
+          raw.event_type                = CATEGORY_EVENT_TYPE[raw.question_category] ?? 'time_window';
+          raw.narrative_context         = raw.reasoning_short ?? '';
+          raw.resolution_rule_text      = raw.predicate_hint  ?? '';
+          raw.match_minute_at_generation = sessionLiveCtx.matchMinute;
+          raw.match_id                  = sessionMatchId;
+          raw.team_ids                  = [sessionLiveCtx.homeTeamId, sessionLiveCtx.awayTeamId];
+          raw.player_ids                = [];
+
+          const isEventDriven   = sessionLiveCtx.generationTrigger === 'event_driven';
+          const visibleDelayMs  = (isEventDriven ? 45 : 20) * 1000;
+          raw.visible_from      = new Date(Date.now() + visibleDelayMs).toISOString();
+          raw.opens_at          = raw.visible_from;
+
+          // Arena-specific answer windows: shorter than league defaults.
+          // Clutch threshold mirrors isClutchAnswer() in clutch-detector.ts.
+          const arenaHalfScope    = (session.half_scope ?? 'full_match') as string;
+          const clutchMinute      = arenaHalfScope === 'first_half' ? 35 : 80;
+          const isArenaClutch     = sessionLiveCtx.matchMinute != null &&
+                                    sessionLiveCtx.matchMinute >= clutchMinute;
+          const answerWindowMs    = isArenaClutch
+            ? (isEventDriven ? 90 : 60) * 1000    // 60–90s in clutch window
+            : (isEventDriven ? 120 : 90) * 1000;  // 90s time-driven, 120s event-driven
+
+          raw.answer_closes_at  = new Date(Date.now() + visibleDelayMs + answerWindowMs).toISOString();
+          raw.deadline          = raw.answer_closes_at;
+          raw.resolves_after    = computeResolvesAfter(sessionLiveCtx.kickoff, 'football');
+
+          let sessionPredicate;
+          try {
+            const predicatePrompt = buildPredicatePrompt({
+              questionText:       raw.question_text,
+              type:               raw.type,
+              options:            raw.options,
+              resolutionRuleText: raw.predicate_hint ?? '',
+              matches:            sessionSportsCtx.upcomingMatches,
+              players:            [],
+              sport:              'football',
+            });
+            sessionPredicate = await convertToPredicate(predicatePrompt, OPENAI_API_KEY);
+          } catch (err) {
+            console.warn(`[arena-gen] convertToPredicate failed for session ${session.id}:`, err);
+            continue;
+          }
+
+          const predAny = sessionPredicate as any;
+          if (
+            predAny.resolution_type === 'match_stat_window' &&
+            predAny.window_start_minute != null &&
+            predAny.window_end_minute   != null
+          ) {
+            raw.answer_closes_at = minuteToTimestamp(sessionLiveCtx.kickoff, predAny.window_start_minute);
+            raw.deadline         = raw.answer_closes_at;
+            raw.window_start_minute = predAny.window_start_minute;
+            raw.window_end_minute   = predAny.window_end_minute;
+            const settleMs = (isEventDriven ? 120 : 90) * 1000;
+            raw.resolves_after = new Date(
+              new Date(minuteToTimestamp(sessionLiveCtx.kickoff, predAny.window_end_minute)).getTime() + settleMs,
+            ).toISOString();
+          }
+
+          raw.player_ids = predAny.player_id ? [String(predAny.player_id)] : [];
+
+          const sessionRejection = validateQuestion(raw, sessionPredicate, sessionSportsCtx, fakeLeague, 1);
+          if (sessionRejection) {
+            console.log(`[arena-gen] question rejected for session ${session.id}: ${sessionRejection.stage}`);
+            continue;
+          }
+
+          const baseValue = (raw.base_value && raw.base_value > 0)
+            ? raw.base_value
+            : (CATEGORY_BASE_VALUE[raw.question_category] ?? 6);
+
+          const arenaQuestion: ValidatedQuestion = {
+            arena_session_id:           session.id,
+            // league_id intentionally omitted — CHECK constraint requires exactly one owner
+            source:                     'ai_generated',
+            generation_run_id:          runId,
+            question_text:              raw.question_text,
+            type:                       raw.type,
+            options:                    raw.options ?? null,
+            sport:                      'football',
+            match_id:                   sessionMatchId,
+            team_ids:                   raw.team_ids,
+            player_ids:                 raw.player_ids,
+            event_type:                 raw.event_type,
+            narrative_context:          raw.narrative_context,
+            opens_at:                   raw.opens_at,
+            deadline:                   raw.deadline,
+            resolves_after:             raw.resolves_after,
+            resolution_rule_text:       raw.resolution_rule_text,
+            resolution_predicate:       sessionPredicate,
+            resolution_status:          'pending',
+            ai_model:                   'gpt-4o-mini',
+            ai_prompt_version:          PROMPT_VERSION,
+            question_type:              'CORE_MATCH_LIVE',
+            source_badge:               'LIVE',
+            base_value:                 baseValue,
+            difficulty_multiplier:      getLiveDifficultyMultiplier(raw, sessionPredicate, sessionLiveCtx),
+            reuse_scope:                'live_safe',
+            visible_from:               raw.visible_from,
+            answer_closes_at:           raw.answer_closes_at,
+            match_minute_at_generation: sessionLiveCtx.matchMinute,
+            generation_trigger:         sessionLiveCtx.generationTrigger,
+            clutch_context: {
+              match_minute_at_generation: sessionLiveCtx.matchMinute,
+              home_goals_at_generation:   sessionLiveCtx.homeScore,
+              away_goals_at_generation:   sessionLiveCtx.awayScore,
+              session_scope:              (session.half_scope as any) ?? 'full_match',
+            },
+          } as any;
+
+          const { error: arenaInsertErr } = await sb.from('questions').insert(arenaQuestion);
+          if (arenaInsertErr) {
+            console.error(`[arena-gen] insert failed for session ${session.id}:`, arenaInsertErr.message);
+          } else {
+            runStats.generated++;
+            console.log(
+              `[arena-gen] CORE_MATCH_LIVE generated for arena session ${session.id} ` +
+              `(match ${sessionMatchId}, minute=${sessionLiveCtx.matchMinute}, trigger=${sessionLiveCtx.generationTrigger})`,
+            );
+          }
+        }
+      }
+    }
+
     // ── REAL_WORLD generation pass ────────────────────────────────────
+    // Skipped when live_only=1 (called from live-stats-poller every minute).
     // Runs after prematch and live passes. One REAL_WORLD question per
     // league per day (enforced by checkRealWorldQuota). Questions are
     // generated from news signals via a 4-call pipeline:
@@ -1033,9 +1389,13 @@ Deno.serve(async (req: Request) => {
     // lower-quality news slice — the first attempt gets the strongest signals.
     const MAX_RW_RETRIES = 3;
 
-    for (const league of (leagues as LeagueWithConfig[])) {
+    if (!liveOnly) for (const league of (leagues as LeagueWithConfig[])) {
       // Football only (same MVP guard as other passes)
       if (league.sport !== 'football') continue;
+
+      // solo_match leagues block REAL_WORLD — it's a personal match session,
+      // not a community intelligence layer.
+      if ((league as any).session_type === 'solo_match') continue;
 
       // Per-league APPROVE counter for WEAK fairness.
       // WEAK questions (score 65–79) are only published when no APPROVE was generated

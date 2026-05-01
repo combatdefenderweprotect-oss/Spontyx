@@ -3894,6 +3894,10 @@ SpontixStore._mapUserFromDb = function (row) {
     badges:         row.badges_count || 0,
     trophies:       row.trophies_count || 0,
     accuracy:       row.accuracy || { live: 0, prematch: 0, trivia: 0, news: 0 },
+    total_xp:           row.total_xp          != null ? row.total_xp          : null,
+    level:              row.level             != null ? row.level             : null,
+    arena_rating:       row.arena_rating      != null ? row.arena_rating      : null,
+    arena_games_played: row.arena_games_played != null ? row.arena_games_played : null,
   };
 };
 
