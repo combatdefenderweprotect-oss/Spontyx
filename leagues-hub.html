@@ -632,7 +632,7 @@
 
   /* ── Hydrate status bar with light Supabase signals (existing data fetching pattern) ── */
   document.addEventListener('DOMContentLoaded', async function() {
-    SpontixSidebar.init();
+    SpontixSidebar.init({ type: 'player', active: 'leagues-hub.html' });
 
     try {
       var uid = SpontixStore.Session.getCurrentUserId();
