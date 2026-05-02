@@ -11,18 +11,32 @@
 <link rel="stylesheet" href="styles.css">
 <style>
 /* ── Layout ─────────────────────────────────────────────────────────────── */
-.main { padding: 32px 40px; }
+.main { padding: 28px 40px 40px; position: relative; }
 
 @media (max-width: 900px) {
-  .main { padding: 20px 16px; }
+  .main { padding: 18px 16px 32px; }
 }
+
+/* Subtle radial glow behind the mode cards — pulls focus to the decision. */
+.br-bg-glow {
+  position: absolute;
+  left: 50%;
+  top: 280px;
+  transform: translateX(-50%);
+  width: 720px; height: 480px;
+  background: radial-gradient(ellipse at center, rgba(168,225,12,0.07) 0%, rgba(168,225,12,0.03) 35%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+  filter: blur(8px);
+}
+.main > *:not(.br-bg-glow) { position: relative; z-index: 1; }
 
 /* ── Header ─────────────────────────────────────────────────────────────── */
 .br-header {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 36px;
+  margin-bottom: 14px;
 }
 .br-icon {
   width: 52px; height: 52px;
@@ -32,14 +46,34 @@
   font-size: 24px;
   box-shadow: 0 0 20px rgba(255,107,107,0.35);
 }
-.br-title h1 { font-size: 1.6rem; font-weight: 800; color: var(--off-white); }
-.br-title p { font-size: 0.85rem; color: var(--grey); margin-top: 2px; }
+.br-title h1 { font-size: 1.7rem; font-weight: 900; color: var(--off-white); letter-spacing: -0.01em; }
+.br-title p { font-size: 0.85rem; color: var(--grey); margin-top: 3px; }
+
+/* ── Live-feel row ──────────────────────────────────────────────────────── */
+.br-live-row {
+  display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding-left: 2px;
+  font-size: 0.74rem;
+  letter-spacing: 0.04em;
+  color: rgba(255,255,255,0.42);
+  font-variant-numeric: tabular-nums;
+}
+.br-live-item { display: inline-flex; align-items: center; gap: 6px; }
+.br-live-orb {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--lime);
+  box-shadow: 0 0 6px rgba(168,225,12,0.55);
+  animation: br-orb-pulse 1.8s infinite ease-in-out;
+}
+@keyframes br-orb-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.br-live-num { color: rgba(255,255,255,0.72); font-weight: 700; }
 
 /* ── Steps ──────────────────────────────────────────────────────────────── */
 .steps-bar {
   display: flex;
   gap: 0;
-  margin-bottom: 32px;
+  margin-bottom: 22px;
   background: var(--navy-card);
   border-radius: 12px;
   padding: 4px;
@@ -74,7 +108,7 @@
   font-size: 1rem;
   font-weight: 700;
   color: var(--off-white);
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 .section-title-small {
   font-size: 0.78rem;
@@ -87,29 +121,41 @@
 .section-sub {
   font-size: 0.82rem;
   color: var(--grey);
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
-/* ── Tension strip ──────────────────────────────────────────────────────── */
+/* ── Tension strip — survival framing ──────────────────────────────────── */
 .br-tension {
-  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-  background: linear-gradient(90deg, rgba(255,107,107,0.07), rgba(232,69,69,0.04));
-  border: 1px solid rgba(255,107,107,0.18);
-  border-radius: 10px;
-  padding: 10px 16px;
-  margin-bottom: 28px;
-  font-size: 0.78rem;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background: linear-gradient(90deg, rgba(255,107,107,0.10) 0%, rgba(232,69,69,0.06) 50%, rgba(168,225,12,0.06) 100%);
+  border: 1px solid rgba(255,107,107,0.22);
+  border-radius: 12px;
+  padding: 12px 18px;
+  margin-bottom: 20px;
+  font-size: 0.8rem;
   font-weight: 600;
-  color: rgba(255,255,255,0.75);
+  color: rgba(255,255,255,0.85);
+  box-shadow: 0 0 24px rgba(255,107,107,0.06), inset 0 0 24px rgba(168,225,12,0.03);
+  position: relative;
+  overflow: hidden;
 }
-.br-tension-item { display: inline-flex; align-items: center; gap: 6px; }
-.br-tension-sep { color: rgba(255,255,255,0.2); }
+@media (max-width: 700px) { .br-tension { grid-template-columns: 1fr; gap: 6px; } }
+.br-tension-item {
+  display: inline-flex; align-items: center; gap: 8px;
+  justify-content: center;
+  letter-spacing: 0.01em;
+}
+@media (max-width: 700px) { .br-tension-item { justify-content: flex-start; } }
+.br-tension-sep { display: none; }
 .br-tension-dot {
   width: 7px; height: 7px; border-radius: 50%;
   background: var(--coral);
-  box-shadow: 0 0 8px rgba(255,107,107,0.7);
-  animation: live-pulse 1.4s infinite;
+  box-shadow: 0 0 10px rgba(255,107,107,0.85);
+  animation: br-tension-pulse 1.6s infinite ease-in-out;
 }
+@keyframes br-tension-pulse { 0%,100%{opacity:1; transform:scale(1)} 50%{opacity:0.45; transform:scale(0.85)} }
 
 /* ── Mode tag (Classic / Ranked badge inside card) ─────────────────────── */
 .mode-tag {
@@ -129,12 +175,13 @@
   border-color: rgba(255,107,107,0.28);
 }
 
-/* ── Mode Cards ─────────────────────────────────────────────────────────── */
+/* ── Mode Cards — Ranked dominant, Classic secondary ───────────────────── */
 .mode-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 28px;
+  grid-template-columns: 1fr 1.08fr;  /* slight asymmetry — Ranked column wider */
+  gap: 18px;
+  margin-bottom: 18px;
+  align-items: stretch;
 }
 @media (max-width: 600px) { .mode-grid { grid-template-columns: 1fr; } }
 
@@ -142,20 +189,22 @@
   background: var(--navy-card);
   border: 2px solid rgba(255,255,255,0.06);
   border-radius: 16px;
-  padding: 28px 24px;
+  padding: 24px 22px;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: transform 0.2s cubic-bezier(0.16,1,0.3,1), border-color 0.2s, background 0.2s, box-shadow 0.25s;
   position: relative;
   overflow: hidden;
+  will-change: transform;
 }
 .mode-card:hover {
-  border-color: rgba(168,225,12,0.3);
+  border-color: rgba(168,225,12,0.35);
   background: var(--navy-hover);
+  transform: translateY(-1px);
 }
 .mode-card.selected {
   border-color: var(--lime);
   background: var(--lime-dim);
-  box-shadow: 0 0 24px rgba(168,225,12,0.15);
+  box-shadow: 0 0 32px rgba(168,225,12,0.18), inset 0 0 0 1px rgba(168,225,12,0.5);
 }
 .mode-card-wm {
   position: absolute;
@@ -166,10 +215,53 @@
   pointer-events: none;
   line-height: 1;
 }
-.mode-card.selected .mode-card-wm { opacity: 0.13; }
+.mode-card.selected .mode-card-wm { opacity: 0.14; }
 .mode-card-icon { font-size: 2rem; margin-bottom: 10px; }
 .mode-card-name { font-size: 1.15rem; font-weight: 800; color: var(--off-white); margin-bottom: 4px; }
 .mode-card-sub { font-size: 0.82rem; color: var(--grey); }
+
+/* Classic — secondary (recessed) */
+#mode-classic {
+  opacity: 0.78;
+}
+#mode-classic:hover { opacity: 1; transform: translateY(-1px); }
+#mode-classic.selected { opacity: 1; }
+#mode-classic .mode-card-name { font-weight: 700; }
+
+/* Ranked — dominant (the "real" mode) */
+#mode-ranked {
+  transform: scale(1.025);
+  border-color: rgba(168,225,12,0.18);
+  box-shadow: 0 0 30px rgba(168,225,12,0.06);
+}
+#mode-ranked .mode-card-name {
+  font-size: 1.32rem;
+  font-weight: 900;
+  letter-spacing: -0.005em;
+}
+#mode-ranked .mode-card-icon { font-size: 2.2rem; }
+#mode-ranked:hover {
+  transform: scale(1.045) translateY(-2px);
+  border-color: rgba(168,225,12,0.5);
+  box-shadow: 0 0 42px rgba(168,225,12,0.14);
+}
+#mode-ranked.selected {
+  transform: scale(1.045);
+  box-shadow: 0 0 44px rgba(168,225,12,0.28), inset 0 0 0 1px rgba(168,225,12,0.65);
+}
+
+/* "Recommended" ribbon on Ranked card */
+.mode-ribbon {
+  position: absolute;
+  top: 14px; right: 14px;
+  font-size: 0.6rem; font-weight: 800;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--lime);
+  background: rgba(168,225,12,0.12);
+  border: 1px solid rgba(168,225,12,0.35);
+  border-radius: 20px;
+  padding: 3px 10px;
+}
 .mode-card-players {
   display: flex;
   gap: 6px;
@@ -545,10 +637,30 @@
   display: flex;
   gap: 12px;
   justify-content: flex-end;
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  margin-top: 14px;
+  padding-top: 0;
+  border-top: none;
 }
+
+/* Step 1 CTA — bigger, glowing, decisive */
+#step-1 .action-row { justify-content: center; margin-top: 8px; }
+#btn-next-1 {
+  padding: 14px 32px;
+  font-size: 0.95rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  border-radius: 12px;
+  box-shadow: 0 0 0 rgba(168,225,12,0);
+  transition: transform 0.15s cubic-bezier(0.16,1,0.3,1), box-shadow 0.2s, background 0.15s;
+}
+#btn-next-1:not(:disabled) {
+  box-shadow: 0 0 22px rgba(168,225,12,0.28), 0 4px 14px rgba(168,225,12,0.18);
+}
+#btn-next-1:not(:disabled):hover {
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 0 32px rgba(168,225,12,0.4), 0 6px 18px rgba(168,225,12,0.25);
+}
+#btn-next-1:not(:disabled):active { transform: scale(0.99); }
 
 /* ── FFA note ───────────────────────────────────────────────────────────── */
 .ffa-note {
@@ -565,6 +677,8 @@
 <body>
 <div id="sidebar-placeholder"></div>
 <div class="main">
+    <!-- Subtle radial glow behind mode cards -->
+    <div class="br-bg-glow" aria-hidden="true"></div>
 
     <div class="br-header">
       <div class="br-icon">💀</div>
@@ -574,13 +688,18 @@
       </div>
     </div>
 
+    <!-- Live-feel ambient row (atmospheric) -->
+    <div class="br-live-row">
+      <span class="br-live-item"><span class="br-live-orb"></span> <span class="br-live-num">1,247</span> players online</span>
+      <span class="br-live-item">⚔️ <span class="br-live-num">18</span> lobbies forming</span>
+      <span class="br-live-item">💀 Avg survival: <span class="br-live-num">~8 min</span></span>
+    </div>
+
     <!-- Tension strip -->
     <div class="br-tension">
-      <span class="br-tension-item"><span class="br-tension-dot"></span> Players will be eliminated</span>
-      <span class="br-tension-sep">·</span>
-      <span class="br-tension-item">⚡ Wrong answer = HP loss</span>
-      <span class="br-tension-sep">·</span>
-      <span class="br-tension-item">🏆 Last alive wins</span>
+      <span class="br-tension-item"><span class="br-tension-dot"></span> 💀 Players get eliminated</span>
+      <span class="br-tension-item">⚡ No answer = HP loss</span>
+      <span class="br-tension-item">🏆 Only one survives</span>
     </div>
 
     <div class="steps-bar">
@@ -605,6 +724,7 @@
           <div class="mode-tag">Practice · No ELO</div>
         </div>
         <div class="mode-card" onclick="selectMode('ranked')" id="mode-ranked">
+          <span class="mode-ribbon">Recommended</span>
           <div class="mode-card-wm">🏆</div>
           <div class="mode-check">✓</div>
           <div class="mode-card-icon">⚔️</div>
@@ -809,7 +929,13 @@ function selectMode(mode) {
   selectedMode = mode;
   document.querySelectorAll('.mode-card').forEach(function(c) { c.classList.remove('selected'); });
   document.getElementById('mode-' + mode).classList.add('selected');
-  document.getElementById('btn-next-1').disabled = false;
+  var nextBtn = document.getElementById('btn-next-1');
+  nextBtn.disabled = false;
+  // Step 3 CTA label reflects mode choice
+  var enterBtn = document.getElementById('btn-enter');
+  if (enterBtn) {
+    enterBtn.textContent = (mode === 'ranked') ? 'Enter Ranked Survival →' : 'Enter Battle Royale →';
+  }
 }
 
 // ── Match loading ─────────────────────────────────────────────────────────────
