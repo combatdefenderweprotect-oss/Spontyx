@@ -1032,7 +1032,8 @@
   <script src="utils.js"></script>
   <script>
     document.addEventListener('DOMContentLoaded', function() {
-      if (window.SpontixSidebar) SpontixSidebar.init({ type: 'player', active: 'multiplayer.html' });
+      try { SpontixSidebar.init({ type: 'player', active: 'multiplayer.html' }); }
+      catch (e) { console.warn('Sidebar init failed:', e); }
     });
   </script>
   <script>
