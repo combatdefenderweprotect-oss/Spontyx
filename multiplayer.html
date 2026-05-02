@@ -28,23 +28,23 @@
       background: var(--navy);
       color: #fff;
       font-family: 'Inter', sans-serif;
-      overflow: hidden;
-      height: 100vh;
-      display: block !important;
       animation: page-enter 120ms ease;
     }
-    #app {
-      display: block !important;
-      width: 100% !important;
-      margin-left: 0 !important;
-    }
     @keyframes page-enter { from { opacity: 0; } to { opacity: 1; } }
+
+    /* Main fills viewport vertically next to the sidebar; mp-page scrolls inside it. */
+    .main {
+      height: 100vh;
+      min-height: 0;
+      overflow: hidden;
+    }
 
     /* ── PAGE SHELL ── */
     .mp-page {
       display: flex;
       flex-direction: column;
-      height: 100vh;
+      flex: 1;
+      min-height: 0;
       width: 100%;
     }
 
@@ -843,7 +843,9 @@
   </style>
 </head>
 <body>
-  <div id="app">
+  <div class="app-shell">
+    <div id="sidebar-placeholder"></div>
+    <main class="main">
     <div class="mp-page">
 
       <!-- TOP BAR -->
@@ -968,7 +970,8 @@
       </div>
 
     </div><!-- /.mp-page -->
-  </div><!-- /#app -->
+    </main>
+  </div><!-- /.app-shell -->
 
   <!-- ═══ WAITING ROOM OVERLAY ═══ -->
   <div id="wr-overlay">
@@ -1029,6 +1032,13 @@
   <!-- SCRIPTS -->
   <script src="supabase-client.js"></script>
   <script src="spontix-store.js"></script>
+  <script src="sidebar.js"></script>
+  <script src="utils.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      if (window.SpontixSidebar) SpontixSidebar.init({ type: 'player', active: 'multiplayer.html' });
+    });
+  </script>
   <script>
   // ── STATE ──────────────────────────────────────────────────────────────────
   var currentStep   = 1;
