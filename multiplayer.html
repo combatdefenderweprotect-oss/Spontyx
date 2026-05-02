@@ -24,28 +24,24 @@
     /* ── GLOBAL RESET FOR FULL-SCREEN ── */
     *, *::before, *::after { box-sizing: border-box; }
     body {
-      margin: 0; padding: 0;
-      background: var(--navy);
       color: #fff;
       font-family: 'Inter', sans-serif;
-      animation: page-enter 120ms ease;
     }
-    @keyframes page-enter { from { opacity: 0; } to { opacity: 1; } }
+    /* (page-enter keyframe is provided by styles.css; no override needed) */
 
-    /* Main fills viewport vertically next to the sidebar; mp-page scrolls inside it. */
-    .main {
-      height: 100vh;
-      min-height: 0;
-      overflow: hidden;
-    }
-
-    /* ── PAGE SHELL ── */
+    /* ── PAGE SHELL ──
+       .main is governed by styles.css (margin-left: 260px next to fixed
+       sidebar; flex column; min-height: 100vh). We do not override it.
+       The full-screen Arena experience is achieved by the .mp-page
+       wrapper, which fills .main and manages its own internal scroll. */
     .mp-page {
       display: flex;
       flex-direction: column;
       flex: 1;
-      min-height: 0;
+      min-height: 100vh;
+      max-height: 100vh;
       width: 100%;
+      overflow: hidden;
     }
 
     /* ── TOP BAR ── */
