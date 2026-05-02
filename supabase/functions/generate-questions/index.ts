@@ -1367,6 +1367,330 @@ Deno.serve(async (req: Request) => {
       }
     }
 
+    // ── BR session live generation pass ──────────────────────────────
+    // Runs for active br_sessions (Battle Royale games).
+    // Mirrors the arena session live loop but uses br_session_id and
+    // question_type: 'BR_MATCH_LIVE'. BR sessions have no half_scope;
+    // questions are always generated for the full match context.
+    // Skipped when liveOnly is false (only runs during live-stats-poller trigger
+    // and the regular cron cycle — same as arena pass).
+    {
+      const { data: activeBrSessions } = await sb
+        .from('br_sessions')
+        .select('id, match_id, api_league_id, started_at')
+        .eq('status', 'active');
+
+      if (activeBrSessions && activeBrSessions.length > 0) {
+        const { data: liveFixturesBr } = await sb
+          .from('live_match_stats')
+          .select('fixture_id, status, minute, home_score, away_score, home_team_id, away_team_id, kickoff_at')
+          .in('status', ['1H', '2H', 'ET']);
+
+        const liveFixtureMapBr = new Map<string, any>();
+        for (const f of liveFixturesBr ?? []) {
+          liveFixtureMapBr.set(String(f.fixture_id), f);
+        }
+
+        for (const brSession of activeBrSessions) {
+          const brMatchId = String(brSession.match_id);
+          const brFixture = liveFixtureMapBr.get(brMatchId);
+
+          // Skip if match isn't currently live in the poller cache
+          if (!brFixture) continue;
+          if (brFixture.status === 'HT') {
+            console.log(`[br-gen] skipping session ${brSession.id}: halftime_pause`);
+            continue;
+          }
+
+          // Build live context scoped to this BR session
+          let brLiveCtx;
+          try {
+            brLiveCtx = await buildLiveContext(sb, '', brMatchId, brFixture, undefined);
+          } catch (err) {
+            console.warn(`[br-gen] buildLiveContext failed for session ${brSession.id}:`, err);
+            continue;
+          }
+
+          if (!brLiveCtx) {
+            console.log(`[br-gen] skipping session ${brSession.id}: no_live_stats_available`);
+            continue;
+          }
+          if (brLiveCtx.matchMinute >= 89) {
+            console.log(`[br-gen] skipping session ${brSession.id}: match_minute_too_late (${brLiveCtx.matchMinute})`);
+            continue;
+          }
+          if (brLiveCtx.activeQuestionCount >= MVP_MAX_ACTIVE_LIVE) {
+            // activeQuestionCount counts arena questions — for BR, count separately
+            const { count: brActiveCount } = await sb
+              .from('questions')
+              .select('*', { count: 'exact', head: true })
+              .eq('br_session_id', brSession.id)
+              .eq('resolution_status', 'pending')
+              .gt('answer_closes_at', new Date().toISOString());
+
+            if ((brActiveCount ?? 0) >= MVP_MAX_ACTIVE_LIVE) {
+              console.log(`[br-gen] skipping session ${brSession.id}: active_question_cap_reached (${brActiveCount})`);
+              continue;
+            }
+          }
+
+          // Rate limit for time-driven (event-driven bypasses)
+          if (brLiveCtx.generationTrigger === 'time_driven') {
+            const brRateLimitCutoff = new Date(Date.now() - 3 * 60 * 1000).toISOString();
+            const { data: recentBrQ } = await sb
+              .from('questions')
+              .select('id')
+              .eq('br_session_id', brSession.id)
+              .eq('question_type', 'BR_MATCH_LIVE')
+              .gte('created_at', brRateLimitCutoff)
+              .limit(1);
+
+            if (recentBrQ && recentBrQ.length > 0) {
+              console.log(`[br-gen] skipping session ${brSession.id}: rate_limit_3min_live`);
+              continue;
+            }
+          }
+
+          // Count alive players for context
+          const { count: brAliveCount } = await sb
+            .from('br_session_players')
+            .select('*', { count: 'exact', head: true })
+            .eq('session_id', brSession.id)
+            .eq('is_eliminated', false);
+
+          const brGenerationMode: GenerationMode =
+            brLiveCtx.generationTrigger === 'event_driven' ? 'live_event' : 'live_gap';
+
+          const brSportsCtx: SportsContext = {
+            upcomingMatches: [{
+              id:          brMatchId,
+              sport:       'football',
+              homeTeam:    { id: brLiveCtx.homeTeamId, name: brLiveCtx.homeTeamName },
+              awayTeam:    { id: brLiveCtx.awayTeamId, name: brLiveCtx.awayTeamName },
+              kickoff:     brLiveCtx.kickoff,
+              competition: String(brSession.api_league_id ?? ''),
+              status:      'in_progress',
+            }],
+            standings:          [],
+            form:               [],
+            keyPlayers:         [],
+            narrativeHooks:     [],
+            playerAvailability: [],
+          };
+
+          const brFakeLeague: LeagueWithConfig = {
+            id:                    brSession.id,
+            name:                  `BR Session ${brSession.id.slice(0, 8)}`,
+            sport:                 'football',
+            scope:                 'full_league',
+            scoped_team_id:        null,
+            scoped_team_name:      null,
+            api_sports_league_id:  brSession.api_league_id ?? null,
+            api_sports_team_id:    null,
+            api_sports_season:     null,
+            ai_weekly_quota:       -1,
+            ai_total_quota:        -1,
+            league_start_date:     null,
+            league_end_date:       null,
+            owner_id:              null,
+            prematch_question_budget: 0,
+            live_question_budget:  20,
+            prematch_generation_mode: 'automatic',
+            prematch_publish_offset_hours: 24,
+            created_at:            null,
+          } as any;
+
+          const brSessionCls: LeagueClassification = {
+            league:            brFakeLeague,
+            classification:    'IMMINENT',
+            priorityScore:     5,
+            earliestKickoff:   brLiveCtx.kickoff,
+            hoursUntilKickoff: 0,
+            generationMode:    brGenerationMode,
+          };
+
+          const brActiveWindowsStr = brLiveCtx.activeWindows.length > 0
+            ? brLiveCtx.activeWindows.map((w) => `${w.start}–${w.end}`).join(', ')
+            : 'none';
+
+          const brGameContext = {
+            source:             'br_session' as const,
+            brSessionId:        brSession.id,
+            mode:               'battle_royale',
+            halfScope:          'full_match',
+            playerCount:        brAliveCount ?? 2,
+            competitive_format: true,
+          };
+
+          const brBaseContextPacket = buildContextPacket({
+            league:              brFakeLeague,
+            classification:      brSessionCls,
+            sportsCtx:           brSportsCtx,
+            newsItems:           [],
+            recentQuestions:     [],
+            questionsToGenerate: 1,
+            existingQuestionCount: brLiveCtx.activeQuestionCount,
+            recentCategories:    [],
+            recentStatFocus:     [],
+            matchPhase:          brLiveCtx.matchPhase,
+            lastEventType:       brLiveCtx.lastEventType,
+            activeQuestionCount: brLiveCtx.activeQuestionCount,
+            maxActiveQuestions:  MVP_MAX_ACTIVE_LIVE,
+            matchMinute:         brLiveCtx.matchMinute,
+            gameContext:         brGameContext,
+          });
+
+          const brLiveStateSuffix = [
+            'LIVE MATCH STATE',
+            '-----------------',
+            `current_score: ${brLiveCtx.homeScore}–${brLiveCtx.awayScore} (home–away)`,
+            `is_close_game: ${brLiveCtx.isCloseGame}`,
+            `is_blowout: ${brLiveCtx.isBlowout}`,
+            `generation_trigger: ${brLiveCtx.generationTrigger}`,
+            `last_event_type: ${brLiveCtx.lastEventType}`,
+            brLiveCtx.lastEventMinute != null
+              ? `last_event_minute: ${brLiveCtx.lastEventMinute}`
+              : 'last_event_minute: null',
+            `active_prediction_windows: [${brActiveWindowsStr}]`,
+            `alive_players: ${brAliveCount ?? 'unknown'}`,
+          ].join('\n');
+
+          const brFullContextPacket = brBaseContextPacket + '\n\n' + brLiveStateSuffix;
+
+          let brRawQuestions;
+          try {
+            brRawQuestions = await generateQuestions(brFullContextPacket, OPENAI_API_KEY);
+          } catch (err) {
+            console.warn(`[br-gen] generateQuestions failed for session ${brSession.id}:`, err);
+            continue;
+          }
+
+          if (!brRawQuestions.length) continue;
+
+          const brRaw = brRawQuestions[0];
+
+          brRaw.event_type                = CATEGORY_EVENT_TYPE[brRaw.question_category] ?? 'time_window';
+          brRaw.narrative_context         = brRaw.reasoning_short ?? '';
+          brRaw.resolution_rule_text      = brRaw.predicate_hint  ?? '';
+          brRaw.match_minute_at_generation = brLiveCtx.matchMinute;
+          brRaw.match_id                  = brMatchId;
+          brRaw.team_ids                  = [brLiveCtx.homeTeamId, brLiveCtx.awayTeamId];
+          brRaw.player_ids                = [];
+
+          const brIsEventDriven  = brLiveCtx.generationTrigger === 'event_driven';
+          const brVisibleDelayMs = (brIsEventDriven ? 45 : 20) * 1000;
+          brRaw.visible_from     = new Date(Date.now() + brVisibleDelayMs).toISOString();
+          brRaw.opens_at         = brRaw.visible_from;
+
+          // BR sessions always span full_match — use standard clutch threshold (minute >= 80)
+          const isBrClutch      = brLiveCtx.matchMinute != null && brLiveCtx.matchMinute >= 80;
+          const brAnswerWindowMs = isBrClutch
+            ? (brIsEventDriven ? 90 : 60) * 1000
+            : (brIsEventDriven ? 120 : 90) * 1000;
+
+          brRaw.answer_closes_at = new Date(Date.now() + brVisibleDelayMs + brAnswerWindowMs).toISOString();
+          brRaw.deadline         = brRaw.answer_closes_at;
+          brRaw.resolves_after   = computeResolvesAfter(brLiveCtx.kickoff, 'football');
+
+          let brPredicate;
+          try {
+            const brPredicatePrompt = buildPredicatePrompt({
+              questionText:       brRaw.question_text,
+              type:               brRaw.type,
+              options:            brRaw.options,
+              resolutionRuleText: brRaw.predicate_hint ?? '',
+              matches:            brSportsCtx.upcomingMatches,
+              players:            [],
+              sport:              'football',
+            });
+            brPredicate = await convertToPredicate(brPredicatePrompt, OPENAI_API_KEY);
+          } catch (err) {
+            console.warn(`[br-gen] convertToPredicate failed for session ${brSession.id}:`, err);
+            continue;
+          }
+
+          const brPredAny = brPredicate as any;
+          if (
+            brPredAny.resolution_type === 'match_stat_window' &&
+            brPredAny.window_start_minute != null &&
+            brPredAny.window_end_minute   != null
+          ) {
+            brRaw.answer_closes_at  = minuteToTimestamp(brLiveCtx.kickoff, brPredAny.window_start_minute);
+            brRaw.deadline          = brRaw.answer_closes_at;
+            brRaw.window_start_minute = brPredAny.window_start_minute;
+            brRaw.window_end_minute   = brPredAny.window_end_minute;
+            const brSettleMs = (brIsEventDriven ? 120 : 90) * 1000;
+            brRaw.resolves_after = new Date(
+              new Date(minuteToTimestamp(brLiveCtx.kickoff, brPredAny.window_end_minute)).getTime() + brSettleMs,
+            ).toISOString();
+          }
+
+          brRaw.player_ids = brPredAny.player_id ? [String(brPredAny.player_id)] : [];
+
+          const brRejection = validateQuestion(brRaw, brPredicate, brSportsCtx, brFakeLeague, 1);
+          if (brRejection) {
+            console.log(`[br-gen] question rejected for session ${brSession.id}: ${brRejection.stage}`);
+            continue;
+          }
+
+          const brBaseValue = (brRaw.base_value && brRaw.base_value > 0)
+            ? brRaw.base_value
+            : (CATEGORY_BASE_VALUE[brRaw.question_category] ?? 6);
+
+          const brQuestion: ValidatedQuestion = {
+            br_session_id:              brSession.id,
+            // league_id and arena_session_id intentionally omitted —
+            // CHECK constraint requires exactly one of the three owner columns.
+            source:                     'ai_generated',
+            generation_run_id:          runId,
+            question_text:              brRaw.question_text,
+            type:                       brRaw.type,
+            options:                    brRaw.options ?? null,
+            sport:                      'football',
+            match_id:                   brMatchId,
+            team_ids:                   brRaw.team_ids,
+            player_ids:                 brRaw.player_ids,
+            event_type:                 brRaw.event_type,
+            narrative_context:          brRaw.narrative_context,
+            opens_at:                   brRaw.opens_at,
+            deadline:                   brRaw.deadline,
+            resolves_after:             brRaw.resolves_after,
+            resolution_rule_text:       brRaw.resolution_rule_text,
+            resolution_predicate:       brPredicate,
+            resolution_status:          'pending',
+            ai_model:                   'gpt-4o-mini',
+            ai_prompt_version:          PROMPT_VERSION,
+            question_type:              'BR_MATCH_LIVE',
+            source_badge:               'LIVE',
+            base_value:                 brBaseValue,
+            difficulty_multiplier:      getLiveDifficultyMultiplier(brRaw, brPredicate, brLiveCtx),
+            reuse_scope:                'live_safe',
+            visible_from:               brRaw.visible_from,
+            answer_closes_at:           brRaw.answer_closes_at,
+            match_minute_at_generation: brLiveCtx.matchMinute,
+            generation_trigger:         brLiveCtx.generationTrigger,
+            clutch_context: {
+              match_minute_at_generation: brLiveCtx.matchMinute,
+              home_goals_at_generation:   brLiveCtx.homeScore,
+              away_goals_at_generation:   brLiveCtx.awayScore,
+              session_scope:              'full_match',
+            },
+          } as any;
+
+          const { error: brInsertErr } = await sb.from('questions').insert(brQuestion);
+          if (brInsertErr) {
+            console.error(`[br-gen] insert failed for session ${brSession.id}:`, brInsertErr.message);
+          } else {
+            runStats.generated++;
+            console.log(
+              `[br-gen] BR_MATCH_LIVE generated for br session ${brSession.id} ` +
+              `(match ${brMatchId}, minute=${brLiveCtx.matchMinute}, trigger=${brLiveCtx.generationTrigger})`,
+            );
+          }
+        }
+      }
+    }
+
     // ── REAL_WORLD generation pass ────────────────────────────────────
     // Skipped when live_only=1 (called from live-stats-poller every minute).
     // Runs after prematch and live passes. One REAL_WORLD question per

@@ -52,7 +52,7 @@
 
     /* ── Action Cards Grid ── */
     .action-cards-grid {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 28px;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px;
     }
     .action-card {
       background: var(--navy-card); border-radius: var(--radius-lg); padding: 18px 20px; border: 2px solid rgba(255,255,255,0.06);
@@ -87,7 +87,7 @@
       background: rgba(168,225,12,0.07);
     }
 
-    /* Join League — PURPLE (secondary) */
+    /* Leagues — PURPLE */
     .action-card.purple-accent {
       background: var(--purple);
       border-color: var(--purple);
@@ -98,6 +98,33 @@
     .action-card.purple-accent:hover {
       background: #8d72fc;
       border-color: #8d72fc;
+    }
+
+    /* Battle Royale — CORAL */
+    .action-card.coral-accent {
+      background: var(--coral);
+      border-color: var(--coral);
+      color: #fff;
+    }
+    .action-card.coral-accent .action-card-title { color: #fff; }
+    .action-card.coral-accent .action-card-desc { color: rgba(255,255,255,0.75); }
+    .action-card.coral-accent .action-card-icon { background: rgba(255,255,255,0.2); color: #fff; }
+    .action-card.coral-accent:hover {
+      background: #ff8080;
+      border-color: #ff8080;
+    }
+
+    /* Trivia — TEAL */
+    .action-card.teal-accent {
+      background: var(--navy-card);
+      border-color: var(--teal);
+      color: var(--off-white);
+    }
+    .action-card.teal-accent .action-card-title { color: var(--teal); }
+    .action-card.teal-accent .action-card-desc { color: rgba(255,255,255,0.6); }
+    .action-card.teal-accent .action-card-icon { background: rgba(78,205,196,0.12); color: var(--teal); }
+    .action-card.teal-accent:hover {
+      background: rgba(78,205,196,0.07);
     }
 
     .action-card-icon {
@@ -378,40 +405,53 @@
     <!-- Unanswered Questions Alert — populated dynamically -->
     <div id="activity-alert"></div>
 
-    <!-- Quick Action Cards -->
+    <!-- Game Mode Pillar Cards -->
     <div class="action-cards-grid">
-      <!-- Singleplayer -->
-      <a href="create-league.html?play_mode=singleplayer" class="action-card lime-accent" style="text-decoration:none;color:inherit;">
+
+      <!-- Leagues -->
+      <a href="leagues-hub.html" class="action-card purple-accent" style="text-decoration:none;color:inherit;">
         <div class="action-card-icon">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4-4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
         </div>
         <div class="action-card-body">
-          <div class="action-card-title">Singleplayer</div>
-          <div class="action-card-desc">Play solo. Choose a match, season, or custom setup.</div>
+          <div class="action-card-title">Leagues</div>
+          <div class="action-card-desc">Compete with friends. Create, join, or discover leagues.</div>
         </div>
       </a>
 
-      <!-- Multiplayer -->
+      <!-- Arena -->
       <a href="multiplayer.html" class="action-card multi-accent" style="text-decoration:none;color:inherit;">
         <div class="action-card-icon">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
         </div>
         <div class="action-card-body">
-          <div class="action-card-title">Multiplayer</div>
-          <div class="action-card-desc">Quick matches. Play live vs players (1v1 or 2v2).</div>
+          <div class="action-card-title">Arena</div>
+          <div class="action-card-desc">Live 1v1 or 2v2 duels. Find a match, enter the arena.</div>
         </div>
       </a>
 
-      <!-- Party -->
-      <a href="create-league.html" class="action-card purple-accent" style="text-decoration:none;color:inherit;">
+      <!-- Battle Royale -->
+      <a href="br-lobby.html" class="action-card coral-accent" style="text-decoration:none;color:inherit;">
         <div class="action-card-icon">
-          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="8"/><path d="M12 18v4"/><path d="M8 22h8"/><circle cx="9" cy="9" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.5" fill="currentColor" stroke="none"/></svg>
         </div>
         <div class="action-card-body">
-          <div class="action-card-title">Party</div>
-          <div class="action-card-desc">Create a league, invite friends, and compete.</div>
+          <div class="action-card-title">Battle Royale</div>
+          <div class="action-card-desc">Survive every round. Last prediction standing wins.</div>
         </div>
       </a>
+
+      <!-- Trivia -->
+      <a href="trivia.html" class="action-card teal-accent" style="text-decoration:none;color:inherit;">
+        <div class="action-card-icon">
+          <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div class="action-card-body">
+          <div class="action-card-title">Trivia</div>
+          <div class="action-card-desc">Solo, 1v1, or party modes. Sports knowledge wins.</div>
+        </div>
+      </a>
+
     </div>
 
     <!-- Quick Nav Links -->
@@ -435,28 +475,6 @@
         <div class="nav-link-body">
           <div class="nav-link-title">Schedule</div>
           <div class="nav-link-sub" id="nav-schedule-sub">Loading…</div>
-        </div>
-        <div class="nav-link-arrow"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
-      </a>
-
-      <a href="my-leagues.html" class="nav-link-card lime-link">
-        <div class="nav-link-icon">
-          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-        </div>
-        <div class="nav-link-body">
-          <div class="nav-link-title">My Leagues <span class="nav-link-badge lime" id="badge-leagues" style="display:none"></span></div>
-          <div class="nav-link-sub" id="nav-leagues-sub">Manage your active leagues and standings</div>
-        </div>
-        <div class="nav-link-arrow"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
-      </a>
-
-      <a href="battle-royale.html" class="nav-link-card purple-link">
-        <div class="nav-link-icon">
-          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="10" r="8"/><path d="M12 18v4"/><path d="M8 22h8"/></svg>
-        </div>
-        <div class="nav-link-body">
-          <div class="nav-link-title">Battle Royale</div>
-          <div class="nav-link-sub">Jump into a live match — last one standing wins</div>
         </div>
         <div class="nav-link-arrow"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg></div>
       </a>

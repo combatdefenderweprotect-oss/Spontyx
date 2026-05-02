@@ -142,7 +142,7 @@ spontix_venue_trophies     → (unused — venue badges use separate key)
 spontix_custom_trophies    → venue-created custom trophy catalogue
 spontix_venue_photos       → { [venueName]: { photos, titlePhotoId, useTitlePhoto } }
 spontix_remote_trophy_queue → trophies pending delivery to other users
-spontix_br_total           → battle royale games played counter
+spontix_br_total           → legacy client-side BR games counter (replaced by users.br_games_played in migration 046)
 ```
 
 On the backend these become database tables. Table names map directly from key names
@@ -164,9 +164,10 @@ Suggested order of work:
 6. **Object storage for photos** — move `addVenuePhoto` to an upload endpoint that
    stores originals in S3/R2 and returns a CDN URL. Keep the client-side resize step
    on the upload pipeline.
-7. **Websockets for live gameplay** — live.html, battle-royale.html, trivia.html,
-   venue-live-floor.html need server-authoritative state. Winner determination moves
-   server-side; client awardTrophy calls are removed (server awards on game end).
+7. **Websockets for live gameplay** — arena-session.html is live with Supabase Realtime.
+   br-session.html (Phase 2) and trivia.html (Phase 2–3) still need server-authoritative
+   state. Winner determination moves server-side; client awardTrophy calls are removed
+   (server awards on game end). venue-live-floor.html also in scope.
 8. **Cross-user fan-out** — drain `spontix_remote_trophy_queue` via push/websocket
    so trophies land in other users' rooms in real time.
 

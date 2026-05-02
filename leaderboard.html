@@ -305,6 +305,51 @@
       text-decoration: none; transition: opacity 0.15s;
     }
     .ar-empty-btn:hover { opacity: 0.85; }
+    /* ── BR hero + tier badges ─────────────────────────── */
+    .br-hero {
+      display: flex; align-items: center; gap: 14px;
+      background: rgba(255,107,107,0.06); border: 1px solid rgba(255,107,107,0.15);
+      border-radius: 14px; padding: 16px 20px; margin-bottom: 24px;
+    }
+    .br-hero-icon {
+      width: 44px; height: 44px; border-radius: 12px;
+      background: rgba(255,107,107,0.12); display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .br-hero-icon svg { width: 26px; height: 26px; stroke: var(--coral); stroke-width: 2; fill: none; }
+    .br-hero-info { flex: 1; }
+    .br-hero-title { font-size: 1.15rem; font-weight: 800; letter-spacing: -0.3px; }
+    .br-hero-sub { font-size: 0.78rem; color: var(--grey); margin-top: 3px; }
+    .br-hero-badge {
+      background: rgba(255,107,107,0.12); color: var(--coral);
+      border: 1px solid rgba(255,107,107,0.25); border-radius: 20px;
+      padding: 5px 12px; font-size: 0.72rem; font-weight: 700; white-space: nowrap;
+    }
+    .br-tier-badge {
+      display: inline-block; padding: 3px 8px; border-radius: 20px;
+      font-size: 0.68rem; font-weight: 700; letter-spacing: 0.3px;
+    }
+    .br-tier-iron        { background: rgba(100,100,120,0.15); color: #787890; }
+    .br-tier-bronze      { background: rgba(205,127,50,0.15);  color: #CD7F32; }
+    .br-tier-silver      { background: rgba(168,168,179,0.15); color: #A8A8B3; }
+    .br-tier-gold        { background: rgba(255,215,0,0.15);   color: #FFD700; }
+    .br-tier-platinum    { background: rgba(78,205,196,0.15);  color: var(--teal); }
+    .br-tier-diamond     { background: rgba(124,92,252,0.15);  color: var(--purple); }
+    .br-tier-elite       { background: rgba(192,132,252,0.15); color: #C084FC; }
+    .br-tier-master      { background: rgba(255,107,107,0.15); color: var(--coral); }
+    .br-tier-champion    { background: rgba(255,165,0,0.15);   color: #FFA500; }
+    .br-tier-legend      { background: rgba(168,225,12,0.12);  color: var(--lime); }
+    /* BR uses the same .ar-podium + .ar-table structural classes with .br- colour overrides */
+    .br-podium-card.first  .ar-podium-bar { background: linear-gradient(180deg, var(--coral), rgba(255,107,107,0.3)); }
+    .br-podium-card.second .ar-podium-bar { background: linear-gradient(180deg, var(--orange,#FF9F43), rgba(255,159,67,0.25)); }
+    .br-podium-card.third  .ar-podium-bar { background: linear-gradient(180deg, #CD7F32, rgba(205,127,50,0.25)); }
+    .br-podium-card.first  .ar-podium-rank { background: var(--coral); color: #fff; }
+    .br-podium-card.second .ar-podium-rank { background: var(--orange,#FF9F43); color: var(--navy); }
+    .br-podium-card.third  .ar-podium-rank { background: #CD7F32; color: var(--navy); }
+    .br-podium-card.first  .ar-podium-avatar { border: 3px solid var(--coral); }
+    .br-podium-card .ar-podium-rating { color: var(--coral); }
+    #br-table .ar-table tr.you-row { background: rgba(255,107,107,0.07); }
+    #br-table .ar-table tr.you-row td { font-weight: 700; }
+
     .ar-sticky-you {
       position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(120px);
       background: var(--navy-card); border: 1px solid rgba(168,225,12,0.3);
@@ -367,6 +412,10 @@
       <button class="view-tab" onclick="switchView('arena')">
         <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9 12 2"/></svg>
         Arena
+      </button>
+      <button class="view-tab" onclick="switchView('br')">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        Battle Royale
       </button>
     </div>
 
@@ -678,10 +727,27 @@
       <div id="ar-table-section"></div>
     </div>
 
+    <!-- ═══ BATTLE ROYALE VIEW ═══ -->
+    <div class="view-panel" id="view-br">
+      <div class="br-hero">
+        <div class="br-hero-icon">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="br-hero-info">
+          <div class="br-hero-title">Battle Royale Rankings</div>
+          <div class="br-hero-sub">Multiplayer BR skill leaderboard · Earn BR Rating through placement finishes</div>
+        </div>
+        <div class="br-hero-badge">BR Rating</div>
+      </div>
+      <div id="br-podium-section"></div>
+      <div id="br-table-section"></div>
+    </div>
+
   </div>
 </div>
 
 <div class="ar-sticky-you" id="ar-sticky-you"></div>
+<div class="ar-sticky-you" id="br-sticky-you"></div>
 <div class="toast" id="toast"></div>
 
 <script src="utils.js"></script>
@@ -924,6 +990,124 @@ function hideArenaStickyCard() {
   if (card) card.classList.remove('visible');
 }
 
+// ── Battle Royale leaderboard ──────────────────────────────────────────────
+let brLoaded = false;
+let brData   = [];
+
+function getBrTier(rating) {
+  if (rating >= 2500) return { label: 'Legend',   cls: 'br-tier-legend'   };
+  if (rating >= 2300) return { label: 'Champion', cls: 'br-tier-champion' };
+  if (rating >= 2100) return { label: 'Master',   cls: 'br-tier-master'   };
+  if (rating >= 1900) return { label: 'Elite',    cls: 'br-tier-elite'    };
+  if (rating >= 1700) return { label: 'Diamond',  cls: 'br-tier-diamond'  };
+  if (rating >= 1500) return { label: 'Platinum', cls: 'br-tier-platinum' };
+  if (rating >= 1300) return { label: 'Gold',     cls: 'br-tier-gold'     };
+  if (rating >= 1100) return { label: 'Silver',   cls: 'br-tier-silver'   };
+  if (rating >=  900) return { label: 'Bronze',   cls: 'br-tier-bronze'   };
+  return                     { label: 'Iron',     cls: 'br-tier-iron'     };
+}
+
+async function loadBrLeaderboard() {
+  brLoaded = true;
+  const podiumEl = document.getElementById('br-podium-section');
+  const tableEl  = document.getElementById('br-table-section');
+  if (podiumEl) podiumEl.innerHTML = '<p style="color:var(--grey);font-size:0.85rem;padding:20px 0;">Loading rankings…</p>';
+
+  const uid = SpontixStore.Session.getCurrentUserId();
+  const { data, error } = await window.sb
+    .from('users')
+    .select('id, handle, name, br_rating, br_games_played')
+    .gt('br_games_played', 0)
+    .order('br_rating', { ascending: false })
+    .limit(100);
+
+  if (error || !data || !data.length) {
+    if (podiumEl) podiumEl.innerHTML = '<div style="text-align:center;padding:48px 16px;color:var(--grey);"><div style="font-size:2rem;margin-bottom:12px;">🛡️</div><div style="font-weight:700;margin-bottom:6px;">No BR rankings yet</div><div style="font-size:0.82rem;">Play Battle Royale to earn your rating</div><a href="br-lobby.html" style="display:inline-block;margin-top:18px;padding:10px 22px;background:var(--coral);color:#fff;border-radius:20px;font-weight:700;text-decoration:none;font-size:0.85rem;">Enter BR Lobby</a></div>';
+    return;
+  }
+
+  brData = data;
+  renderBrLeaderboard(data, uid);
+}
+
+function renderBrLeaderboard(data, uid) {
+  const podiumEl = document.getElementById('br-podium-section');
+  const tableEl  = document.getElementById('br-table-section');
+  const top3     = data.slice(0, 3);
+  const rest     = data.slice(3);
+
+  // ── Podium ──
+  const podiumOrder = top3.length >= 3 ? [top3[1], top3[0], top3[2]] : top3;
+  const podiumPositions = top3.length >= 3 ? ['second', 'first', 'third'] : ['first', 'second'];
+  const rankNums        = top3.length >= 3 ? [2, 1, 3] : [1, 2];
+
+  let podiumHtml = '<div class="ar-podium" style="margin-bottom:28px;">';
+  podiumOrder.forEach((p, i) => {
+    if (!p) return;
+    const tier   = getBrTier(p.br_rating);
+    const pos    = podiumPositions[i];
+    const rank   = rankNums[i];
+    const initials = ((p.handle || p.name || '?')[0]).toUpperCase();
+    const isYou  = p.id === uid;
+    podiumHtml += `
+      <div class="ar-podium-card br-podium-card ${pos}${isYou ? ' you-pod' : ''}">
+        <div class="ar-podium-bar"></div>
+        <div class="ar-podium-rank">${rank}</div>
+        <div class="ar-podium-avatar" style="background:var(--coral);color:#fff;">${initials}</div>
+        <div class="ar-podium-name">@${p.handle || p.name}${isYou ? ' <span style="color:var(--coral);font-size:0.65rem;">(You)</span>' : ''}</div>
+        <div class="ar-podium-rating">${p.br_rating.toLocaleString()}</div>
+        <span class="br-tier-badge ${tier.cls}">${tier.label}</span>
+      </div>`;
+  });
+  podiumHtml += '</div>';
+
+  // ── Table ──
+  let tableHtml = '<div id="br-table"><table class="ar-table"><thead><tr><th>#</th><th>Player</th><th>Tier</th><th>BR Rating</th><th>Games</th></tr></thead><tbody>';
+  data.forEach((p, i) => {
+    const rank  = i + 1;
+    const tier  = getBrTier(p.br_rating);
+    const isYou = p.id === uid;
+    tableHtml += `<tr${isYou ? ' class="you-row"' : ''}>
+      <td style="font-weight:700;color:var(--coral);">${rank}</td>
+      <td>@${p.handle || p.name}${isYou ? ' <span style="color:var(--coral);font-size:0.65rem;font-weight:700;">(You)</span>' : ''}</td>
+      <td><span class="br-tier-badge ${tier.cls}">${tier.label}</span></td>
+      <td style="font-weight:700;">${p.br_rating.toLocaleString()}</td>
+      <td style="color:var(--grey);">${p.br_games_played}</td>
+    </tr>`;
+  });
+  tableHtml += '</tbody></table></div>';
+
+  if (podiumEl) podiumEl.innerHTML = podiumHtml;
+  if (tableEl)  tableEl.innerHTML  = tableHtml;
+
+  // Sticky card for current user ranked > 10
+  const myRank = data.findIndex(p => p.id === uid);
+  if (myRank >= 10) {
+    showBrStickyCard(myRank + 1, data[myRank]);
+  } else {
+    hideBrStickyCard();
+  }
+}
+
+function showBrStickyCard(rank, player) {
+  const card = document.getElementById('br-sticky-you');
+  if (!card) return;
+  const initials = ((player.handle || player.name || '?')[0]).toUpperCase();
+  const displayName = '@' + (player.handle || player.name);
+  card.innerHTML = `
+    <div class="ar-sticky-rank">RANK<strong>#${rank}</strong></div>
+    <div class="lb-avatar av-self" style="background:var(--coral);color:#fff;width:32px;height:32px;font-size:0.6rem;flex-shrink:0;">${initials}</div>
+    <div class="ar-sticky-name">${displayName} <span style="font-size:0.65rem;color:var(--coral);font-weight:700;">(You)</span></div>
+    <div class="ar-sticky-rating">${player.br_rating.toLocaleString()} BR Rating</div>
+  `;
+  requestAnimationFrame(() => card.classList.add('visible'));
+}
+
+function hideBrStickyCard() {
+  const card = document.getElementById('br-sticky-you');
+  if (card) card.classList.remove('visible');
+}
+
 // ── View / chip handlers ───────────────────────────────────────────────
 function switchView(view) {
   document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
@@ -933,9 +1117,14 @@ function switchView(view) {
   const panel = document.getElementById('view-' + view);
   if (panel) panel.classList.add('active');
   if (view === 'arena') {
+    hideBrStickyCard();
     if (!arenaLoaded) loadArenaLeaderboard();
+  } else if (view === 'br') {
+    hideArenaStickyCard();
+    if (!brLoaded) loadBrLeaderboard();
   } else {
     hideArenaStickyCard();
+    hideBrStickyCard();
     renderLeaderboard();
   }
 }

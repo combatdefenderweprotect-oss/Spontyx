@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="view-transition" content="same-origin">
+<title>Battle Royale — Spontix</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+.main { padding: 32px 40px; }
+
+@media (max-width: 900px) {
+  .main { padding: 20px 16px; }
+}
+
+/* ── Header ─────────────────────────────────────────────────────────────── */
+.br-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 36px;
+}
+.br-icon {
+  width: 52px; height: 52px;
+  background: linear-gradient(135deg, var(--coral), #E84545);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px;
+  box-shadow: 0 0 20px rgba(255,107,107,0.35);
+}
+.br-title h1 { font-size: 1.6rem; font-weight: 800; color: var(--off-white); }
+.br-title p { font-size: 0.85rem; color: var(--grey); margin-top: 2px; }
+
+/* ── Steps ──────────────────────────────────────────────────────────────── */
+.steps-bar {
+  display: flex;
+  gap: 0;
+  margin-bottom: 32px;
+  background: var(--navy-card);
+  border-radius: 12px;
+  padding: 4px;
+  overflow: hidden;
+}
+.step-pill {
+  flex: 1;
+  text-align: center;
+  padding: 9px 16px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--grey-dark);
+  border-radius: 8px;
+  transition: all 0.2s;
+  cursor: default;
+  white-space: nowrap;
+}
+.step-pill.active {
+  background: var(--lime-dim);
+  color: var(--lime);
+}
+.step-pill.done {
+  background: rgba(168,225,12,0.06);
+  color: rgba(168,225,12,0.6);
+}
+
+/* ── Cards / Sections ───────────────────────────────────────────────────── */
+.step-section { display: none; }
+.step-section.active { display: block; }
+
+.section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--off-white);
+  margin-bottom: 16px;
+}
+
+/* ── Mode Cards ─────────────────────────────────────────────────────────── */
+.mode-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+@media (max-width: 600px) { .mode-grid { grid-template-columns: 1fr; } }
+
+.mode-card {
+  background: var(--navy-card);
+  border: 2px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+  padding: 28px 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+  overflow: hidden;
+}
+.mode-card:hover {
+  border-color: rgba(168,225,12,0.3);
+  background: var(--navy-hover);
+}
+.mode-card.selected {
+  border-color: var(--lime);
+  background: var(--lime-dim);
+  box-shadow: 0 0 24px rgba(168,225,12,0.15);
+}
+.mode-card-wm {
+  position: absolute;
+  right: -10px; bottom: -20px;
+  font-size: 7rem;
+  opacity: 0.06;
+  user-select: none;
+  pointer-events: none;
+  line-height: 1;
+}
+.mode-card.selected .mode-card-wm { opacity: 0.13; }
+.mode-card-icon { font-size: 2rem; margin-bottom: 10px; }
+.mode-card-name { font-size: 1.15rem; font-weight: 800; color: var(--off-white); margin-bottom: 4px; }
+.mode-card-sub { font-size: 0.82rem; color: var(--grey); }
+.mode-card-players {
+  display: flex;
+  gap: 6px;
+  margin-top: 12px;
+}
+.player-dot {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.15);
+}
+.mode-card.selected .player-dot { background: var(--lime); }
+.mode-check {
+  position: absolute;
+  top: 14px; right: 14px;
+  width: 22px; height: 22px;
+  background: var(--lime);
+  border-radius: 50%;
+  display: none;
+  align-items: center; justify-content: center;
+  font-size: 12px;
+  color: var(--navy);
+}
+.mode-card.selected .mode-check { display: flex; }
+
+/* ── Match List ─────────────────────────────────────────────────────────── */
+.match-search-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+.match-search-row input,
+.match-search-row select {
+  flex: 1;
+  background: var(--navy-card);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 9px 14px;
+  color: var(--off-white);
+  font-size: 0.85rem;
+  font-family: 'Inter', sans-serif;
+  outline: none;
+}
+.match-search-row select option { background: var(--navy-card); }
+.match-search-row input:focus,
+.match-search-row select:focus { border-color: rgba(168,225,12,0.45); }
+
+.match-list { display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto; padding-right: 4px; }
+.match-list::-webkit-scrollbar { width: 4px; }
+.match-list::-webkit-scrollbar-track { background: transparent; }
+.match-list::-webkit-scrollbar-thumb { background: rgba(168,225,12,0.25); border-radius: 2px; }
+
+.match-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: var(--navy-card);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.match-row:hover { border-color: rgba(168,225,12,0.3); background: var(--navy-hover); }
+.match-row.selected { border-color: var(--lime); background: var(--lime-dim); }
+.match-row-status {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.match-row-status.live { background: var(--coral); animation: live-pulse 1.4s infinite; }
+.match-row-status.soon { background: #f59e0b; }
+.match-row-status.upcoming { background: var(--grey-dark); }
+@keyframes live-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+.match-row-teams { flex: 1; min-width: 0; }
+.match-row-name { font-size: 0.88rem; font-weight: 600; color: var(--off-white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.match-row-comp { font-size: 0.75rem; color: var(--grey-dark); margin-top: 1px; }
+.match-row-time { font-size: 0.78rem; color: var(--grey); white-space: nowrap; }
+.match-row-live-badge {
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: rgba(255,107,107,0.15);
+  color: var(--coral);
+  border: 1px solid rgba(255,107,107,0.25);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.match-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--grey-dark);
+  font-size: 0.88rem;
+}
+
+/* ── Half Scope ─────────────────────────────────────────────────────────── */
+.half-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-bottom: 28px;
+}
+@media (max-width: 600px) { .half-grid { grid-template-columns: 1fr; } }
+
+.half-card {
+  background: var(--navy-card);
+  border: 2px solid rgba(255,255,255,0.06);
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: center;
+}
+.half-card:hover { border-color: rgba(168,225,12,0.3); background: var(--navy-hover); }
+.half-card.selected { border-color: var(--lime); background: var(--lime-dim); }
+.half-card-icon { font-size: 1.4rem; margin-bottom: 6px; }
+.half-card-name { font-size: 0.85rem; font-weight: 700; color: var(--off-white); }
+.half-card-sub { font-size: 0.73rem; color: var(--grey-dark); margin-top: 3px; }
+
+/* ── Waiting Room ───────────────────────────────────────────────────────── */
+.wr-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: var(--navy);
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.wr-overlay.show { display: flex; }
+
+.wr-rings {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+.wr-ring {
+  position: absolute;
+  border-radius: 50%;
+  border: 1px solid rgba(168,225,12,0.2);
+  animation: wr-ring-pulse 3s infinite ease-out;
+}
+.wr-ring:nth-child(1) { width: 160px; height: 160px; animation-delay: 0s; }
+.wr-ring:nth-child(2) { width: 300px; height: 300px; animation-delay: 0.75s; }
+.wr-ring:nth-child(3) { width: 440px; height: 440px; animation-delay: 1.5s; }
+.wr-ring:nth-child(4) { width: 580px; height: 580px; animation-delay: 2.25s; }
+@keyframes wr-ring-pulse {
+  0%   { opacity: 0; transform: scale(0.85); }
+  20%  { opacity: 1; }
+  80%  { opacity: 0.1; }
+  100% { opacity: 0; transform: scale(1.05); }
+}
+
+.wr-content {
+  position: relative;
+  z-index: 2;
+  max-width: 420px;
+  padding: 24px;
+}
+.wr-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--lime-dim);
+  border: 1px solid rgba(168,225,12,0.3);
+  color: var(--lime);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: 32px;
+}
+.wr-badge-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--lime);
+  animation: live-pulse 1.4s infinite;
+}
+
+.wr-avatars {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 24px;
+  margin-bottom: 28px;
+}
+.wr-avatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.wr-avatar-ring {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 28px;
+  font-weight: 800;
+  position: relative;
+}
+.wr-avatar-ring.me {
+  background: var(--lime-dim);
+  border: 2px solid var(--lime);
+  color: var(--lime);
+}
+.wr-avatar-ring.opp {
+  background: rgba(152,152,176,0.1);
+  border: 2px dashed var(--grey-dark);
+  color: var(--grey-dark);
+  animation: wr-searching 2s infinite ease-in-out;
+}
+.wr-avatar-ring.opp.found {
+  background: rgba(78,205,196,0.12);
+  border-color: var(--teal);
+  border-style: solid;
+  color: var(--teal);
+  animation: wr-found-pop 0.5s ease-out forwards;
+}
+@keyframes wr-searching { 0%,100%{opacity:1} 50%{opacity:0.4} }
+@keyframes wr-found-pop { 0%{transform:scale(0.8);opacity:0.5} 60%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
+.wr-avatar-label { font-size: 0.78rem; color: var(--grey); font-weight: 600; }
+
+.wr-vs {
+  font-size: 1.2rem;
+  font-weight: 900;
+  color: var(--grey);
+  opacity: 0.5;
+}
+
+.wr-status {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--off-white);
+  margin-bottom: 6px;
+}
+.wr-status.found { color: var(--lime); }
+.wr-status-sub { font-size: 0.82rem; color: var(--grey); margin-bottom: 28px; }
+
+.wr-players-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.wr-player-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--navy-card);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 0.83rem;
+}
+.wr-player-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--lime);
+  flex-shrink: 0;
+}
+.wr-player-handle { color: var(--off-white); font-weight: 600; flex: 1; text-align: left; }
+.wr-player-waiting { color: var(--grey-dark); font-size: 0.73rem; }
+
+.dot-bounce { display: inline-flex; gap: 4px; vertical-align: middle; }
+.dot-bounce span {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--lime);
+  display: inline-block;
+  animation: db 1.2s infinite ease-in-out;
+}
+.dot-bounce span:nth-child(2) { animation-delay: 0.2s; }
+.dot-bounce span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes db { 0%,80%,100%{transform:scale(0.6);opacity:0.4} 40%{transform:scale(1);opacity:1} }
+
+/* ── Buttons ─────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: none;
+  font-family: 'Inter', sans-serif;
+  transition: all 0.15s;
+}
+.btn-primary {
+  background: var(--lime);
+  color: var(--navy);
+}
+.btn-primary:hover:not(:disabled) { background: var(--lime-hover); transform: translateY(-1px); }
+.btn-primary:disabled { background: rgba(168,225,12,0.2); color: rgba(26,26,46,0.5); cursor: not-allowed; }
+.btn-ghost {
+  background: rgba(255,255,255,0.05);
+  color: var(--grey);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.btn-ghost:hover { background: rgba(255,255,255,0.09); color: var(--off-white); }
+
+.action-row {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+
+/* ── FFA note ───────────────────────────────────────────────────────────── */
+.ffa-note {
+  background: rgba(255,215,0,0.08);
+  border: 1px solid rgba(255,215,0,0.18);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 0.82rem;
+  color: var(--gold);
+  margin-bottom: 20px;
+}
+</style>
+</head>
+<body>
+<div id="sidebar-placeholder"></div>
+<div class="main">
+
+    <div class="br-header">
+      <div class="br-icon">💀</div>
+      <div class="br-title">
+        <h1>Battle Royale Lobby</h1>
+        <p>Last one standing wins. Wrong answers cost HP.</p>
+      </div>
+    </div>
+
+    <div class="steps-bar">
+      <div class="step-pill active" id="spill-1">① Mode</div>
+      <div class="step-pill" id="spill-2">② Match</div>
+      <div class="step-pill" id="spill-3">③ Half</div>
+      <div class="step-pill" id="spill-4">④ Waiting Room</div>
+    </div>
+
+    <!-- ── Step 1: Mode ─────────────────────────────────────────────────── -->
+    <div class="step-section active" id="step-1">
+      <p class="section-title">Choose your format</p>
+
+      <div class="mode-grid">
+        <div class="mode-card" onclick="selectMode('1v1')" id="mode-1v1">
+          <div class="mode-card-wm">⚔️</div>
+          <div class="mode-check">✓</div>
+          <div class="mode-card-icon">⚔️</div>
+          <div class="mode-card-name">1 vs 1</div>
+          <div class="mode-card-sub">Duel — 2 players, sudden death</div>
+          <div class="mode-card-players">
+            <div class="player-dot"></div><div class="player-dot"></div>
+          </div>
+        </div>
+        <div class="mode-card" onclick="selectMode('ffa')" id="mode-ffa">
+          <div class="mode-card-wm">👑</div>
+          <div class="mode-check">✓</div>
+          <div class="mode-card-icon">👑</div>
+          <div class="mode-card-name">Free for All</div>
+          <div class="mode-card-sub">4 players, last one standing</div>
+          <div class="mode-card-players">
+            <div class="player-dot"></div><div class="player-dot"></div>
+            <div class="player-dot"></div><div class="player-dot"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn btn-primary" id="btn-next-1" onclick="goStep(2)" disabled>
+          Choose a Match →
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Step 2: Match ─────────────────────────────────────────────────── -->
+    <div class="step-section" id="step-2">
+      <p class="section-title">Select a match</p>
+
+      <div class="match-search-row">
+        <input type="text" id="match-search" placeholder="Search teams..." oninput="filterMatches()">
+        <select id="comp-filter" onchange="filterMatches()">
+          <option value="">All competitions</option>
+        </select>
+      </div>
+
+      <div class="match-list" id="match-list">
+        <div class="match-empty">Loading matches…</div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn btn-ghost" onclick="goStep(1)">← Back</button>
+        <button class="btn btn-primary" id="btn-next-2" onclick="goStep(3)" disabled>
+          Choose Half →
+        </button>
+      </div>
+    </div>
+
+    <!-- ── Step 3: Half scope ─────────────────────────────────────────────── -->
+    <div class="step-section" id="step-3">
+      <p class="section-title" id="step3-match-label">Full Match</p>
+      <p style="font-size:0.82rem;color:var(--grey);margin-bottom:18px;">
+        Questions are generated from this window of the match.
+      </p>
+
+      <div class="half-grid">
+        <div class="half-card selected" onclick="selectHalf('full_match')" id="half-full">
+          <div class="half-card-icon">⚽</div>
+          <div class="half-card-name">Full Match</div>
+          <div class="half-card-sub">0′ – 90′</div>
+        </div>
+        <div class="half-card" onclick="selectHalf('first_half')" id="half-first">
+          <div class="half-card-icon">🕐</div>
+          <div class="half-card-name">First Half</div>
+          <div class="half-card-sub">0′ – 45′</div>
+        </div>
+        <div class="half-card" onclick="selectHalf('second_half')" id="half-second">
+          <div class="half-card-icon">🕑</div>
+          <div class="half-card-name">Second Half</div>
+          <div class="half-card-sub">45′ – 90′</div>
+        </div>
+      </div>
+
+      <div class="action-row">
+        <button class="btn btn-ghost" onclick="goStep(2)">← Back</button>
+        <button class="btn btn-primary" id="btn-enter" onclick="enterLobby()">
+          Enter Arena →
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+<!-- ── Waiting Room Overlay ─────────────────────────────────────────────── -->
+<div class="wr-overlay" id="wr-overlay">
+  <div class="wr-rings">
+    <div class="wr-ring"></div>
+    <div class="wr-ring"></div>
+    <div class="wr-ring"></div>
+    <div class="wr-ring"></div>
+  </div>
+
+  <div class="wr-content">
+    <div class="wr-badge">
+      <span class="wr-badge-dot"></span>
+      <span id="wr-badge-label">Waiting Room</span>
+    </div>
+
+    <!-- 1v1: avatar duel -->
+    <div id="wr-duel" style="display:none">
+      <div class="wr-avatars">
+        <div class="wr-avatar">
+          <div class="wr-avatar-ring me" id="wr-me-avatar">?</div>
+          <div class="wr-avatar-label" id="wr-me-label">You</div>
+        </div>
+        <div class="wr-vs">VS</div>
+        <div class="wr-avatar">
+          <div class="wr-avatar-ring opp" id="wr-opp-avatar">??</div>
+          <div class="wr-avatar-label">Opponent</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FFA: player list -->
+    <div id="wr-ffa" style="display:none">
+      <div class="wr-players-list" id="wr-players-list"></div>
+    </div>
+
+    <div class="wr-status" id="wr-status-line">
+      Searching
+      <span class="dot-bounce"><span></span><span></span><span></span></span>
+    </div>
+    <div class="wr-status-sub" id="wr-status-sub">Waiting for opponents to join…</div>
+
+    <button class="btn btn-ghost" onclick="leaveLobby()">Cancel</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+<script src="sidebar.js"></script>
+<script>
+'use strict';
+
+// ── State ────────────────────────────────────────────────────────────────────
+var selectedMode   = null;   // '1v1' | 'ffa'
+var selectedMatch  = null;   // match object from api_football_fixtures
+var selectedHalf   = 'full_match';
+var currentUserId  = null;
+var currentHandle  = null;
+var currentSessionId = null;
+var sessionChannel = null;
+var playersChannel = null;
+var allMatches     = [];
+var requiredPlayers = { '1v1': 2, 'ffa': 4 };
+
+// ── Init ─────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async function() {
+  SpontixSidebar.init({ type: 'player', active: 'br-lobby.html' });
+
+  var { data: { user } } = await window.sb.auth.getUser();
+  if (!user) { window.location.replace('login.html'); return; }
+  currentUserId = user.id;
+
+  var { data: prof } = await window.sb.from('users').select('handle, name').eq('id', user.id).single();
+  currentHandle = (prof && prof.handle) ? prof.handle : (prof && prof.name) ? prof.name.split(' ')[0] : 'You';
+
+  var meAvatar = document.getElementById('wr-me-avatar');
+  if (meAvatar) meAvatar.textContent = currentHandle[0].toUpperCase();
+  var meLabel = document.getElementById('wr-me-label');
+  if (meLabel) meLabel.textContent = currentHandle;
+
+  // Direct join via ?session=<id>
+  var params = new URLSearchParams(window.location.search);
+  if (params.get('session')) {
+    currentSessionId = params.get('session');
+    await rejoinSession(currentSessionId);
+    return;
+  }
+
+  await loadMatches();
+});
+
+// ── Step navigation ───────────────────────────────────────────────────────────
+function goStep(n) {
+  document.querySelectorAll('.step-section').forEach(function(s) { s.classList.remove('active'); });
+  document.getElementById('step-' + n).classList.add('active');
+
+  document.querySelectorAll('.step-pill').forEach(function(p, i) {
+    p.classList.remove('active', 'done');
+    if (i < n - 1) p.classList.add('done');
+    else if (i === n - 1) p.classList.add('active');
+  });
+
+  if (n === 2 && allMatches.length === 0) loadMatches();
+  if (n === 3 && selectedMatch) {
+    document.getElementById('step3-match-label').textContent =
+      selectedMatch.home_team_name + ' vs ' + selectedMatch.away_team_name;
+  }
+}
+
+// ── Mode selection ────────────────────────────────────────────────────────────
+function selectMode(mode) {
+  selectedMode = mode;
+  document.querySelectorAll('.mode-card').forEach(function(c) { c.classList.remove('selected'); });
+  document.getElementById('mode-' + mode).classList.add('selected');
+  document.getElementById('btn-next-1').disabled = false;
+}
+
+// ── Match loading ─────────────────────────────────────────────────────────────
+async function loadMatches() {
+  var list = document.getElementById('match-list');
+  list.innerHTML = '<div class="match-empty">Loading matches…</div>';
+
+  var now = new Date();
+  var windowEnd = new Date(now.getTime() + 48 * 60 * 60 * 1000).toISOString();
+
+  var { data, error } = await window.sb
+    .from('api_football_fixtures')
+    .select('fixture_id, home_team_name, away_team_name, kickoff_at, status_short, league_id, league_name')
+    .gte('kickoff_at', new Date(now.getTime() - 120 * 60 * 1000).toISOString())
+    .lte('kickoff_at', windowEnd)
+    .order('kickoff_at', { ascending: true })
+    .limit(60);
+
+  if (error || !data || data.length === 0) {
+    list.innerHTML = '<div class="match-empty">No matches found in the next 48 hours</div>';
+    return;
+  }
+
+  allMatches = data;
+
+  // Populate competition filter
+  var comps = [...new Set(data.map(function(m) { return m.league_name; }).filter(Boolean))];
+  var cf = document.getElementById('comp-filter');
+  comps.forEach(function(c) {
+    var o = document.createElement('option');
+    o.value = c; o.textContent = c;
+    cf.appendChild(o);
+  });
+
+  renderMatches(data);
+}
+
+function filterMatches() {
+  var q = document.getElementById('match-search').value.toLowerCase();
+  var comp = document.getElementById('comp-filter').value;
+  var filtered = allMatches.filter(function(m) {
+    var name = (m.home_team_name + ' ' + m.away_team_name).toLowerCase();
+    return (!q || name.includes(q)) && (!comp || m.league_name === comp);
+  });
+  renderMatches(filtered);
+}
+
+function renderMatches(matches) {
+  var list = document.getElementById('match-list');
+  if (!matches.length) {
+    list.innerHTML = '<div class="match-empty">No matches match your search</div>';
+    return;
+  }
+
+  var isLive = function(s) { return ['1H','HT','2H','ET','BT'].includes(s); };
+  var isSoon = function(m) {
+    var diff = (new Date(m.kickoff_at) - Date.now()) / 60000;
+    return diff >= 0 && diff <= 60;
+  };
+
+  list.innerHTML = matches.map(function(m) {
+    var live = isLive(m.status_short);
+    var soon = !live && isSoon(m);
+    var statusClass = live ? 'live' : soon ? 'soon' : 'upcoming';
+    var timeStr = live ? '' : formatKickoff(m.kickoff_at);
+    var liveBadge = live ? '<span class="match-row-live-badge">LIVE</span>' : '';
+    var selected = selectedMatch && selectedMatch.fixture_id === m.fixture_id ? ' selected' : '';
+    return '<div class="match-row' + selected + '" onclick="selectMatch(' + m.fixture_id + ')">' +
+      '<div class="match-row-status ' + statusClass + '"></div>' +
+      '<div class="match-row-teams">' +
+        '<div class="match-row-name">' + esc(m.home_team_name) + ' vs ' + esc(m.away_team_name) + '</div>' +
+        '<div class="match-row-comp">' + esc(m.league_name || '') + '</div>' +
+      '</div>' +
+      '<div class="match-row-time">' + (live ? liveBadge : timeStr) + '</div>' +
+    '</div>';
+  }).join('');
+}
+
+var _matchLookup = {};
+function selectMatch(fixtureId) {
+  var m = allMatches.find(function(x) { return x.fixture_id == fixtureId; });
+  if (!m) return;
+  selectedMatch = m;
+  document.querySelectorAll('.match-row').forEach(function(r) { r.classList.remove('selected'); });
+  event.currentTarget.classList.add('selected');
+  document.getElementById('btn-next-2').disabled = false;
+}
+
+function formatKickoff(iso) {
+  var d = new Date(iso);
+  var diff = (d - Date.now()) / 60000;
+  if (diff <= 0) return 'Started';
+  if (diff < 60) return 'in ' + Math.round(diff) + 'm';
+  if (diff < 120) return 'in 1h ' + Math.round(diff - 60) + 'm';
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+// ── Half scope ────────────────────────────────────────────────────────────────
+function selectHalf(half) {
+  selectedHalf = half;
+  document.querySelectorAll('.half-card').forEach(function(c) { c.classList.remove('selected'); });
+  var map = { 'full_match': 'half-full', 'first_half': 'half-first', 'second_half': 'half-second' };
+  document.getElementById(map[half]).classList.add('selected');
+}
+
+// ── Enter lobby ───────────────────────────────────────────────────────────────
+async function enterLobby() {
+  var btn = document.getElementById('btn-enter');
+  btn.disabled = true;
+  btn.textContent = 'Creating session…';
+
+  try {
+    // 1. Find or create a br_match_pools placeholder
+    var poolId = await getOrCreatePool();
+    if (!poolId) throw new Error('Could not create match pool');
+
+    // 2. Find an open waiting session for this context, or create one
+    var sessionId = await getOrCreateSession(poolId);
+    if (!sessionId) throw new Error('Could not create session');
+    currentSessionId = sessionId;
+
+    // 3. Join session as a player
+    var { error: joinErr } = await window.sb.from('br_session_players').insert({
+      session_id: sessionId,
+      user_id: currentUserId,
+    });
+    // Ignore duplicate join (23505 = unique_violation — already in session)
+    if (joinErr && joinErr.code !== '23505') {
+      // 23000-range codes may indicate br_session_not_waiting — propagate that
+      throw new Error(joinErr.message);
+    }
+
+    showWaitingRoom(sessionId);
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = 'Enter Arena →';
+    showToast(err.message || 'Failed to enter lobby', true);
+  }
+}
+
+async function getOrCreatePool() {
+  var matchId = String(selectedMatch.fixture_id);
+  var kickoff = selectedMatch.kickoff_at;
+  var expiresAt = new Date(new Date(kickoff).getTime() + 130 * 60 * 1000).toISOString();
+
+  // Try to find an existing ready pool
+  var { data: existing } = await window.sb
+    .from('br_match_pools')
+    .select('id')
+    .eq('match_id', matchId)
+    .eq('half_scope', selectedHalf)
+    .in('status', ['ready', 'generating'])
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) return existing.id;
+
+  // Create a placeholder pool (question generation happens server-side later)
+  var { data: pool, error } = await window.sb
+    .from('br_match_pools')
+    .insert({
+      match_id:           matchId,
+      half_scope:         selectedHalf,
+      status:             'ready',
+      question_count:     0,
+      expires_at:         expiresAt,
+      generation_profile: {
+        match_id:   matchId,
+        half_scope: selectedHalf,
+        home_team:  selectedMatch.home_team_name,
+        away_team:  selectedMatch.away_team_name,
+      },
+    })
+    .select('id')
+    .single();
+
+  if (error) {
+    // Unique conflict — race, re-fetch
+    if (error.code === '23505') {
+      var { data: retry } = await window.sb
+        .from('br_match_pools')
+        .select('id')
+        .eq('match_id', matchId)
+        .eq('half_scope', selectedHalf)
+        .in('status', ['ready', 'generating'])
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return retry ? retry.id : null;
+    }
+    throw new Error('Pool creation failed: ' + error.message);
+  }
+  return pool.id;
+}
+
+async function getOrCreateSession(poolId) {
+  var matchId = String(selectedMatch.fixture_id);
+
+  // Look for a waiting session with space
+  var { data: waiting } = await window.sb
+    .from('br_sessions')
+    .select('id, mode')
+    .eq('match_id', matchId)
+    .eq('half_scope', selectedHalf)
+    .eq('mode', selectedMode)
+    .eq('status', 'waiting')
+    .order('created_at', { ascending: true })
+    .limit(5);
+
+  if (waiting && waiting.length > 0) {
+    // Pick the first session that still has space (not yet full)
+    for (var i = 0; i < waiting.length; i++) {
+      var { count } = await window.sb
+        .from('br_session_players')
+        .select('user_id', { count: 'exact', head: true })
+        .eq('session_id', waiting[i].id);
+      if (count < requiredPlayers[selectedMode]) return waiting[i].id;
+    }
+  }
+
+  // Create a new session
+  var { data: session, error } = await window.sb
+    .from('br_sessions')
+    .insert({
+      pool_id:        poolId,
+      match_id:       String(selectedMatch.fixture_id),
+      half_scope:     selectedHalf,
+      mode:           selectedMode,
+      home_team_name: selectedMatch.home_team_name,
+      away_team_name: selectedMatch.away_team_name,
+      kickoff_at:     selectedMatch.kickoff_at,
+      api_league_id:  selectedMatch.league_id,
+      status:         'waiting',
+    })
+    .select('id')
+    .single();
+
+  if (error) throw new Error('Session creation failed: ' + error.message);
+  return session.id;
+}
+
+// ── Waiting room ──────────────────────────────────────────────────────────────
+function showWaitingRoom(sessionId) {
+  var overlay = document.getElementById('wr-overlay');
+  overlay.classList.add('show');
+
+  var badge = document.getElementById('wr-badge-label');
+  badge.textContent = selectedMatch.home_team_name + ' vs ' + selectedMatch.away_team_name +
+    ' · ' + halfLabel(selectedHalf) + ' · ' + selectedMode.toUpperCase();
+
+  if (selectedMode === '1v1') {
+    document.getElementById('wr-duel').style.display = 'block';
+    document.getElementById('wr-ffa').style.display = 'none';
+  } else {
+    document.getElementById('wr-duel').style.display = 'none';
+    document.getElementById('wr-ffa').style.display = 'block';
+  }
+
+  startSessionRealtime(sessionId);
+  refreshWaitingRoom(sessionId);
+}
+
+async function refreshWaitingRoom(sessionId) {
+  var { data: players } = await window.sb
+    .from('br_session_players')
+    .select('user_id, users(handle, name)')
+    .eq('session_id', sessionId);
+
+  if (!players) return;
+
+  var needed = requiredPlayers[selectedMode];
+  var count = players.length;
+
+  if (selectedMode === '1v1') {
+    var opp = players.find(function(p) { return p.user_id !== currentUserId; });
+    var oppRing = document.getElementById('wr-opp-avatar');
+    if (opp && opp.users) {
+      var handle = opp.users.handle || (opp.users.name || '?')[0].toUpperCase();
+      oppRing.textContent = handle[0].toUpperCase();
+      oppRing.classList.add('found');
+    }
+  } else {
+    var list = document.getElementById('wr-players-list');
+    list.innerHTML = players.map(function(p) {
+      var h = (p.users && (p.users.handle || p.users.name)) || '…';
+      var isMe = p.user_id === currentUserId;
+      return '<div class="wr-player-row">' +
+        '<div class="wr-player-dot"></div>' +
+        '<div class="wr-player-handle">' + esc(h) + (isMe ? ' (you)' : '') + '</div>' +
+      '</div>';
+    }).join('') +
+    Array(needed - count).fill(
+      '<div class="wr-player-row">' +
+        '<div class="wr-player-dot" style="background:var(--grey-dark)"></div>' +
+        '<div class="wr-player-handle" style="color:var(--grey-dark)">Waiting…</div>' +
+      '</div>'
+    ).join('');
+  }
+
+  var statusLine = document.getElementById('wr-status-line');
+  var statusSub = document.getElementById('wr-status-sub');
+  statusSub.textContent = count + ' / ' + needed + ' players joined';
+
+  if (count >= needed) {
+    statusLine.innerHTML = '⚡ Starting…';
+    statusLine.className = 'wr-status found';
+    // All clients attempt to instantiate; RPC guard handles the race
+    await tryInstantiate(sessionId);
+  }
+}
+
+async function tryInstantiate(sessionId) {
+  try {
+    var { data: result } = await window.sb.rpc('instantiate_br_session', {
+      p_session_id:      sessionId,
+      p_pool_id:         await getPoolId(sessionId),
+      p_total_questions: 10, // placeholder until BR question generation is live
+    });
+    // ok=false with reason='session_not_waiting' means another client got there first — fine
+    if (result && result.ok) {
+      redirectToSession(sessionId);
+    }
+  } catch (e) {
+    // Ignore — Realtime will fire the status change and redirect
+  }
+}
+
+async function getPoolId(sessionId) {
+  var { data } = await window.sb
+    .from('br_sessions')
+    .select('pool_id')
+    .eq('id', sessionId)
+    .single();
+  return data ? data.pool_id : null;
+}
+
+function redirectToSession(sessionId) {
+  window.location.href = 'br-session.html?id=' + sessionId;
+}
+
+function startSessionRealtime(sessionId) {
+  stopRealtime();
+
+  sessionChannel = window.sb.channel('br-session-' + sessionId)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'br_sessions',
+      filter: 'id=eq.' + sessionId,
+    }, function(payload) {
+      var s = payload.new || payload.old || {};
+      if (s.status === 'active') {
+        redirectToSession(sessionId);
+      }
+    })
+    .on('postgres_changes', {
+      event: 'INSERT',
+      schema: 'public',
+      table: 'br_session_players',
+      filter: 'session_id=eq.' + sessionId,
+    }, function() {
+      refreshWaitingRoom(sessionId);
+    })
+    .subscribe();
+}
+
+function stopRealtime() {
+  if (sessionChannel) { window.sb.removeChannel(sessionChannel); sessionChannel = null; }
+  if (playersChannel) { window.sb.removeChannel(playersChannel); playersChannel = null; }
+}
+
+async function leaveLobby() {
+  stopRealtime();
+  if (currentSessionId) {
+    await window.sb.from('br_session_players')
+      .delete()
+      .eq('session_id', currentSessionId)
+      .eq('user_id', currentUserId);
+  }
+  document.getElementById('wr-overlay').classList.remove('show');
+  currentSessionId = null;
+}
+
+// ── Rejoin existing session ───────────────────────────────────────────────────
+async function rejoinSession(sessionId) {
+  var { data: session } = await window.sb
+    .from('br_sessions')
+    .select('*')
+    .eq('id', sessionId)
+    .single();
+
+  if (!session) { showToast('Session not found', true); return; }
+
+  if (session.status === 'active' || session.status === 'completed') {
+    window.location.href = 'br-session.html?id=' + sessionId;
+    return;
+  }
+
+  // Restore state and show waiting room
+  selectedMode = session.mode;
+  selectedHalf = session.half_scope;
+  selectedMatch = {
+    fixture_id:     parseInt(session.match_id),
+    home_team_name: session.home_team_name,
+    away_team_name: session.away_team_name,
+    kickoff_at:     session.kickoff_at,
+  };
+  showWaitingRoom(sessionId);
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function halfLabel(h) {
+  return { full_match: 'Full Match', first_half: '1st Half', second_half: '2nd Half' }[h] || h;
+}
+
+function esc(s) {
+  return String(s || '')
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+var _toastTimer;
+function showToast(msg, isError) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isError ? ' error' : '');
+  clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(function() { t.classList.remove('show'); }, 3500);
+}
+</script>
+</body>
+</html>

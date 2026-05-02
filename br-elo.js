@@ -1,6 +1,20 @@
 /**
  * br-elo.js — Battle Royale ELO Module
  *
+ * ⚠️  PROTOTYPE / CLIENT-TRUSTED — NOT PRODUCTION-SECURE
+ *
+ * Placement and ELO are computed entirely in the browser from client-reported
+ * data. Until Battle Royale has server-authoritative sessions (br_sessions /
+ * br_session_players tables + server-side RPC), any player can manipulate their
+ * own placement by altering JS state.
+ *
+ * Safe uses:  visual progression, prototype demos, dev testing.
+ * NEVER use for: competitive prizes, rare trophies, paid rewards, or any
+ * integrity-sensitive ranked feature.
+ *
+ * See CLAUDE.md §"Battle Royale ELO — prototype status" for the future
+ * server-authoritative design direction.
+ *
  * Placement rules:
  *   - placement 1 = winner (best)
  *   - higher placement number = eliminated earlier (worse)

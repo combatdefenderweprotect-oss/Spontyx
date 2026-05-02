@@ -1,0 +1,1158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Battle Royale — Spontix</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #080815;
+      --card: #0f1020;
+      --card2: #161830;
+      --border: rgba(255,255,255,0.08);
+      --border-hi: rgba(255,255,255,0.14);
+      --text: #e2e8f0;
+      --muted: rgba(226,232,240,0.5);
+      --red: #dc2626;
+      --red-light: rgba(220,38,38,0.15);
+      --red-border: rgba(220,38,38,0.35);
+      --lime: #A8E10C;
+      --lime-light: rgba(168,225,12,0.12);
+      --hp-green: #22c55e;
+      --hp-yellow: #eab308;
+      --hp-red: #ef4444;
+      --hp-dead: rgba(255,255,255,0.12);
+    }
+
+    html { background: var(--bg); }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* ── Topbar ────────────────────────────────────────────── */
+    #br-topbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      gap: 10px;
+    }
+    .br-logo {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--red);
+      letter-spacing: -0.5px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+    }
+    .br-logo span { color: var(--text); }
+    .br-round-pill {
+      background: var(--red-light);
+      border: 1px solid var(--red-border);
+      color: var(--text);
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 20px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .br-mode-label {
+      font-size: 0.7rem;
+      color: var(--muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Scoreboard ────────────────────────────────────────── */
+    #br-scoreboard {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+    }
+    #br-players-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 8px;
+    }
+    .br-player-card {
+      background: var(--card2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 10px 8px;
+      position: relative;
+    }
+    .br-player-card.is-me {
+      border-color: var(--red-border);
+      background: var(--red-light);
+    }
+    .br-player-card.is-eliminated {
+      opacity: 0.45;
+    }
+    .br-player-handle {
+      font-size: 0.72rem;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      margin-bottom: 6px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .br-player-you-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      background: var(--red);
+      flex-shrink: 0;
+    }
+    .br-hp-bar-wrap {
+      height: 6px;
+      border-radius: 3px;
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+      margin-bottom: 5px;
+    }
+    .br-hp-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      transition: width 0.6s ease, background 0.3s;
+    }
+    .br-hp-bar-fill.hp-green  { background: var(--hp-green); }
+    .br-hp-bar-fill.hp-yellow { background: var(--hp-yellow); }
+    .br-hp-bar-fill.hp-red    { background: var(--hp-red); }
+    .br-hp-bar-fill.hp-dead   { background: var(--hp-dead); }
+    .br-hp-text {
+      font-size: 0.65rem;
+      font-weight: 700;
+      color: var(--muted);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .br-elim-tag {
+      font-size: 0.6rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .br-placement-badge {
+      position: absolute;
+      top: 6px; right: 8px;
+      font-size: 0.6rem;
+      font-weight: 800;
+      color: var(--red);
+    }
+
+    /* ── Main feed area ────────────────────────────────────── */
+    #br-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 20px 16px 80px;
+      gap: 12px;
+    }
+
+    /* ── Holding states ────────────────────────────────────── */
+    .br-holding {
+      width: 100%;
+      max-width: 480px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 28px 20px;
+      text-align: center;
+    }
+    .br-holding-icon {
+      font-size: 2rem;
+      margin-bottom: 10px;
+    }
+    .br-holding-title {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+    }
+    .br-holding-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .br-pulse-dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--red);
+      margin-right: 6px;
+      animation: br-dot-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes br-dot-pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.2; }
+    }
+
+    /* ── Question card ─────────────────────────────────────── */
+    .br-q-card {
+      width: 100%;
+      max-width: 480px;
+      background: var(--card);
+      border: 1px solid var(--border-hi);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .br-q-header {
+      padding: 14px 16px 10px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .br-q-badge {
+      font-size: 0.6rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 3px 7px;
+      border-radius: 4px;
+      background: var(--red-light);
+      color: var(--red);
+      border: 1px solid var(--red-border);
+    }
+    .br-q-timer {
+      margin-left: auto;
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .br-q-timer.urgent { color: var(--hp-red); }
+    .br-q-body { padding: 16px 16px 12px; }
+    .br-q-text {
+      font-size: 0.95rem;
+      font-weight: 600;
+      line-height: 1.5;
+      color: var(--text);
+      margin-bottom: 16px;
+    }
+    .br-q-opts {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    .br-q-opt {
+      background: var(--card2);
+      border: 1.5px solid var(--border-hi);
+      border-radius: 10px;
+      padding: 12px 10px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      color: var(--text);
+      cursor: pointer;
+      text-align: center;
+      transition: border-color 0.15s, background 0.15s, transform 0.1s;
+    }
+    .br-q-opt:hover:not(.disabled) {
+      border-color: var(--red);
+      background: var(--red-light);
+    }
+    .br-q-opt:active:not(.disabled) { transform: scale(0.97); }
+    .br-q-opt.selected {
+      border-color: var(--red);
+      background: var(--red-light);
+      color: var(--text);
+    }
+    .br-q-opt.correct-opt {
+      border-color: var(--hp-green) !important;
+      background: rgba(34,197,94,0.12) !important;
+      color: var(--hp-green) !important;
+    }
+    .br-q-opt.wrong-opt {
+      border-color: var(--hp-red) !important;
+      background: rgba(239,68,68,0.1) !important;
+      color: var(--hp-red) !important;
+    }
+    .br-q-opt.disabled {
+      cursor: default;
+      opacity: 0.55;
+    }
+    .br-q-footer {
+      padding: 10px 16px 14px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .br-q-footer-status {
+      font-size: 0.72rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .br-q-pts {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .br-q-pts.earned { color: var(--lime); }
+
+    /* Timer bar */
+    .br-timer-bar-wrap {
+      height: 3px;
+      background: rgba(255,255,255,0.07);
+      margin: 0 16px 10px;
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .br-timer-bar-fill {
+      height: 100%;
+      background: var(--red);
+      border-radius: 2px;
+      transition: width 1s linear;
+    }
+
+    /* ── Eliminated banner ─────────────────────────────────── */
+    #br-elim-banner {
+      display: none;
+      width: 100%;
+      max-width: 480px;
+      background: rgba(239,68,68,0.1);
+      border: 1px solid rgba(239,68,68,0.3);
+      border-radius: 12px;
+      padding: 16px;
+      text-align: center;
+    }
+    #br-elim-banner .br-elim-title {
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--hp-red);
+      margin-bottom: 4px;
+    }
+    #br-elim-banner .br-elim-sub {
+      font-size: 0.8rem;
+      color: var(--muted);
+    }
+
+    /* ── Flash notifications ───────────────────────────────── */
+    .br-flash-notif {
+      position: fixed;
+      top: 90px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      z-index: 300;
+      font-size: 1.2rem;
+      font-weight: 800;
+      padding: 8px 20px;
+      border-radius: 30px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .br-flash-notif.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    #br-hp-notif {
+      background: rgba(239,68,68,0.2);
+      border: 1px solid rgba(239,68,68,0.4);
+      color: var(--hp-red);
+    }
+    #br-hp-gain-notif {
+      background: rgba(34,197,94,0.15);
+      border: 1px solid rgba(34,197,94,0.35);
+      color: var(--hp-green);
+    }
+    .br-round-toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      z-index: 300;
+      background: var(--card2);
+      border: 1px solid var(--border-hi);
+      border-radius: 30px;
+      padding: 8px 18px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s, transform 0.25s;
+    }
+    .br-round-toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    /* ── Complete overlay ──────────────────────────────────── */
+    #br-complete-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 200;
+      background: rgba(8,8,21,0.97);
+      backdrop-filter: blur(8px);
+      overflow-y: auto;
+      padding: 40px 20px 60px;
+    }
+    .br-complete-inner {
+      max-width: 440px;
+      margin: 0 auto;
+      text-align: center;
+    }
+    .br-complete-icon { font-size: 3rem; margin-bottom: 12px; }
+    .br-complete-title {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+    .br-complete-sub {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-bottom: 28px;
+    }
+    .br-placements {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 28px;
+    }
+    .br-placement-row {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-align: left;
+    }
+    .br-placement-row.is-me {
+      border-color: var(--red-border);
+      background: var(--red-light);
+    }
+    .br-placement-num {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--muted);
+      width: 24px;
+      flex-shrink: 0;
+    }
+    .br-placement-num.p1 { color: #facc15; }
+    .br-placement-num.p2 { color: #94a3b8; }
+    .br-placement-num.p3 { color: #cd7c40; }
+    .br-placement-info { flex: 1; }
+    .br-placement-handle {
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 2px;
+    }
+    .br-placement-hp {
+      font-size: 0.72rem;
+      color: var(--muted);
+    }
+    .br-placement-elim {
+      font-size: 0.62rem;
+      font-weight: 700;
+      color: var(--hp-red);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .br-btn-lobby {
+      display: inline-block;
+      background: var(--red);
+      color: #fff;
+      font-size: 0.9rem;
+      font-weight: 700;
+      padding: 12px 28px;
+      border-radius: 10px;
+      text-decoration: none;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s;
+    }
+    .br-btn-lobby:hover { opacity: 0.88; }
+    .br-btn-ghost {
+      display: inline-block;
+      background: transparent;
+      color: var(--muted);
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 10px;
+      text-decoration: none;
+      cursor: pointer;
+      border: 1px solid var(--border);
+      margin-top: 10px;
+      transition: border-color 0.15s, color 0.15s;
+    }
+    .br-btn-ghost:hover { border-color: var(--border-hi); color: var(--text); }
+
+    /* ── Animations ────────────────────────────────────────── */
+    @keyframes page-enter { from { opacity: 0; } to { opacity: 1; } }
+    body { animation: page-enter 150ms ease; }
+    @keyframes glow-correct {
+      0%, 100% { box-shadow: none; }
+      50% { box-shadow: 0 0 0 3px rgba(34,197,94,0.3); }
+    }
+    @keyframes shake-wrong {
+      0%, 100% { transform: translateX(0); }
+      20%, 60% { transform: translateX(-4px); }
+      40%, 80% { transform: translateX(4px); }
+    }
+    .glow-correct { animation: glow-correct 0.6s ease; }
+    .shake-wrong { animation: shake-wrong 0.4s ease; }
+
+    @media (max-width: 480px) {
+      .br-q-opts { grid-template-columns: 1fr; }
+      #br-players-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+<style>html{background:#080815;margin:0;padding:0}</style>
+
+<!-- Topbar -->
+<div id="br-topbar">
+  <a href="br-lobby.html" class="br-logo">⚔️ <span>BR</span></a>
+  <div id="br-round-pill" class="br-round-pill">Waiting…</div>
+  <div id="br-mode-label" class="br-mode-label"></div>
+</div>
+
+<!-- HP Scoreboard -->
+<div id="br-scoreboard">
+  <div id="br-players-grid"></div>
+</div>
+
+<!-- Main feed -->
+<div id="br-main">
+  <div id="br-feed">
+    <div class="br-holding">
+      <div class="br-holding-icon">⚔️</div>
+      <div class="br-holding-title">Loading session…</div>
+      <div class="br-holding-sub">Connecting to the arena</div>
+    </div>
+  </div>
+  <div id="br-elim-banner">
+    <div class="br-elim-title">💀 You've been eliminated</div>
+    <div class="br-elim-sub">Watch the remaining players battle it out</div>
+  </div>
+</div>
+
+<!-- HP flash notifications -->
+<div id="br-hp-notif" class="br-flash-notif"></div>
+<div id="br-hp-gain-notif" class="br-flash-notif"></div>
+<div id="br-round-toast" class="br-round-toast"></div>
+
+<!-- Complete overlay -->
+<div id="br-complete-overlay">
+  <div class="br-complete-inner">
+    <div id="br-co-icon" class="br-complete-icon">🏆</div>
+    <div id="br-co-title" class="br-complete-title">Battle Over</div>
+    <div id="br-co-sub" class="br-complete-sub"></div>
+    <div id="br-co-placements" class="br-placements"></div>
+    <button class="br-btn-lobby" onclick="window.location.href='br-lobby.html'">Back to Lobby</button>
+    <br>
+    <a href="dashboard.html" class="br-btn-ghost">Dashboard</a>
+  </div>
+</div>
+
+<!-- Supabase + store -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+
+<script>
+(function() {
+  /* ── State ─────────────────────────────────────────────── */
+  var sessionId      = null;
+  var currentUserId  = null;
+  var currentHandle  = null;
+  var sessionData    = null;
+  var players        = [];      // br_session_players rows + _handle
+  var currentQuestion = null;
+  var myAnswer       = null;    // player_answers row for current question
+  var myPlayer       = null;    // my br_session_players row
+  var prevHp         = null;
+  var prevSeq        = 0;
+
+  var brSessionChannel  = null;
+  var brPlayersChannel  = null;
+  var pollTimer         = null;
+  var tickTimer         = null;
+  var rtActive          = false;
+
+  /* ── Init ──────────────────────────────────────────────── */
+  window.addEventListener('load', async function() {
+    var { data: { user } } = await window.sb.auth.getUser();
+    if (!user) { window.location.replace('login.html'); return; }
+    currentUserId = user.id;
+
+    // Read handle from public.users
+    var { data: prof } = await window.sb.from('users').select('handle').eq('id', currentUserId).maybeSingle();
+    currentHandle = (prof && prof.handle) ? prof.handle : 'You';
+
+    var params = new URLSearchParams(window.location.search);
+    sessionId = params.get('id');
+    if (!sessionId) { window.location.replace('br-lobby.html'); return; }
+
+    await Promise.all([loadSession(), loadPlayers()]);
+    if (!sessionData) { window.location.replace('br-lobby.html'); return; }
+
+    // Guard: must be a participant (allow spectate of completed sessions)
+    var isMember = players.some(function(p) { return p.user_id === currentUserId; });
+    if (!isMember && sessionData.status !== 'completed') {
+      window.location.replace('br-lobby.html');
+      return;
+    }
+
+    renderTopbar();
+    renderScoreboard();
+
+    if (sessionData.status === 'completed') {
+      await loadCurrentQuestion();
+      await showCompleteOverlay();
+      return;
+    }
+
+    if (sessionData.status === 'active') {
+      await loadCurrentQuestion();
+    }
+
+    renderFeed();
+    startRealtime();
+    startPolling(15000);
+    startTimerTick();
+  });
+
+  /* ── Data loaders ──────────────────────────────────────── */
+  async function loadSession() {
+    var { data, error } = await window.sb
+      .from('br_sessions')
+      .select('id, status, match_id, half_scope, mode, current_question_seq, last_processed_seq, total_questions, winner_user_id, started_at, completed_at, home_team_name, away_team_name')
+      .eq('id', sessionId)
+      .maybeSingle();
+    if (error || !data) { sessionData = null; return; }
+    sessionData = data;
+    prevSeq = data.current_question_seq || 0;
+  }
+
+  async function loadPlayers() {
+    var { data: rows } = await window.sb
+      .from('br_session_players')
+      .select('user_id, hp, current_streak, is_eliminated, placement, br_rating_before, br_rating_after, br_rating_delta')
+      .eq('session_id', sessionId)
+      .order('placement', { ascending: true, nullsFirst: false });
+    if (!rows) { players = []; return; }
+
+    // Two-step: fetch handles from public.users
+    var uids = rows.map(function(r) { return r.user_id; });
+    var { data: profs } = await window.sb
+      .from('users')
+      .select('id, handle, name')
+      .in('id', uids);
+    var profMap = {};
+    (profs || []).forEach(function(p) { profMap[p.id] = p; });
+
+    players = rows.map(function(r) {
+      var prof = profMap[r.user_id] || {};
+      r._handle = prof.handle || prof.name || r.user_id.slice(0,6);
+      return r;
+    });
+
+    myPlayer = players.find(function(p) { return p.user_id === currentUserId; }) || null;
+  }
+
+  async function loadCurrentQuestion() {
+    var seq = (sessionData && sessionData.current_question_seq) ? sessionData.current_question_seq : 1;
+    var { data: qs } = await window.sb
+      .from('questions')
+      .select('id, question_text, options, answer_closes_at, resolution_status, correct_option_id, question_type, base_value, difficulty_multiplier, created_at')
+      .eq('br_session_id', sessionId)
+      .order('created_at', { ascending: true })
+      .range(seq - 1, seq - 1);
+    currentQuestion = (qs && qs.length > 0) ? qs[0] : null;
+
+    // Load my answer for this question
+    myAnswer = null;
+    if (currentQuestion) {
+      var { data: ans } = await window.sb
+        .from('player_answers')
+        .select('answer, is_correct, points_earned, answered_at')
+        .eq('question_id', currentQuestion.id)
+        .eq('user_id', currentUserId)
+        .maybeSingle();
+      myAnswer = ans || null;
+    }
+  }
+
+  /* ── Render ────────────────────────────────────────────── */
+  function renderTopbar() {
+    if (!sessionData) return;
+    var seq = sessionData.current_question_seq || 1;
+    var total = sessionData.total_questions || '?';
+    var st = sessionData.status;
+    var pill = document.getElementById('br-round-pill');
+    if (st === 'waiting') {
+      pill.textContent = 'Waiting…';
+    } else if (st === 'completed') {
+      pill.textContent = 'Battle Over';
+    } else {
+      pill.textContent = 'Round ' + seq + ' / ' + total;
+    }
+    var modeLabel = document.getElementById('br-mode-label');
+    var hl = sessionData.half_scope ? sessionData.half_scope.replace('_', ' ') : '';
+    modeLabel.textContent = hl.toUpperCase();
+  }
+
+  function renderScoreboard() {
+    var grid = document.getElementById('br-players-grid');
+    if (!players.length) { grid.innerHTML = ''; return; }
+    grid.innerHTML = players.map(function(p) {
+      var isMe = p.user_id === currentUserId;
+      var hp = typeof p.hp === 'number' ? p.hp : 100;
+      var isElim = !!p.is_eliminated;
+      var barPct = Math.max(0, Math.min(100, (hp / 150) * 100)).toFixed(1);
+      var cls = hpClass(hp, isElim);
+      var placementBadge = '';
+      if (p.placement) {
+        placementBadge = '<div class="br-placement-badge">#' + p.placement + '</div>';
+      }
+      return '<div class="br-player-card' + (isMe ? ' is-me' : '') + (isElim ? ' is-eliminated' : '') + '">' +
+        placementBadge +
+        '<div class="br-player-handle">' +
+          (isMe ? '<div class="br-player-you-dot"></div>' : '') +
+          escHtml(p._handle) +
+        '</div>' +
+        '<div class="br-hp-bar-wrap"><div class="br-hp-bar-fill ' + cls + '" style="width:' + barPct + '%"></div></div>' +
+        '<div class="br-hp-text">' +
+          (isElim
+            ? '<span class="br-elim-tag">Eliminated</span>'
+            : '<span>' + hp + ' HP</span><span>' + (p.current_streak > 1 ? '🔥' + p.current_streak : '') + '</span>'
+          ) +
+        '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  function hpClass(hp, isElim) {
+    if (isElim || hp <= 0) return 'hp-dead';
+    if (hp > 80) return 'hp-green';
+    if (hp > 40) return 'hp-yellow';
+    return 'hp-red';
+  }
+
+  function renderFeed() {
+    var feed = document.getElementById('br-feed');
+    var st = sessionData ? sessionData.status : 'waiting';
+
+    if (st === 'waiting') {
+      feed.innerHTML = holdingHtml('⏳', 'Waiting for players', 'The battle starts when all players are ready.');
+      return;
+    }
+    if (st === 'cancelled') {
+      feed.innerHTML = holdingHtml('❌', 'Session Cancelled', 'This battle was cancelled. Head back to the lobby.');
+      return;
+    }
+    if (st === 'completed') {
+      feed.innerHTML = holdingHtml('🏆', 'Battle Complete', 'Check your result below.');
+      return;
+    }
+
+    // Active session
+    if (!currentQuestion) {
+      var seq = (sessionData && sessionData.current_question_seq) ? sessionData.current_question_seq : 1;
+      feed.innerHTML = holdingHtml(
+        '<span class="br-pulse-dot"></span>⚔️',
+        'Round ' + seq + ' Starting…',
+        'The next question is being prepared. Stand by.'
+      );
+      return;
+    }
+
+    var q = currentQuestion;
+    var now = Date.now();
+    var closesAt = q.answer_closes_at ? new Date(q.answer_closes_at).getTime() : 0;
+    var isOpen = closesAt > now;
+    var isResolved = q.resolution_status === 'resolved';
+    var isVoided = q.resolution_status === 'voided';
+    var iAmElim = myPlayer && myPlayer.is_eliminated;
+
+    var opts = parseOptions(q.options);
+    var myAns = myAnswer ? myAnswer.answer : null;
+    var correctId = q.correct_option_id || null;
+
+    var optsHtml = opts.map(function(o) {
+      var cls = 'br-q-opt';
+      var disabled = false;
+      if (!isOpen || iAmElim) { cls += ' disabled'; disabled = true; }
+      if (isResolved) {
+        if (o.id === correctId) cls += ' correct-opt';
+        else if (o.id === myAns && o.id !== correctId) cls += ' wrong-opt';
+        cls += ' disabled';
+      } else if (o.id === myAns) {
+        cls += ' selected';
+      }
+      var click = (!disabled && !isResolved && isOpen && !iAmElim)
+        ? 'onclick="window.handleAnswer(\'' + escAttr(o.id) + '\')"'
+        : '';
+      return '<button class="' + cls + '" ' + click + '>' + escHtml(o.label) + '</button>';
+    }).join('');
+
+    // Timer bar
+    var totalMs = closesAt - (q.created_at ? new Date(q.created_at).getTime() : closesAt - 60000);
+    var remMs = Math.max(0, closesAt - now);
+    var barPct = totalMs > 0 ? Math.min(100, (remMs / totalMs * 100)).toFixed(1) : 0;
+    var timerCls = (remMs < 30000) ? ' urgent' : '';
+
+    var footerStatus = '';
+    if (isVoided) {
+      footerStatus = 'Question voided';
+    } else if (isResolved) {
+      if (myAnswer && myAnswer.is_correct) {
+        footerStatus = '✓ Correct';
+      } else if (myAnswer && myAnswer.is_correct === false) {
+        footerStatus = '✗ Wrong';
+      } else {
+        footerStatus = 'Resolved';
+      }
+    } else if (iAmElim) {
+      footerStatus = 'You\'re eliminated — spectating';
+    } else if (myAns) {
+      footerStatus = '🔒 Locked in — awaiting result';
+    } else if (isOpen) {
+      footerStatus = 'Choose your answer';
+    } else {
+      footerStatus = 'Resolving…';
+    }
+
+    var ptsHtml = '';
+    if (isResolved && myAnswer && myAnswer.points_earned != null) {
+      var pts = myAnswer.points_earned;
+      ptsHtml = '<span class="br-q-pts' + (pts > 0 ? ' earned' : '') + '">' + (pts > 0 ? '+' + pts : pts) + ' pts</span>';
+    } else if (!isResolved && q.base_value) {
+      ptsHtml = '<span class="br-q-pts">Up to ' + (q.base_value * 2) + ' pts</span>';
+    }
+
+    feed.innerHTML =
+      '<div class="br-q-card" id="current-q-card">' +
+        '<div class="br-q-header">' +
+          '<div class="br-q-badge">BR LIVE</div>' +
+          (isOpen ? '<div class="br-q-timer' + timerCls + '" id="q-timer-txt" data-closes-at="' + closesAt + '">' + fmtMs(remMs) + '</div>' : '') +
+        '</div>' +
+        (isOpen ? '<div class="br-timer-bar-wrap"><div class="br-timer-bar-fill" id="q-timer-bar" data-total="' + totalMs + '" data-closes-at="' + closesAt + '" style="width:' + barPct + '%"></div></div>' : '') +
+        '<div class="br-q-body">' +
+          '<div class="br-q-text">' + escHtml(q.question_text) + '</div>' +
+          '<div class="br-q-opts">' + optsHtml + '</div>' +
+        '</div>' +
+        '<div class="br-q-footer">' +
+          '<span class="br-q-footer-status">' + footerStatus + '</span>' +
+          ptsHtml +
+        '</div>' +
+      '</div>';
+
+    // Eliminated banner
+    var elimBanner = document.getElementById('br-elim-banner');
+    elimBanner.style.display = iAmElim ? 'block' : 'none';
+  }
+
+  function holdingHtml(icon, title, sub) {
+    return '<div class="br-holding"><div class="br-holding-icon">' + icon + '</div>' +
+      '<div class="br-holding-title">' + title + '</div>' +
+      '<div class="br-holding-sub">' + sub + '</div></div>';
+  }
+
+  /* ── Answer submission ─────────────────────────────────── */
+  window.handleAnswer = async function(answer) {
+    if (!currentQuestion || !sessionId) return;
+    if (myPlayer && myPlayer.is_eliminated) return;
+
+    var payload = {
+      question_id:                 currentQuestion.id,
+      user_id:                     currentUserId,
+      br_session_id:               sessionId,
+      answer:                      answer,
+      answered_at:                 new Date().toISOString(),
+      clutch_multiplier_at_answer: 1.0,
+      leader_gap_at_answer:        0,
+      streak_at_answer:            (myPlayer && myPlayer.current_streak) ? myPlayer.current_streak : 0,
+    };
+
+    var { error } = await window.sb
+      .from('player_answers')
+      .upsert(payload, { onConflict: 'question_id,user_id' });
+
+    if (!error) {
+      myAnswer = { answer: answer, is_correct: null, points_earned: null };
+      renderFeed();
+    }
+  };
+
+  /* ── Realtime ──────────────────────────────────────────── */
+  function startRealtime() {
+    // Watch session status + seq changes
+    brSessionChannel = window.sb.channel('br-sess-' + sessionId)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public',
+        table: 'br_sessions', filter: 'id=eq.' + sessionId
+      }, async function(payload) {
+        var prev = sessionData ? Object.assign({}, sessionData) : {};
+        sessionData = Object.assign({}, sessionData, payload.new);
+
+        renderTopbar();
+
+        if (payload.new.status === 'completed') {
+          renderScoreboard();
+          await showCompleteOverlay();
+          return;
+        }
+
+        var newSeq = payload.new.current_question_seq || 0;
+        if (newSeq !== prevSeq) {
+          prevSeq = newSeq;
+          // Round advanced — clear answer and load new question
+          myAnswer = null;
+          await loadCurrentQuestion();
+          renderFeed();
+          showRoundToast('Round ' + newSeq);
+        }
+      })
+      .subscribe(function(status) {
+        if (status === 'SUBSCRIBED') {
+          rtActive = true;
+          startPolling(30000);
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          rtActive = false;
+          startPolling(10000);
+        }
+      });
+
+    // Watch player HP / elimination changes
+    brPlayersChannel = window.sb.channel('br-plrs-' + sessionId)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public',
+        table: 'br_session_players', filter: 'session_id=eq.' + sessionId
+      }, async function(payload) {
+        var prevMyHp = myPlayer ? myPlayer.hp : null;
+        await loadPlayers();
+        renderScoreboard();
+
+        if (payload.new.user_id === currentUserId && myPlayer) {
+          var delta = myPlayer.hp - (prevMyHp !== null ? prevMyHp : myPlayer.hp);
+          if (delta !== 0) showHpFlash(delta);
+          if (myPlayer.is_eliminated && !document.getElementById('br-elim-banner').style.display !== 'none') {
+            document.getElementById('br-elim-banner').style.display = 'block';
+          }
+          renderFeed(); // refresh disabled state if eliminated
+        }
+      })
+      .subscribe();
+  }
+
+  function stopRealtime() {
+    if (brSessionChannel) { window.sb.removeChannel(brSessionChannel); brSessionChannel = null; }
+    if (brPlayersChannel) { window.sb.removeChannel(brPlayersChannel); brPlayersChannel = null; }
+    rtActive = false;
+  }
+
+  /* ── Polling ───────────────────────────────────────────── */
+  function startPolling(ms) {
+    stopPolling();
+    pollTimer = setInterval(async function() {
+      await loadSession();
+      await loadPlayers();
+      var newSeq = (sessionData && sessionData.current_question_seq) ? sessionData.current_question_seq : 0;
+      if (newSeq !== prevSeq) {
+        prevSeq = newSeq;
+        myAnswer = null;
+        await loadCurrentQuestion();
+      }
+      renderTopbar();
+      renderScoreboard();
+      renderFeed();
+      if (sessionData && sessionData.status === 'completed') {
+        await showCompleteOverlay();
+      }
+    }, ms);
+  }
+
+  function stopPolling() {
+    if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+  }
+
+  /* ── Timer tick ────────────────────────────────────────── */
+  function startTimerTick() {
+    stopTimerTick();
+    tickTimer = setInterval(function() {
+      var txt = document.getElementById('q-timer-txt');
+      var bar = document.getElementById('q-timer-bar');
+      if (txt) {
+        var closesAt = parseInt(txt.dataset.closesAt, 10);
+        var rem = Math.max(0, closesAt - Date.now());
+        txt.textContent = fmtMs(rem);
+        if (rem < 30000) txt.classList.add('urgent');
+      }
+      if (bar) {
+        var closesAt2 = parseInt(bar.dataset.closesAt, 10);
+        var total = parseInt(bar.dataset.total, 10);
+        var rem2 = Math.max(0, closesAt2 - Date.now());
+        var pct = total > 0 ? Math.min(100, (rem2 / total * 100)).toFixed(1) : 0;
+        bar.style.width = pct + '%';
+      }
+    }, 1000);
+  }
+
+  function stopTimerTick() {
+    if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+  }
+
+  /* ── HP flash ──────────────────────────────────────────── */
+  function showHpFlash(delta) {
+    if (delta === 0) return;
+    var el = delta < 0
+      ? document.getElementById('br-hp-notif')
+      : document.getElementById('br-hp-gain-notif');
+    el.textContent = (delta < 0 ? '' : '+') + delta + ' HP';
+    el.classList.add('show');
+    setTimeout(function() { el.classList.remove('show'); }, 1800);
+  }
+
+  function showRoundToast(msg) {
+    var el = document.getElementById('br-round-toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    setTimeout(function() { el.classList.remove('show'); }, 2500);
+  }
+
+  /* ── Complete overlay ──────────────────────────────────── */
+  async function showCompleteOverlay() {
+    stopPolling(); stopRealtime(); stopTimerTick();
+
+    // Compute BR ratings (idempotent — safe if already processed)
+    try {
+      await window.sb.rpc('update_br_ratings', { p_session_id: sessionId });
+    } catch(e) {
+      console.warn('[br-ratings] RPC error', e);
+    }
+    // Reload players so br_rating_delta values are populated
+    await loadPlayers();
+
+    var sorted = players.slice().sort(function(a, b) {
+      var pa = a.placement || 999;
+      var pb = b.placement || 999;
+      return pa - pb;
+    });
+
+    var myPlace = myPlayer ? (myPlayer.placement || null) : null;
+    var icon = myPlace === 1 ? '🏆' : myPlace === 2 ? '🥈' : myPlace === 3 ? '🥉' : '💀';
+    var title = myPlace === 1 ? 'Victory!' : ('You placed #' + (myPlace || '?'));
+    var sub = sorted.length + '-player battle complete';
+
+    document.getElementById('br-co-icon').innerHTML = icon;
+    document.getElementById('br-co-title').textContent = title;
+    document.getElementById('br-co-sub').textContent = sub;
+
+    var html = sorted.map(function(p, i) {
+      var rank = p.placement || (i + 1);
+      var numCls = 'br-placement-num' + (rank === 1 ? ' p1' : rank === 2 ? ' p2' : rank === 3 ? ' p3' : '');
+      var isElim = !!p.is_eliminated;
+      return '<div class="br-placement-row' + (p.user_id === currentUserId ? ' is-me' : '') + '">' +
+        '<div class="' + numCls + '">#' + rank + '</div>' +
+        '<div class="br-placement-info">' +
+          '<div class="br-placement-handle">' + escHtml(p._handle) + (p.user_id === currentUserId ? ' (you)' : '') + '</div>' +
+          (isElim
+            ? '<div class="br-placement-elim">Eliminated · ' + (typeof p.hp === 'number' ? p.hp + ' HP' : '') + '</div>'
+            : '<div class="br-placement-hp">' + (typeof p.hp === 'number' ? p.hp + ' HP remaining' : '') + '</div>'
+          ) +
+        '</div>' +
+        (p.br_rating_delta != null
+          ? '<div style="font-size:0.72rem;font-weight:700;color:' + (p.br_rating_delta >= 0 ? '#22c55e' : '#ef4444') + '">' +
+              (p.br_rating_delta >= 0 ? '+' : '') + p.br_rating_delta + ' SR</div>'
+          : '') +
+      '</div>';
+    }).join('');
+
+    document.getElementById('br-co-placements').innerHTML = html;
+    document.getElementById('br-complete-overlay').style.display = 'block';
+  }
+
+  /* ── Helpers ───────────────────────────────────────────── */
+  function parseOptions(raw) {
+    var arr = raw;
+    if (typeof raw === 'string') {
+      try { arr = JSON.parse(raw); } catch(e) { arr = []; }
+    }
+    if (!Array.isArray(arr)) return [];
+    return arr.map(function(o) {
+      if (typeof o === 'string') return { id: o.toLowerCase().replace(/\s+/g,'_'), label: o };
+      return o;
+    });
+  }
+
+  function fmtMs(ms) {
+    if (ms <= 0) return '0:00';
+    var s = Math.ceil(ms / 1000);
+    var m = Math.floor(s / 60);
+    var sec = s % 60;
+    return m + ':' + (sec < 10 ? '0' : '') + sec;
+  }
+
+  function escHtml(s) {
+    if (!s) return '';
+    return String(s)
+      .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function escAttr(s) {
+    if (!s) return '';
+    return String(s).replace(/'/g, "\\'");
+  }
+
+  /* ── Visibility + cleanup ──────────────────────────────── */
+  document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+      stopRealtime(); stopPolling(); stopTimerTick();
+    } else {
+      Promise.all([loadSession(), loadPlayers()]).then(async function() {
+        if (sessionData && sessionData.status !== 'completed') {
+          await loadCurrentQuestion();
+        }
+        renderTopbar(); renderScoreboard(); renderFeed();
+        if (sessionData && sessionData.status === 'completed') {
+          await showCompleteOverlay();
+        } else {
+          startRealtime(); startTimerTick();
+        }
+      });
+    }
+  });
+
+  window.addEventListener('beforeunload', function() {
+    stopRealtime(); stopPolling(); stopTimerTick();
+  });
+
+})();
+</script>
+</body>
+</html>

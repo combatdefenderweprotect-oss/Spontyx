@@ -1,0 +1,1016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Leagues — Spontix</title>
+  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <meta name="view-transition" content="same-origin">
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="styles.css"/>
+  <style>
+    /* ── Page wrapper ── */
+    .page-header {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 28px; gap: 16px; flex-wrap: wrap;
+    }
+    .page-header-left h1 {
+      font-size: 1.7rem; font-weight: 800; color: var(--off-white); margin: 0 0 4px;
+    }
+    .page-header-left p {
+      color: rgba(255,255,255,0.5); font-size: 0.85rem; margin: 0;
+    }
+    .page-header-actions { display: flex; gap: 10px; flex-shrink: 0; }
+
+    /* ── Stats row ── */
+    .stats-row {
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px;
+      margin-bottom: 28px;
+    }
+    @media (max-width: 700px) { .stats-row { grid-template-columns: repeat(2, 1fr); } }
+    .stat-card {
+      background: var(--navy-card); border: 1px solid var(--border);
+      border-radius: 12px; padding: 16px 18px;
+    }
+    .stat-card-value {
+      font-size: 1.6rem; font-weight: 800; color: var(--off-white); line-height: 1;
+    }
+    .stat-card-value.lime { color: var(--lime); }
+    .stat-card-label { font-size: 0.72rem; color: rgba(255,255,255,0.45); margin-top: 5px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+    /* ── Top-level tabs (My Leagues / Discover) ── */
+    .hub-tabs {
+      display: flex; gap: 6px; border-bottom: 1px solid var(--border);
+      margin-bottom: 24px; overflow-x: auto;
+    }
+    .hub-tab-btn {
+      padding: 10px 20px; border-radius: 8px 8px 0 0;
+      background: transparent; border: none; color: rgba(255,255,255,0.5);
+      font-size: 0.9rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+      transition: color .15s, background .15s; position: relative; bottom: -1px;
+    }
+    .hub-tab-btn.active {
+      color: var(--off-white); background: var(--navy-card);
+      border: 1px solid var(--border); border-bottom-color: var(--navy-card);
+    }
+    .hub-tab-btn:hover:not(.active) { color: var(--off-white); }
+    .hub-panel { display: none; }
+    .hub-panel.active { display: block; }
+
+    /* ── My Leagues inner tabs ── */
+    .inner-tabs { display: flex; gap: 8px; margin-bottom: 20px; }
+    .inner-tab-btn {
+      padding: 8px 18px; border-radius: 20px; border: 1px solid var(--border);
+      background: transparent; color: rgba(255,255,255,0.5);
+      font-size: 0.82rem; font-weight: 600; cursor: pointer; transition: all .15s;
+    }
+    .inner-tab-btn.active {
+      background: var(--lime); border-color: var(--lime); color: #111;
+    }
+    .inner-tab-btn:hover:not(.active) { border-color: rgba(255,255,255,0.3); color: var(--off-white); }
+    .inner-panel { display: none; }
+    .inner-panel.active { display: block; }
+
+    /* ── League cards ── */
+    .leagues-list { display: flex; flex-direction: column; gap: 12px; }
+
+    .league-card {
+      display: flex; align-items: center; gap: 16px;
+      background: var(--navy-card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px 18px;
+      text-decoration: none; color: inherit; cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .league-card:hover { border-color: rgba(168,225,12,0.3); background: rgba(168,225,12,0.03); }
+    .league-card.history { opacity: 0.75; }
+    .league-card.history:hover { opacity: 0.9; }
+
+    .league-card-icon {
+      width: 46px; height: 46px; border-radius: 12px; display: flex;
+      align-items: center; justify-content: center; font-weight: 800;
+      font-size: 0.85rem; flex-shrink: 0; letter-spacing: 0.01em;
+    }
+    .league-card-icon.lime    { background: rgba(168,225,12,0.15); color: var(--lime); }
+    .league-card-icon.purple  { background: rgba(124,92,252,0.15); color: #7C5CFC; }
+    .league-card-icon.coral   { background: rgba(255,107,107,0.15); color: var(--coral); }
+    .league-card-icon.teal    { background: rgba(78,205,196,0.15);  color: var(--teal); }
+
+    .league-row-info { flex: 1; min-width: 0; }
+    .league-row-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 5px; }
+    .league-row-name { font-weight: 700; font-size: 0.95rem; color: var(--off-white); }
+
+    .league-row-badge {
+      font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .league-row-badge.owner   { background: rgba(168,225,12,0.15); color: var(--lime); }
+    .league-row-badge.member  { background: rgba(124,92,252,0.15); color: #7C5CFC; }
+    .league-row-badge.public  { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.5); }
+    .league-row-badge.private { background: rgba(255,107,107,0.12); color: var(--coral); }
+    .league-row-badge.ended   { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.35); }
+    .league-row-badge.live    { background: rgba(255,107,107,0.15); color: var(--coral); }
+    .league-row-badge.team    { background: rgba(78,205,196,0.12); color: var(--teal); }
+    .league-row-result { font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.04em; }
+    .league-row-result.winner { background: rgba(168,225,12,0.15); color: var(--lime); }
+    .league-row-result.top3   { background: rgba(78,205,196,0.15); color: var(--teal); }
+    .league-row-result.mid    { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.4); }
+
+    .league-row-meta { display: flex; gap: 14px; flex-wrap: wrap; }
+    .league-row-meta-item {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 0.75rem; color: rgba(255,255,255,0.45);
+    }
+    .league-row-meta-item svg { width: 12px; height: 12px; stroke: currentColor; fill: none; }
+
+    .league-row-stats { display: flex; gap: 20px; flex-shrink: 0; }
+    @media (max-width: 700px) { .league-row-stats { display: none; } }
+    .league-row-stat { text-align: center; }
+    .league-row-stat-value { font-size: 1rem; font-weight: 700; color: var(--off-white); }
+    .league-row-stat-value.lime { color: var(--lime); }
+    .league-row-stat-label { font-size: 0.65rem; color: rgba(255,255,255,0.4); margin-top: 2px; }
+
+    .league-row-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .league-action-btn {
+      width: 34px; height: 34px; border-radius: 8px;
+      border: 1px solid var(--border); background: transparent;
+      color: rgba(255,255,255,0.4); cursor: pointer; display: flex;
+      align-items: center; justify-content: center; transition: all .15s;
+    }
+    .league-action-btn:hover { border-color: var(--lime); color: var(--lime); background: rgba(168,225,12,0.08); }
+    .league-action-btn.danger:hover { border-color: var(--coral); color: var(--coral); background: rgba(255,107,107,0.08); }
+    .league-action-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+    /* ── Empty state ── */
+    .empty-state {
+      text-align: center; padding: 48px 24px;
+      background: var(--navy-card); border: 1px dashed var(--border); border-radius: 14px;
+    }
+    .empty-state-icon { font-size: 2.2rem; margin-bottom: 12px; }
+    .empty-state h3 { color: var(--off-white); font-size: 1rem; margin: 0 0 8px; font-weight: 700; }
+    .empty-state p { color: rgba(255,255,255,0.4); font-size: 0.82rem; margin: 0 0 20px; }
+
+    /* ── Discover tab ── */
+    .filter-bar {
+      display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; align-items: center;
+    }
+    .filter-bar input[type="text"] {
+      flex: 1; min-width: 180px; padding: 9px 14px;
+      background: var(--navy-card); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--off-white); font-family: inherit; font-size: 0.85rem;
+    }
+    .filter-bar input[type="text"]:focus { outline: none; border-color: var(--lime); }
+    .filter-bar select {
+      padding: 9px 12px; background: var(--navy-card); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--off-white); font-family: inherit; font-size: 0.85rem; cursor: pointer;
+    }
+    .filter-bar select:focus { outline: none; border-color: var(--lime); }
+
+    .filter-chips { display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+    .filter-chip {
+      padding: 6px 14px; border-radius: 20px; border: 1px solid var(--border);
+      background: transparent; color: rgba(255,255,255,0.5);
+      font-size: 0.78rem; font-weight: 600; cursor: pointer; transition: all .15s;
+    }
+    .filter-chip.active { background: var(--lime); border-color: var(--lime); color: #111; }
+    .filter-chip:hover:not(.active) { border-color: rgba(255,255,255,0.3); color: var(--off-white); }
+
+    .discover-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 14px; }
+
+    .discover-card {
+      background: var(--navy-card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 18px 20px; text-decoration: none; color: inherit;
+      display: flex; flex-direction: column; gap: 12px; cursor: pointer;
+      transition: border-color .15s, background .15s;
+    }
+    .discover-card:hover { border-color: rgba(168,225,12,0.35); background: rgba(168,225,12,0.03); }
+
+    .dc-top { display: flex; align-items: flex-start; gap: 14px; }
+    .dc-icon {
+      width: 48px; height: 48px; border-radius: 12px; display: flex;
+      align-items: center; justify-content: center; font-weight: 800;
+      font-size: 0.85rem; flex-shrink: 0;
+    }
+    .dc-info { flex: 1; min-width: 0; }
+    .dc-name { font-weight: 700; font-size: 0.92rem; color: var(--off-white); margin-bottom: 5px; }
+    .dc-meta { display: flex; gap: 10px; flex-wrap: wrap; }
+    .dc-meta-item { display: flex; align-items: center; gap: 4px; font-size: 0.73rem; color: rgba(255,255,255,0.45); }
+    .dc-meta-item svg { width: 11px; height: 11px; stroke: currentColor; fill: none; }
+
+    .dc-badges { display: flex; gap: 6px; flex-wrap: wrap; }
+    .dc-badge {
+      font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    .dc-badge.sport  { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.5); }
+    .dc-badge.active { background: rgba(168,225,12,0.15); color: var(--lime); }
+    .dc-badge.ai     { background: rgba(124,92,252,0.15); color: #9b7cfc; }
+    .dc-badge.live   { background: rgba(255,107,107,0.15); color: var(--coral); }
+    .dc-badge.team   { background: rgba(78,205,196,0.12); color: var(--teal); }
+
+    .dc-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .dc-members { font-size: 0.75rem; color: rgba(255,255,255,0.4); }
+    .dc-join-btn {
+      padding: 7px 18px; border-radius: 20px; border: 1px solid var(--lime);
+      background: transparent; color: var(--lime); font-size: 0.78rem; font-weight: 700;
+      cursor: pointer; transition: all .15s;
+    }
+    .dc-join-btn:hover { background: var(--lime); color: #111; }
+
+    /* ── Create CTA banner ── */
+    .create-cta-banner {
+      background: linear-gradient(135deg, rgba(168,225,12,0.08), rgba(124,92,252,0.06));
+      border: 1px solid rgba(168,225,12,0.2); border-radius: 14px;
+      padding: 20px 24px; margin-bottom: 24px;
+      display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+    }
+    .cta-banner-text h3 { font-size: 1rem; font-weight: 700; color: var(--off-white); margin: 0 0 4px; }
+    .cta-banner-text p  { font-size: 0.8rem; color: rgba(255,255,255,0.5); margin: 0; }
+
+    /* ── Buttons ── */
+    .btn-lime {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: 10px;
+      background: var(--lime); border: none; color: #111;
+      font-size: 0.85rem; font-weight: 700; cursor: pointer; transition: background .15s; text-decoration: none;
+    }
+    .btn-lime:hover { background: #b8f40e; }
+    .btn-lime svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+
+    .btn-ghost {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 20px; border-radius: 10px;
+      background: transparent; border: 1px solid var(--border); color: var(--off-white);
+      font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all .15s; text-decoration: none;
+    }
+    .btn-ghost:hover { border-color: rgba(255,255,255,0.4); }
+
+    /* ── Toast ── */
+    #toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: #1e2a40; border: 1px solid var(--border); color: var(--off-white);
+      padding: 10px 22px; border-radius: 24px; font-size: 0.85rem; font-weight: 500;
+      opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 999; white-space: nowrap;
+    }
+    #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ── Sidebar ── -->
+  <div id="sidebar-placeholder"></div>
+
+  <!-- ── Main ── -->
+  <main class="main">
+    <div class="content">
+
+      <!-- Page header -->
+      <div class="page-header">
+        <div class="page-header-left">
+          <h1>Leagues</h1>
+          <p>Compete with friends and the community across every sport</p>
+        </div>
+        <div class="page-header-actions">
+          <a href="discover.html" class="btn-ghost">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            Browse
+          </a>
+          <a href="create-league.html" class="btn-lime">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Create League
+          </a>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row" id="stats-row">
+        <div class="stat-card">
+          <div class="stat-card-value lime" id="stat-active-leagues">—</div>
+          <div class="stat-card-label">Active Leagues</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value" id="stat-open-questions">—</div>
+          <div class="stat-card-label">Open Questions</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value" id="stat-total-points">—</div>
+          <div class="stat-card-label">Total Points</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-value" id="stat-leagues-won">—</div>
+          <div class="stat-card-label">Leagues Won</div>
+        </div>
+      </div>
+
+      <!-- Hub tabs -->
+      <div class="hub-tabs">
+        <button class="hub-tab-btn active" onclick="switchHubTab('my-leagues', this)">My Leagues</button>
+        <button class="hub-tab-btn" onclick="switchHubTab('discover', this)">Discover</button>
+      </div>
+
+      <!-- ═══ MY LEAGUES PANEL ═══ -->
+      <div class="hub-panel active" id="hub-my-leagues">
+
+        <!-- Inner tabs: Created / Joined / History -->
+        <div class="inner-tabs">
+          <button class="inner-tab-btn active" onclick="switchInnerTab('created', this)">Created</button>
+          <button class="inner-tab-btn" onclick="switchInnerTab('joined', this)">Joined</button>
+          <button class="inner-tab-btn" onclick="switchInnerTab('history', this)">History</button>
+        </div>
+
+        <!-- ── Created ── -->
+        <div class="inner-panel active" id="inner-created">
+          <div class="leagues-list" id="list-created">
+
+            <a href="league.html" class="league-card">
+              <div class="league-card-icon lime">LL</div>
+              <div class="league-row-info">
+                <div class="league-row-top">
+                  <div class="league-row-name">LaLiga Legends 24/25</div>
+                  <span class="league-row-badge owner">Owner</span>
+                  <span class="league-row-badge public">Public</span>
+                  <span class="league-row-badge live">Live</span>
+                </div>
+                <div class="league-row-meta">
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    8 / 12 members
+                  </span>
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Season · Match 28
+                  </span>
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                    Football · La Liga
+                  </span>
+                </div>
+              </div>
+              <div class="league-row-stats">
+                <div class="league-row-stat">
+                  <div class="league-row-stat-value lime">1st</div>
+                  <div class="league-row-stat-label">Your Rank</div>
+                </div>
+                <div class="league-row-stat">
+                  <div class="league-row-stat-value">2,840</div>
+                  <div class="league-row-stat-label">Points</div>
+                </div>
+              </div>
+              <div class="league-row-actions" onclick="event.preventDefault();event.stopPropagation();">
+                <button class="league-action-btn" title="Share" onclick="showToast('Invite link copied!')">
+                  <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                </button>
+                <button class="league-action-btn danger" title="Delete League" onclick="showToast('Are you sure you want to delete?')">
+                  <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                </button>
+              </div>
+            </a>
+
+            <a href="league.html" class="league-card">
+              <div class="league-card-icon purple">UK</div>
+              <div class="league-row-info">
+                <div class="league-row-top">
+                  <div class="league-row-name">UCL Knockout Crew</div>
+                  <span class="league-row-badge owner">Owner</span>
+                  <span class="league-row-badge private">Private</span>
+                </div>
+                <div class="league-row-meta">
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    5 / 8 members
+                  </span>
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Season · Matchday 6
+                  </span>
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                    Football · UCL
+                  </span>
+                </div>
+              </div>
+              <div class="league-row-stats">
+                <div class="league-row-stat">
+                  <div class="league-row-stat-value lime">2nd</div>
+                  <div class="league-row-stat-label">Your Rank</div>
+                </div>
+                <div class="league-row-stat">
+                  <div class="league-row-stat-value">1,560</div>
+                  <div class="league-row-stat-label">Points</div>
+                </div>
+              </div>
+              <div class="league-row-actions" onclick="event.preventDefault();event.stopPropagation();">
+                <button class="league-action-btn" title="Share" onclick="showToast('Invite link copied!')">
+                  <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                </button>
+                <button class="league-action-btn danger" title="Delete League" onclick="showToast('Are you sure you want to delete?')">
+                  <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                </button>
+              </div>
+            </a>
+
+            <a href="league.html" class="league-card">
+              <div class="league-card-icon teal">DN</div>
+              <div class="league-row-info">
+                <div class="league-row-top">
+                  <div class="league-row-name">Draft Night Crew</div>
+                  <span class="league-row-badge owner">Owner</span>
+                  <span class="league-row-badge public">Public</span>
+                </div>
+                <div class="league-row-meta">
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    10 / 15 members
+                  </span>
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Season · Week 14
+                  </span>
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                    Hockey · NHL
+                  </span>
+                </div>
+              </div>
+              <div class="league-row-stats">
+                <div class="league-row-stat">
+                  <div class="league-row-stat-value">4th</div>
+                  <div class="league-row-stat-label">Your Rank</div>
+                </div>
+                <div class="league-row-stat">
+                  <div class="league-row-stat-value">980</div>
+                  <div class="league-row-stat-label">Points</div>
+                </div>
+              </div>
+              <div class="league-row-actions" onclick="event.preventDefault();event.stopPropagation();">
+                <button class="league-action-btn" title="Share" onclick="showToast('Invite link copied!')">
+                  <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                </button>
+                <button class="league-action-btn danger" title="Delete League" onclick="showToast('Are you sure you want to delete?')">
+                  <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+                </button>
+              </div>
+            </a>
+
+          </div>
+        </div>
+
+        <!-- ── Joined ── -->
+        <div class="inner-panel" id="inner-joined">
+          <div class="leagues-list" id="list-joined">
+
+            <a href="league.html" class="league-card">
+              <div class="league-card-icon coral">LF</div>
+              <div class="league-row-info">
+                <div class="league-row-top">
+                  <div class="league-row-name">La Liga Fanatics</div>
+                  <span class="league-row-badge member">Member</span>
+                  <span class="league-row-badge public">Public</span>
+                  <span class="league-row-badge live">Live</span>
+                </div>
+                <div class="league-row-meta">
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    342 members
+                  </span>
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Season · Match 28
+                  </span>
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H5"/><circle cx="8.5" cy="7" r="4"/></svg>
+                    by @laliga_legend
+                  </span>
+                </div>
+              </div>
+              <div class="league-row-stats">
+                <div class="league-row-stat">
+                  <div class="league-row-stat-value lime">14th</div>
+                  <div class="league-row-stat-label">Your Rank</div>
+                </div>
+                <div class="league-row-stat">
+                  <div class="league-row-stat-value">3,120</div>
+                  <div class="league-row-stat-label">Points</div>
+                </div>
+              </div>
+              <div class="league-row-actions" onclick="event.preventDefault();event.stopPropagation();">
+                <button class="league-action-btn" title="Share" onclick="showToast('Invite link copied!')">
+                  <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                </button>
+                <button class="league-action-btn danger" title="Leave League" onclick="showToast('Left league!')">
+                  <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                </button>
+              </div>
+            </a>
+
+            <a href="league.html" class="league-card">
+              <div class="league-card-icon lime">GS</div>
+              <div class="league-row-info">
+                <div class="league-row-top">
+                  <div class="league-row-name">Grand Slam Guessers</div>
+                  <span class="league-row-badge member">Member</span>
+                  <span class="league-row-badge public">Public</span>
+                </div>
+                <div class="league-row-meta">
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    88 members
+                  </span>
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Season · Round 3
+                  </span>
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H5"/><circle cx="8.5" cy="7" r="4"/></svg>
+                    by @ace_predictor
+                  </span>
+                </div>
+              </div>
+              <div class="league-row-stats">
+                <div class="league-row-stat">
+                  <div class="league-row-stat-value lime">5th</div>
+                  <div class="league-row-stat-label">Your Rank</div>
+                </div>
+                <div class="league-row-stat">
+                  <div class="league-row-stat-value">2,680</div>
+                  <div class="league-row-stat-label">Points</div>
+                </div>
+              </div>
+              <div class="league-row-actions" onclick="event.preventDefault();event.stopPropagation();">
+                <button class="league-action-btn" title="Share" onclick="showToast('Invite link copied!')">
+                  <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                </button>
+                <button class="league-action-btn danger" title="Leave League" onclick="showToast('Left league!')">
+                  <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                </button>
+              </div>
+            </a>
+
+            <a href="league.html" class="league-card">
+              <div class="league-card-icon purple">IP</div>
+              <div class="league-row-info">
+                <div class="league-row-top">
+                  <div class="league-row-name">IPL Prediction Kings</div>
+                  <span class="league-row-badge member">Member</span>
+                  <span class="league-row-badge public">Public</span>
+                </div>
+                <div class="league-row-meta">
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    512 members
+                  </span>
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    Season · Match 20
+                  </span>
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H5"/><circle cx="8.5" cy="7" r="4"/></svg>
+                    by @cricket_master
+                  </span>
+                </div>
+              </div>
+              <div class="league-row-stats">
+                <div class="league-row-stat">
+                  <div class="league-row-stat-value">47th</div>
+                  <div class="league-row-stat-label">Your Rank</div>
+                </div>
+                <div class="league-row-stat">
+                  <div class="league-row-stat-value">1,890</div>
+                  <div class="league-row-stat-label">Points</div>
+                </div>
+              </div>
+              <div class="league-row-actions" onclick="event.preventDefault();event.stopPropagation();">
+                <button class="league-action-btn" title="Share" onclick="showToast('Invite link copied!')">
+                  <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                </button>
+                <button class="league-action-btn danger" title="Leave League" onclick="showToast('Left league!')">
+                  <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+                </button>
+              </div>
+            </a>
+
+          </div>
+        </div>
+
+        <!-- ── History ── -->
+        <div class="inner-panel" id="inner-history">
+          <div class="leagues-list" id="list-history">
+
+            <div class="league-card history">
+              <div class="league-card-icon lime" style="opacity:.6;">PL</div>
+              <div class="league-row-info">
+                <div class="league-row-top">
+                  <div class="league-row-name">Premier League 23/24</div>
+                  <span class="league-row-badge ended">Ended</span>
+                  <span class="league-row-result winner">1st Place</span>
+                </div>
+                <div class="league-row-meta">
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    12 members
+                  </span>
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+                    Sep 2023 — May 2024
+                  </span>
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                    Owner
+                  </span>
+                </div>
+              </div>
+              <div class="league-row-stats">
+                <div class="league-row-stat">
+                  <div class="league-row-stat-value lime">1st</div>
+                  <div class="league-row-stat-label">Final Rank</div>
+                </div>
+                <div class="league-row-stat">
+                  <div class="league-row-stat-value">4,560</div>
+                  <div class="league-row-stat-label">Total Pts</div>
+                </div>
+                <div class="league-row-stat">
+                  <div class="league-row-stat-value">72%</div>
+                  <div class="league-row-stat-label">Accuracy</div>
+                </div>
+              </div>
+            </div>
+
+            <div class="league-card history">
+              <div class="league-card-icon purple" style="opacity:.6;">WC</div>
+              <div class="league-row-info">
+                <div class="league-row-top">
+                  <div class="league-row-name">World Cup 2022 Preds</div>
+                  <span class="league-row-badge ended">Ended</span>
+                  <span class="league-row-result top3">3rd Place</span>
+                </div>
+                <div class="league-row-meta">
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    256 members
+                  </span>
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/></svg>
+                    Nov 2022 — Dec 2022
+                  </span>
+                  <span class="league-row-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H5"/><circle cx="8.5" cy="7" r="4"/></svg>
+                    Member
+                  </span>
+                </div>
+              </div>
+              <div class="league-row-stats">
+                <div class="league-row-stat">
+                  <div class="league-row-stat-value">3rd</div>
+                  <div class="league-row-stat-label">Final Rank</div>
+                </div>
+                <div class="league-row-stat">
+                  <div class="league-row-stat-value">3,210</div>
+                  <div class="league-row-stat-label">Total Pts</div>
+                </div>
+                <div class="league-row-stat">
+                  <div class="league-row-stat-value">68%</div>
+                  <div class="league-row-stat-label">Accuracy</div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+      </div><!-- /hub-my-leagues -->
+
+      <!-- ═══ DISCOVER PANEL ═══ -->
+      <div class="hub-panel" id="hub-discover">
+
+        <!-- Create CTA banner -->
+        <div class="create-cta-banner">
+          <div class="cta-banner-text">
+            <h3>Can't find what you're looking for?</h3>
+            <p>Create your own league and invite friends to compete</p>
+          </div>
+          <a href="create-league.html" class="btn-lime">
+            <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            Create League
+          </a>
+        </div>
+
+        <!-- Search + filters -->
+        <div class="filter-bar">
+          <input type="text" id="discover-search" placeholder="Search leagues…" oninput="filterDiscover()"/>
+          <select id="discover-sport" onchange="filterDiscover()">
+            <option value="all">All Sports</option>
+            <option value="football">⚽ Football</option>
+            <option value="hockey">🏒 Hockey</option>
+            <option value="tennis">🎾 Tennis</option>
+          </select>
+          <select id="discover-sort" onchange="filterDiscover()">
+            <option value="popular">Most Popular</option>
+            <option value="new">Newest</option>
+            <option value="active">Most Active</option>
+          </select>
+        </div>
+
+        <div class="filter-chips">
+          <button class="filter-chip active" onclick="setDiscoverFilter('all', this)">All</button>
+          <button class="filter-chip" onclick="setDiscoverFilter('live', this)">🔴 Live</button>
+          <button class="filter-chip" onclick="setDiscoverFilter('ai', this)">🤖 AI Questions</button>
+          <button class="filter-chip" onclick="setDiscoverFilter('team', this)">👥 Team Mode</button>
+          <button class="filter-chip" onclick="setDiscoverFilter('public', this)">🌍 Public</button>
+        </div>
+
+        <!-- Discover grid -->
+        <div class="discover-grid" id="discover-grid">
+
+          <a href="league.html" class="discover-card" data-sport="football" data-tags="live ai public">
+            <div class="dc-top">
+              <div class="dc-icon lime">EL</div>
+              <div class="dc-info">
+                <div class="dc-name">El Clásico Watchers</div>
+                <div class="dc-meta">
+                  <span class="dc-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    1,204 members
+                  </span>
+                  <span class="dc-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                    Football · La Liga
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="dc-badges">
+              <span class="dc-badge sport">Football</span>
+              <span class="dc-badge live">🔴 Live</span>
+              <span class="dc-badge ai">🤖 AI Questions</span>
+            </div>
+            <div class="dc-footer">
+              <span class="dc-members">1,204 competing now</span>
+              <button class="dc-join-btn" onclick="event.preventDefault();showToast('Joined league!')">Join</button>
+            </div>
+          </a>
+
+          <a href="league.html" class="discover-card" data-sport="football" data-tags="ai public">
+            <div class="dc-top">
+              <div class="dc-icon purple">CL</div>
+              <div class="dc-info">
+                <div class="dc-name">Champions League Hub</div>
+                <div class="dc-meta">
+                  <span class="dc-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    832 members
+                  </span>
+                  <span class="dc-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                    Football · UCL
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="dc-badges">
+              <span class="dc-badge sport">Football</span>
+              <span class="dc-badge ai">🤖 AI Questions</span>
+              <span class="dc-badge active">Active</span>
+            </div>
+            <div class="dc-footer">
+              <span class="dc-members">832 members</span>
+              <button class="dc-join-btn" onclick="event.preventDefault();showToast('Joined league!')">Join</button>
+            </div>
+          </a>
+
+          <a href="league.html" class="discover-card" data-sport="football" data-tags="team public">
+            <div class="dc-top">
+              <div class="dc-icon coral">BM</div>
+              <div class="dc-info">
+                <div class="dc-name">Bundesliga Masters</div>
+                <div class="dc-meta">
+                  <span class="dc-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    445 members
+                  </span>
+                  <span class="dc-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                    Football · Bundesliga
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="dc-badges">
+              <span class="dc-badge sport">Football</span>
+              <span class="dc-badge team">👥 Teams</span>
+              <span class="dc-badge active">Active</span>
+            </div>
+            <div class="dc-footer">
+              <span class="dc-members">445 members</span>
+              <button class="dc-join-btn" onclick="event.preventDefault();showToast('Joined league!')">Join</button>
+            </div>
+          </a>
+
+          <a href="league.html" class="discover-card" data-sport="tennis" data-tags="public ai">
+            <div class="dc-top">
+              <div class="dc-icon teal">GS</div>
+              <div class="dc-info">
+                <div class="dc-name">Grand Slam Guessers</div>
+                <div class="dc-meta">
+                  <span class="dc-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    288 members
+                  </span>
+                  <span class="dc-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                    Tennis · Grand Slams
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="dc-badges">
+              <span class="dc-badge sport">Tennis</span>
+              <span class="dc-badge ai">🤖 AI Questions</span>
+            </div>
+            <div class="dc-footer">
+              <span class="dc-members">288 members</span>
+              <button class="dc-join-btn" onclick="event.preventDefault();showToast('Joined league!')">Join</button>
+            </div>
+          </a>
+
+          <a href="league.html" class="discover-card" data-sport="hockey" data-tags="public team">
+            <div class="dc-top">
+              <div class="dc-icon lime">NH</div>
+              <div class="dc-info">
+                <div class="dc-name">NHL Playoffs Crew</div>
+                <div class="dc-meta">
+                  <span class="dc-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    176 members
+                  </span>
+                  <span class="dc-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                    Hockey · NHL
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="dc-badges">
+              <span class="dc-badge sport">Hockey</span>
+              <span class="dc-badge team">👥 Teams</span>
+            </div>
+            <div class="dc-footer">
+              <span class="dc-members">176 members</span>
+              <button class="dc-join-btn" onclick="event.preventDefault();showToast('Joined league!')">Join</button>
+            </div>
+          </a>
+
+          <a href="league.html" class="discover-card" data-sport="football" data-tags="live public ai">
+            <div class="dc-top">
+              <div class="dc-icon purple">PL</div>
+              <div class="dc-info">
+                <div class="dc-name">Premier League Live</div>
+                <div class="dc-meta">
+                  <span class="dc-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                    2,840 members
+                  </span>
+                  <span class="dc-meta-item">
+                    <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
+                    Football · Premier League
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div class="dc-badges">
+              <span class="dc-badge sport">Football</span>
+              <span class="dc-badge live">🔴 Live</span>
+              <span class="dc-badge ai">🤖 AI Questions</span>
+            </div>
+            <div class="dc-footer">
+              <span class="dc-members">2,840 members</span>
+              <button class="dc-join-btn" onclick="event.preventDefault();showToast('Joined league!')">Join</button>
+            </div>
+          </a>
+
+        </div><!-- /discover-grid -->
+
+      </div><!-- /hub-discover -->
+
+    </div><!-- /content -->
+  </main>
+
+</div><!-- /app-shell -->
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Scripts -->
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+<script src="sidebar.js"></script>
+<script src="utils.js"></script>
+<script>
+
+  /* ── Toast ── */
+  function showToast(msg, duration) {
+    var t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, duration || 2500);
+  }
+
+  /* ── Hub tab switching ── */
+  function switchHubTab(id, btn) {
+    document.querySelectorAll('.hub-panel').forEach(function(p){ p.classList.remove('active'); });
+    document.querySelectorAll('.hub-tab-btn').forEach(function(b){ b.classList.remove('active'); });
+    document.getElementById('hub-' + id).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  /* ── Inner tab switching (Created / Joined / History) ── */
+  function switchInnerTab(id, btn) {
+    document.querySelectorAll('.inner-panel').forEach(function(p){ p.classList.remove('active'); });
+    document.querySelectorAll('.inner-tab-btn').forEach(function(b){ b.classList.remove('active'); });
+    document.getElementById('inner-' + id).classList.add('active');
+    btn.classList.add('active');
+  }
+
+  /* ── Discover filters ── */
+  var activeDiscoverTag = 'all';
+
+  function setDiscoverFilter(tag, btn) {
+    activeDiscoverTag = tag;
+    document.querySelectorAll('.filter-chip').forEach(function(b){ b.classList.remove('active'); });
+    btn.classList.add('active');
+    filterDiscover();
+  }
+
+  function filterDiscover() {
+    var search = (document.getElementById('discover-search').value || '').toLowerCase();
+    var sport  = document.getElementById('discover-sport').value;
+    var cards  = document.querySelectorAll('.discover-card');
+    cards.forEach(function(card) {
+      var name     = (card.querySelector('.dc-name') ? card.querySelector('.dc-name').textContent : '').toLowerCase();
+      var cardSport = card.dataset.sport || '';
+      var cardTags  = card.dataset.tags  || '';
+      var matchSearch = !search || name.indexOf(search) >= 0;
+      var matchSport  = sport === 'all' || cardSport === sport;
+      var matchTag    = activeDiscoverTag === 'all' || cardTags.indexOf(activeDiscoverTag) >= 0;
+      card.style.display = (matchSearch && matchSport && matchTag) ? '' : 'none';
+    });
+  }
+
+  /* ── Supabase data ── */
+  document.addEventListener('DOMContentLoaded', async function() {
+    SpontixSidebar.init();
+
+    // Hydrate stats
+    try {
+      var uid = SpontixStore.Session.getCurrentUserId();
+      if (!uid) return;
+
+      var sb = window.sb;
+
+      // Active leagues
+      var { count: activeCount } = await sb
+        .from('league_members')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', uid);
+
+      // Open questions
+      var { data: memberLeagues } = await sb
+        .from('league_members').select('league_id').eq('user_id', uid);
+      var leagueIds = (memberLeagues || []).map(function(r){ return r.league_id; });
+
+      var openQCount = 0;
+      if (leagueIds.length > 0) {
+        var now = new Date().toISOString();
+        var { count: qc } = await sb
+          .from('questions')
+          .select('*', { count: 'exact', head: true })
+          .in('league_id', leagueIds)
+          .eq('resolution_status', 'pending')
+          .gt('answer_closes_at', now);
+        openQCount = qc || 0;
+      }
+
+      // Total points
+      var totalPts = 0;
+      if (leagueIds.length > 0) {
+        var { data: answers } = await sb
+          .from('player_answers')
+          .select('points_earned')
+          .eq('user_id', uid)
+          .eq('is_correct', true);
+        if (answers) answers.forEach(function(a){ totalPts += (a.points_earned || 0); });
+      }
+
+      document.getElementById('stat-active-leagues').textContent = activeCount || 0;
+      document.getElementById('stat-open-questions').textContent = openQCount;
+      document.getElementById('stat-total-points').textContent   = totalPts.toLocaleString();
+      document.getElementById('stat-leagues-won').textContent    = '—'; // requires game_history scope
+
+    } catch(e) {
+      console.warn('[leagues-hub] stats load error:', e);
+    }
+  });
+
+</script>
+</body>
+</html>

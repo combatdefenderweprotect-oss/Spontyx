@@ -3,6 +3,7 @@
 <head>
   <meta name="view-transition" content="same-origin" />
   <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <script>window.location.replace('br-lobby.html');</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spontyx — Battle Royale</title>
@@ -3019,6 +3020,12 @@
     }
 
     async function recordBRResult(rank, totalPlayers) {
+      // ⚠️  BR ELO is CLIENT-TRUSTED (prototype only).
+      // Placement is derived from client-reported `rank`. Any player can alter
+      // their own JS state to fake a 1st-place finish. Do not award competitive
+      // prizes, rare trophies, or paid rewards based on BR ELO until BR sessions
+      // are server-authoritative. See CLAUDE.md §"Battle Royale ELO — prototype status".
+
       // Build match title from current game if available
       const g = typeof currentGameTitle === 'string' && currentGameTitle ? currentGameTitle : 'Battle Royale';
 

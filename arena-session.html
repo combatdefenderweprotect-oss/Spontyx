@@ -603,6 +603,45 @@
       pointer-events: none; z-index: 102;
     }
     .as-comeback-notif.show { transform: translateY(0); opacity: 1; }
+
+    /* ── SPECTATOR MODE ── */
+    .as-spectator-banner {
+      display: none; align-items: center; gap: 10px;
+      background: rgba(124,92,252,0.12); border-bottom: 1px solid rgba(124,92,252,0.25);
+      padding: 10px 20px; font-size: 0.78rem; font-weight: 600;
+      color: rgba(255,255,255,0.75);
+    }
+    .as-spectator-banner svg { width: 16px; height: 16px; flex-shrink: 0; stroke: var(--purple); fill: none; stroke-width: 2; }
+    .as-spectator-banner .as-spec-pill {
+      margin-left: auto; background: rgba(124,92,252,0.2); color: var(--purple);
+      font-size: 0.62rem; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .as-spectator-note {
+      font-size: 0.72rem; color: rgba(124,92,252,0.8); margin-top: 6px; font-style: italic;
+    }
+
+    /* Locked state — private session */
+    .as-locked-state {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      min-height: 60vh; padding: 40px 24px; text-align: center;
+    }
+    .as-locked-icon {
+      font-size: 3rem; margin-bottom: 16px; opacity: 0.6;
+    }
+    .as-locked-title {
+      font-size: 1.2rem; font-weight: 700; color: rgba(255,255,255,0.9); margin-bottom: 8px;
+    }
+    .as-locked-body {
+      font-size: 0.83rem; color: rgba(255,255,255,0.45); max-width: 320px; line-height: 1.55;
+    }
+    .as-locked-btn {
+      margin-top: 28px; padding: 12px 28px; border-radius: 24px;
+      background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.8); font-size: 0.85rem; font-weight: 600;
+      font-family: inherit; cursor: pointer; transition: all 0.15s;
+    }
+    .as-locked-btn:hover { background: rgba(255,255,255,0.14); color: #fff; }
   </style>
 </head>
 <body>
@@ -620,6 +659,13 @@
     <span class="as-half-badge" id="as-half-badge"></span>
     <span class="as-mode-badge" id="as-mode-badge"></span>
   </div>
+</div>
+
+<!-- SPECTATOR BANNER (hidden by default; shown when isSpectator=true) -->
+<div class="as-spectator-banner" id="as-spectator-banner">
+  <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+  You are watching this match as a spectator. Answers are locked.
+  <span class="as-spec-pill">Spectator</span>
 </div>
 
 <!-- DUEL HEADER -->
@@ -727,6 +773,7 @@ var timerInterval     = null;
 var historyOpen       = false;
 var historyHasNewQ    = false;
 var deepLinkQuestionId = null;
+var isSpectator       = false;  // true when viewing a spectatable session as a non-participant
 
 // ── Init ──────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async function() {
@@ -774,11 +821,18 @@ async function init() {
   await loadQuestions();
   await loadPlayers();
 
-  // Membership guard — fail-closed: non-participants cannot view the session
-  if (sessionData && !players.some(function(p) { return p.user_id === currentUserId; })) {
-    showToast('You are not a participant in this session.');
-    setTimeout(function() { window.location.href = 'multiplayer.html'; }, 2000);
-    return;
+  // Membership gate — spectator branch
+  var isParticipant = players.some(function(p) { return p.user_id === currentUserId; });
+  if (sessionData && !isParticipant) {
+    if (sessionData.is_spectatable) {
+      // Allowed as read-only spectator
+      isSpectator = true;
+      document.getElementById('as-spectator-banner').style.display = 'flex';
+    } else {
+      // Private session — show locked state, do not redirect
+      showLockedState();
+      return;
+    }
   }
 
   if (sessionData && sessionData.status !== 'completed' && sessionData.status !== 'cancelled') {
@@ -806,6 +860,32 @@ async function init() {
   } else if (sessionData && (sessionData.status === 'completed' || sessionData.status === 'cancelled')) {
     showCompleteOverlay(deepLinkQuestionId);
   }
+}
+
+// ── Locked state ─────────────────────────────────────────────────────────
+function showLockedState() {
+  // Hide all live-session chrome except the topbar
+  var elementsToHide = ['as-scoreboard', 'as-spectator-banner', 'as-feed', 'as-complete-overlay', 'as-hist-btn', 'as-hist-overlay', 'as-streak-notif', 'as-comeback-notif'];
+  elementsToHide.forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+
+  var matchName = (sessionData && sessionData.home_team_name && sessionData.away_team_name)
+    ? sessionData.home_team_name + ' vs ' + sessionData.away_team_name
+    : 'Arena Session';
+
+  var locked = document.createElement('div');
+  locked.className = 'as-locked-state';
+  locked.innerHTML =
+    '<div class="as-locked-icon">🔒</div>' +
+    '<div class="as-locked-title">Private Session</div>' +
+    '<div class="as-locked-body">' +
+      escHtml(matchName) + ' is a private match.<br>Only participants can view this session.' +
+    '</div>' +
+    '<button class="as-locked-btn" onclick="window.location.href=\'multiplayer.html\'">← Back to Arena</button>';
+
+  document.getElementById('app').appendChild(locked);
 }
 
 // ── Deep-link helpers ─────────────────────────────────────────────────────
@@ -1056,6 +1136,20 @@ function renderFeed() {
       '<div class="as-holding-title">Next moment dropping soon</div>' +
       '<div class="as-holding-sub">Live questions appear here as the match unfolds</div>' +
       '</div>';
+
+    // Client-side fallback: if no active questions remain, ask the RPC whether the
+    // session should be completed (all questions resolved/voided). The RPC is
+    // idempotent and has all necessary guards. If it completes the session, the
+    // Realtime subscription below will fire showCompleteOverlay() for all clients.
+    // Fire-and-forget — never call showCompleteOverlay() directly from here.
+    window.sb.rpc('complete_arena_session', { p_session_id: currentSessionId })
+      .then(function(res) {
+        if (res.error) {
+          console.warn('[arena-session] complete_arena_session fallback error:', res.error.message);
+        } else if (res.data && res.data.completed) {
+          console.log('[arena-session] complete_arena_session fallback: session completed via client poll');
+        }
+      });
   }
 
   var isPrimarySet = false;
@@ -1172,12 +1266,14 @@ function renderCard(q, isPrimary) {
   }
 
   // Options HTML
+  // Spectators: buttons always disabled, no onclick, no resolution highlighting on unresolved questions
+  var spectatorHideOutcome = isSpectator && state !== 'resolved';
   var optHtml = '<div class="as-options">';
   opts.forEach(function(opt) {
-    var disabled  = state !== 'active';
-    var sel       = my && my.answer === opt.id;
-    var correct   = state === 'resolved' && opt.id === q.resolution_outcome;
-    var wrong     = state === 'resolved' && sel && opt.id !== q.resolution_outcome;
+    var disabled  = isSpectator || state !== 'active';
+    var sel       = !isSpectator && my && my.answer === opt.id;
+    var correct   = !spectatorHideOutcome && state === 'resolved' && opt.id === q.resolution_outcome;
+    var wrong     = !spectatorHideOutcome && state === 'resolved' && sel && opt.id !== q.resolution_outcome;
     var optCls    = 'as-opt';
     if (sel && state === 'active') optCls += ' selected';
     if (correct) optCls += ' correct';
@@ -1188,7 +1284,8 @@ function renderCard(q, isPrimary) {
     if (correct) icon = '<svg class="as-opt-icon" viewBox="0 0 24 24" stroke="#A8E10C" stroke-width="2.5" fill="none"><polyline points="20 6 9 17 4 12"/></svg>';
     if (wrong)   icon = '<svg class="as-opt-icon" viewBox="0 0 24 24" stroke="#FF6B6B" stroke-width="2.5" fill="none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
 
-    var click = (!disabled && state === 'active') ?
+    // Never add onclick for spectators
+    var click = (!isSpectator && !disabled && state === 'active') ?
       ' onclick="handleAnswer(this, \'' + q.id + '\', \'' + escAttr(opt.id) + '\')"' : '';
 
     optHtml += '<button class="' + optCls + '"' + (disabled ? ' disabled' : '') + click + '>' +
@@ -1196,9 +1293,11 @@ function renderCard(q, isPrimary) {
   });
   optHtml += '</div>';
 
-  // Current pick label
+  // Spectator note (replaces current-pick label)
   var pickLabel = '';
-  if (my && my.answer && state === 'active') {
+  if (isSpectator && state === 'active') {
+    pickLabel = '<div class="as-spectator-note">👁 Watching — answers locked for spectators</div>';
+  } else if (!isSpectator && my && my.answer && state === 'active') {
     pickLabel = '<div class="as-current-pick">Your current pick — tap to change</div>';
   }
 
@@ -1281,6 +1380,7 @@ async function computeLeaderGap() {
 
 // ── Answer Submission ─────────────────────────────────────────────────────
 async function handleAnswer(btn, questionId, answer) {
+  if (isSpectator) return;  // spectators cannot answer
   if (!currentUserId || !window.sb) { showToast('Sign in to answer'); return; }
 
   var q = currentQuestions.find(function(x) { return x.id === questionId; });
@@ -1449,6 +1549,20 @@ async function showCompleteOverlay(focusId) {
       '<div class="as-result-stat"><div class="as-result-stat-val">' + myScore + '</div><div class="as-result-stat-label">Points</div></div>' +
       xpHtml +
       ratingHtml;
+  }
+
+  if (isSpectator) {
+    // Spectator overlay: show scores only, skip XP/rating tiles and personal question review
+    var statsEl = document.getElementById('as-result-stats');
+    if (statsEl) {
+      statsEl.innerHTML =
+        '<div class="as-result-stat"><div class="as-result-stat-val lime">' + myCorrect + '</div><div class="as-result-stat-label">Correct</div></div>' +
+        '<div class="as-result-stat"><div class="as-result-stat-val">' + myScore + '</div><div class="as-result-stat-label">Points</div></div>';
+    }
+    overlay.classList.add('show');
+    stopPoll();
+    stopTimerTick();
+    return;
   }
 
   renderStats(null, undefined);  // show immediately with both pending

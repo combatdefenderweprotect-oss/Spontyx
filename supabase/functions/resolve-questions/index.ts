@@ -27,14 +27,18 @@ Deno.serve(async (req: Request) => {
     return new Response('Unauthorized', { status: 401 });
   }
 
+  const reqUrl = new URL(req.url);
+  const brOnly = reqUrl.searchParams.get('br_only') === '1';
+
   const sb = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
   // ── Fetch pending questions past their resolves_after ────────────────
   // Include all scoring metadata needed by markCorrectAnswers()
-  const { data: questions, error: fetchErr } = await sb
+  let questionsQuery = sb
     .from('questions')
     .select([
-      'id', 'league_id', 'arena_session_id', 'type', 'question_type', 'sport', 'options', 'resolution_predicate',
+      'id', 'league_id', 'arena_session_id', 'br_session_id',
+      'type', 'question_type', 'sport', 'options', 'resolution_predicate',
       // Scoring metadata (added by migration 006)
       'base_value', 'difficulty_multiplier',
       'answer_closes_at', 'deadline',
@@ -50,6 +54,13 @@ Deno.serve(async (req: Request) => {
     .not('resolution_predicate', 'is', null)
     .order('resolves_after', { ascending: true })
     .limit(BATCH_SIZE);
+
+  // br_only=1: process only BR questions (used by the 1-minute cron job)
+  if (brOnly) {
+    questionsQuery = questionsQuery.not('br_session_id', 'is', null);
+  }
+
+  const { data: questions, error: fetchErr } = await questionsQuery;
 
   if (fetchErr) {
     console.error('[resolve-questions] fetch error:', fetchErr);
@@ -89,6 +100,55 @@ Deno.serve(async (req: Request) => {
     }
   }
 
+  // ── Pre-load BR session statuses ──────────────────────────────────────
+  // One query covers all BR questions in the batch. Fail-closed: if the
+  // query errors, brStatusLookupFailed = true and all BR questions are
+  // skipped (not voided) — the 1-min cron retries next cycle.
+  const brSessionIds = [...new Set(
+    questions
+      .map((q: any) => q.br_session_id)
+      .filter(Boolean),
+  )] as string[];
+
+  const brSessionMap = new Map<string, { status: string; current_question_seq: number }>();
+  let   brStatusLookupFailed = false;
+
+  if (brSessionIds.length > 0) {
+    const { data: brSessions, error: brErr } = await sb
+      .from('br_sessions')
+      .select('id, status, current_question_seq')
+      .in('id', brSessionIds);
+
+    if (brErr) {
+      console.error('[resolve] br_session_status_lookup_error:', brErr.message);
+      brStatusLookupFailed = true;
+    } else {
+      for (const s of (brSessions ?? [])) {
+        brSessionMap.set(s.id, { status: s.status, current_question_seq: s.current_question_seq });
+      }
+    }
+
+    // ── Stuck BR session watchdog ─────────────────────────────────────
+    // Log sessions where the active question has been pending >10 minutes.
+    // Logs only — advance_br_session_round() handles the actual fix.
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const { data: stuckQs } = await sb
+      .from('questions')
+      .select('id, br_session_id, resolves_after')
+      .in('br_session_id', brSessionIds)
+      .eq('resolution_status', 'pending')
+      .lt('resolves_after', tenMinutesAgo);
+
+    if (stuckQs && stuckQs.length > 0) {
+      for (const sq of stuckQs) {
+        console.warn(
+          `[br-watchdog] stuck question — session=${sq.br_session_id} ` +
+          `question=${sq.id} resolves_after=${sq.resolves_after}`,
+        );
+      }
+    }
+  }
+
   // ── Cache match stats by (sport:matchId) to avoid duplicate API calls ─
   const statsCache = new Map<string, MatchStats | null>();
   const runStats   = { resolved: 0, voided: 0, skipped: 0, errors: 0 };
@@ -98,11 +158,19 @@ Deno.serve(async (req: Request) => {
     if (!pred?.resolution_type) {
       await voidQuestion(sb, q.id, 'invalid_predicate');
       runStats.voided++;
+      if (q.arena_session_id) {
+        await maybeCompleteArenaSession(sb, q.arena_session_id);
+      }
+      if (q.br_session_id) {
+        await advanceBrRound(sb, q.br_session_id, brSessionMap, true);
+      }
       continue;
     }
 
     const matchId = pred.match_id ? String(pred.match_id) : null;
 
+    // invalid_predicate void happens before the arena guard — still check completion
+    // for arena-bound questions so a malformed question doesn't stall the session.
     try {
       // ── Arena session guard ───────────────────────────────────────────
       // Arena questions resolve only when their session is active.
@@ -125,6 +193,33 @@ Deno.serve(async (req: Request) => {
         }
       }
 
+      // ── BR session guard ──────────────────────────────────────────────
+      // BR questions resolve only when their session is active.
+      // Skip (not void) on lookup failure — 1-min cron retries next cycle.
+      if (q.br_session_id) {
+        if (brStatusLookupFailed) {
+          console.log(`[resolve] br_session_status_lookup_failed question=${q.id} br_session_id=${q.br_session_id}`);
+          runStats.skipped++;
+          continue;
+        }
+
+        const brSession = brSessionMap.get(q.br_session_id);
+        if (!brSession) {
+          console.log(`[resolve] br_session_not_found question=${q.id} br_session_id=${q.br_session_id}`);
+          runStats.skipped++;
+          continue;
+        }
+
+        if (brSession.status !== 'active') {
+          console.log(
+            `[resolve] br_question_skipped_session_not_active ` +
+            `question=${q.id} br_session_id=${q.br_session_id} status=${brSession.status}`,
+          );
+          runStats.skipped++;
+          continue;
+        }
+      }
+
       // ── REAL_WORLD deadline auto-void ─────────────────────────────────
       // If resolution_deadline has passed (+ 1-hour grace), void the question.
       // This covers both manual_review and match_lineup questions that were
@@ -135,6 +230,12 @@ Deno.serve(async (req: Request) => {
         if (Date.now() > deadlineMs + gracePeriodMs) {
           await voidQuestion(sb, q.id, 'resolution_deadline_passed');
           runStats.voided++;
+          if (q.arena_session_id) {
+            await maybeCompleteArenaSession(sb, q.arena_session_id);
+          }
+          if (q.br_session_id) {
+            await advanceBrRound(sb, q.br_session_id, brSessionMap, true);
+          }
           continue;
         }
       }
@@ -143,6 +244,12 @@ Deno.serve(async (req: Request) => {
       if (pred.resolution_type === 'player_status') {
         await voidQuestion(sb, q.id, 'player_status_no_historical_data');
         runStats.voided++;
+        if (q.arena_session_id) {
+          await maybeCompleteArenaSession(sb, q.arena_session_id);
+        }
+        if (q.br_session_id) {
+          await advanceBrRound(sb, q.br_session_id, brSessionMap, true);
+        }
         continue;
       }
 
@@ -163,6 +270,12 @@ Deno.serve(async (req: Request) => {
       if (!matchId) {
         await voidQuestion(sb, q.id, 'no_match_id');
         runStats.voided++;
+        if (q.arena_session_id) {
+          await maybeCompleteArenaSession(sb, q.arena_session_id);
+        }
+        if (q.br_session_id) {
+          await advanceBrRound(sb, q.br_session_id, brSessionMap, true);
+        }
         continue;
       }
 
@@ -193,6 +306,12 @@ Deno.serve(async (req: Request) => {
       if (deadStatuses.has(stats.status)) {
         await voidQuestion(sb, q.id, `match_${stats.status.toLowerCase()}`);
         runStats.voided++;
+        if (q.arena_session_id) {
+          await maybeCompleteArenaSession(sb, q.arena_session_id);
+        }
+        if (q.br_session_id) {
+          await advanceBrRound(sb, q.br_session_id, brSessionMap, true);
+        }
         continue;
       }
 
@@ -237,6 +356,12 @@ Deno.serve(async (req: Request) => {
         }
         await voidQuestion(sb, q.id, result.reason ?? 'unresolvable');
         runStats.voided++;
+        if (q.arena_session_id) {
+          await maybeCompleteArenaSession(sb, q.arena_session_id);
+        }
+        if (q.br_session_id) {
+          await advanceBrRound(sb, q.br_session_id, brSessionMap, true);
+        }
         continue;
       }
 
@@ -247,6 +372,16 @@ Deno.serve(async (req: Request) => {
       await resolveQuestion(sb, q.id, resolutionOutcome);
       await markCorrectAnswers(sb, q, resolutionOutcome);
       runStats.resolved++;
+
+      // Check if all questions for this arena session are now done
+      if (q.arena_session_id) {
+        await maybeCompleteArenaSession(sb, q.arena_session_id);
+      }
+
+      // Advance the BR session to the next round (isVoided=false → HP deltas applied)
+      if (q.br_session_id) {
+        await advanceBrRound(sb, q.br_session_id, brSessionMap, false);
+      }
 
     } catch (err) {
       console.error(`[resolve] exception for question ${q.id}:`, err);
@@ -579,5 +714,126 @@ async function awardClutchXp(
   if (CLUTCH_MILESTONES.has(newCount)) {
     console.log(`[resolve] clutch_milestone reached — user=${userId} milestone=${newCount}`);
     // Achievement hook placeholder — badge/notification system wired here post-MVP
+  }
+}
+
+// ── BR session round advancement helper ──────────────────────────────
+//
+// Called after every BR question resolves (isVoided=false) or is voided
+// (isVoided=true). Calls the advance_br_session_round() SECURITY DEFINER
+// RPC which applies HP deltas, eliminates players, assigns placements,
+// and finalises the session when ≤1 survivor or the last question resolves.
+//
+// The RPC is idempotent via last_processed_seq guard — safe to call on
+// resolver retries without double-applying HP changes.
+//
+// Log events:
+//   [br-advance] advanced        — round processed, session continuing
+//   [br-advance] session_complete — all rounds done, session finalised
+//   [br-advance] no-op           — already_processed or other non-error skip
+
+async function advanceBrRound(
+  sb:           any,
+  sessionId:    string,
+  brSessionMap: Map<string, { status: string; current_question_seq: number }>,
+  isVoided:     boolean,
+): Promise<void> {
+  const brSession = brSessionMap.get(sessionId);
+  if (!brSession) {
+    console.warn(`[br-advance] no session data for ${sessionId} — skipping advance`);
+    return;
+  }
+
+  const { data, error } = await sb.rpc('advance_br_session_round', {
+    p_session_id:   sessionId,
+    p_question_seq: brSession.current_question_seq,
+    p_is_voided:    isVoided,
+  });
+
+  if (error) {
+    console.warn(
+      `[br-advance] rpc error session=${sessionId} seq=${brSession.current_question_seq}:`,
+      error.message,
+    );
+    return;
+  }
+
+  if (data?.ok === false) {
+    console.log(
+      `[br-advance] no-op session=${sessionId} seq=${brSession.current_question_seq} ` +
+      `reason=${data.reason ?? 'unknown'}`,
+    );
+    return;
+  }
+
+  if (data?.session_complete) {
+    console.log(
+      `[br-advance] session_complete session=${sessionId} ` +
+      `survivors=${data.survivors ?? '?'} newly_eliminated=${data.newly_eliminated ?? '?'} ` +
+      `last_question=${data.last_question ?? false} voided=${isVoided}`,
+    );
+  } else {
+    console.log(
+      `[br-advance] advanced session=${sessionId} ` +
+      `seq=${brSession.current_question_seq} → ${data?.next_question_seq ?? '?'} ` +
+      `survivors=${data?.survivors ?? '?'} newly_eliminated=${data?.newly_eliminated ?? '?'} ` +
+      `voided=${isVoided}`,
+    );
+  }
+}
+
+// ── Arena session completion helper ──────────────────────────────────
+//
+// Calls complete_arena_session() RPC after each arena-question resolve or void.
+// The RPC has all necessary guards (active status, ≥1 question, 0 pending),
+// so it is safe to call after every terminal transition — a no-op when the
+// session isn't ready yet.
+//
+// Log events:
+//   [arena-complete] completed   — session marked completed, winner determined
+//   [arena-complete] pending     — questions still pending; normal mid-session state
+//   [arena-complete] no_questions — session has zero questions; not completed
+//   [arena-complete] skipped     — already done, not active, or not found
+
+async function maybeCompleteArenaSession(sb: any, sessionId: string): Promise<void> {
+  try {
+    const { data, error } = await sb.rpc('complete_arena_session', {
+      p_session_id: sessionId,
+    });
+
+    if (error) {
+      console.warn(`[arena-complete] rpc error for session ${sessionId}:`, error.message);
+      return;
+    }
+
+    const result = data as {
+      completed:           boolean;
+      reason?:             string;
+      pending_count?:      number;
+      total_questions?:    number;
+      winner_user_id?:     string | null;
+      winning_team_number?: number | null;
+    };
+
+    if (result.completed) {
+      console.log(
+        `[arena-complete] completed — session=${sessionId} ` +
+        `winner_user_id=${result.winner_user_id ?? 'draw'} ` +
+        `winning_team=${result.winning_team_number ?? 'n/a'} ` +
+        `total_questions=${result.total_questions}`,
+      );
+    } else if (result.reason === 'questions_still_pending') {
+      console.log(
+        `[arena-complete] pending — session=${sessionId} ` +
+        `pending=${result.pending_count} total=${result.total_questions}`,
+      );
+    } else if (result.reason === 'no_questions') {
+      console.log(`[arena-complete] no_questions — session=${sessionId}`);
+    } else {
+      // already_done, session_not_active, session_not_found — safe, no action
+      console.log(`[arena-complete] skipped — session=${sessionId} reason=${result.reason ?? 'unknown'}`);
+    }
+  } catch (err) {
+    console.warn(`[arena-complete] exception for session ${sessionId}:`, String(err));
   }
 }
