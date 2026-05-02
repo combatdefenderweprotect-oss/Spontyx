@@ -4,6 +4,82 @@ Last updated: 2026-05-01 — Phase 1 migrations 040–047 written. Cron migratio
 
 ---
 
+## Battle Royale — Final Product Definition
+
+**This is the canonical product model. The previous lobby model using 1v1 / FFA was incorrect and is replaced by this structure.** All UI work must align with this section. Backend already matches.
+
+**Survival model:**
+- One shared lobby per session, multiple players, sequential questions
+- Every player must answer every question
+- Wrong answer → HP loss
+- **No answer (timeout) → same damage as a wrong answer** — silence is not safe
+- HP = 0 → eliminated; placement assigned in elimination order
+- Session ends when one player remains OR the question budget is exhausted (then placement by HP)
+
+**Modes — exactly two:**
+- **Classic** — casual survival, no rating impact
+- **Ranked** — identical gameplay, ELO applied via `update_br_ratings()`
+
+There are no other modes. No 1v1. No duel. No FFA. No "format" selection. The DB column `br_sessions.mode` carries the Classic / Ranked value.
+
+**Player count:**
+- MVP can run with 4 players
+- System and UI must be designed for **8–12 players** as the target
+- No hardcoded player limits in the UI; the waiting room must scale from a handful to a full dozen
+
+**UI/UX principles:**
+- Entering a dangerous environment, not configuring a match
+- Group survival, not a duel
+- Tension and elimination risk are the dominant emotions
+- "Last one standing" framing throughout
+- Arena UI patterns (format cards, duel framing, player-count pickers) are forbidden in BR pages
+
+**What BR is NOT:** not Arena, not a match format, not a configurable duel.
+
+---
+
+## Lobby Sizing — Client UI vs Server Enforcement
+
+**Current implementation (UI prototype):**
+
+The lobby sizing rules below are enforced **only in `br-lobby.html` JS constants**. The DB schema (`br_sessions`, `br_session_players`) has no `min_players` / `max_players` columns, and `instantiate_br_session()` does not gate on player count beyond requiring the session row to exist and be in `waiting` status.
+
+| Constant | Value | Purpose |
+|---|---|---|
+| `BR_MIN_PLAYERS` | 4 | Below this, "Start" is locked |
+| `BR_TARGET_PLAYERS` | 10 | Reaching target triggers a 15s auto-start countdown |
+| `BR_MAX_PLAYERS` | 12 | Hard cap; reaching this triggers immediate auto-start |
+| `BR_FILL_TIMEOUT_MS` | 60000 | Auto-fill timer once min is reached |
+| `BR_TARGET_COUNTDOWN_MS` | 15000 | Countdown when target reached |
+
+This is acceptable for the UI prototype. **It is not acceptable for production Ranked BR.**
+
+### ⚠️ TODO — Production server-side enforcement (Phase 4)
+
+Before Ranked BR ships to production, the following must be enforced on the server:
+
+1. **Minimum players to start** — `instantiate_br_session()` must reject when the player count is below `BR_MIN_PLAYERS`. Currently it only checks `status = 'waiting'`.
+2. **Maximum lobby size** — joining a session (`INSERT INTO br_session_players`) must be rejected when the player count is at `BR_MAX_PLAYERS`. Currently this is only blocked client-side.
+3. **Start eligibility** — only the lobby host (or auto-fill timer expiry) should be able to invoke `instantiate_br_session()`. Currently any participant can call it.
+4. **Ranked validity gate** — `update_br_ratings()` must only apply ELO when the session was instantiated with `≥ BR_MIN_PLAYERS` participants. A Ranked session that started below the minimum must be treated as Classic for rating purposes (or rejected at instantiate time). The column `br_sessions.mode` carries `'classic' | 'ranked'`; the rating RPC must read this AND the player count, not just the mode.
+5. **Full lobby blocking** — `INSERT INTO br_session_players` RLS or a SECURITY DEFINER `join_br_session()` RPC should atomically count players and reject when full, closing the race window.
+
+**Why this matters:** without server-side gates, a determined client can bypass the JS constants and:
+- Start a Ranked session with 1 player and farm easy ELO
+- Join a "full" lobby, breaking pacing for everyone else
+- Trigger `instantiate_br_session()` early, robbing the lobby of fill time
+
+**Implementation approach (sketch, do not build yet):**
+- Migration `051_br_lobby_constraints.sql`:
+  - Add `min_players`, `max_players` columns to `br_sessions` (default 4 / 12)
+  - Replace direct `INSERT INTO br_session_players` with a SECURITY DEFINER `join_br_session(p_session_id)` RPC that counts players and rejects when full
+  - Update `instantiate_br_session()` to verify `COUNT(br_session_players) >= min_players`; reject otherwise
+  - Update `update_br_ratings()` to skip rating when session metadata indicates the start was below `min_players` (store the start count on session row at instantiate time, e.g. `br_sessions.starting_player_count`)
+
+This is **Phase 4** scope. Phase 1–3 (current) deliberately defers it to keep the prototype shippable.
+
+---
+
 ## Status
 
 | Phase | Description | Status |

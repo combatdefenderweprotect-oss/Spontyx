@@ -74,7 +74,59 @@
   font-size: 1rem;
   font-weight: 700;
   color: var(--off-white);
-  margin-bottom: 16px;
+  margin-bottom: 6px;
+}
+.section-title-small {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.5);
+  margin-bottom: 4px;
+}
+.section-sub {
+  font-size: 0.82rem;
+  color: var(--grey);
+  margin-bottom: 18px;
+}
+
+/* ── Tension strip ──────────────────────────────────────────────────────── */
+.br-tension {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  background: linear-gradient(90deg, rgba(255,107,107,0.07), rgba(232,69,69,0.04));
+  border: 1px solid rgba(255,107,107,0.18);
+  border-radius: 10px;
+  padding: 10px 16px;
+  margin-bottom: 28px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(255,255,255,0.75);
+}
+.br-tension-item { display: inline-flex; align-items: center; gap: 6px; }
+.br-tension-sep { color: rgba(255,255,255,0.2); }
+.br-tension-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--coral);
+  box-shadow: 0 0 8px rgba(255,107,107,0.7);
+  animation: live-pulse 1.4s infinite;
+}
+
+/* ── Mode tag (Classic / Ranked badge inside card) ─────────────────────── */
+.mode-tag {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 0.68rem; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  background: rgba(168,225,12,0.12);
+  color: var(--lime);
+  border: 1px solid rgba(168,225,12,0.25);
+  border-radius: 20px;
+  padding: 3px 10px;
+}
+.mode-tag.tag-coral {
+  background: rgba(255,107,107,0.12);
+  color: var(--coral);
+  border-color: rgba(255,107,107,0.28);
 }
 
 /* ── Mode Cards ─────────────────────────────────────────────────────────── */
@@ -223,18 +275,18 @@
 
 .half-card {
   background: var(--navy-card);
-  border: 2px solid rgba(255,255,255,0.06);
-  border-radius: 12px;
-  padding: 16px;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 12px 14px;
   cursor: pointer;
   transition: all 0.15s;
   text-align: center;
 }
 .half-card:hover { border-color: rgba(168,225,12,0.3); background: var(--navy-hover); }
 .half-card.selected { border-color: var(--lime); background: var(--lime-dim); }
-.half-card-icon { font-size: 1.4rem; margin-bottom: 6px; }
-.half-card-name { font-size: 0.85rem; font-weight: 700; color: var(--off-white); }
-.half-card-sub { font-size: 0.73rem; color: var(--grey-dark); margin-top: 3px; }
+.half-card-name { font-size: 0.8rem; font-weight: 700; color: var(--off-white); }
+.half-card-sub { font-size: 0.7rem; color: var(--grey-dark); margin-top: 2px; }
+.half-grid.compact { gap: 8px; margin-bottom: 22px; }
 
 /* ── Waiting Room ───────────────────────────────────────────────────────── */
 .wr-overlay {
@@ -360,31 +412,94 @@
 .wr-status.found { color: var(--lime); }
 .wr-status-sub { font-size: 0.82rem; color: var(--grey); margin-bottom: 28px; }
 
-.wr-players-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 20px;
-  max-height: 200px;
-  overflow-y: auto;
+/* ── Survival arena (scaling avatar grid) ─────────────────────────────── */
+.wr-arena { margin-bottom: 22px; }
+.wr-arena-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 64px);
+  gap: 12px;
+  justify-content: center;
 }
-.wr-player-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--navy-card);
-  border-radius: 8px;
-  padding: 8px 12px;
-  font-size: 0.83rem;
+@media (max-width: 480px) {
+  .wr-arena-grid { grid-template-columns: repeat(4, 52px); gap: 10px; }
 }
-.wr-player-dot {
-  width: 8px; height: 8px;
+.wr-slot {
+  width: 64px; height: 64px;
   border-radius: 50%;
-  background: var(--lime);
-  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.05rem; font-weight: 800;
+  position: relative;
+  transition: all 0.25s;
 }
-.wr-player-handle { color: var(--off-white); font-weight: 600; flex: 1; text-align: left; }
-.wr-player-waiting { color: var(--grey-dark); font-size: 0.73rem; }
+@media (max-width: 480px) { .wr-slot { width: 52px; height: 52px; font-size: 0.9rem; } }
+.wr-slot.empty {
+  background: rgba(152,152,176,0.06);
+  border: 1px dashed rgba(152,152,176,0.25);
+  color: rgba(152,152,176,0.4);
+}
+.wr-slot.filled {
+  background: rgba(168,225,12,0.12);
+  border: 2px solid var(--lime);
+  color: var(--lime);
+  animation: wr-found-pop 0.45s ease-out;
+  box-shadow: 0 0 12px rgba(168,225,12,0.25);
+}
+.wr-slot.me {
+  background: rgba(78,205,196,0.15);
+  border-color: var(--teal);
+  color: var(--teal);
+  box-shadow: 0 0 14px rgba(78,205,196,0.35);
+}
+.wr-slot-tag {
+  position: absolute;
+  bottom: -16px; left: 50%; transform: translateX(-50%);
+  font-size: 0.55rem; font-weight: 700;
+  letter-spacing: 0.05em; text-transform: uppercase;
+  color: rgba(255,255,255,0.4);
+  white-space: nowrap;
+}
+
+/* ── Lobby counter ─────────────────────────────────────────────────────── */
+.wr-counter {
+  display: flex; align-items: baseline; justify-content: center; gap: 4px;
+  margin-bottom: 8px;
+}
+.wr-counter-num {
+  font-size: 2rem; font-weight: 900;
+  color: var(--lime);
+  line-height: 1;
+}
+.wr-counter-num.target { color: rgba(168,225,12,0.45); font-size: 1.4rem; }
+.wr-counter-sep { color: rgba(168,225,12,0.45); font-weight: 700; }
+.wr-counter-label {
+  margin-left: 8px;
+  font-size: 0.78rem; font-weight: 600;
+  color: var(--grey);
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+
+/* ── Auto-start countdown banner ───────────────────────────────────────── */
+.wr-countdown {
+  display: inline-block;
+  background: rgba(255,107,107,0.1);
+  border: 1px solid rgba(255,107,107,0.3);
+  color: var(--coral);
+  border-radius: 20px;
+  padding: 7px 18px;
+  font-size: 0.82rem; font-weight: 700;
+  margin: 0 0 22px;
+  animation: live-pulse 1.4s infinite;
+}
+.wr-countdown.full {
+  background: rgba(168,225,12,0.12);
+  border-color: rgba(168,225,12,0.4);
+  color: var(--lime);
+}
+
+.wr-actions {
+  display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;
+  margin-top: 4px;
+}
 
 .dot-bounce { display: inline-flex; gap: 4px; vertical-align: middle; }
 .dot-bounce span {
@@ -454,56 +569,62 @@
     <div class="br-header">
       <div class="br-icon">💀</div>
       <div class="br-title">
-        <h1>Battle Royale Lobby</h1>
-        <p>Last one standing wins. Wrong answers cost HP.</p>
+        <h1>Battle Royale</h1>
+        <p>Survive all rounds. Wrong answers cost HP. Last player alive wins.</p>
       </div>
+    </div>
+
+    <!-- Tension strip -->
+    <div class="br-tension">
+      <span class="br-tension-item"><span class="br-tension-dot"></span> Players will be eliminated</span>
+      <span class="br-tension-sep">·</span>
+      <span class="br-tension-item">⚡ Wrong answer = HP loss</span>
+      <span class="br-tension-sep">·</span>
+      <span class="br-tension-item">🏆 Last alive wins</span>
     </div>
 
     <div class="steps-bar">
       <div class="step-pill active" id="spill-1">① Mode</div>
-      <div class="step-pill" id="spill-2">② Match</div>
-      <div class="step-pill" id="spill-3">③ Half</div>
+      <div class="step-pill" id="spill-2">② Battlefield</div>
+      <div class="step-pill" id="spill-3">③ Scope</div>
       <div class="step-pill" id="spill-4">④ Waiting Room</div>
     </div>
 
-    <!-- ── Step 1: Mode ─────────────────────────────────────────────────── -->
+    <!-- ── Step 1: Mode (Classic vs Ranked) ──────────────────────────────── -->
     <div class="step-section active" id="step-1">
-      <p class="section-title">Choose your format</p>
+      <p class="section-title">Choose your mode</p>
+      <p class="section-sub">Same survival gameplay. Ranked counts toward your BR rating.</p>
 
       <div class="mode-grid">
-        <div class="mode-card" onclick="selectMode('1v1')" id="mode-1v1">
-          <div class="mode-card-wm">⚔️</div>
+        <div class="mode-card" onclick="selectMode('classic')" id="mode-classic">
+          <div class="mode-card-wm">💀</div>
+          <div class="mode-check">✓</div>
+          <div class="mode-card-icon">🎯</div>
+          <div class="mode-card-name">Classic</div>
+          <div class="mode-card-sub">Casual survival. No rating pressure.</div>
+          <div class="mode-tag">Practice · No ELO</div>
+        </div>
+        <div class="mode-card" onclick="selectMode('ranked')" id="mode-ranked">
+          <div class="mode-card-wm">🏆</div>
           <div class="mode-check">✓</div>
           <div class="mode-card-icon">⚔️</div>
-          <div class="mode-card-name">1 vs 1</div>
-          <div class="mode-card-sub">Duel — 2 players, sudden death</div>
-          <div class="mode-card-players">
-            <div class="player-dot"></div><div class="player-dot"></div>
-          </div>
-        </div>
-        <div class="mode-card" onclick="selectMode('ffa')" id="mode-ffa">
-          <div class="mode-card-wm">👑</div>
-          <div class="mode-check">✓</div>
-          <div class="mode-card-icon">👑</div>
-          <div class="mode-card-name">Free for All</div>
-          <div class="mode-card-sub">4 players, last one standing</div>
-          <div class="mode-card-players">
-            <div class="player-dot"></div><div class="player-dot"></div>
-            <div class="player-dot"></div><div class="player-dot"></div>
-          </div>
+          <div class="mode-card-name">Ranked</div>
+          <div class="mode-card-sub">Identical gameplay. Rating on the line.</div>
+          <div class="mode-tag tag-coral">Survive · ELO applies</div>
         </div>
       </div>
 
       <div class="action-row">
         <button class="btn btn-primary" id="btn-next-1" onclick="goStep(2)" disabled>
-          Choose a Match →
+          Pick Battlefield →
         </button>
       </div>
     </div>
 
     <!-- ── Step 2: Match ─────────────────────────────────────────────────── -->
     <div class="step-section" id="step-2">
-      <p class="section-title">Select a match</p>
+      <p class="section-title">Choose your battlefield</p>
+      <p class="section-sub">Live matches drop questions in real time — most intense survival.</p>
 
       <div class="match-search-row">
         <input type="text" id="match-search" placeholder="Search teams..." oninput="filterMatches()">
@@ -519,31 +640,26 @@
       <div class="action-row">
         <button class="btn btn-ghost" onclick="goStep(1)">← Back</button>
         <button class="btn btn-primary" id="btn-next-2" onclick="goStep(3)" disabled>
-          Choose Half →
+          Set Scope →
         </button>
       </div>
     </div>
 
-    <!-- ── Step 3: Half scope ─────────────────────────────────────────────── -->
+    <!-- ── Step 3: Match scope (de-emphasized) ───────────────────────────── -->
     <div class="step-section" id="step-3">
-      <p class="section-title" id="step3-match-label">Full Match</p>
-      <p style="font-size:0.82rem;color:var(--grey);margin-bottom:18px;">
-        Questions are generated from this window of the match.
-      </p>
+      <p class="section-title-small">Match scope</p>
+      <p class="section-sub" id="step3-match-label">Full Match</p>
 
-      <div class="half-grid">
+      <div class="half-grid compact">
         <div class="half-card selected" onclick="selectHalf('full_match')" id="half-full">
-          <div class="half-card-icon">⚽</div>
           <div class="half-card-name">Full Match</div>
           <div class="half-card-sub">0′ – 90′</div>
         </div>
         <div class="half-card" onclick="selectHalf('first_half')" id="half-first">
-          <div class="half-card-icon">🕐</div>
           <div class="half-card-name">First Half</div>
           <div class="half-card-sub">0′ – 45′</div>
         </div>
         <div class="half-card" onclick="selectHalf('second_half')" id="half-second">
-          <div class="half-card-icon">🕑</div>
           <div class="half-card-name">Second Half</div>
           <div class="half-card-sub">45′ – 90′</div>
         </div>
@@ -552,7 +668,7 @@
       <div class="action-row">
         <button class="btn btn-ghost" onclick="goStep(2)">← Back</button>
         <button class="btn btn-primary" id="btn-enter" onclick="enterLobby()">
-          Enter Arena →
+          Enter Battle Royale →
         </button>
       </div>
     </div>
@@ -574,33 +690,33 @@
       <span id="wr-badge-label">Waiting Room</span>
     </div>
 
-    <!-- 1v1: avatar duel -->
-    <div id="wr-duel" style="display:none">
-      <div class="wr-avatars">
-        <div class="wr-avatar">
-          <div class="wr-avatar-ring me" id="wr-me-avatar">?</div>
-          <div class="wr-avatar-label" id="wr-me-label">You</div>
-        </div>
-        <div class="wr-vs">VS</div>
-        <div class="wr-avatar">
-          <div class="wr-avatar-ring opp" id="wr-opp-avatar">??</div>
-          <div class="wr-avatar-label">Opponent</div>
-        </div>
-      </div>
+    <!-- Survival arena: scaling avatar grid (4 → 12 players) -->
+    <div class="wr-arena" id="wr-arena">
+      <div class="wr-arena-grid" id="wr-arena-grid"></div>
     </div>
 
-    <!-- FFA: player list -->
-    <div id="wr-ffa" style="display:none">
-      <div class="wr-players-list" id="wr-players-list"></div>
+    <div class="wr-counter">
+      <span class="wr-counter-num" id="wr-counter-now">0</span>
+      <span class="wr-counter-sep">/</span>
+      <span class="wr-counter-num target" id="wr-counter-target">10</span>
+      <span class="wr-counter-label">warriors ready</span>
     </div>
 
     <div class="wr-status" id="wr-status-line">
-      Searching
+      Waiting for warriors
       <span class="dot-bounce"><span></span><span></span><span></span></span>
     </div>
-    <div class="wr-status-sub" id="wr-status-sub">Waiting for opponents to join…</div>
+    <div class="wr-status-sub" id="wr-status-sub">Need at least 4 to start the survival session.</div>
 
-    <button class="btn btn-ghost" onclick="leaveLobby()">Cancel</button>
+    <!-- Auto-start countdown banner (hidden until min reached) -->
+    <div class="wr-countdown" id="wr-countdown" style="display:none">
+      <span id="wr-countdown-text">Auto-start in 60s</span>
+    </div>
+
+    <div class="wr-actions">
+      <button class="btn btn-primary" id="wr-start-btn" onclick="manualStart()" style="display:none">Start now</button>
+      <button class="btn btn-ghost" onclick="leaveLobby()">Leave lobby</button>
+    </div>
   </div>
 </div>
 
@@ -612,8 +728,18 @@
 <script>
 'use strict';
 
+// ── Lobby sizing constants ────────────────────────────────────────────────────
+// UI-only enforcement. Server-side validation pending — see docs/BR_SESSION_SYSTEM.md
+// "Lobby Sizing — Client UI vs Server Enforcement". Production Ranked BR requires
+// server-side enforcement of min/max lobby size and rating eligibility.
+var BR_MIN_PLAYERS         = 4;
+var BR_TARGET_PLAYERS      = 10;
+var BR_MAX_PLAYERS         = 12;
+var BR_FILL_TIMEOUT_MS     = 60000;  // auto-fill timer once min reached
+var BR_TARGET_COUNTDOWN_MS = 15000;  // countdown when target reached
+
 // ── State ────────────────────────────────────────────────────────────────────
-var selectedMode   = null;   // '1v1' | 'ffa'
+var selectedMode   = null;   // 'classic' | 'ranked' (UI value; mapped to DB 'ffa')
 var selectedMatch  = null;   // match object from api_football_fixtures
 var selectedHalf   = 'full_match';
 var currentUserId  = null;
@@ -622,7 +748,13 @@ var currentSessionId = null;
 var sessionChannel = null;
 var playersChannel = null;
 var allMatches     = [];
-var requiredPlayers = { '1v1': 2, 'ffa': 4 };
+
+// Lobby fill timer state
+var fillTimerStart      = null;     // timestamp when min was first reached
+var targetCountdownStart= null;     // timestamp when target was first reached
+var lobbyTickInterval   = null;
+var lastPlayerCount     = 0;
+var instantiateInFlight = false;
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async function() {
@@ -670,6 +802,9 @@ function goStep(n) {
 }
 
 // ── Mode selection ────────────────────────────────────────────────────────────
+// 'classic' or 'ranked'. UI-only distinction; both map to DB mode='ffa' for now
+// (DB CHECK constraint allows only '1v1' | 'ffa' | '2v2'). Server-side rating
+// gate for Ranked is Phase 4 — see docs/BR_SESSION_SYSTEM.md.
 function selectMode(mode) {
   selectedMode = mode;
   document.querySelectorAll('.mode-card').forEach(function(c) { c.classList.remove('selected'); });
@@ -810,7 +945,7 @@ async function enterLobby() {
     showWaitingRoom(sessionId);
   } catch (err) {
     btn.disabled = false;
-    btn.textContent = 'Enter Arena →';
+    btn.textContent = 'Enter Battle Royale →';
     showToast(err.message || 'Failed to enter lobby', true);
   }
 }
@@ -873,26 +1008,29 @@ async function getOrCreatePool() {
 
 async function getOrCreateSession(poolId) {
   var matchId = String(selectedMatch.fixture_id);
+  // DB CHECK constraint allows '1v1' | 'ffa' | '2v2'. BR is now N-player survival,
+  // so we always store 'ffa' and track Classic vs Ranked client-side until the
+  // schema migration in Phase 4 adds a proper `rating_eligible` flag.
+  var dbMode = 'ffa';
 
-  // Look for a waiting session with space
+  // Look for a waiting session with space (under BR_MAX_PLAYERS)
   var { data: waiting } = await window.sb
     .from('br_sessions')
     .select('id, mode')
     .eq('match_id', matchId)
     .eq('half_scope', selectedHalf)
-    .eq('mode', selectedMode)
+    .eq('mode', dbMode)
     .eq('status', 'waiting')
     .order('created_at', { ascending: true })
     .limit(5);
 
   if (waiting && waiting.length > 0) {
-    // Pick the first session that still has space (not yet full)
     for (var i = 0; i < waiting.length; i++) {
       var { count } = await window.sb
         .from('br_session_players')
         .select('user_id', { count: 'exact', head: true })
         .eq('session_id', waiting[i].id);
-      if (count < requiredPlayers[selectedMode]) return waiting[i].id;
+      if (count < BR_MAX_PLAYERS) return waiting[i].id;
     }
   }
 
@@ -903,7 +1041,7 @@ async function getOrCreateSession(poolId) {
       pool_id:        poolId,
       match_id:       String(selectedMatch.fixture_id),
       half_scope:     selectedHalf,
-      mode:           selectedMode,
+      mode:           dbMode,
       home_team_name: selectedMatch.home_team_name,
       away_team_name: selectedMatch.away_team_name,
       kickoff_at:     selectedMatch.kickoff_at,
@@ -923,19 +1061,30 @@ function showWaitingRoom(sessionId) {
   overlay.classList.add('show');
 
   var badge = document.getElementById('wr-badge-label');
+  var modeLabel = (selectedMode === 'ranked') ? 'Ranked' : 'Classic';
   badge.textContent = selectedMatch.home_team_name + ' vs ' + selectedMatch.away_team_name +
-    ' · ' + halfLabel(selectedHalf) + ' · ' + selectedMode.toUpperCase();
+    ' · ' + halfLabel(selectedHalf) + ' · ' + modeLabel;
 
-  if (selectedMode === '1v1') {
-    document.getElementById('wr-duel').style.display = 'block';
-    document.getElementById('wr-ffa').style.display = 'none';
-  } else {
-    document.getElementById('wr-duel').style.display = 'none';
-    document.getElementById('wr-ffa').style.display = 'block';
-  }
+  document.getElementById('wr-counter-target').textContent = BR_TARGET_PLAYERS;
+
+  // Reset timers
+  fillTimerStart       = null;
+  targetCountdownStart = null;
+  lastPlayerCount      = 0;
+  instantiateInFlight  = false;
 
   startSessionRealtime(sessionId);
   refreshWaitingRoom(sessionId);
+  startLobbyTick(sessionId);
+}
+
+function startLobbyTick(sessionId) {
+  if (lobbyTickInterval) clearInterval(lobbyTickInterval);
+  lobbyTickInterval = setInterval(function() { updateCountdownUI(sessionId); }, 500);
+}
+
+function stopLobbyTick() {
+  if (lobbyTickInterval) { clearInterval(lobbyTickInterval); lobbyTickInterval = null; }
 }
 
 async function refreshWaitingRoom(sessionId) {
@@ -946,48 +1095,123 @@ async function refreshWaitingRoom(sessionId) {
 
   if (!players) return;
 
-  var needed = requiredPlayers[selectedMode];
   var count = players.length;
+  renderArenaSlots(players, count);
 
-  if (selectedMode === '1v1') {
-    var opp = players.find(function(p) { return p.user_id !== currentUserId; });
-    var oppRing = document.getElementById('wr-opp-avatar');
-    if (opp && opp.users) {
-      var handle = opp.users.handle || (opp.users.name || '?')[0].toUpperCase();
-      oppRing.textContent = handle[0].toUpperCase();
-      oppRing.classList.add('found');
-    }
+  document.getElementById('wr-counter-now').textContent = count;
+
+  // Min/target/max gating — UI only. Server-side enforcement is Phase 4.
+  if (count >= BR_MAX_PLAYERS) {
+    // Full lobby — instantiate immediately
+    fillTimerStart       = null;
+    targetCountdownStart = targetCountdownStart || Date.now();
+    setStatus('🔥 Lobby full — starting now', true);
+    await tryInstantiate(sessionId);
+  } else if (count >= BR_TARGET_PLAYERS) {
+    // Target reached — start the 15s countdown if not already
+    if (!targetCountdownStart) targetCountdownStart = Date.now();
+    setStatus('Target reached', false);
+    document.getElementById('wr-status-sub').textContent = 'Auto-starting soon — host can override.';
+  } else if (count >= BR_MIN_PLAYERS) {
+    // Min reached — start the 60s fill timer if not already
+    if (!fillTimerStart) fillTimerStart = Date.now();
+    targetCountdownStart = null;
+    setStatus('Lobby ready', false);
+    document.getElementById('wr-status-sub').textContent =
+      'Survival session can start. Filling toward ' + BR_TARGET_PLAYERS + '…';
   } else {
-    var list = document.getElementById('wr-players-list');
-    list.innerHTML = players.map(function(p) {
-      var h = (p.users && (p.users.handle || p.users.name)) || '…';
-      var isMe = p.user_id === currentUserId;
-      return '<div class="wr-player-row">' +
-        '<div class="wr-player-dot"></div>' +
-        '<div class="wr-player-handle">' + esc(h) + (isMe ? ' (you)' : '') + '</div>' +
-      '</div>';
-    }).join('') +
-    Array(needed - count).fill(
-      '<div class="wr-player-row">' +
-        '<div class="wr-player-dot" style="background:var(--grey-dark)"></div>' +
-        '<div class="wr-player-handle" style="color:var(--grey-dark)">Waiting…</div>' +
-      '</div>'
-    ).join('');
+    // Below min — reset all timers
+    fillTimerStart       = null;
+    targetCountdownStart = null;
+    setStatus('Waiting for warriors', false);
+    document.getElementById('wr-status-sub').textContent =
+      'Need at least ' + BR_MIN_PLAYERS + ' players to start. ' + count + ' here so far.';
   }
 
-  var statusLine = document.getElementById('wr-status-line');
-  var statusSub = document.getElementById('wr-status-sub');
-  statusSub.textContent = count + ' / ' + needed + ' players joined';
+  // Manual start button — visible only at min, host only.
+  // Host = the first player to join (lowest joined_at). Until host concept is server-validated,
+  // we approximate by checking if currentUserId is in the player list (any participant can hit it).
+  // Phase 4 will add proper host enforcement.
+  var startBtn = document.getElementById('wr-start-btn');
+  var isParticipant = players.some(function(p) { return p.user_id === currentUserId; });
+  if (count >= BR_MIN_PLAYERS && count < BR_MAX_PLAYERS && isParticipant) {
+    startBtn.style.display = '';
+  } else {
+    startBtn.style.display = 'none';
+  }
 
-  if (count >= needed) {
-    statusLine.innerHTML = '⚡ Starting…';
-    statusLine.className = 'wr-status found';
-    // All clients attempt to instantiate; RPC guard handles the race
-    await tryInstantiate(sessionId);
+  lastPlayerCount = count;
+  updateCountdownUI(sessionId);
+}
+
+function setStatus(text, found) {
+  var s = document.getElementById('wr-status-line');
+  s.textContent = text;
+  s.className = 'wr-status' + (found ? ' found' : '');
+}
+
+function renderArenaSlots(players, count) {
+  var grid = document.getElementById('wr-arena-grid');
+  // Visible slot count: at least target, scale up to max as the lobby fills.
+  var visible = Math.max(BR_TARGET_PLAYERS, Math.min(count + 2, BR_MAX_PLAYERS));
+  var html = '';
+  for (var i = 0; i < visible; i++) {
+    if (i < count) {
+      var p = players[i];
+      var handle = (p.users && (p.users.handle || p.users.name)) || '?';
+      var initial = String(handle).charAt(0).toUpperCase();
+      var isMe = p.user_id === currentUserId;
+      html += '<div class="wr-slot ' + (isMe ? 'me' : 'filled') + '" title="' + esc(handle) + '">' +
+                esc(initial) +
+                (isMe ? '<span class="wr-slot-tag">You</span>' : '') +
+              '</div>';
+    } else {
+      html += '<div class="wr-slot empty">·</div>';
+    }
+  }
+  grid.innerHTML = html;
+}
+
+function updateCountdownUI(sessionId) {
+  var banner = document.getElementById('wr-countdown');
+  var text   = document.getElementById('wr-countdown-text');
+  var now    = Date.now();
+
+  if (targetCountdownStart) {
+    var remaining = Math.max(0, BR_TARGET_COUNTDOWN_MS - (now - targetCountdownStart));
+    var secs = Math.ceil(remaining / 1000);
+    banner.style.display = '';
+    banner.classList.add('full');
+    text.textContent = '🔥 Auto-start in ' + secs + 's';
+    if (remaining <= 0 && !instantiateInFlight) {
+      tryInstantiate(sessionId);
+    }
+  } else if (fillTimerStart) {
+    var remaining2 = Math.max(0, BR_FILL_TIMEOUT_MS - (now - fillTimerStart));
+    var secs2 = Math.ceil(remaining2 / 1000);
+    banner.style.display = '';
+    banner.classList.remove('full');
+    text.textContent = '⏱ Auto-start in ' + secs2 + 's (waiting for more warriors)';
+    if (remaining2 <= 0 && !instantiateInFlight && lastPlayerCount >= BR_MIN_PLAYERS) {
+      tryInstantiate(sessionId);
+    }
+  } else {
+    banner.style.display = 'none';
   }
 }
 
+function manualStart() {
+  if (!currentSessionId) return;
+  if (lastPlayerCount < BR_MIN_PLAYERS) {
+    showToast('Need at least ' + BR_MIN_PLAYERS + ' players to start', true);
+    return;
+  }
+  tryInstantiate(currentSessionId);
+}
+
 async function tryInstantiate(sessionId) {
+  if (instantiateInFlight) return;
+  instantiateInFlight = true;
   try {
     var { data: result } = await window.sb.rpc('instantiate_br_session', {
       p_session_id:      sessionId,
@@ -996,9 +1220,13 @@ async function tryInstantiate(sessionId) {
     });
     // ok=false with reason='session_not_waiting' means another client got there first — fine
     if (result && result.ok) {
+      stopLobbyTick();
       redirectToSession(sessionId);
+    } else {
+      instantiateInFlight = false;
     }
   } catch (e) {
+    instantiateInFlight = false;
     // Ignore — Realtime will fire the status change and redirect
   }
 }
@@ -1049,6 +1277,7 @@ function stopRealtime() {
 
 async function leaveLobby() {
   stopRealtime();
+  stopLobbyTick();
   if (currentSessionId) {
     await window.sb.from('br_session_players')
       .delete()
@@ -1057,6 +1286,9 @@ async function leaveLobby() {
   }
   document.getElementById('wr-overlay').classList.remove('show');
   currentSessionId = null;
+  fillTimerStart       = null;
+  targetCountdownStart = null;
+  instantiateInFlight  = false;
 }
 
 // ── Rejoin existing session ───────────────────────────────────────────────────
@@ -1074,8 +1306,10 @@ async function rejoinSession(sessionId) {
     return;
   }
 
-  // Restore state and show waiting room
-  selectedMode = session.mode;
+  // Restore state and show waiting room.
+  // DB mode is 'ffa'; default UI label to Classic on rejoin (Ranked vs Classic
+  // distinction will be persisted on the session row in Phase 4).
+  selectedMode = 'classic';
   selectedHalf = session.half_scope;
   selectedMatch = {
     fixture_id:     parseInt(session.match_id),

@@ -200,6 +200,48 @@ You want to beat a specific person right now. Not in a standings table that sett
 
 ## Pillar 3 — Battle Royale
 
+### Battle Royale — Final Product Definition
+
+**This is the canonical model. The previous lobby model using 1v1 / FFA was incorrect and is replaced by this structure.**
+
+Battle Royale is a single survival session. Not a match format. Not Arena. Not a configurable duel. One lobby, multiple players, sequential questions, HP damage, elimination over time, last player alive wins.
+
+**Survival model — locked rules:**
+- One shared lobby per session. All players answer the same sequence of questions.
+- Every player must answer every question.
+- **Wrong answer = HP loss.**
+- **No answer (timeout) = same damage as a wrong answer.** This is a deliberate design choice: silence is not a safe option, it is a loss.
+- HP reaches 0 → player is eliminated and assigned a placement in elimination order.
+- Session ends when one player remains OR the question budget is exhausted; if exhausted, remaining players are placed by HP descending.
+
+**Modes — exactly two:**
+| Mode | Rating impact | Use case |
+|---|---|---|
+| **Classic** | None | Casual survival, no ELO pressure |
+| **Ranked** | ELO applied via `update_br_ratings()` | Competitive survival |
+
+Gameplay is identical between modes. Only the rating consequence differs. There are no other modes. There is no "1v1", no "duel", no "FFA", no "format". Player count is whatever joins the lobby.
+
+**Target player count:**
+- MVP can operate with 4 players.
+- System and UI must be designed for **8–12 players** as the target lobby size.
+- No hardcoded player limits in the UI. The waiting room must scale visually from a handful of players to a full dozen without breaking layout.
+
+**UI/UX principles — what BR must feel like:**
+- Entering a dangerous environment, not configuring a match
+- Multiple players, not pairs — a group survival, not a duel
+- Tension and elimination risk are the dominant emotions
+- "Last one standing" framing throughout — never "winner" or "highest score"
+- HP visualisation, elimination moments, and the shrinking lobby are the core visceral signals
+
+**What Battle Royale is NOT:**
+- It is NOT Arena. Arena is competitive duels (1v1 / 2v2). BR is survival.
+- It is NOT a match format. There is one format: survival.
+- It does NOT have player-count selection. The lobby fills with whoever joins.
+- It does NOT use any Arena UI patterns (format cards, duel framing, player-count pickers).
+
+---
+
 ### What Battle Royale is
 
 Battle Royale is the **survival elimination pillar**. Multiple players enter a lobby, all start with 100 HP, and answer the same sequential questions. Wrong answers reduce HP; correct answers can restore it. Players are eliminated when their HP reaches zero. The last player standing wins.
