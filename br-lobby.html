@@ -11,10 +11,16 @@
 <link rel="stylesheet" href="styles.css">
 <style>
 /* ── Layout ─────────────────────────────────────────────────────────────── */
-.main { padding: 28px 40px 40px; position: relative; }
+/* .main keeps NO horizontal padding so the unified .mode-header sits full-width
+   like Arena/Trivia. Page-level inset is applied to children only. */
+.main { padding: 0 0 40px; position: relative; }
+.main > *:not(.mode-header):not(.br-bg-glow) { padding-left: 40px; padding-right: 40px; }
+.main > .mode-header + *:not(.br-bg-glow) { margin-top: 28px; }
 
 @media (max-width: 900px) {
-  .main { padding: 18px 16px 32px; }
+  .main { padding: 0 0 32px; }
+  .main > *:not(.mode-header):not(.br-bg-glow) { padding-left: 16px; padding-right: 16px; }
+  .main > .mode-header + *:not(.br-bg-glow) { margin-top: 18px; }
 }
 
 /* Subtle radial glow behind the mode cards — pulls focus to the decision. */
