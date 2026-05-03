@@ -275,6 +275,78 @@ a { text-decoration: none; color: inherit; }
 .mode-icon.icon-help       { background: rgba(78,205,196,0.12);   border-color: rgba(78,205,196,0.28);  color: var(--teal); }
 
 /* ══════════════════════════════════════════════
+   BR-MODE — sidebar adapts to survival aesthetic.
+   Activated by body.br-mode (set on Battle Royale pages only).
+   All rules scoped under .br-mode so non-BR pages are 100% unaffected.
+   ══════════════════════════════════════════════ */
+body.br-mode .sidebar {
+  background:
+    linear-gradient(180deg, rgba(0,255,178,0.025) 0%, rgba(0,0,0,0) 60%),
+    linear-gradient(180deg, #0E1320 0%, #05070D 100%);
+  border-right: 1px solid rgba(0,255,178,0.10);
+  box-shadow: 1px 0 24px rgba(0,255,178,0.04);
+  transition: background 0.4s ease;
+}
+/* Edge separator — soft glow line down the right edge */
+body.br-mode .sidebar::after {
+  content: '';
+  position: absolute;
+  top: 0; right: -1px; bottom: 0;
+  width: 1px;
+  background: linear-gradient(180deg, transparent 0%, rgba(0,255,178,0.18) 30%, rgba(0,255,178,0.18) 70%, transparent 100%);
+  pointer-events: none;
+}
+
+/* Nav item hover — subtle highlight, premium */
+body.br-mode .sidebar-link {
+  transition: background 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+body.br-mode .sidebar-link:hover {
+  background: rgba(255,255,255,0.04);
+  color: var(--off-white);
+  box-shadow: inset 2px 0 0 rgba(0,255,178,0.18);
+}
+
+/* Active item — Battle Royale entry feels alive */
+body.br-mode .sidebar-link.active {
+  background: rgba(0,255,178,0.08);
+  color: #fff;
+  position: relative;
+  box-shadow: inset 3px 0 0 #00FFB2, 0 0 18px rgba(0,255,178,0.10);
+  animation: br-side-pulse 2.5s ease-in-out infinite;
+}
+@keyframes br-side-pulse {
+  0%, 100% { box-shadow: inset 3px 0 0 #00FFB2, 0 0 14px rgba(0,255,178,0.10); }
+  50%      { box-shadow: inset 3px 0 0 #00FFB2, 0 0 26px rgba(0,255,178,0.22); }
+}
+
+/* Active item icon — slight glow + scale */
+body.br-mode .sidebar-link.active svg {
+  color: #00FFB2;
+  filter: drop-shadow(0 0 6px rgba(0,255,178,0.45));
+  transform: scale(1.05);
+  transition: transform 0.18s ease, color 0.18s ease, filter 0.22s ease;
+}
+
+/* Section labels — lift the dim grey to a hint of green so they stop
+   feeling like a SaaS dashboard. */
+body.br-mode .sidebar-section {
+  color: rgba(0,255,178,0.45);
+}
+
+/* Profile footer — match the deeper background */
+body.br-mode .sidebar-profile-block {
+  border-top-color: rgba(0,255,178,0.08);
+  background: rgba(0,0,0,0.18);
+}
+
+/* Reduced motion — kill the active-pulse */
+@media (prefers-reduced-motion: reduce) {
+  body.br-mode .sidebar-link.active { animation: none; }
+  body.br-mode .sidebar-link.active svg { transform: none; }
+}
+
+/* ══════════════════════════════════════════════
    HELP / FAQ accordion + search (used on support.html + help.html)
    ══════════════════════════════════════════════ */
 .help-search {
