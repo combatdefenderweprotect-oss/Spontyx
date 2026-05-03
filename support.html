@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="view-transition" content="same-origin">
+  <title>Support — Spontyx</title>
+  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .content { flex: 1; min-width: 0; padding: 0 0 40px; }
+    .sp-inner { padding: 28px 32px 0; max-width: 980px; margin: 0 auto; }
+    @media (max-width: 900px) { .sp-inner { padding: 18px 14px 0; } }
+
+    .sp-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 22px;
+      margin-top: 8px;
+    }
+    @media (max-width: 900px) { .sp-grid { grid-template-columns: 1fr; } }
+
+    .sp-card {
+      background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 22px 24px;
+    }
+    .sp-card-title {
+      font-size: 0.95rem; font-weight: 800; color: var(--off-white); margin-bottom: 6px;
+    }
+    .sp-card-sub {
+      font-size: 0.8rem; color: var(--grey); margin-bottom: 16px;
+    }
+
+    .sp-form { display: flex; flex-direction: column; gap: 12px; }
+    .sp-form label { font-size: 0.7rem; font-weight: 700; color: var(--grey); text-transform: uppercase; letter-spacing: 0.06em; }
+    .sp-form select, .sp-form input, .sp-form textarea {
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px; padding: 10px 14px;
+      color: var(--off-white); font-family: inherit; font-size: 0.85rem; outline: none;
+    }
+    .sp-form textarea { min-height: 120px; resize: vertical; }
+    .sp-form select:focus, .sp-form input:focus, .sp-form textarea:focus { border-color: rgba(168,225,12,0.4); }
+    .sp-send {
+      align-self: flex-start; margin-top: 4px;
+      background: var(--lime); color: var(--navy); border: none;
+      border-radius: 999px; padding: 10px 22px;
+      font-family: inherit; font-size: 0.82rem; font-weight: 800; cursor: pointer;
+      transition: background 0.15s, transform 0.12s;
+    }
+    .sp-send:hover { background: #b8f00f; transform: translateY(-1px); }
+
+    .sp-inbox { display: flex; flex-direction: column; gap: 10px; }
+    .sp-inbox-item {
+      padding: 12px 14px; border-radius: 10px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-left: 3px solid var(--coral);
+    }
+    .sp-inbox-item.read { opacity: 0.65; border-left-color: rgba(255,255,255,0.1); }
+    .sp-inbox-title { font-size: 0.84rem; font-weight: 700; color: var(--off-white); margin-bottom: 4px; }
+    .sp-inbox-body  { font-size: 0.78rem; color: var(--grey); line-height: 1.5; }
+    .sp-inbox-time  { font-size: 0.62rem; color: var(--grey-dark); margin-top: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+    .sp-faq-item {
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .sp-faq-item:last-child { border-bottom: none; }
+    .sp-faq-q { font-size: 0.85rem; font-weight: 700; color: var(--off-white); margin-bottom: 6px; }
+    .sp-faq-a { font-size: 0.78rem; color: var(--grey); line-height: 1.55; }
+
+    .sp-demo-note {
+      display: inline-flex; align-items: center; gap: 6px; margin-bottom: 16px;
+      padding: 5px 12px; border-radius: 999px;
+      background: rgba(255,159,67,0.08); border: 1px solid rgba(255,159,67,0.22);
+      color: #FF9F43; font-size: 0.62rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+  </style>
+</head>
+<body>
+
+<div id="sidebar-placeholder"></div>
+
+<main class="content">
+
+  <!-- ═══ UNIFIED MODE HEADER ═══ -->
+  <div class="mode-header">
+    <div class="mode-header-content">
+      <div class="mode-header-left">
+        <div class="mode-icon icon-trivia">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div>
+          <h1 class="mode-title">Support</h1>
+          <p class="mode-subtitle">Stuck on something? Send us a message — we read every one. Faster help is the bell-icon popup in the sidebar.</p>
+        </div>
+      </div>
+      <div class="mode-header-right">
+        <a class="how-to-play" href="dashboard.html">← Back to Game Center</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="sp-inner">
+
+    <span class="sp-demo-note">Demo data — backend ships in a future sprint</span>
+
+    <div class="sp-grid">
+
+      <!-- LEFT: Contact form + FAQ -->
+      <div>
+        <div class="sp-card">
+          <div class="sp-card-title">Contact support</div>
+          <div class="sp-card-sub">Bug, feature request, account question — anything. We typically respond in under 24h.</div>
+          <form class="sp-form" onsubmit="event.preventDefault();sendSupport()">
+            <div>
+              <label for="sp-topic">Topic</label>
+              <select id="sp-topic">
+                <option>Bug report</option>
+                <option>Feature request</option>
+                <option>Account / billing</option>
+                <option>Gameplay question</option>
+                <option>Other</option>
+              </select>
+            </div>
+            <div>
+              <label for="sp-body">Message</label>
+              <textarea id="sp-body" placeholder="Tell us what's going on…"></textarea>
+            </div>
+            <button class="sp-send" type="submit">Send to support</button>
+          </form>
+        </div>
+
+        <div class="sp-card" style="margin-top:18px;">
+          <div class="sp-card-title">Quick answers</div>
+          <div class="sp-card-sub">The most common things people ask.</div>
+          <div class="sp-faq-item">
+            <div class="sp-faq-q">How do scoring multipliers work?</div>
+            <div class="sp-faq-a">Points = base × time pressure × difficulty × streak × comeback × clutch. Live cards show estimated points before you answer.</div>
+          </div>
+          <div class="sp-faq-item">
+            <div class="sp-faq-q">Why was my question voided?</div>
+            <div class="sp-faq-a">Usually because the match was cancelled, postponed, or the resolver couldn't read official stats. Voided questions don't affect your streak or score.</div>
+          </div>
+          <div class="sp-faq-item">
+            <div class="sp-faq-q">When does my Pro trial end?</div>
+            <div class="sp-faq-a">Check your Game Center → Your Plan card. The "Resets in" timer counts daily caps; tier expiry is shown on the Profile page.</div>
+          </div>
+          <div class="sp-faq-item">
+            <div class="sp-faq-q">Can I delete my account?</div>
+            <div class="sp-faq-a">Yes — message us via the form above and we'll handle the data deletion within 7 days.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Inbox from Spontyx -->
+      <aside>
+        <div class="sp-card">
+          <div class="sp-card-title">Inbox from Spontyx</div>
+          <div class="sp-card-sub">Announcements, replies, account notices.</div>
+          <div class="sp-inbox" id="sp-inbox"></div>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+<script src="sidebar.js"></script>
+<script>SpontixSidebar.init({ type: 'player', active: 'support.html' });</script>
+<script>
+const SP_INBOX = [
+  { title: 'Welcome to Spontyx Beta',  body: 'Thanks for joining the beta. Reach out any time using the form on the left — we read every message.', time: 'Today',     read: false },
+  { title: 'Pro Trial active',         body: 'You have full Pro features for 14 days. After that you stay on Pro at €7.99/mo or roll back to Starter.', time: '2d ago', read: true  },
+  { title: 'New: Battle Royale Ranked',body: 'Ranked BR is in soft launch — try it, ELO is live. Share feedback any time.', time: '1w ago', read: true  },
+];
+
+function renderInbox() {
+  const el = document.getElementById('sp-inbox');
+  el.innerHTML = SP_INBOX.map(m => `
+    <div class="sp-inbox-item${m.read ? ' read' : ''}">
+      <div class="sp-inbox-title">${m.title}</div>
+      <div class="sp-inbox-body">${m.body}</div>
+      <div class="sp-inbox-time">${m.time}</div>
+    </div>`).join('');
+}
+
+function sendSupport() {
+  const body = (document.getElementById('sp-body').value || '').trim();
+  if (!body) return showToast('Add a message first');
+  document.getElementById('sp-body').value = '';
+  showToast('Thanks — we\'ll get back to you soon (demo)');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+document.addEventListener('DOMContentLoaded', renderInbox);
+</script>
+</body>
+</html>

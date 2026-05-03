@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="view-transition" content="same-origin">
+  <title>Messages — Spontyx</title>
+  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .content { flex: 1; min-width: 0; padding: 0 0 32px; }
+    .mc-inner { padding: 22px 32px 0; max-width: 1320px; margin: 0 auto; }
+    @media (max-width: 900px) { .mc-inner { padding: 16px 14px 0; } }
+
+    .mc-tabs {
+      display: inline-flex; gap: 6px; background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.06);
+      padding: 4px; border-radius: 999px; margin-bottom: 16px;
+    }
+    .mc-tab {
+      padding: 7px 16px; border-radius: 999px; border: none;
+      background: transparent; color: var(--grey);
+      font-family: inherit; font-size: 0.78rem; font-weight: 700; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .mc-tab:hover  { color: var(--off-white); }
+    .mc-tab.active { background: var(--lime); color: var(--navy); }
+
+    .mc-demo-note {
+      display: inline-flex; align-items: center; gap: 6px; margin-left: 12px;
+      padding: 4px 10px; border-radius: 999px;
+      background: rgba(255,159,67,0.08); border: 1px solid rgba(255,159,67,0.2);
+      color: #FF9F43; font-size: 0.62rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+
+    /* ── 2-pane messenger layout ── */
+    .mc-grid {
+      display: grid;
+      grid-template-columns: 320px 1fr;
+      gap: 16px;
+      height: calc(100vh - var(--mode-header-h, 76px) - 120px);
+      min-height: 540px;
+    }
+    @media (max-width: 900px) {
+      .mc-grid { grid-template-columns: 1fr; height: auto; }
+      .mc-grid.thread-open .mc-list { display: none; }
+      .mc-grid:not(.thread-open) .mc-thread { display: none; }
+    }
+
+    /* Conversations list */
+    .mc-list {
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px; overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .mc-list-head {
+      padding: 14px 16px;
+      display: flex; flex-direction: column; gap: 10px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+    }
+    .mc-search {
+      display: flex; align-items: center; gap: 8px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 999px; padding: 7px 12px;
+    }
+    .mc-search:focus-within { border-color: rgba(168,225,12,0.4); }
+    .mc-search svg { width: 14px; height: 14px; stroke: var(--grey); fill: none; stroke-width: 2; }
+    .mc-search input {
+      background: transparent; border: none; outline: none;
+      color: var(--off-white); font-family: inherit; font-size: 0.78rem;
+      flex: 1; min-width: 0;
+    }
+    .mc-search input::placeholder { color: var(--grey-dark); }
+    .mc-compose {
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      padding: 8px 14px; border-radius: 999px;
+      background: var(--lime); color: var(--navy); border: none;
+      font-family: inherit; font-size: 0.74rem; font-weight: 800; cursor: pointer;
+      transition: background 0.15s;
+    }
+    .mc-compose:hover { background: #b8f00f; }
+
+    .mc-list-scroll { flex: 1; overflow-y: auto; }
+    .mc-list-scroll::-webkit-scrollbar { width: 6px; }
+    .mc-list-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+    .mc-conv {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 12px 16px; cursor: pointer;
+      border-left: 2px solid transparent;
+      transition: background 0.12s;
+    }
+    .mc-conv:hover { background: rgba(255,255,255,0.03); }
+    .mc-conv.active { background: rgba(168,225,12,0.06); border-left-color: var(--lime); }
+    .mc-conv.unread .mc-conv-name::after {
+      content: ''; display: inline-block; width: 7px; height: 7px;
+      border-radius: 50%; background: var(--lime); margin-left: 6px;
+      vertical-align: middle;
+    }
+    .mc-conv-avatar {
+      width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.78rem; font-weight: 800;
+    }
+    .mc-conv-avatar.purple { background: rgba(124,92,252,0.18); color: #9b7cfc; }
+    .mc-conv-avatar.coral  { background: rgba(255,107,107,0.16); color: var(--coral); }
+    .mc-conv-avatar.teal   { background: rgba(78,205,196,0.15);  color: var(--teal); }
+    .mc-conv-avatar.lime   { background: rgba(168,225,12,0.18);  color: var(--lime); }
+    .mc-conv-info { flex: 1; min-width: 0; }
+    .mc-conv-name { font-size: 0.84rem; font-weight: 700; color: var(--off-white); display: flex; align-items: center; gap: 6px; }
+    .mc-conv-name .mc-kind {
+      font-size: 0.55rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 2px 7px; border-radius: 999px; background: rgba(124,92,252,0.18); color: #9b7cfc;
+    }
+    .mc-conv-preview {
+      font-size: 0.74rem; color: var(--grey); margin-top: 3px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .mc-conv-time { font-size: 0.62rem; color: var(--grey-dark); margin-top: 3px; }
+
+    /* Active thread */
+    .mc-thread {
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px; overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .mc-thread-head {
+      padding: 14px 18px;
+      border-bottom: 1px solid rgba(255,255,255,0.05);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .mc-thread-back {
+      display: none; background: transparent; border: none;
+      color: var(--grey); cursor: pointer; padding: 4px;
+    }
+    @media (max-width: 900px) { .mc-thread-back { display: inline-flex; } }
+    .mc-thread-back svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .mc-thread-info { flex: 1; min-width: 0; }
+    .mc-thread-title { font-size: 0.95rem; font-weight: 800; color: var(--off-white); }
+    .mc-thread-sub { font-size: 0.7rem; color: var(--grey); margin-top: 2px; }
+
+    .mc-thread-body {
+      flex: 1; overflow-y: auto;
+      padding: 18px;
+      display: flex; flex-direction: column; gap: 10px;
+      background: linear-gradient(180deg, rgba(168,225,12,0.02) 0%, transparent 30%);
+    }
+    .mc-thread-body::-webkit-scrollbar { width: 6px; }
+    .mc-thread-body::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.08); border-radius: 3px; }
+
+    .mc-msg {
+      max-width: 65%; padding: 10px 14px; border-radius: 14px;
+      font-size: 0.82rem; line-height: 1.45;
+      animation: mc-msg-in 0.22s cubic-bezier(0.16,1,0.3,1);
+    }
+    @keyframes mc-msg-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
+    .mc-msg.them {
+      align-self: flex-start;
+      background: rgba(255,255,255,0.05); color: var(--off-white);
+      border-bottom-left-radius: 4px;
+    }
+    .mc-msg.you {
+      align-self: flex-end;
+      background: var(--lime); color: var(--navy);
+      border-bottom-right-radius: 4px;
+      font-weight: 600;
+    }
+    .mc-msg-meta {
+      font-size: 0.6rem; color: var(--grey-dark); margin-top: 4px;
+      align-self: flex-start;
+    }
+    .mc-msg.you + .mc-msg-meta { align-self: flex-end; }
+
+    .mc-msg-day {
+      align-self: center;
+      font-size: 0.6rem; color: var(--grey-dark); font-weight: 700;
+      letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 4px 12px; background: rgba(255,255,255,0.04);
+      border-radius: 999px;
+      margin: 8px 0;
+    }
+
+    .mc-thread-empty {
+      flex: 1; display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 10px; padding: 40px 30px; text-align: center;
+      color: var(--grey);
+    }
+    .mc-thread-empty .icon {
+      width: 60px; height: 60px; border-radius: 50%;
+      background: rgba(124,92,252,0.12); color: #9b7cfc;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.6rem;
+    }
+    .mc-thread-empty h3 { font-size: 1rem; font-weight: 800; color: var(--off-white); margin: 0; }
+    .mc-thread-empty p { font-size: 0.82rem; max-width: 280px; margin: 0; }
+
+    /* Composer */
+    .mc-composer {
+      padding: 12px 14px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+      display: flex; gap: 10px; align-items: center;
+    }
+    .mc-composer input {
+      flex: 1; background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 999px; padding: 10px 16px;
+      color: var(--off-white); font-family: inherit; font-size: 0.85rem; outline: none;
+    }
+    .mc-composer input:focus { border-color: rgba(168,225,12,0.4); }
+    .mc-composer button {
+      background: var(--lime); color: var(--navy); border: none;
+      border-radius: 999px; padding: 10px 22px;
+      font-family: inherit; font-size: 0.78rem; font-weight: 800; cursor: pointer;
+      transition: background 0.15s, transform 0.12s;
+    }
+    .mc-composer button:hover { background: #b8f00f; transform: translateY(-1px); }
+  </style>
+</head>
+<body>
+
+<div id="sidebar-placeholder"></div>
+
+<main class="content">
+
+  <!-- ═══ UNIFIED MODE HEADER ═══ -->
+  <div class="mode-header">
+    <div class="mode-header-content">
+      <div class="mode-header-left">
+        <div class="mode-icon icon-messages">
+          <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
+        </div>
+        <div>
+          <h1 class="mode-title">Messages</h1>
+          <p class="mode-subtitle">Direct messages and league chats — chat with mates, plan your next match.</p>
+        </div>
+      </div>
+      <div class="mode-header-right">
+        <button class="how-to-play" type="button">How It Works →</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="mc-inner">
+
+    <div style="display:flex;align-items:center;flex-wrap:wrap;">
+      <div class="mc-tabs">
+        <button class="mc-tab active" data-tab="all">All</button>
+        <button class="mc-tab" data-tab="dm">Direct</button>
+        <button class="mc-tab" data-tab="league">Leagues</button>
+      </div>
+      <div class="mc-demo-note">Demo data</div>
+    </div>
+
+    <div class="mc-grid" id="mc-grid">
+
+      <!-- Conversations list -->
+      <aside class="mc-list">
+        <div class="mc-list-head">
+          <div class="mc-search">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="mc-search-input" placeholder="Search messages…" />
+          </div>
+          <button class="mc-compose" type="button" onclick="newChat()">
+            <svg viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New message
+          </button>
+        </div>
+        <div class="mc-list-scroll" id="mc-list"></div>
+      </aside>
+
+      <!-- Active thread -->
+      <section class="mc-thread" id="mc-thread">
+        <div class="mc-thread-empty" id="mc-thread-empty">
+          <div class="icon">💬</div>
+          <h3>Pick a conversation</h3>
+          <p>Choose someone on the left to start chatting, or hit <strong>New message</strong> to find a player.</p>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+<script src="sidebar.js"></script>
+<script>SpontixSidebar.init({ type: 'player', active: 'message-center.html' });</script>
+<script src="chat-popups.js"></script>
+<script>
+/* ═══ Mock conversations + threads (replace when backend ships) ═══ */
+const CONVERSATIONS = [
+  { id:'c1', kind:'dm',     name:'Marcus K.', handle:'@marc_predicts', color:'purple', unread:2,
+    last:'You owe me a rematch in BR 😤', time:'2m ago', online:true,
+    sub:'Member of LaLiga Legends · UCL Knockout' },
+  { id:'c2', kind:'league', name:'LaLiga Legends 24/25', color:'lime', unread:5,
+    last:'Jake R: who else picked Vinícius for the equaliser?', time:'14m ago',
+    sub:'12 members · season league' },
+  { id:'c3', kind:'dm',     name:'Ines L.',   handle:'@ines_trivia',   color:'coral',  unread:0,
+    last:'gg, see you next week', time:'Yesterday', online:false,
+    sub:'Member of LaLiga Legends' },
+  { id:'c4', kind:'league', name:'UCL Knockout Crew', color:'purple', unread:0,
+    last:'Marcus T: fixture moved to Wed 8pm', time:'2d ago',
+    sub:'8 members · season league' },
+  { id:'c5', kind:'dm',     name:'Jake R.',   handle:'@jake_risky',    color:'teal',   unread:0,
+    last:'You took the corners over again you maniac', time:'3d ago', online:true,
+    sub:'Member of LaLiga Legends · UCL Knockout' },
+];
+
+const THREADS = {
+  c1: [
+    { day: 'Today' },
+    { who:'them', text:'You only won because the resolver cheated', time:'10:42' },
+    { who:'you',  text:'I literally answered 3 clutch questions with 8 seconds left, that\'s skill', time:'10:43' },
+    { who:'them', text:'You owe me a rematch in BR 😤', time:'10:45' },
+  ],
+  c2: [
+    { day: 'Today' },
+    { who:'them', text:'Real Madrid are gonna get spanked tonight', time:'14:02', name:'Marcus K.' },
+    { who:'them', text:'Vinícius scoring before 30 mins, calling it', time:'14:03', name:'Marcus K.' },
+    { who:'you',  text:'Nah, Bellingham first, then Vini for the equaliser', time:'14:04' },
+    { who:'them', text:'Jake R: who else picked Vinícius for the equaliser?', time:'14:05', name:'Jake R.' },
+  ],
+  c3: [
+    { day: 'Yesterday' },
+    { who:'them', text:'Solid game today, that party round was nuts', time:'21:14' },
+    { who:'you',  text:'Yeah you carried mid', time:'21:18' },
+    { who:'them', text:'gg, see you next week', time:'21:20' },
+  ],
+  c4: [
+    { day: '2 days ago' },
+    { who:'them', text:'Marcus T: fixture moved to Wed 8pm', time:'09:11', name:'Marcus T.' },
+  ],
+  c5: [
+    { day: '3 days ago' },
+    { who:'them', text:'You took the corners over again you maniac', time:'18:32' },
+  ],
+};
+
+let activeTab = 'all';
+let activeConv = null;
+
+function esc(s){ return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function renderList(){
+  const list = document.getElementById('mc-list');
+  const q    = (document.getElementById('mc-search-input').value || '').toLowerCase();
+  const filtered = CONVERSATIONS.filter(c => {
+    const tabOk    = activeTab === 'all' || c.kind === activeTab;
+    const searchOk = !q || (c.name.toLowerCase() + ' ' + c.last.toLowerCase()).includes(q);
+    return tabOk && searchOk;
+  });
+  if (!filtered.length) {
+    list.innerHTML = '<div style="padding:30px 20px;text-align:center;color:var(--grey-dark);font-size:0.78rem;">No conversations match.</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(c => {
+    const initials = c.name.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase();
+    const kindBadge = c.kind === 'league' ? '<span class="mc-kind">League</span>' : '';
+    return `
+      <div class="mc-conv${c.unread ? ' unread' : ''}${activeConv === c.id ? ' active' : ''}" data-conv="${c.id}">
+        <div class="mc-conv-avatar ${c.color}">${esc(initials)}</div>
+        <div class="mc-conv-info">
+          <div class="mc-conv-name">${esc(c.name)}${kindBadge}</div>
+          <div class="mc-conv-preview">${esc(c.last)}</div>
+          <div class="mc-conv-time">${esc(c.time)}${c.unread ? ' · <span style="color:var(--lime);font-weight:700;">' + c.unread + ' new</span>' : ''}</div>
+        </div>
+      </div>`;
+  }).join('');
+  list.querySelectorAll('.mc-conv').forEach(el => {
+    el.addEventListener('click', () => openThread(el.dataset.conv));
+  });
+}
+
+function openThread(id) {
+  activeConv = id;
+  const c = CONVERSATIONS.find(x => x.id === id);
+  if (!c) return;
+  c.unread = 0;
+
+  document.getElementById('mc-grid').classList.add('thread-open');
+  document.getElementById('mc-thread-empty')?.remove();
+
+  const thread = document.getElementById('mc-thread');
+  const initials = c.name.split(' ').map(p => p[0]).join('').slice(0,2).toUpperCase();
+  thread.innerHTML = `
+    <div class="mc-thread-head">
+      <button class="mc-thread-back" onclick="closeThread()">
+        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <div class="mc-conv-avatar ${c.color}" style="width:42px;height:42px;font-size:0.85rem;">${esc(initials)}</div>
+      <div class="mc-thread-info">
+        <div class="mc-thread-title">${esc(c.name)}${c.kind === 'league' ? ' <span class="mc-kind" style="margin-left:6px;">League</span>' : ''}</div>
+        <div class="mc-thread-sub">${esc(c.sub || '')}${c.online ? ' · <span style="color:var(--lime);">● online</span>' : ''}</div>
+      </div>
+    </div>
+    <div class="mc-thread-body" id="mc-thread-body"></div>
+    <div class="mc-composer">
+      <input type="text" id="mc-input" placeholder="Message ${esc(c.name)}…" onkeydown="if(event.key==='Enter')sendMessage()" />
+      <button type="button" onclick="sendMessage()">Send</button>
+    </div>`;
+  renderThreadBody();
+  renderList(); // update active state
+}
+
+function renderThreadBody() {
+  const body = document.getElementById('mc-thread-body');
+  const msgs = THREADS[activeConv] || [];
+  if (!msgs.length) {
+    body.innerHTML = '<div class="mc-thread-empty"><div class="icon">👋</div><h3>Say hi</h3><p>No messages yet — kick off the conversation.</p></div>';
+    return;
+  }
+  body.innerHTML = msgs.map(m => {
+    if (m.day) return `<div class="mc-msg-day">${esc(m.day)}</div>`;
+    const namePrefix = (m.who === 'them' && m.name) ? `<div class="mc-msg-meta">${esc(m.name)}</div>` : '';
+    return `${namePrefix}<div class="mc-msg ${m.who}">${esc(m.text)}</div><div class="mc-msg-meta">${esc(m.time || '')}</div>`;
+  }).join('');
+  body.scrollTop = body.scrollHeight;
+}
+
+function sendMessage() {
+  const input = document.getElementById('mc-input');
+  if (!input || !input.value.trim()) return;
+  const text = input.value.trim();
+  THREADS[activeConv] = THREADS[activeConv] || [];
+  THREADS[activeConv].push({ who:'you', text, time: new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}) });
+  // also bump conversation preview
+  const c = CONVERSATIONS.find(x => x.id === activeConv);
+  if (c) { c.last = 'You: ' + text; c.time = 'just now'; }
+  input.value = '';
+  renderThreadBody();
+  renderList();
+  showToast('Sent (demo) — backend ships in a future sprint');
+}
+
+function closeThread() {
+  document.getElementById('mc-grid').classList.remove('thread-open');
+}
+
+function newChat() {
+  showToast('New-message picker ships with the backend');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderList();
+  document.querySelectorAll('.mc-tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.mc-tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      activeTab = t.dataset.tab;
+      renderList();
+    });
+  });
+  document.getElementById('mc-search-input').addEventListener('input', renderList);
+
+  // Open the first conversation by default on desktop
+  if (window.innerWidth > 900 && CONVERSATIONS.length) openThread(CONVERSATIONS[0].id);
+});
+</script>
+</body>
+</html>

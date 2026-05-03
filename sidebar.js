@@ -27,7 +27,9 @@ const SpontixSidebar = {
     { label: 'Leaderboard', href: 'leaderboard.html', icon: '<path d="M18 20V10M12 20V4M6 20V14"/>' },
 
     { section: 'Account' },
-    { label: 'Profile', href: 'profile.html', icon: '<path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>' },
+    { label: 'Profile',  href: 'profile.html',         icon: '<path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>' },
+    { label: 'Messages', href: 'message-center.html',  icon: '<path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>' },
+    { label: 'Support',  href: 'support.html',         icon: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>' },
   ],
 
   // ── Venue Navigation ──
@@ -141,23 +143,38 @@ const SpontixSidebar = {
       }
     }
 
-    const profileHTML = '<a href="' + profileLink + '" class="sidebar-profile" style="text-decoration:none;color:inherit;">' +
-      '<div class="sidebar-avatar"' + avatarExtraStyle + '>' + avatarInnerHTML + '</div>' +
-      '<div class="sidebar-profile-info">' +
-      '<div class="sidebar-profile-name">' + profileName + '</div>' +
-      '<div class="sidebar-profile-tier">' + profileTier + '</div>' +
-      trophyCountHTML +
-      '</div>' +
-      '<button onclick="event.preventDefault(); event.stopPropagation(); if (window.SpontixStore && SpontixStore.Session) SpontixStore.Session.logout(); else window.location.href=\'login.html\';" ' +
-        'title="Sign out" ' +
-        'style="margin-left:auto;background:transparent;border:none;padding:6px;border-radius:6px;cursor:pointer;color:inherit;opacity:0.55;transition:opacity 0.15s,background 0.15s;" ' +
-        'onmouseover="this.style.opacity=1;this.style.background=\'rgba(255,255,255,0.06)\'" ' +
-        'onmouseout="this.style.opacity=0.55;this.style.background=\'transparent\'">' +
-        '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
-          '<path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>' +
-        '</svg>' +
-      '</button>' +
-      '</a>';
+    // Profile footer — avatar + name/tier on top row, then a horizontal action
+    // bar (Notifications · Messages · Support · Logout). Action buttons sit
+    // BELOW the profile to keep the row readable on a 260px sidebar.
+    const profileHTML = ''
+      + '<div class="sidebar-profile-block">'
+        + '<a href="' + profileLink + '" class="sidebar-profile" style="text-decoration:none;color:inherit;">'
+          + '<div class="sidebar-avatar"' + avatarExtraStyle + '>' + avatarInnerHTML + '</div>'
+          + '<div class="sidebar-profile-info">'
+            + '<div class="sidebar-profile-name">' + profileName + '</div>'
+            + '<div class="sidebar-profile-tier">' + profileTier + '</div>'
+            + trophyCountHTML
+          + '</div>'
+        + '</a>'
+        + '<div class="sidebar-actions">'
+          + '<button class="sb-action" data-popup="notifications" title="Notifications" aria-label="Notifications">'
+            + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>'
+            + '<span class="sb-action-badge" id="sb-notif-badge" hidden>0</span>'
+          + '</button>'
+          + '<button class="sb-action" data-popup="messages" title="Messages" aria-label="Messages">'
+            + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>'
+            + '<span class="sb-action-badge" id="sb-msg-badge" hidden>0</span>'
+          + '</button>'
+          + '<button class="sb-action" data-popup="support" title="Support" aria-label="Support">'
+            + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/><line x1="4.93" y1="4.93" x2="9.17" y2="9.17"/><line x1="14.83" y1="14.83" x2="19.07" y2="19.07"/><line x1="14.83" y1="9.17" x2="19.07" y2="4.93"/><line x1="14.83" y1="9.17" x2="18.36" y2="5.64"/><line x1="4.93" y1="19.07" x2="9.17" y2="14.83"/></svg>'
+          + '</button>'
+          + '<button class="sb-action sb-action-logout" '
+            + 'onclick="if (window.SpontixStore && SpontixStore.Session) SpontixStore.Session.logout(); else window.location.href=\'login.html\';" '
+            + 'title="Sign out" aria-label="Sign out">'
+            + '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>'
+          + '</button>'
+        + '</div>'
+      + '</div>';
 
     // Logo
     const logoExtra = isVenue ? '<span class="venue-tag">Venue</span>' : '';
@@ -178,6 +195,16 @@ const SpontixSidebar = {
     } else {
       // Insert at start of body
       document.body.insertAdjacentHTML('afterbegin', sidebarHTML);
+    }
+
+    // Auto-load chat-popups.js once per page (Notifications / Messages /
+    // Support popups for the sidebar action buttons). Player nav only.
+    if (!isVenue && !document.getElementById('sb-chat-popups-script')) {
+      const s = document.createElement('script');
+      s.id   = 'sb-chat-popups-script';
+      s.src  = 'chat-popups.js';
+      s.defer = true;
+      document.body.appendChild(s);
     }
 
     // Hydrate profile from SpontixStore if available
