@@ -8,6 +8,7 @@
   <title>Spontyx — Trivia</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
   <style>
     :root {
       --navy: #1A1A2E;
@@ -592,6 +593,9 @@
   </style>
 </head>
 <body>
+<div class="app-shell">
+<div id="sidebar-placeholder"></div>
+<main class="main">
 
 <!-- ══ TOP BAR ══ -->
 <div class="topbar">
@@ -1706,5 +1710,13 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="supabase-client.js"></script>
 <script src="spontix-store.js"></script>
 <script src="sidebar.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    try { SpontixSidebar.init({ type: 'player', active: 'trivia.html' }); }
+    catch (e) { console.warn('Sidebar init failed:', e); }
+  });
+</script>
+</main>
+</div><!-- /.app-shell -->
 </body>
 </html>
