@@ -1,8 +1,8 @@
 # Leaderboard Architecture
 
-**Status:** Design + audit document. No implementation yet.
+**Status:** Phase 1 (UI/UX-only chrome) shipped 2026-05-03 — commit `406bbca`. Phases 2–4 (new queries, backend, new product surfaces) are not started.
 
-This document defines the full leaderboard system Spontyx wants to ship and audits what currently exists in `leaderboard.html` against that target. **Do not implement UI changes from this document — it exists to ground the redesign.**
+This document defines the full leaderboard system Spontyx wants to ship and audits what currently exists in `leaderboard.html` against that target. **Phase 1 is live — see §10 below for what shipped.** Phases 2+ remain unimplemented.
 
 ---
 
@@ -353,14 +353,30 @@ Hard rules for the redesign sprint:
 
 Three buckets:
 
-### A. Can ship UI-only now (no backend changes, no new queries)
+### A. Can ship UI-only now (no backend changes, no new queries) — ✅ **SHIPPED Phase 1, commit `406bbca`**
 
-- New unified mode-header on the page
-- Live Activity Strip (static counts acceptable for MVP, same pattern as dashboard)
-- Right panel "Your Ranking" + "Your Ratings" — reads existing `users.arena_rating` / `br_rating` / `total_points` / `accuracy`
-- Right panel "Next Target" — pure JS computation against existing tier breakpoints
-- Player-card list styling (replace the current `<table>` with card rows)
-- Visual consistency: timeframe + scope + mode filter row using the same chip system as elsewhere
+- ✅ New unified mode-header on the page (gold trophy icon, new `.icon-leaderboard` tint added to `styles.css`)
+- ✅ Live Activity Strip (static counts: `12 in Arena`, `8 in BR`, `3 leagues live`, `142 online now`)
+- ✅ Right panel "Your Ranking" + "Your Ratings" — reads existing `users.arena_rating` / `br_rating` / `total_points` already loaded into `arenaData` / `brData` / `players` arrays. Combined and Trivia panels render as "Coming soon" (faithful to §8 — do not fake)
+- ✅ Right panel "Next Target" — pure JS computation against the 9 Arena tier breakpoints + nearest rival above the user
+- ✅ 3-axis filter system inside one `.lb-filters` card: Scope (Global / Friends / My Leagues) · Mode (Global / Arena / BR / Leagues, plus disabled `Combined Soon` / `Trivia Soon`) · Time (Week / Month / Season / All Time) · Special row (disabled `Rising / Speed / Clutch / Survival / Consistency`, all marked "Soon")
+- ✅ Two-column grid (>=1100px); stacks below 1100px (mobile right panel falls below main list per the approved option-(a) decision)
+- ✅ `?view=` URL deep-link param honoured for `arena | br | leagues | friends | global`
+- ✅ `br-leaderboard.html` (legacy 636-line page that read from `br-elo.js` client simulation) replaced with a one-screen redirect to `leaderboard.html?view=br` — the unified BR tab is now the canonical surface
+- ✅ Pre-load Arena + BR data on `DOMContentLoaded` so the right panel populates immediately without waiting for tab clicks; loads only render their UI when their tab is active; `switchView` re-renders from cache when re-entering
+- ⏸ Player-card list styling (replace the current `<table>` with card rows) — **deferred to Phase 1.5 / Phase 2**. Existing tables kept intact; the new chrome wraps them. Reason: changing the table → card row markup means rewriting `renderArenaLeaderboard` / `renderBrLeaderboard` / `renderFriendsLeaderboard` / `renderGlobalLeaderboard`, which touches more JS than Phase 1 wanted to risk in a single commit. Preserved as a focused follow-up.
+
+**Phase 1 preserved verbatim** (no rename, no signature change):
+- `loadLeaderboardData()`, `loadArenaLeaderboard()`, `loadBrLeaderboard()`, `SpontixStoreAsync.getLeaderboard()`, `SpontixStoreAsync.getLeagueLeaderboard()`
+- `switchView()` (made resilient when called without a click event), `selectTime()`, `selectCat()`
+- All render functions: `renderLeaderboard`, `renderGlobalLeaderboard`, `renderLeaguesLeaderboard`, `renderFriendsLeaderboard`, `renderArenaLeaderboard`, `renderBrLeaderboard`
+- Container IDs: `#ar-podium-section`, `#br-podium-section`, `#view-global/leagues/friends/arena/br`, `#ar-sticky-you`, `#br-sticky-you`
+- Tier helpers: `getArenaTier()`, `getBrTier()`
+
+**Phase 1 added (presentation-only):**
+- `selectScope(chip, scope)` — wires new scope chips to `switchView`
+- `syncScopeChip(view)` — keeps scope chips in sync when mode chips trigger view changes
+- `hydrateRightPanel()` — populates the new right-context panel; called after every render path. Reads existing arrays only; no new queries.
 
 ### B. Needs new query (data exists, just not surfaced)
 
@@ -382,8 +398,8 @@ Three buckets:
 
 ### Recommended implementation order
 
-1. **Phase 1 (UI-only, no backend):** Mode header + live strip + right panel + player-card list + tier-tier filter polish on existing Arena / BR / Global / Friends / Leagues tabs. This makes the page feel modern without touching data.
-2. **Phase 2 (additive new queries, no migrations):** Add Clutch + Speed + Survival + Rising tabs. Add trend arrows on Arena/BR rows. Add per-league consolidated standings.
+1. **✅ Phase 1 (UI-only, no backend) — SHIPPED 2026-05-03 (commit `406bbca`):** Mode header + live strip + right panel + 3-axis filter system + disabled "Soon" chips for the unbuilt boards + `?view=` deep links + `br-leaderboard.html` redirect. Player-card list styling deferred (the four `render*Leaderboard` functions still emit tables; Phase 1.5 will swap them for card rows without changing the data flow).
+2. **Phase 2 (additive new queries, no migrations):** Add Clutch + Speed + Survival + Rising tabs. Add trend arrows on Arena/BR rows. Add per-league consolidated standings. Includes Phase 1.5 player-card row swap if not done by then.
 3. **Phase 3 (backend):** Lock Combined Rank formula, decide read-time vs materialised, ship it. Add `weekly_leaderboard_archive` table + weekly snapshot job. Begin server-side trivia recording.
 4. **Phase 4 (new product surface):** Trivia Knowledge tab, real friend graph, leagues-won historical counter.
 
