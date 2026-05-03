@@ -68,102 +68,211 @@
     .screen.active { display: flex; flex-direction: column; }
 
     /* ═══════════════════════════════
-       HUB SCREEN
+       HUB SCREEN — 3-column command center
     ═══════════════════════════════ */
-    .hub { align-items: center; padding: 32px 24px; }
-    .hub-profile {
-      background: var(--navy-card); border-radius: var(--radius-xl); padding: 24px 28px;
-      border: 1px solid rgba(255,255,255,0.06); width: 100%; max-width: 560px;
-      margin-bottom: 28px; display: flex; align-items: center; gap: 20px;
+    .hub { padding: 28px 32px 48px; align-items: stretch; }
+    .hub-grid {
+      display: grid;
+      grid-template-columns: 280px minmax(0, 600px) 320px;
+      gap: 24px;
+      width: 100%;
+      max-width: 1280px;
+      margin: 0 auto;
+      align-items: start;
     }
+    .hub-col-left, .hub-col-center, .hub-col-right {
+      display: flex; flex-direction: column; gap: 16px; min-width: 0;
+    }
+    @media (max-width: 1099px) {
+      .hub-grid {
+        grid-template-columns: 1fr 1fr;
+        grid-template-areas: "left center" "right right";
+      }
+      .hub-col-left   { grid-area: left; }
+      .hub-col-center { grid-area: center; }
+      .hub-col-right  { grid-area: right; }
+    }
+    @media (max-width: 720px) {
+      .hub { padding: 18px 14px 32px; }
+      .hub-grid { grid-template-columns: 1fr; grid-template-areas: "left" "center" "right"; gap: 14px; }
+    }
+
+    /* Section labels (used in all 3 columns) */
+    .hub-section-title {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.4px;
+      color: var(--grey-dark); margin-bottom: 4px;
+    }
+
+    /* ── LEFT: Profile + lifetime stats + tier ── */
+    .hub-profile {
+      background: var(--navy-card); border-radius: var(--radius-xl); padding: 22px;
+      border: 1px solid rgba(255,255,255,0.06);
+      display: flex; flex-direction: column; align-items: flex-start; gap: 14px;
+    }
+    .hub-profile-row { display: flex; align-items: center; gap: 14px; width: 100%; }
     .hub-avatar {
-      width: 64px; height: 64px; border-radius: 50%;
+      width: 56px; height: 56px; border-radius: 50%;
       background: linear-gradient(135deg, var(--teal), #3BA89F);
       display: flex; align-items: center; justify-content: center;
-      font-size: 1.5rem; font-weight: 900; color: #fff; flex-shrink: 0;
+      font-size: 1.3rem; font-weight: 900; color: #fff; flex-shrink: 0;
       position: relative;
     }
     .hub-level-badge {
       position: absolute; bottom: -4px; right: -4px;
       background: var(--gold); color: var(--navy); font-size: 0.6rem;
-      font-weight: 900; width: 24px; height: 24px; border-radius: 50%;
+      font-weight: 900; width: 22px; height: 22px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       border: 2px solid var(--navy-card);
     }
-    .hub-profile-info { flex: 1; }
-    .hub-profile-name { font-size: 1.1rem; font-weight: 800; margin-bottom: 2px; }
-    .hub-profile-title { font-size: 0.75rem; color: var(--teal); font-weight: 600; margin-bottom: 8px; }
+    .hub-profile-info { flex: 1; min-width: 0; }
+    .hub-profile-name { font-size: 1rem; font-weight: 800; margin-bottom: 2px; }
+    .hub-profile-title { font-size: 0.72rem; color: var(--teal); font-weight: 600; }
+    .hub-xp-bar-wrap { width: 100%; }
     .hub-xp-bar { height: 6px; background: rgba(255,255,255,0.08); border-radius: 6px; overflow: hidden; margin-bottom: 4px; }
     .hub-xp-fill { height: 100%; background: linear-gradient(90deg, var(--teal), var(--lime)); border-radius: 6px; transition: width 0.6s; }
     .hub-xp-text { font-size: 0.65rem; color: var(--grey); display: flex; justify-content: space-between; }
 
     .hub-stats {
-      display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
-      width: 100%; max-width: 560px; margin-bottom: 32px;
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
     }
     .hub-stat {
       background: var(--navy-card); border-radius: var(--radius-md); padding: 14px 12px;
       text-align: center; border: 1px solid rgba(255,255,255,0.06);
     }
-    .hub-stat-val { font-size: 1.2rem; font-weight: 800; color: var(--off-white); }
+    .hub-stat-val { font-size: 1.25rem; font-weight: 800; color: var(--off-white); line-height: 1.1; }
     .hub-stat-val.teal { color: var(--teal); }
     .hub-stat-val.lime { color: var(--lime); }
     .hub-stat-val.gold { color: var(--gold); }
     .hub-stat-val.coral { color: var(--coral); }
-    .hub-stat-label { font-size: 0.6rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px; }
+    .hub-stat-label { font-size: 0.58rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 5px; }
 
-    .hub-modes-title {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
-      color: var(--grey-dark); margin-bottom: 14px; width: 100%; max-width: 560px; text-align: left;
+    .hub-tier-pill {
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-md); padding: 12px 14px;
+      font-size: 0.72rem; color: var(--grey); line-height: 1.55;
     }
-    .hub-modes {
-      display: flex; flex-direction: column; gap: 12px;
-      width: 100%; max-width: 560px; margin-bottom: 32px;
+    .hub-tier-pill .tier-name { font-weight: 700; }
+    .hub-tier-pill .free  { color: var(--teal); }
+    .hub-tier-pill .pro   { color: var(--purple); }
+    .hub-tier-pill .elite { color: var(--coral); }
+    .hub-tier-pill-row { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
+
+    /* ── CENTER: 3 large equal mode cards ── */
+    .hub-mode-lg {
+      background: var(--navy-card); border-radius: var(--radius-xl);
+      padding: 22px 24px; border: 1px solid rgba(255,255,255,0.07);
+      cursor: pointer; display: flex; align-items: center; gap: 18px;
+      transition: transform 0.18s cubic-bezier(0.16,1,0.3,1), border-color 0.18s, box-shadow 0.22s, background 0.18s;
+      position: relative; overflow: hidden;
     }
-    .hub-mode {
-      background: var(--navy-card); border-radius: var(--radius-lg); padding: 20px 24px;
-      border: 1px solid rgba(255,255,255,0.06); cursor: pointer;
-      display: flex; align-items: center; gap: 16px;
-      transition: border-color 0.2s, transform 0.2s;
+    .hub-mode-lg:hover {
+      transform: translateY(-2px) scale(1.01);
+      background: var(--navy-hover);
     }
-    .hub-mode:hover { border-color: rgba(78,205,196,0.3); transform: translateY(-2px); }
-    .hub-mode-icon {
-      width: 52px; height: 52px; border-radius: var(--radius-md);
+    .hub-mode-lg:active { transform: scale(0.995); }
+    .hub-mode-lg.solo:hover  { border-color: rgba(78,205,196,0.45); box-shadow: 0 0 28px rgba(78,205,196,0.16); }
+    .hub-mode-lg.duel:hover  { border-color: rgba(255,107,107,0.45); box-shadow: 0 0 28px rgba(255,107,107,0.16); }
+    .hub-mode-lg.party:hover { border-color: rgba(124,92,252,0.45); box-shadow: 0 0 28px rgba(124,92,252,0.16); }
+    .hub-mode-lg-icon {
+      width: 64px; height: 64px; border-radius: var(--radius-lg);
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
-    .hub-mode-icon svg { width: 26px; height: 26px; stroke-width: 2; fill: none; }
-    .hub-mode-icon.solo { background: rgba(78,205,196,0.12); }
-    .hub-mode-icon.solo svg { stroke: var(--teal); }
-    .hub-mode-icon.duel { background: rgba(255,107,107,0.12); }
-    .hub-mode-icon.duel svg { stroke: var(--coral); }
-    .hub-mode-icon.party { background: rgba(124,92,252,0.12); }
-    .hub-mode-icon.party svg { stroke: var(--purple); }
-    .hub-mode-info { flex: 1; }
-    .hub-mode-name { font-size: 1rem; font-weight: 700; margin-bottom: 3px; }
-    .hub-mode-desc { font-size: 0.75rem; color: var(--grey); line-height: 1.4; }
-    .hub-mode-arrow { color: var(--grey-dark); font-size: 1.2rem; }
-    .hub-mode-arrow svg { width: 20px; height: 20px; stroke: var(--grey-dark); stroke-width: 2; fill: none; }
-
-    .hub-recent-title {
-      font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;
-      color: var(--grey-dark); margin-bottom: 14px; width: 100%; max-width: 560px; text-align: left;
+    .hub-mode-lg-icon svg { width: 30px; height: 30px; stroke-width: 2; fill: none; }
+    .hub-mode-lg.solo  .hub-mode-lg-icon { background: rgba(78,205,196,0.14); }
+    .hub-mode-lg.solo  .hub-mode-lg-icon svg { stroke: var(--teal); }
+    .hub-mode-lg.duel  .hub-mode-lg-icon { background: rgba(255,107,107,0.14); }
+    .hub-mode-lg.duel  .hub-mode-lg-icon svg { stroke: var(--coral); }
+    .hub-mode-lg.party .hub-mode-lg-icon { background: rgba(124,92,252,0.14); }
+    .hub-mode-lg.party .hub-mode-lg-icon svg { stroke: var(--purple); }
+    .hub-mode-lg-info { flex: 1; min-width: 0; }
+    .hub-mode-lg-name {
+      font-size: 1.15rem; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.01em;
     }
+    .hub-mode-lg-desc { font-size: 0.78rem; color: var(--grey); line-height: 1.45; margin-bottom: 6px; }
+    .hub-mode-lg-cta {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--grey-dark);
+    }
+    .hub-mode-lg.solo:hover  .hub-mode-lg-cta { color: var(--teal); }
+    .hub-mode-lg.duel:hover  .hub-mode-lg-cta { color: var(--coral); }
+    .hub-mode-lg.party:hover .hub-mode-lg-cta { color: var(--purple); }
+    .hub-mode-lg-arrow {
+      width: 28px; height: 28px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      background: rgba(255,255,255,0.04); transition: background 0.18s, transform 0.18s;
+    }
+    .hub-mode-lg-arrow svg { width: 14px; height: 14px; stroke: var(--grey); stroke-width: 2.5; fill: none; }
+    .hub-mode-lg:hover .hub-mode-lg-arrow { transform: translateX(2px); }
+
+    .hub-modes-headline {
+      font-size: 1.1rem; font-weight: 800; color: var(--off-white); margin-bottom: 4px;
+    }
+    .hub-modes-sub { font-size: 0.78rem; color: var(--grey); margin-bottom: 10px; }
+
+    /* ── RIGHT: recent + performance + suggested ── */
     .hub-recent {
       display: flex; flex-direction: column; gap: 8px;
-      width: 100%; max-width: 560px;
     }
     .hub-recent-item {
-      background: var(--navy-card); border-radius: var(--radius-md); padding: 14px 18px;
-      border: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 14px;
+      background: var(--navy-card); border-radius: var(--radius-md); padding: 12px 14px;
+      border: 1px solid rgba(255,255,255,0.06); display: flex; align-items: center; gap: 12px;
+      transition: border-color 0.15s, background 0.15s;
     }
+    .hub-recent-item:hover { border-color: rgba(255,255,255,0.12); background: var(--navy-hover); }
     .hub-recent-icon {
-      width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
-      font-size: 0.7rem; font-weight: 800; flex-shrink: 0;
+      width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      font-size: 0.68rem; font-weight: 800; flex-shrink: 0;
     }
-    .hub-recent-info { flex: 1; }
-    .hub-recent-topic { font-size: 0.85rem; font-weight: 600; }
-    .hub-recent-meta { font-size: 0.68rem; color: var(--grey); margin-top: 2px; }
-    .hub-recent-score { font-size: 0.85rem; font-weight: 800; }
+    .hub-recent-info { flex: 1; min-width: 0; }
+    .hub-recent-topic { font-size: 0.8rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .hub-recent-meta { font-size: 0.66rem; color: var(--grey); margin-top: 2px; }
+    .hub-recent-score { font-size: 0.85rem; font-weight: 800; flex-shrink: 0; }
+
+    .hub-perf {
+      background: var(--navy-card); border-radius: var(--radius-md);
+      border: 1px solid rgba(255,255,255,0.06); padding: 16px;
+      display: flex; flex-direction: column; gap: 12px;
+    }
+    .hub-perf-row {
+      display: flex; align-items: center; justify-content: space-between; gap: 8px;
+      font-size: 0.78rem;
+    }
+    .hub-perf-label { color: var(--grey); }
+    .hub-perf-val { font-weight: 800; color: var(--off-white); }
+    .hub-perf-val.lime { color: var(--lime); }
+    .hub-perf-val.gold { color: var(--gold); }
+    .hub-perf-val.teal { color: var(--teal); }
+    .hub-perf-spark {
+      display: flex; align-items: flex-end; gap: 3px; height: 18px;
+    }
+    .hub-perf-spark span {
+      flex: 1; background: var(--teal); border-radius: 1px; opacity: 0.55;
+    }
+    .hub-perf-spark span.peak { opacity: 1; background: var(--lime); }
+
+    .hub-suggest {
+      background: linear-gradient(135deg, rgba(78,205,196,0.08), rgba(168,225,12,0.05));
+      border: 1px solid rgba(78,205,196,0.22);
+      border-radius: var(--radius-md); padding: 14px 16px;
+      display: flex; align-items: center; gap: 12px;
+      cursor: pointer; transition: border-color 0.15s, background 0.15s, transform 0.15s;
+      text-decoration: none; color: inherit;
+    }
+    .hub-suggest:hover {
+      border-color: rgba(78,205,196,0.45);
+      transform: translateY(-1px);
+    }
+    .hub-suggest-icon {
+      width: 36px; height: 36px; border-radius: var(--radius-sm);
+      background: rgba(78,205,196,0.16); color: var(--teal);
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+      font-size: 1.1rem;
+    }
+    .hub-suggest-info { flex: 1; min-width: 0; }
+    .hub-suggest-eyebrow { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--teal); margin-bottom: 3px; }
+    .hub-suggest-text { font-size: 0.82rem; font-weight: 700; color: var(--off-white); }
+    .hub-suggest-meta { font-size: 0.68rem; color: var(--grey); margin-top: 2px; }
+    .hub-suggest-arrow svg { width: 14px; height: 14px; stroke: var(--teal); stroke-width: 2.5; fill: none; }
 
     /* ═══════════════════════════════
        SETUP SCREEN
@@ -565,22 +674,6 @@
       100% { transform: translateY(110vh) rotate(720deg); opacity: 0; }
     }
 
-    /* ══ DEMO NAV ══ */
-    .demo-nav {
-      position: fixed; bottom: 0; left: 0; right: 0; z-index: 200;
-      background: rgba(26,26,46,0.95); border-top: 1px solid rgba(255,255,255,0.08);
-      padding: 8px 12px; display: flex; gap: 6px; overflow-x: auto;
-      backdrop-filter: blur(10px);
-    }
-    .demo-nav button {
-      padding: 6px 14px; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.1);
-      background: var(--navy-card); color: var(--grey); font-family: inherit;
-      font-size: 0.68rem; font-weight: 600; cursor: pointer; white-space: nowrap;
-      transition: all 0.15s;
-    }
-    .demo-nav button:hover { background: var(--navy-hover); color: var(--off-white); }
-    .demo-nav button.active { background: var(--teal); color: #fff; border-color: var(--teal); }
-
     /* ══ TOAST ══ */
     .toast {
       position: fixed; bottom: 60px; left: 50%; transform: translateX(-50%);
@@ -615,107 +708,172 @@
 ═══════════════════════════════ -->
 <div id="screen-hub" class="screen hub active">
 
-  <!-- Player Profile -->
-  <div class="hub-profile">
-    <div class="hub-avatar">
-      BW
-      <div class="hub-level-badge">12</div>
-    </div>
-    <div class="hub-profile-info">
-      <div class="hub-profile-name">BranWilson</div>
-      <div class="hub-profile-title">Sports Scholar — Level 12</div>
-      <div class="hub-xp-bar"><div class="hub-xp-fill" style="width:62%"></div></div>
-      <div class="hub-xp-text"><span>3,100 / 5,000 XP</span><span>Level 13</span></div>
-    </div>
-  </div>
+  <div class="hub-grid">
 
-  <!-- Quick Stats -->
-  <div class="hub-stats">
-    <div class="hub-stat">
-      <div class="hub-stat-val teal">143</div>
-      <div class="hub-stat-label">Games Played</div>
-    </div>
-    <div class="hub-stat">
-      <div class="hub-stat-val lime">72%</div>
-      <div class="hub-stat-label">Accuracy</div>
-    </div>
-    <div class="hub-stat">
-      <div class="hub-stat-val gold">18</div>
-      <div class="hub-stat-label">Win Streak</div>
-    </div>
-    <div class="hub-stat">
-      <div class="hub-stat-val coral">9</div>
-      <div class="hub-stat-label">1v1 Wins</div>
-    </div>
-  </div>
+    <!-- ═══ LEFT: Profile + lifetime stats + tier ═══ -->
+    <div class="hub-col-left">
 
-  <!-- Game Modes -->
-  <div class="hub-modes-title">Choose Game Mode</div>
-  <div class="hub-modes">
-    <div class="hub-mode" onclick="selectMode('solo')">
-      <div class="hub-mode-icon solo">
-        <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+      <div class="hub-profile">
+        <div class="hub-profile-row">
+          <div class="hub-avatar">
+            BW
+            <div class="hub-level-badge">12</div>
+          </div>
+          <div class="hub-profile-info">
+            <div class="hub-profile-name">BranWilson</div>
+            <div class="hub-profile-title">Sports Scholar — Lvl 12</div>
+          </div>
+        </div>
+        <div class="hub-xp-bar-wrap">
+          <div class="hub-xp-bar"><div class="hub-xp-fill" style="width:62%"></div></div>
+          <div class="hub-xp-text"><span>3,100 / 5,000 XP</span><span>Lvl 13</span></div>
+        </div>
       </div>
-      <div class="hub-mode-info">
-        <div class="hub-mode-name">Solo Challenge</div>
-        <div class="hub-mode-desc">Test your knowledge against AI-generated questions. Choose your topic and difficulty.</div>
-      </div>
-      <div class="hub-mode-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
-    </div>
-    <div class="hub-mode" onclick="selectMode('duel')">
-      <div class="hub-mode-icon duel">
-        <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      </div>
-      <div class="hub-mode-info">
-        <div class="hub-mode-name">1v1 Duel</div>
-        <div class="hub-mode-desc">Go head-to-head against another player. Fastest correct answer wins each round.</div>
-      </div>
-      <div class="hub-mode-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
-    </div>
-    <div class="hub-mode" onclick="selectMode('party')">
-      <div class="hub-mode-icon party">
-        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-      </div>
-      <div class="hub-mode-info">
-        <div class="hub-mode-name">Party Room</div>
-        <div class="hub-mode-desc">Invite 2–8 friends to compete. Same questions, live standings. Top score wins.</div>
-      </div>
-      <div class="hub-mode-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
-    </div>
-  </div>
 
-  <div class="tier-hint" style="font-size:0.7rem;color:#5A5A78;margin-top:4px;margin-bottom:16px;">
-    <strong style="color:var(--teal);">Free:</strong> Solo only, 5/day &nbsp;·&nbsp; <strong style="color:var(--purple);">Pro:</strong> Solo + 1v1, 15/day &nbsp;·&nbsp; <strong style="color:var(--coral);">Elite:</strong> All modes, unlimited
-  </div>
+      <div class="hub-stats">
+        <div class="hub-stat">
+          <div class="hub-stat-val teal">143</div>
+          <div class="hub-stat-label">Games Played</div>
+        </div>
+        <div class="hub-stat">
+          <div class="hub-stat-val lime">72%</div>
+          <div class="hub-stat-label">Accuracy</div>
+        </div>
+        <div class="hub-stat">
+          <div class="hub-stat-val gold">18</div>
+          <div class="hub-stat-label">Win Streak</div>
+        </div>
+        <div class="hub-stat">
+          <div class="hub-stat-val coral">9</div>
+          <div class="hub-stat-label">1v1 Wins</div>
+        </div>
+      </div>
 
-  <!-- Recent Games -->
-  <div class="hub-recent-title">Recent Games</div>
-  <div class="hub-recent">
-    <div class="hub-recent-item">
-      <div class="hub-recent-icon" style="background:rgba(78,205,196,0.12);color:var(--teal);">S</div>
-      <div class="hub-recent-info">
-        <div class="hub-recent-topic">Premier League History</div>
-        <div class="hub-recent-meta">Solo · 10 rounds · Hard · 2h ago</div>
+      <div class="hub-tier-pill">
+        <div class="tier-name">Quotas</div>
+        <div class="hub-tier-pill-row">
+          <span><span class="free tier-name">Free:</span> Solo · 5/day</span>
+          <span><span class="pro tier-name">Pro:</span> Solo + 1v1 · 15/day</span>
+          <span><span class="elite tier-name">Elite:</span> All modes · unlimited</span>
+        </div>
       </div>
-      <div class="hub-recent-score" style="color:var(--teal)">8/10</div>
+
     </div>
-    <div class="hub-recent-item">
-      <div class="hub-recent-icon" style="background:rgba(255,107,107,0.12);color:var(--coral);">D</div>
-      <div class="hub-recent-info">
-        <div class="hub-recent-topic">NBA All-Time Records</div>
-        <div class="hub-recent-meta">1v1 Duel · vs MarkH · Won · Yesterday</div>
+
+    <!-- ═══ CENTER: 3 large equal mode cards ═══ -->
+    <div class="hub-col-center">
+      <div>
+        <div class="hub-modes-headline">Choose your challenge</div>
+        <div class="hub-modes-sub">Same questions · live scoring · pick your battlefield.</div>
       </div>
-      <div class="hub-recent-score" style="color:var(--lime)">W</div>
-    </div>
-    <div class="hub-recent-item">
-      <div class="hub-recent-icon" style="background:rgba(124,92,252,0.12);color:var(--purple);">P</div>
-      <div class="hub-recent-info">
-        <div class="hub-recent-topic">World Cup Legends</div>
-        <div class="hub-recent-meta">Party · 5 players · 2nd place · 3d ago</div>
+
+      <div class="hub-mode-lg solo" onclick="selectMode('solo')">
+        <div class="hub-mode-lg-icon">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>
+        </div>
+        <div class="hub-mode-lg-info">
+          <div class="hub-mode-lg-name">Solo Challenge</div>
+          <div class="hub-mode-lg-desc">Test your knowledge against AI-generated questions. Pick your topic and difficulty.</div>
+          <div class="hub-mode-lg-cta">Pick topic & difficulty →</div>
+        </div>
+        <div class="hub-mode-lg-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
       </div>
-      <div class="hub-recent-score" style="color:var(--gold)">2nd</div>
+
+      <div class="hub-mode-lg duel" onclick="selectMode('duel')">
+        <div class="hub-mode-lg-icon">
+          <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="hub-mode-lg-info">
+          <div class="hub-mode-lg-name">1v1 Duel</div>
+          <div class="hub-mode-lg-desc">Go head-to-head. Fastest correct answer wins each round.</div>
+          <div class="hub-mode-lg-cta">Find an opponent →</div>
+        </div>
+        <div class="hub-mode-lg-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+
+      <div class="hub-mode-lg party" onclick="selectMode('party')">
+        <div class="hub-mode-lg-icon">
+          <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="hub-mode-lg-info">
+          <div class="hub-mode-lg-name">Party Room</div>
+          <div class="hub-mode-lg-desc">Invite 2–8 friends to compete. Same questions, live standings. Top score wins.</div>
+          <div class="hub-mode-lg-cta">Open a room →</div>
+        </div>
+        <div class="hub-mode-lg-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
     </div>
-  </div>
+
+    <!-- ═══ RIGHT: recent + performance + suggested ═══ -->
+    <div class="hub-col-right">
+
+      <div class="hub-section-title">Recent Games</div>
+      <div class="hub-recent">
+        <div class="hub-recent-item">
+          <div class="hub-recent-icon" style="background:rgba(78,205,196,0.12);color:var(--teal);">S</div>
+          <div class="hub-recent-info">
+            <div class="hub-recent-topic">Premier League History</div>
+            <div class="hub-recent-meta">Solo · Hard · 2h ago</div>
+          </div>
+          <div class="hub-recent-score" style="color:var(--teal)">8/10</div>
+        </div>
+        <div class="hub-recent-item">
+          <div class="hub-recent-icon" style="background:rgba(255,107,107,0.12);color:var(--coral);">D</div>
+          <div class="hub-recent-info">
+            <div class="hub-recent-topic">NBA All-Time Records</div>
+            <div class="hub-recent-meta">1v1 · vs MarkH · Yesterday</div>
+          </div>
+          <div class="hub-recent-score" style="color:var(--lime)">W</div>
+        </div>
+        <div class="hub-recent-item">
+          <div class="hub-recent-icon" style="background:rgba(124,92,252,0.12);color:var(--purple);">P</div>
+          <div class="hub-recent-info">
+            <div class="hub-recent-topic">World Cup Legends</div>
+            <div class="hub-recent-meta">Party · 5 players · 3d ago</div>
+          </div>
+          <div class="hub-recent-score" style="color:var(--gold)">2nd</div>
+        </div>
+      </div>
+
+      <div class="hub-section-title">Performance</div>
+      <div class="hub-perf">
+        <div class="hub-perf-row">
+          <span class="hub-perf-label">Latest result</span>
+          <span class="hub-perf-val teal">8/10 · Solo</span>
+        </div>
+        <div class="hub-perf-row">
+          <span class="hub-perf-label">Best run</span>
+          <span class="hub-perf-val gold">22-streak</span>
+        </div>
+        <div class="hub-perf-row">
+          <span class="hub-perf-label">Accuracy (last 7)</span>
+          <span class="hub-perf-val lime">76%</span>
+        </div>
+        <div class="hub-perf-spark" aria-hidden="true">
+          <span style="height:35%"></span>
+          <span style="height:55%"></span>
+          <span style="height:42%"></span>
+          <span style="height:80%"></span>
+          <span style="height:60%" class="peak"></span>
+          <span style="height:72%"></span>
+          <span style="height:88%" class="peak"></span>
+        </div>
+      </div>
+
+      <div class="hub-section-title">Suggested Next</div>
+      <div class="hub-suggest" onclick="selectMode('solo')">
+        <div class="hub-suggest-icon">⚡</div>
+        <div class="hub-suggest-info">
+          <div class="hub-suggest-eyebrow">Try this</div>
+          <div class="hub-suggest-text">Football · Hard · Solo</div>
+          <div class="hub-suggest-meta">Push your accuracy past 80%</div>
+        </div>
+        <div class="hub-suggest-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+      </div>
+
+    </div>
+
+  </div><!-- /.hub-grid -->
 </div>
 
 <!-- ═══════════════════════════════
@@ -1153,18 +1311,6 @@
 <!-- ══ TOAST ══ -->
 <div class="toast" id="toast"></div>
 
-<!-- ══ DEMO NAV ══ -->
-<div class="demo-nav">
-  <button class="active" onclick="goScreen('screen-hub')">Hub</button>
-  <button onclick="goScreen('screen-setup')">Setup</button>
-  <button onclick="goScreen('screen-solo')">Solo Play</button>
-  <button onclick="goScreen('screen-duel-lobby')">1v1 Lobby</button>
-  <button onclick="goScreen('screen-duel-play')">1v1 Play</button>
-  <button onclick="goScreen('screen-party-lobby')">Party Lobby</button>
-  <button onclick="goScreen('screen-party-play')">Party Play</button>
-  <button onclick="goScreen('screen-results')">Results</button>
-</div>
-
 <script>
 /* ═══ STATE ═══ */
 let currentMode = 'solo';
@@ -1228,10 +1374,6 @@ const levels = [
 function goScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
-  document.querySelectorAll('.demo-nav button').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll('.demo-nav button').forEach(b => {
-    if (b.textContent.trim() === screenLabel(id)) b.classList.add('active');
-  });
   if (id === 'screen-solo') initPlay('solo');
   if (id === 'screen-duel-play') initPlay('duel');
   if (id === 'screen-party-play') initPlay('party');
