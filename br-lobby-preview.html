@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="view-transition" content="same-origin">
+<title>Battle Royale — PREVIEW · Spontyx</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  /* ═══════════════════════════════════════════════════════════════════
+     BATTLE ROYALE — PREVIEW (cinematic survival lobby)
+     Standalone preview: not linked from sidebar, not pushed live yet.
+     Existing br-lobby.html is untouched. Reach this page directly.
+     ═══════════════════════════════════════════════════════════════════ */
+
+  :root {
+    --br-bg-1:    #0B0F1A;
+    --br-bg-2:    #05070D;
+    --br-action:  #00FFB2;        /* primary accent — survival action */
+    --br-danger:  #FF4D4D;        /* danger / elimination signal */
+    --br-text:    #E8E8F0;
+    --br-mute:    rgba(255,255,255,0.55);
+    --br-mute-2:  rgba(255,255,255,0.30);
+  }
+
+  /* Replace the shared .main padding so the cinematic hero hits edge to edge.
+     Sidebar margin-left:260px from styles.css is preserved. */
+  .main { padding: 0; background: linear-gradient(180deg, var(--br-bg-1) 0%, var(--br-bg-2) 100%); position: relative; min-height: 100vh; }
+  @media (max-width: 900px) { .main { margin-left: 0; } }
+
+  /* ── PREVIEW BANNER (quietly persistent) ── */
+  .pv-banner {
+    position: sticky; top: 0; z-index: 12;
+    padding: 8px 24px;
+    background: rgba(255,77,77,0.10);
+    border-bottom: 1px solid rgba(255,77,77,0.25);
+    color: #ff8080; font-size: 0.7rem; font-weight: 700;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    text-align: center;
+    backdrop-filter: blur(8px);
+  }
+
+  /* ── ANIMATED BACKGROUND LAYER ── */
+  .br-bg {
+    position: absolute; inset: 0; z-index: 0; overflow: hidden;
+    pointer-events: none;
+  }
+  /* Centered radial pulse */
+  .br-bg::before {
+    content: ''; position: absolute;
+    left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 980px; height: 980px;
+    background: radial-gradient(circle, rgba(0,255,178,0.10) 0%, rgba(0,255,178,0.04) 35%, transparent 70%);
+    filter: blur(40px);
+    animation: br-radial-pulse 6s ease-in-out infinite;
+  }
+  @keyframes br-radial-pulse {
+    0%,100% { opacity: 0.45; transform: translate(-50%, -50%) scale(1); }
+    50%     { opacity: 0.85; transform: translate(-50%, -50%) scale(1.08); }
+  }
+  /* Vignette for depth */
+  .br-bg::after {
+    content: ''; position: absolute; inset: 0;
+    background: radial-gradient(ellipse at center, transparent 50%, rgba(0,0,0,0.55) 100%);
+  }
+  /* Distant flash — fires every ~9s with random horizontal position via JS */
+  .br-flash {
+    position: absolute; top: 30%;
+    width: 320px; height: 320px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255,77,77,0.18) 0%, transparent 70%);
+    filter: blur(30px);
+    opacity: 0; pointer-events: none;
+  }
+  .br-flash.fire { animation: br-flash 1.2s ease-out; }
+  @keyframes br-flash {
+    0%   { opacity: 0; }
+    20%  { opacity: 1; }
+    100% { opacity: 0; }
+  }
+  /* Particles canvas */
+  #br-particles {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    pointer-events: none;
+  }
+
+  /* ── CONTENT WRAPPER ── */
+  .br-page {
+    position: relative; z-index: 1;
+    padding: 60px 32px 80px;
+    max-width: 1180px; margin: 0 auto;
+    color: var(--br-text);
+  }
+  @media (max-width: 700px) { .br-page { padding: 40px 18px 60px; } }
+
+  /* ── HERO ── */
+  .br-hero {
+    text-align: center;
+    margin-bottom: 36px;
+    animation: br-fade-up 0.6s cubic-bezier(0.16,1,0.3,1) both;
+  }
+  @keyframes br-fade-up {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .br-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 6px 16px; border-radius: 999px;
+    background: rgba(255,77,77,0.08);
+    border: 1px solid rgba(255,77,77,0.28);
+    color: #ff8080; font-size: 0.66rem; font-weight: 800;
+    letter-spacing: 0.13em; text-transform: uppercase;
+    margin-bottom: 22px;
+  }
+  .br-eyebrow-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--br-danger);
+    box-shadow: 0 0 12px rgba(255,77,77,0.7);
+    animation: br-dot-pulse 1.4s infinite;
+  }
+  @keyframes br-dot-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .br-headline {
+    font-size: clamp(2.4rem, 5.4vw, 4.4rem);
+    font-weight: 900;
+    line-height: 1.02;
+    letter-spacing: -0.025em;
+    color: #fff;
+    text-shadow: 0 0 60px rgba(0,255,178,0.18);
+    margin: 0 0 18px;
+  }
+  .br-headline span {
+    background: linear-gradient(135deg, var(--br-action) 0%, #b8f00f 50%, var(--br-action) 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-size: 200% 100%;
+    animation: br-shine 4s ease-in-out infinite;
+  }
+  @keyframes br-shine { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+
+  .br-subline {
+    font-size: clamp(0.95rem, 1.4vw, 1.15rem);
+    color: var(--br-mute);
+    max-width: 560px; margin: 0 auto;
+    line-height: 1.55;
+  }
+
+  /* ── LIVE ACTIVITY STRIP ── */
+  .br-live {
+    display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;
+    margin-bottom: 18px;
+  }
+  .br-live-pill {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 8px 16px; border-radius: 999px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: rgba(255,255,255,0.85);
+    font-size: 0.78rem; font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    opacity: 0;
+    transition: transform 0.18s, box-shadow 0.22s, border-color 0.18s;
+    animation: br-pill-in 0.5s cubic-bezier(0.16,1,0.3,1) forwards;
+  }
+  .br-live-pill:nth-child(1) { animation-delay: 0.15s; }
+  .br-live-pill:nth-child(2) { animation-delay: 0.30s; }
+  .br-live-pill:nth-child(3) { animation-delay: 0.45s; }
+  .br-live-pill:nth-child(4) { animation-delay: 0.60s; }
+  @keyframes br-pill-in {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .br-live-pill:hover {
+    transform: scale(1.03);
+    border-color: rgba(0,255,178,0.32);
+    box-shadow: 0 0 18px rgba(0,255,178,0.12);
+  }
+  .br-live-pill .num { color: #fff; font-weight: 800; }
+  .br-live-pill .icon {
+    width: 18px; height: 18px; display: inline-flex; align-items: center; justify-content: center;
+  }
+  .br-live-pill.danger .num { color: var(--br-danger); }
+  .br-live-pill .pulse-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--br-action);
+    box-shadow: 0 0 8px rgba(0,255,178,0.7);
+    animation: br-blink 1.6s ease-in-out infinite;
+  }
+  @keyframes br-blink { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* ── SURVIVAL WARNING STRIP ── */
+  .br-warn {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    background: linear-gradient(90deg, rgba(255,77,77,0.10) 0%, rgba(255,77,77,0.04) 50%, rgba(0,255,178,0.06) 100%);
+    border: 1px solid rgba(255,77,77,0.22);
+    border-radius: 14px;
+    padding: 14px 22px;
+    margin-bottom: 36px;
+    box-shadow: 0 0 28px rgba(255,77,77,0.06), inset 0 0 28px rgba(0,255,178,0.03);
+    animation: br-fade-up 0.7s 0.6s cubic-bezier(0.16,1,0.3,1) both;
+  }
+  @media (max-width: 700px) { .br-warn { grid-template-columns: 1fr; gap: 6px; } }
+  .br-warn-item {
+    display: inline-flex; align-items: center; gap: 8px;
+    justify-content: center;
+    font-size: 0.85rem; font-weight: 700;
+    color: rgba(255,255,255,0.92);
+    letter-spacing: 0.01em;
+  }
+  @media (max-width: 700px) { .br-warn-item { justify-content: flex-start; } }
+
+  /* ── MODE CARDS ── */
+  .br-modes {
+    display: grid;
+    grid-template-columns: 1fr 1.08fr;   /* asymmetry — Ranked column wider */
+    gap: 22px;
+    margin-bottom: 36px;
+    align-items: stretch;
+    animation: br-fade-up 0.8s 0.9s cubic-bezier(0.16,1,0.3,1) both;
+  }
+  @media (max-width: 700px) { .br-modes { grid-template-columns: 1fr; } }
+
+  .br-mode {
+    position: relative;
+    padding: 28px 28px 26px;
+    border-radius: 20px;
+    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.025);
+    cursor: pointer; overflow: hidden;
+    transition: transform 0.25s cubic-bezier(0.16,1,0.3,1), border-color 0.22s, box-shadow 0.28s, background 0.2s;
+    will-change: transform;
+  }
+  .br-mode-wm {
+    position: absolute; right: -6px; bottom: -32px;
+    font-size: 9rem; line-height: 1;
+    opacity: 0.07; user-select: none; pointer-events: none;
+    font-weight: 900; letter-spacing: -0.04em;
+    transition: opacity 0.25s;
+  }
+  .br-mode:hover { transform: translateY(-2px); }
+
+  /* CLASSIC — calm, recessed */
+  .br-mode.classic {
+    opacity: 0.86;
+    animation: br-float-classic 7s ease-in-out infinite;
+  }
+  .br-mode.classic .br-mode-wm { color: var(--br-text); }
+  .br-mode.classic:hover { opacity: 1; border-color: rgba(255,255,255,0.18); }
+  .br-mode.classic.selected {
+    opacity: 1; border-color: rgba(0,255,178,0.5);
+    background: rgba(0,255,178,0.04);
+    box-shadow: 0 0 32px rgba(0,255,178,0.12);
+    transform: translateY(-2px) scale(1.04);
+  }
+
+  /* RANKED — visually dominant, intense */
+  .br-mode.ranked {
+    transform: scale(1.025);
+    border-color: rgba(0,255,178,0.20);
+    background: linear-gradient(135deg, rgba(0,255,178,0.04) 0%, rgba(255,77,77,0.04) 100%);
+    box-shadow: 0 0 36px rgba(0,255,178,0.08);
+    animation: br-float-ranked 6s ease-in-out infinite;
+  }
+  .br-mode.ranked::before {
+    content: ''; position: absolute; inset: -1px;
+    border-radius: 20px; padding: 1px;
+    background: linear-gradient(135deg, rgba(0,255,178,0.5) 0%, rgba(255,77,77,0.5) 100%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    opacity: 0.45; pointer-events: none;
+    animation: br-border-pulse 3s ease-in-out infinite;
+  }
+  @keyframes br-border-pulse {
+    0%,100% { opacity: 0.35; }
+    50%     { opacity: 0.75; }
+  }
+  .br-mode.ranked .br-mode-wm { color: var(--br-action); opacity: 0.10; }
+  .br-mode.ranked:hover {
+    transform: scale(1.045) translateY(-3px);
+    border-color: rgba(0,255,178,0.55);
+    box-shadow: 0 0 48px rgba(0,255,178,0.18);
+  }
+  .br-mode.ranked.selected {
+    transform: scale(1.045);
+    box-shadow: 0 0 56px rgba(0,255,178,0.30), inset 0 0 0 1px rgba(0,255,178,0.5);
+  }
+
+  @keyframes br-float-classic {
+    0%,100% { transform: translateY(0); }
+    50%     { transform: translateY(-2px); }
+  }
+  @keyframes br-float-ranked {
+    0%,100% { transform: scale(1.025) translateY(0); }
+    50%     { transform: scale(1.025) translateY(-2.5px); }
+  }
+
+  .br-mode-recommend {
+    position: absolute; top: 16px; right: 16px;
+    font-size: 0.6rem; font-weight: 800;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--br-action);
+    background: rgba(0,255,178,0.12);
+    border: 1px solid rgba(0,255,178,0.35);
+    border-radius: 999px;
+    padding: 3px 10px;
+  }
+  .br-mode-icon {
+    font-size: 2rem; margin-bottom: 14px;
+    display: block; line-height: 1;
+  }
+  .br-mode-name {
+    font-size: 1.6rem; font-weight: 900;
+    color: #fff; margin-bottom: 6px;
+    letter-spacing: -0.01em;
+  }
+  .br-mode.ranked .br-mode-name {
+    background: linear-gradient(135deg, var(--br-action) 0%, #fff 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .br-mode-desc {
+    font-size: 0.92rem;
+    color: var(--br-mute); line-height: 1.5;
+    margin-bottom: 16px;
+  }
+  .br-mode-badge {
+    display: inline-block;
+    font-size: 0.65rem; font-weight: 800;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    padding: 4px 12px; border-radius: 999px;
+    background: rgba(255,255,255,0.06);
+    color: rgba(255,255,255,0.65);
+    border: 1px solid rgba(255,255,255,0.1);
+  }
+  .br-mode.ranked .br-mode-badge {
+    background: rgba(0,255,178,0.10);
+    color: var(--br-action);
+    border-color: rgba(0,255,178,0.35);
+  }
+  .br-mode-check {
+    position: absolute; bottom: 16px; right: 16px;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--br-action); color: #001a14;
+    display: none; align-items: center; justify-content: center;
+    font-weight: 900;
+  }
+  .br-mode-check svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 3; }
+  .br-mode.selected .br-mode-check { display: flex; animation: br-check-in 0.25s cubic-bezier(0.16,1,0.3,1); }
+  @keyframes br-check-in { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  /* ── DROP-IN CTA ── */
+  .br-cta-wrap {
+    text-align: center;
+    animation: br-fade-up 0.9s 1.2s cubic-bezier(0.16,1,0.3,1) both;
+  }
+  .br-drop-in {
+    position: relative;
+    display: inline-flex; align-items: center; gap: 12px;
+    padding: 18px 42px;
+    border: none; border-radius: 999px;
+    background: linear-gradient(135deg, var(--br-action) 0%, #00d99a 100%);
+    color: #001a14;
+    font-family: 'Inter', sans-serif;
+    font-size: 1.05rem; font-weight: 900;
+    letter-spacing: 0.02em;
+    cursor: pointer; outline: none;
+    box-shadow: 0 0 30px rgba(0,255,178,0.32), 0 8px 24px rgba(0,0,0,0.35);
+    animation: br-cta-breathe 3.2s ease-in-out infinite;
+    transition: transform 0.18s cubic-bezier(0.16,1,0.3,1), box-shadow 0.22s;
+    overflow: hidden;
+  }
+  .br-drop-in::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(120deg, transparent 35%, rgba(255,255,255,0.4) 50%, transparent 65%);
+    transform: translateX(-100%);
+    transition: none;
+  }
+  .br-drop-in:hover { transform: scale(1.05); box-shadow: 0 0 48px rgba(0,255,178,0.5), 0 12px 32px rgba(0,0,0,0.4); }
+  .br-drop-in:hover::before { transform: translateX(100%); transition: transform 0.6s ease-out; }
+  .br-drop-in:active { transform: scale(0.95); }
+  .br-drop-in:disabled {
+    cursor: not-allowed; opacity: 0.5;
+    animation: none; box-shadow: 0 0 0 transparent;
+  }
+  @keyframes br-cta-breathe {
+    0%,100% { transform: scale(1); box-shadow: 0 0 30px rgba(0,255,178,0.32), 0 8px 24px rgba(0,0,0,0.35); }
+    50%     { transform: scale(1.02); box-shadow: 0 0 42px rgba(0,255,178,0.45), 0 8px 28px rgba(0,0,0,0.4); }
+  }
+  .br-drop-in.flash { animation: br-cta-flash 0.5s ease-out; }
+  @keyframes br-cta-flash {
+    0%   { box-shadow: 0 0 30px rgba(0,255,178,0.32); }
+    50%  { box-shadow: 0 0 100px rgba(0,255,178,1), 0 0 40px rgba(255,255,255,0.6); transform: scale(1.08); }
+    100% { box-shadow: 0 0 30px rgba(0,255,178,0.32); }
+  }
+  .br-cta-micro {
+    margin-top: 14px;
+    font-size: 0.78rem;
+    color: var(--br-mute-2);
+    letter-spacing: 0.02em;
+  }
+
+  /* ── REDUCED MOTION ── */
+  @media (prefers-reduced-motion: reduce) {
+    .br-bg::before, .br-eyebrow-dot, .br-headline span,
+    .br-live-pill, .br-warn, .br-modes, .br-cta-wrap,
+    .br-mode.classic, .br-mode.ranked, .br-mode.ranked::before,
+    .br-drop-in, .br-flash {
+      animation: none !important;
+    }
+    .br-mode.ranked, .br-mode.ranked.selected, .br-mode.classic.selected {
+      transform: none !important;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="sidebar-placeholder"></div>
+
+<main class="main">
+  <div class="pv-banner">
+    PREVIEW · Battle Royale concept · not live · existing /br-lobby.html still active
+  </div>
+
+  <!-- Animated background layer -->
+  <div class="br-bg" aria-hidden="true">
+    <canvas id="br-particles"></canvas>
+    <div class="br-flash" id="br-flash"></div>
+  </div>
+
+  <div class="br-page">
+
+    <!-- HERO -->
+    <section class="br-hero">
+      <span class="br-eyebrow">
+        <span class="br-eyebrow-dot"></span>
+        Survival Mode · Live
+      </span>
+      <h1 class="br-headline">Last one <span>standing</span> wins.</h1>
+      <p class="br-subline">Every wrong answer costs HP. Survive longer than everyone else.</p>
+    </section>
+
+    <!-- LIVE ACTIVITY STRIP -->
+    <div class="br-live" id="br-live">
+      <span class="br-live-pill"><span class="pulse-dot"></span><span class="num" data-target="1247">0</span> players online</span>
+      <span class="br-live-pill"><span class="icon">⚔️</span><span class="num" data-target="18">0</span> lobbies forming</span>
+      <span class="br-live-pill danger"><span class="icon">💀</span><span class="num" data-target="3">0</span> eliminated last minute</span>
+      <span class="br-live-pill"><span class="icon">⏱</span> Avg survival: <span class="num">~8 min</span></span>
+    </div>
+
+    <!-- SURVIVAL WARNING STRIP -->
+    <div class="br-warn">
+      <span class="br-warn-item">💀 Players get eliminated</span>
+      <span class="br-warn-item">⚡ No answer = HP loss</span>
+      <span class="br-warn-item">🏆 Only one survives</span>
+    </div>
+
+    <!-- MODE SELECTION -->
+    <div class="br-modes">
+
+      <div class="br-mode classic" id="pv-mode-classic" onclick="pvSelect('classic')">
+        <span class="br-mode-wm">CL</span>
+        <span class="br-mode-icon">🎯</span>
+        <div class="br-mode-name">Classic</div>
+        <p class="br-mode-desc">Casual survival. No rating impact.</p>
+        <span class="br-mode-badge">Practice · No ELO</span>
+        <span class="br-mode-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+      </div>
+
+      <div class="br-mode ranked" id="pv-mode-ranked" onclick="pvSelect('ranked')">
+        <span class="br-mode-recommend">Recommended</span>
+        <span class="br-mode-wm">RK</span>
+        <span class="br-mode-icon">⚔️</span>
+        <div class="br-mode-name">Ranked</div>
+        <p class="br-mode-desc">High risk. Real consequences.</p>
+        <span class="br-mode-badge">Survive · ELO Applies</span>
+        <span class="br-mode-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+      </div>
+
+    </div>
+
+    <!-- DROP-IN CTA -->
+    <div class="br-cta-wrap">
+      <button class="br-drop-in" id="pv-drop-in" type="button" onclick="pvDropIn()" disabled>
+        🔥 Drop In
+      </button>
+      <div class="br-cta-micro">Instant matchmaking · No setup</div>
+    </div>
+
+  </div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+<script src="sidebar.js"></script>
+<script>SpontixSidebar.init({ type: 'player', active: 'br-lobby.html' });</script>
+<script>
+'use strict';
+
+/* ─── Mode select (preview-only, no DB writes) ─── */
+let pvSelected = null;
+function pvSelect(kind) {
+  pvSelected = kind;
+  document.querySelectorAll('.br-mode').forEach(el => el.classList.remove('selected'));
+  document.getElementById('pv-mode-' + kind).classList.add('selected');
+  document.getElementById('pv-drop-in').disabled = false;
+}
+
+/* ─── Drop-in CTA — preview only, no routing changes ─── */
+function pvDropIn() {
+  const btn = document.getElementById('pv-drop-in');
+  if (btn.disabled) return;
+  btn.classList.add('flash');
+  setTimeout(() => btn.classList.remove('flash'), 500);
+  setTimeout(() => {
+    showToast(`Preview only · would drop into ${pvSelected === 'ranked' ? 'Ranked' : 'Classic'} matchmaking`);
+  }, 350);
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+/* ─── Count-up for live numbers ─── */
+function countUp() {
+  document.querySelectorAll('.br-live-pill .num[data-target]').forEach(el => {
+    const target = parseInt(el.dataset.target, 10) || 0;
+    if (!target) return;
+    const dur = 900;
+    const start = performance.now();
+    function tick(now) {
+      const t = Math.min(1, (now - start) / dur);
+      // ease-out
+      const eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = Math.floor(eased * target).toLocaleString();
+      if (t < 1) requestAnimationFrame(tick);
+      else el.textContent = target.toLocaleString();
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
+/* ─── Particles canvas (max 30, transform-friendly) ─── */
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function initParticles() {
+  if (reduceMotion) return;
+  const canvas = document.getElementById('br-particles');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let w = 0, h = 0, dpr = window.devicePixelRatio || 1;
+  const PARTICLE_COUNT = 30;
+  const particles = [];
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    w = rect.width; h = rect.height;
+    canvas.width  = w * dpr;
+    canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function spawn() {
+    return {
+      x: Math.random() * w,
+      y: h + Math.random() * 100,
+      r: 0.6 + Math.random() * 1.6,
+      vy: 0.15 + Math.random() * 0.35,
+      vx: (Math.random() - 0.5) * 0.12,
+      a: 0.15 + Math.random() * 0.45,
+      hue: Math.random() < 0.85 ? 'g' : 'r',  // mostly green, occasional red
+    };
+  }
+
+  function reset() {
+    particles.length = 0;
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      const p = spawn();
+      p.y = Math.random() * h;     // pre-distribute
+      particles.push(p);
+    }
+  }
+
+  let last = performance.now();
+  function tick(now) {
+    const dt = Math.min(48, now - last);
+    last = now;
+    ctx.clearRect(0, 0, w, h);
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      p.y -= p.vy * (dt / 16);
+      p.x += p.vx * (dt / 16);
+      if (p.y < -10 || p.x < -10 || p.x > w + 10) {
+        particles[i] = spawn();
+        continue;
+      }
+      ctx.beginPath();
+      ctx.fillStyle = p.hue === 'g'
+        ? `rgba(0, 255, 178, ${p.a})`
+        : `rgba(255, 77, 77, ${p.a * 0.85})`;
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    requestAnimationFrame(tick);
+  }
+
+  resize();
+  reset();
+  requestAnimationFrame(tick);
+
+  let resizeTmo;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTmo);
+    resizeTmo = setTimeout(() => { resize(); reset(); }, 120);
+  });
+}
+
+/* ─── Distant flash effect every 9-14s ─── */
+function startFlashes() {
+  if (reduceMotion) return;
+  const flashEl = document.getElementById('br-flash');
+  function fire() {
+    flashEl.style.left = (Math.random() * 80 + 10) + '%';
+    flashEl.classList.remove('fire');
+    void flashEl.offsetWidth;       // force reflow to restart animation
+    flashEl.classList.add('fire');
+    setTimeout(fire, 9000 + Math.random() * 5000);
+  }
+  setTimeout(fire, 4000);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  countUp();
+  initParticles();
+  startFlashes();
+});
+</script>
+</body>
+</html>
