@@ -301,10 +301,9 @@
 .match-search-row {
   display: flex;
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
-.match-search-row input,
-.match-search-row select {
+.match-search-row input {
   flex: 1;
   background: var(--navy-card);
   border: 1px solid rgba(255,255,255,0.08);
@@ -315,9 +314,38 @@
   font-family: 'Inter', sans-serif;
   outline: none;
 }
-.match-search-row select option { background: var(--navy-card); }
-.match-search-row input:focus,
-.match-search-row select:focus { border-color: rgba(168,225,12,0.45); }
+.match-search-row input:focus { border-color: rgba(168,225,12,0.45); }
+
+/* Filter chip rows under the search input */
+.match-filter-row {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+  margin-bottom: 10px;
+}
+.match-filter-label {
+  font-size: 0.6rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--grey-dark);
+  width: 56px; flex-shrink: 0;
+}
+.match-filter-chip {
+  padding: 6px 12px; border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.1);
+  background: transparent; color: var(--grey);
+  font-family: 'Inter', sans-serif; font-size: 0.74rem; font-weight: 600;
+  cursor: pointer; white-space: nowrap;
+  transition: all 0.15s;
+}
+.match-filter-chip:hover { color: var(--off-white); border-color: rgba(168,225,12,0.3); }
+.match-filter-chip.active { background: var(--lime); color: var(--navy); border-color: var(--lime); }
+.match-filter-chip.disabled { opacity: 0.4; cursor: not-allowed; }
+.match-filter-chip.disabled:hover { border-color: rgba(255,255,255,0.1); color: var(--grey); }
+.match-filters-wrap {
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  display: flex; flex-direction: column; gap: 6px;
+}
 
 .match-list { display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto; padding-right: 4px; }
 .match-list::-webkit-scrollbar { width: 4px; }
@@ -770,9 +798,28 @@
 
       <div class="match-search-row">
         <input type="text" id="match-search" placeholder="Search teams..." oninput="filterMatches()">
-        <select id="comp-filter" onchange="filterMatches()">
-          <option value="">All competitions</option>
-        </select>
+      </div>
+
+      <div class="match-filters-wrap">
+        <!-- Sport chips — populated from real fixtures we have data for.
+             Today: Football only (per System Rules). New sports added here
+             as they ship. Hockey/Tennis lines kept disabled below as
+             roadmap markers — remove .disabled when their fixture pipeline
+             ships. -->
+        <div class="match-filter-row" id="sport-filter-row">
+          <span class="match-filter-label">Sport</span>
+          <button class="match-filter-chip active" data-sport="all"      onclick="selectSport(this,'all')">All</button>
+          <button class="match-filter-chip"        data-sport="football" onclick="selectSport(this,'football')">Football</button>
+        </div>
+
+        <!-- League chips — populated dynamically from distinct league_name
+             values in api_football_fixtures (next 48h window). Filtered
+             further by selected sport. -->
+        <div class="match-filter-row" id="league-filter-row">
+          <span class="match-filter-label">League</span>
+          <button class="match-filter-chip active" data-league="all" onclick="selectLeague(this,'all')">All</button>
+          <!-- league chips appended here by loadMatches() -->
+        </div>
       </div>
 
       <div class="match-list" id="match-list">
@@ -961,6 +1008,16 @@ function selectMode(mode) {
 }
 
 // ── Match loading ─────────────────────────────────────────────────────────────
+// ── Filter state (UI-only — purely client-side filtering) ────────────────────
+var selectedSport  = 'all';   // 'all' | 'football' | (future: 'hockey' | 'tennis')
+var selectedLeague = 'all';   // 'all' | specific league_name
+
+// Today every fixture in api_football_fixtures is football. This helper exists
+// so when other sports' fixture tables ship, sport tagging is one diff away.
+function sportOf(match) {
+  return 'football';
+}
+
 async function loadMatches() {
   var list = document.getElementById('match-list');
   list.innerHTML = '<div class="match-empty">Loading matches…</div>';
@@ -983,24 +1040,83 @@ async function loadMatches() {
 
   allMatches = data;
 
-  // Populate competition filter
-  var comps = [...new Set(data.map(function(m) { return m.league_name; }).filter(Boolean))];
-  var cf = document.getElementById('comp-filter');
-  comps.forEach(function(c) {
-    var o = document.createElement('option');
-    o.value = c; o.textContent = c;
-    cf.appendChild(o);
-  });
+  // Populate league chips from real fixture data only — no fake leagues.
+  rebuildLeagueChips();
 
   renderMatches(data);
 }
 
+// Build league chip row from currently-loaded fixtures, filtered by selected
+// sport. "All" chip stays first.
+function rebuildLeagueChips() {
+  var row = document.getElementById('league-filter-row');
+  if (!row) return;
+
+  // Distinct leagues for the active sport
+  var leagueSet = new Set();
+  allMatches.forEach(function(m) {
+    if (selectedSport !== 'all' && sportOf(m) !== selectedSport) return;
+    if (m.league_name) leagueSet.add(m.league_name);
+  });
+  var leagues = [...leagueSet].sort();
+
+  // Reset chips: keep the "All" chip, drop the rest
+  var allChip = row.querySelector('[data-league="all"]');
+  row.innerHTML = '';
+  var label = document.createElement('span');
+  label.className = 'match-filter-label';
+  label.textContent = 'League';
+  row.appendChild(label);
+  if (allChip) {
+    allChip.classList.toggle('active', selectedLeague === 'all');
+    row.appendChild(allChip);
+  }
+
+  leagues.forEach(function(name) {
+    var btn = document.createElement('button');
+    btn.className = 'match-filter-chip' + (selectedLeague === name ? ' active' : '');
+    btn.type = 'button';
+    btn.dataset.league = name;
+    btn.textContent = name;
+    btn.onclick = function() { selectLeague(btn, name); };
+    row.appendChild(btn);
+  });
+
+  // If the previously selected league no longer exists for the active sport,
+  // fall back to "All" silently.
+  if (selectedLeague !== 'all' && !leagueSet.has(selectedLeague)) {
+    selectedLeague = 'all';
+    var fallback = row.querySelector('[data-league="all"]');
+    if (fallback) fallback.classList.add('active');
+  }
+}
+
+function selectSport(chip, sport) {
+  selectedSport = sport;
+  document.querySelectorAll('#sport-filter-row .match-filter-chip').forEach(function(c) {
+    c.classList.toggle('active', c === chip);
+  });
+  // Sport change rebuilds league chips (different sports → different leagues)
+  rebuildLeagueChips();
+  filterMatches();
+}
+
+function selectLeague(chip, leagueName) {
+  selectedLeague = leagueName;
+  document.querySelectorAll('#league-filter-row .match-filter-chip').forEach(function(c) {
+    c.classList.toggle('active', c === chip);
+  });
+  filterMatches();
+}
+
 function filterMatches() {
   var q = document.getElementById('match-search').value.toLowerCase();
-  var comp = document.getElementById('comp-filter').value;
   var filtered = allMatches.filter(function(m) {
     var name = (m.home_team_name + ' ' + m.away_team_name).toLowerCase();
-    return (!q || name.includes(q)) && (!comp || m.league_name === comp);
+    var sportOk  = selectedSport  === 'all' || sportOf(m) === selectedSport;
+    var leagueOk = selectedLeague === 'all' || m.league_name === selectedLeague;
+    var searchOk = !q || name.includes(q);
+    return sportOk && leagueOk && searchOk;
   });
   renderMatches(filtered);
 }
