@@ -1,5 +1,7 @@
 # Spontix — Project State & Developer Handoff
 
+Last updated 2026-05-03 — UI overhaul sprint shipped (commits `d32781b` → `4ff076c`). Six surfaces redesigned, zero backend changes: (1) `leagues-hub.html` rebuilt as a hero + status bar + Active/Upcoming/Finished section list; sidebar init bug fixed (`SpontixSidebar.init()` was called with no args). (2) `multiplayer.html` (Arena) wrapped in app-shell so sidebar persists; `const SpontixSidebar` const-vs-window bug fixed; `.app-shell { flex:1 }` + `.main { width: calc(100vw - 260px) }` corrects centering inside the shell; Step 1 widened to 1180px with scaled cards + bounded CTA. (3) `br-lobby.html` reframed from 1v1/FFA to Classic/Ranked modes (UI-only — DB still writes `mode='ffa'` until a Phase 4 server-side gate ships); lobby sizing constants `BR_MIN=4 / TARGET=10 / MAX=12` with 60s auto-fill + 15s target countdown; Ranked-dominant card hierarchy + ambient live-feel row + lime radial glow. (4) `trivia.html` wrapped in app-shell; `#screen-hub` rebuilt as a 3-column command center (profile/stats/tier · 3 large mode cards · recent + performance + suggested); demo-nav debug strip removed. (5) `dashboard.html` rebuilt as a game control center: Player Status panel (Arena lime + BR coral rating split, Last 5 pips, Next-level unlocks) → Live activity strip → Ready to Play 3-card row; Your Plan tier panel with usage bars; pillar cards gain pulsing status sub-lines + hover lift/glow. (6) **Unified mode header** added in `styles.css` (`.mode-header`, `:root --mode-header-h: 76px`) and applied to all four game-mode pages — old per-page hero blocks (`.lh-hero`, `.arena-hero`, `.br-header`, `.topbar`) removed; per-mode icon tints (`.icon-leagues/arena/br/trivia`); inert "How to Play" chip wired in a future sprint. **All existing dynamic IDs and JS functions preserved.** `docs/GAMEPLAY_ARCHITECTURE.md` and `docs/BR_SESSION_SYSTEM.md` updated with the canonical "Battle Royale — Final Product Definition" (survival, no 1v1/FFA, Classic/Ranked only, 8–12 players, no-answer = damage) plus a five-item Phase 4 server-side enforcement TODO for production Ranked BR.
+
 Last updated 2026-05-02 — Battle Royale Phase 3 ELO ratings deployed. Migration 050 (`update_br_ratings`) applied ✅. `update_br_ratings(p_session_id UUID)` SECURITY DEFINER RPC computes and writes ELO (SR) rating changes after a completed BR session. Reads placements from `br_session_players`, applies pairwise ELO against every other participant, then writes `br_rating_before/after/delta` to `br_session_players` and updates `users.br_rating/br_games_played/br_rating_updated_at`. ELO model: K-factor tiers (32 when `br_games_played < 5`, 24 when `< 20`, 20 when `≥ 20`); pairwise delta for each opponent = `K × (actual − expected)` where `expected = 1/(1 + 10^((opp_rating − own_rating)/400))`, actual = 1/0.5/0 for win/tie/loss; total delta normalised by `GREATEST(1, N−1)` to keep magnitude ~= 1v1 regardless of lobby size; rating floor 800 (starts at 1000); delta clamp [-100, +100]. Idempotent: returns `{skipped:true}` if any player already has `br_rating_before` set. Session must be `completed` and have ≥ 2 players with placements. GRANT EXECUTE to `authenticated, service_role`. All migrations 001–050 applied ✅.
 
 Last updated 2026-05-02 — Migration 049: `BR_MATCH_LIVE` question type + BR pool INSERT RLS applied ✅. Two targeted changes: (1) `questions.question_type` CHECK constraint expanded to include `'BR_MATCH_LIVE'` — resolves DB constraint violations when the resolver or RPCs write BR question types; (2) authenticated INSERT RLS policy `br_pools_insert` added to `br_match_pools` — unblocks lobby creation from the browser (previously only `service_role` could insert, blocking `br-lobby.html`); (3) authenticated INSERT RLS policy `br_pool_questions_insert` added to `br_match_pool_questions` for future admin/seeding flows. All three changes are idempotent (wrapped in `DO $$ IF NOT EXISTS` guards).
@@ -1900,6 +1902,76 @@ See `supabase/functions/generate-questions/DEPLOY.md` for the full checklist inc
 ---
 
 ## Update Log
+
+### 2026-05-03 — UI overhaul sprint: dashboard, mode pages, unified header
+
+**Scope:** UI/UX/layout only across the four game-mode pages and the dashboard. **Zero backend, JS logic, Supabase, RPC, migration, or routing changes.** All existing dynamic IDs and hydration paths preserved.
+
+**`leagues-hub.html` — full redesign (commits `d32781b` → `ef38aa0`):**
+- Replaced static "My Leagues" stat boxes with a hero panel: title + subtitle + two prominent CTAs (Create League / Discover Leagues).
+- New 3-pill **Game Status Bar** (`🔥 N leagues live`, `⚡ N questions waiting`, `🏆 N leagues joined`) hydrated by lightweight Supabase queries on `league_members` + `questions`. Live count = open questions where `question_type='CORE_MATCH_LIVE'` or `match_minute_at_generation` is set.
+- Replaced Created/Joined/History tabs with status-grouped sections: **Active / Upcoming / Finished**. Active section title has pulsing coral dot.
+- New 4-column league cards (icon | info | rank | Enter League CTA). Hover lift + glow. Coral live-edge accent + pulsing LIVE badge for active games. Solo cards show "Solo" badge + teal Solo rank label.
+- Mobile: stacks to single column under 720px.
+- Discover tab dropped from this page; reached only via the hero CTA to `discover.html`.
+- Added explicit `.content { flex:1; width:100%; padding:28px 36px 48px }` to fill the full available area next to the sidebar (no max-width cap).
+- Sidebar init bug fixed: `SpontixSidebar.init()` was called with no args; now passes `{ type:'player', active:'leagues-hub.html' }`.
+
+**`multiplayer.html` (Arena) — shell + layout fixes (commits `a0f8005` → `1ab6aa7`):**
+- Wrapped in standard `<div class="app-shell"><div id="sidebar-placeholder"></div><main class="main">...</main></div>` so the persistent sidebar renders. Removed the page's old `#app { display: block !important; width: 100% !important; margin-left: 0 !important }` overrides that forced full-width.
+- **`const SpontixSidebar` doesn't attach to window** — sidebar.js uses `const`, which stays in script-tag scope. Fixed init to call `SpontixSidebar.init(...)` by bare name inside try/catch (the same pattern every other page uses).
+- Stop overriding shared `.main`. Constraints moved onto `.mp-page { flex:1; min-height:100vh; max-height:100vh; overflow:hidden }` so `.main`'s shared rules from `styles.css` (margin-left:260px, flex column) stay intact.
+- **Centering fix**: `.app-shell` had no rule and was defaulting to `flex: 0 1 auto` inside the body's flex row, collapsing `.main`. Added `.app-shell { flex:1; width:100%; min-width:0 }` and `.main { width:calc(100vw - 260px); max-width:calc(100vw - 260px) }` (mobile breakpoint goes 100vw). Content now centers within the area between sidebar and right edge.
+- Step 1 widened to `.s1-inner { max-width: 1180px; padding: 36px 48px 64px }` so Arena onboarding fills the shell. Format cards scaled (min-height 230→300px, padding 32→40px, watermark 8→11rem, `format-name` 2→2.4rem). CTA wrapped in `.s1-cta-row` and capped 320–420px wide with lime glow + hover lift.
+
+**`br-lobby.html` — Battle Royale lobby UX overhaul (commits `08d3b3f` → `b2dcf88`):**
+- Replaced 1v1/FFA "format" cards with **Classic / Ranked** modes (Classic = casual, Ranked = ELO applies). Both UI modes still write `mode='ffa'` to `br_sessions` because the DB CHECK constraint (`'1v1' | 'ffa' | '2v2'`) is unchanged in this UI pass — the Classic vs Ranked distinction is client-side only (Phase 4 server-side gate is documented in `docs/BR_SESSION_SYSTEM.md`).
+- Step pills relabelled: Mode → Battlefield → Scope → Waiting Room.
+- Header tension strip: `💀 Players get eliminated · ⚡ No answer = HP loss · 🏆 Only one survives` with two-tone gradient + pulsing coral dot.
+- Step 2: "Choose your battlefield" framing.
+- Step 3: de-emphasized "Match scope" with compact half cards.
+- CTA: "Enter Battle Royale →" / dynamically swaps to "Enter Ranked Survival →" when Ranked is selected.
+- **Lobby sizing constants (UI-only enforcement, see `docs/BR_SESSION_SYSTEM.md` for Phase 4 server-side TODO):** `BR_MIN_PLAYERS=4`, `BR_TARGET_PLAYERS=10`, `BR_MAX_PLAYERS=12`, `BR_FILL_TIMEOUT_MS=60000`, `BR_TARGET_COUNTDOWN_MS=15000`. 60s auto-fill timer when min reached, 15s auto-start at target, immediate at max. Manual "Start now" button between min and max.
+- Waiting room: replaced duel/FFA split with a single scaling 4–12 avatar grid + live X/N counter + countdown banner.
+- **Polish pass (Ranked-dominant hierarchy)**: Ranked card visually dominant (scale 1.025 baseline, 1.045 hover, larger title, "Recommended" ribbon, lime glow); Classic recessed (opacity 0.78). Asymmetric grid `1fr / 1.08fr`. New ambient "live-feel" row above tension strip (`1,247 players online · 18 lobbies forming · ~8 min avg survival` — atmospheric placeholders, no queries). Subtle lime radial glow positioned behind the mode-card decision area.
+
+**`docs/GAMEPLAY_ARCHITECTURE.md` — Battle Royale Final Product Definition added** at the top of Pillar 3. Locks: survival model, no-answer = damage rule, Classic / Ranked modes only, 8–12 player target, UI/UX principles, explicit list of what BR is NOT, and explicit statement that the previous 1v1/FFA model was incorrect and is replaced.
+
+**`docs/BR_SESSION_SYSTEM.md` — Lobby Sizing section + Phase 4 TODO**: same canonical block placed after the title, plus a five-item server-side enforcement TODO covering min/max enforcement, host eligibility, full-lobby blocking via `join_br_session()` RPC, and the Ranked rating validity gate (`update_br_ratings()` must verify `≥ BR_MIN_PLAYERS` participants before applying ELO).
+
+**`trivia.html` — shell wrap + 3-column hub (commits `82062ec`, `d3e4297`):**
+- Page had no `styles.css` link, no `app-shell` wrapper, no `SpontixSidebar.init` call — fixed all three so the sidebar renders. Same const-vs-window pattern as Arena fix.
+- `#screen-hub` rebuilt as a 3-column command center: **Left** profile + 2×2 stats + tier/quota pill, **Center** "Choose your challenge" headline + 3 large equal mode cards (Solo/Duel/Party with mode-color hover glow), **Right** Recent Games + Performance panel (Latest / Best run / 7-day accuracy + static spark bars) + Suggested Next pill.
+- Tablet (720–1099px) → left + center top row, right wraps below; Mobile (<720) → fully stacked.
+- Removed demo-nav (debug screen jumper) HTML, CSS, and the JS that highlighted its buttons inside `goScreen()`.
+- All 7 gameplay screens (setup, solo play, duel lobby/play, party lobby/play, results), `selectMode()`, scoring, timer logic, and JS state untouched.
+
+**`dashboard.html` — game control center rebuild (commit `4161170`):**
+- Above-the-fold reordered: **Player Status → Live Strip → Ready to Play**, with Game Modes + Your Plan sitting lower.
+- **Player Status panel** (rebuild of `.profile-preview`): kept avatar/name/handle/tier + XP bar; removed Win Rate / Best Streak / Trophies stat tiles per spec; added Arena (lime) | Battle Royale (coral) rating split with defaults visible always (`Rookie · 500 SR` / `Rookie · 500 BR`). All `dash-arena-*` IDs preserved for existing hydration; new `dash-br-*` IDs added so future BR rating hydration is wire-ready. Last 5 W/L pip row + Next-level-unlocks pills (More daily games / Ranked access / Higher limits).
+- **Live activity strip**: `12 in Arena · 8 in Battle Royale · 3 leagues live` — pulsing colored dots (lime / coral / purple), atmospheric.
+- **Ready to Play**: 3 large CTA cards above the existing pillar grid — Join Arena / Enter Battle Royale / Continue Trivia. Hover lift + scale + accent-color glow.
+- **For You**: existing `#activity-alert` div preserved exactly so dynamic JS injection still works.
+- **Game Modes pillar cards**: existing 4 cards kept; added pulsing status sub-line to each (`Leaderboards live` / `Ranked ready` / `Session available` / `Daily challenges available`); hover translateY(-2px) + scale 1.015 + soft shadow.
+- **Your Plan** (new tier panel): tier pill + "Resets in 7h 23m" + 4 usage rows with lime→teal progress bars (warn variant for near-cap rows). Static placeholder note: *"UI placeholder · live usage data wires up in a later sprint"* makes it visually obvious this is not real data.
+- **JS selector updates** (presentation only — same data flow): `.profile-preview-name/handle/tier` → `.ps-name/.ps-handle/.ps-tier`; removed stale Win-Rate / Best-Streak stat-tile writes; `renderArenaRating()` updated so badge `className` writes `ps-rating-tier <tier-cls>` to keep styling consistent in the new panel; trophy hydration kept safe via hidden `#dash-trophy-count` element.
+
+**Unified Mode Header — `styles.css` + 4 pages (commit `4ff076c`):**
+- New shared `.mode-header` system in `styles.css`: title + subtitle + per-mode icon chip + inert `How to Play` button. `:root --mode-header-h: 76px` exposed so dependent layouts can subtract it. Per-mode icon tints only — main palette (dark + lime) unchanged: `.icon-leagues` (purple), `.icon-arena` (lime), `.icon-br` (coral), `.icon-trivia` (teal).
+- **Old per-page hero blocks removed** (single source of truth): `.lh-hero` (Leagues), `.arena-hero` + `.mp-topbar` (Arena), `.br-header` (BR), `.topbar` (Trivia).
+- **`leagues-hub.html`**: title block replaced; Create/Discover CTAs preserved in a slim action row beneath the new header.
+- **`multiplayer.html`**: `mp-topbar` removed; back button (`handleBack()`) rehoused as a small chip inside `mode-header-left`. `.mp-page` height envelope updated to `calc(100vh - var(--mode-header-h))` so step flow fits without overflow. `arena-hero` block removed from Step 1. Hidden `#mp-page-title` kept so any stray JS reads still resolve.
+- **`br-lobby.html`**: skull header replaced; tension strip and step pills unchanged.
+- **`trivia.html`**: old `.topbar` (Back / Sports Knowledge / Trivia [Quiz]) replaced; `.screen` `min-height` updated from `calc(100vh - 54px)` to `calc(100vh - var(--mode-header-h, 76px))` so screens fit cleanly.
+- **`How to Play` button is fully inert** — no `onclick`, no modal, no nav. Hover glow only. Wired in a future sprint.
+
+**Constraints honoured across the whole sprint:**
+- Zero backend / Supabase / RPC / migration / routing changes
+- All existing dynamic IDs preserved (`activity-alert`, `dash-xp-*`, `dash-arena-*`, `dash-trophy-count`, `badge-live`, `nav-games-sub`, `nav-schedule-sub`, `mp-page-title`)
+- All existing JS functions untouched (`selectMode`, `selectFormat`, `enterLobby`, `handleBack`, `goStep`, `goScreen`, `tryInstantiate`, `refreshWaitingRoom`, etc.)
+- DB CHECK constraints (e.g. `br_sessions.mode IN ('1v1','ffa','2v2')`) untouched — Classic vs Ranked distinction is client-side only with the Phase 4 migration TODO documented
+
+---
 
 ### 2026-04-29 — play_mode: singleplayer / multiplayer (migration 029)
 
