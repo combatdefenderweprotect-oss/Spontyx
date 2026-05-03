@@ -19,6 +19,9 @@ const SpontixSidebar = {
     { label: 'Battle Royale', href: 'br-lobby.html', icon: '<circle cx="12" cy="10" r="8"/><path d="M12 18v4"/><path d="M8 22h8"/><circle cx="9" cy="9" r="1.5" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.5" fill="currentColor" stroke="none"/>', badge: 'BR', badgeStyle: 'background:linear-gradient(135deg,#FF6B6B,#E84545);' },
     { label: 'Trivia', href: 'trivia.html', icon: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/>' },
 
+    { section: 'Play in Person' },
+    { label: 'Find Venues', href: 'venues.html', icon: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/>' },
+
     { section: 'Rankings' },
     { label: 'Leaderboard', href: 'leaderboard.html', icon: '<path d="M18 20V10M12 20V4M6 20V14"/>' },
 
