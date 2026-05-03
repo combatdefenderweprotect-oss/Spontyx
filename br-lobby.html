@@ -1022,32 +1022,56 @@ async function loadMatches() {
   var list = document.getElementById('match-list');
   list.innerHTML = '<div class="match-empty">Loading matches…</div>';
 
-  var now = new Date();
-  var windowEnd = new Date(now.getTime() + 48 * 60 * 60 * 1000).toISOString();
+  // Same window as matches.html (Fixtures): -3h (catches currently-live)
+  // through +14 days. Earlier 48h window was too narrow and frequently
+  // returned no matches.
+  var now      = new Date();
+  var lower    = new Date(now.getTime() - 3  * 60 * 60 * 1000).toISOString();
+  var upper    = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
   var { data, error } = await window.sb
     .from('api_football_fixtures')
     .select('fixture_id, home_team_name, away_team_name, kickoff_at, status_short, league_id, league_name')
-    .gte('kickoff_at', new Date(now.getTime() - 120 * 60 * 1000).toISOString())
-    .lte('kickoff_at', windowEnd)
+    .gte('kickoff_at', lower)
+    .lte('kickoff_at', upper)
     .order('kickoff_at', { ascending: true })
-    .limit(60);
+    .limit(200);
 
   if (error || !data || data.length === 0) {
-    list.innerHTML = '<div class="match-empty">No matches found in the next 48 hours</div>';
+    list.innerHTML = '<div class="match-empty">No upcoming fixtures available right now. Check back soon — fixtures sync regularly.</div>';
     return;
   }
 
-  allMatches = data;
+  // Join sports_competitions so league chips show canonical names (e.g.
+  // "Premier League") instead of whatever happens to be in
+  // api_football_fixtures.league_name. Same approach as matches.html.
+  var apiLeagueIds = [...new Set(data.map(function(f) { return f.league_id; }).filter(Boolean))];
+  var compById = {};
+  if (apiLeagueIds.length) {
+    var compsRes = await window.sb
+      .from('sports_competitions')
+      .select('api_league_id, name')
+      .in('api_league_id', apiLeagueIds);
+    if (compsRes && compsRes.data) {
+      compsRes.data.forEach(function(c) { compById[c.api_league_id] = c.name; });
+    }
+  }
+
+  // Decorate each fixture with the canonical league display name.
+  allMatches = data.map(function(f) {
+    f.league_display = compById[f.league_id] || f.league_name || ('League ' + f.league_id);
+    return f;
+  });
 
   // Populate league chips from real fixture data only — no fake leagues.
   rebuildLeagueChips();
 
-  renderMatches(data);
+  renderMatches(allMatches);
 }
 
 // Build league chip row from currently-loaded fixtures, filtered by selected
-// sport. "All" chip stays first.
+// sport. "All" chip stays first. Uses league_display (canonical name from
+// sports_competitions) so chips match what users see on the Fixtures page.
 function rebuildLeagueChips() {
   var row = document.getElementById('league-filter-row');
   if (!row) return;
@@ -1056,7 +1080,8 @@ function rebuildLeagueChips() {
   var leagueSet = new Set();
   allMatches.forEach(function(m) {
     if (selectedSport !== 'all' && sportOf(m) !== selectedSport) return;
-    if (m.league_name) leagueSet.add(m.league_name);
+    var name = m.league_display || m.league_name;
+    if (name) leagueSet.add(name);
   });
   var leagues = [...leagueSet].sort();
 
@@ -1112,10 +1137,11 @@ function selectLeague(chip, leagueName) {
 function filterMatches() {
   var q = document.getElementById('match-search').value.toLowerCase();
   var filtered = allMatches.filter(function(m) {
-    var name = (m.home_team_name + ' ' + m.away_team_name).toLowerCase();
-    var sportOk  = selectedSport  === 'all' || sportOf(m) === selectedSport;
-    var leagueOk = selectedLeague === 'all' || m.league_name === selectedLeague;
-    var searchOk = !q || name.includes(q);
+    var name      = (m.home_team_name + ' ' + m.away_team_name).toLowerCase();
+    var leagueOf  = m.league_display || m.league_name;
+    var sportOk   = selectedSport  === 'all' || sportOf(m) === selectedSport;
+    var leagueOk  = selectedLeague === 'all' || leagueOf === selectedLeague;
+    var searchOk  = !q || name.includes(q);
     return sportOk && leagueOk && searchOk;
   });
   renderMatches(filtered);
