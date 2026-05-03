@@ -26,35 +26,53 @@
    Active only inside #step-1.
    ═══════════════════════════════════════════════════════════════════════ */
 
-/* Background layer — radial glow + subtle particles. Lives inside #step-1
-   so it disappears when user moves to Battlefield. */
+/* Background layer — fixed to the visible area (right of the sidebar) so
+   the cinematic glow + particles fill the viewport without a hard cut at
+   the bottom of the cards. Toggled via .show class — visible only on
+   Step 1, hidden when user moves to Battlefield / Waiting Room. */
 .pv-bg {
-  position: absolute; inset: 0; z-index: 0;
-  overflow: hidden; pointer-events: none;
+  position: fixed;
+  top: 0; right: 0; bottom: 0; left: 260px;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0; visibility: hidden;
+  transition: opacity 0.4s ease, visibility 0s linear 0.4s;
+}
+.pv-bg.show {
+  opacity: 1; visibility: visible;
+  transition: opacity 0.4s ease;
+}
+@media (max-width: 900px) {
+  .pv-bg { left: 0; }
 }
 .pv-bg::before {
   content: '';
   position: absolute;
-  left: 50%; top: 280px;
-  transform: translateX(-50%);
-  width: 920px; height: 560px;
+  left: 50%; top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(1200px, 90vw); height: min(900px, 100vh);
   background:
     radial-gradient(ellipse at center,
-      rgba(168,225,12,0.10) 0%,
-      rgba(168,225,12,0.04) 35%,
-      rgba(124,92,252,0.04) 60%,
+      rgba(168,225,12,0.12) 0%,
+      rgba(168,225,12,0.05) 30%,
+      rgba(124,92,252,0.05) 55%,
       transparent 80%);
-  filter: blur(28px);
+  filter: blur(40px);
   animation: pv-glow-pulse 8s ease-in-out infinite;
 }
 @keyframes pv-glow-pulse {
-  0%, 100% { opacity: 0.55; }
-  50%      { opacity: 0.85; }
+  0%, 100% { opacity: 0.6; transform: translate(-50%, -50%) scale(1); }
+  50%      { opacity: 0.9; transform: translate(-50%, -50%) scale(1.04); }
 }
 #pv-particles {
   position: absolute; inset: 0; width: 100%; height: 100%;
-  pointer-events: none; opacity: 0.55;
+  pointer-events: none; opacity: 0.6;
 }
+
+/* Steps-bar removed visually — JS still references step-pill nodes for
+   active-state, kept hidden so old code paths don't crash. */
+.steps-bar { display: none; }
 
 /* Wrapper that sits above the background */
 .pv-page { position: relative; z-index: 1; padding: 24px 32px 0; width: 100%; }
@@ -1078,13 +1096,16 @@
       <div class="step-pill" id="spill-3">③ Waiting Room</div>
     </div>
 
+    <!-- Animated cinematic background — fixed to the viewport area next
+         to the sidebar. Lives outside #step-1 so its position: fixed
+         escapes any parent stacking context. Toggled by goStep(): visible
+         only on Step 1, fades out on Step 2 / Waiting Room. -->
+    <div class="pv-bg show" id="pv-bg" aria-hidden="true">
+      <canvas id="pv-particles"></canvas>
+    </div>
+
     <!-- ═══ STEP 1 — Cinematic survival lobby (Mode pick) ═══ -->
     <div class="step-section active" id="step-1">
-
-      <!-- Animated background — particles + radial glow -->
-      <div class="pv-bg" aria-hidden="true">
-        <canvas id="pv-particles"></canvas>
-      </div>
 
       <div class="pv-page">
         <div class="pv-inner">
@@ -1401,6 +1422,10 @@ function goStep(n) {
     if (i < n - 1) p.classList.add('done');
     else if (i === n - 1) p.classList.add('active');
   });
+
+  // Cinematic background only on Step 1 (Mode picker)
+  var bg = document.getElementById('pv-bg');
+  if (bg) bg.classList.toggle('show', n === 1);
 
   if (n === 2) {
     // Update mode pill at top of Battlefield
