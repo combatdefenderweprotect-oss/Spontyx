@@ -276,34 +276,29 @@
 <!-- Main -->
 <div class="main">
 
-  <!-- Top Bar -->
-  <header class="topbar">
-    <button class="mobile-menu-btn" onclick="document.getElementById('sidebar').classList.toggle('open')">
-      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
-    <div class="topbar-title">Venues &amp; Bars</div>
-    <div class="topbar-right">
-      <button class="topbar-btn" onclick="showToast('Notifications coming soon')">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-        <div class="notif-dot"></div>
-      </button>
+  <!-- ═══ UNIFIED MODE HEADER ═══ -->
+  <div class="mode-header">
+    <div class="mode-header-content">
+      <div class="mode-header-left">
+        <div class="mode-icon icon-venues">
+          <svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+        </div>
+        <div>
+          <h1 class="mode-title">Find Venues</h1>
+          <p class="mode-subtitle">Sports bars and pubs hosting live Spontyx games near you. Reserve a spot and play in person.</p>
+        </div>
+      </div>
+      <div class="mode-header-right">
+        <a href="live.html" class="play-live-btn">
+          <span class="live-dot"></span>
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+          Play Live Now
+        </a>
+      </div>
     </div>
-  </header>
+  </div>
 
   <div class="content">
-
-    <!-- Page Header -->
-    <div class="page-header">
-      <div class="page-header-text">
-        <h1>Venues &amp; <span>Bars</span></h1>
-        <p>Find venues near you hosting live Spontyx games. Join events, reserve spots, and compete with the crowd.</p>
-      </div>
-      <a href="live.html" class="play-live-btn">
-        <span class="live-dot"></span>
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-        Play Live Now
-      </a>
-    </div>
 
     <!-- Location Banner -->
     <div class="location-banner" id="locationBanner">
