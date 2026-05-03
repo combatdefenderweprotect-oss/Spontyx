@@ -14,7 +14,8 @@
        Inner padding is on .mc-inner so the unified .mode-header sits flush. */
     .main { padding: 0 0 32px; }
     @media (max-width: 900px) { .main { margin-left: 0; } }
-    .mc-inner { padding: 22px 32px 0; max-width: 1320px; margin: 0 auto; }
+    /* Fill the full available area next to the sidebar — no max-width cap. */
+    .mc-inner { padding: 22px 32px 0; width: 100%; }
     @media (max-width: 900px) { .mc-inner { padding: 16px 14px 0; } }
 
     .mc-tabs {
@@ -42,10 +43,11 @@
     /* ── 2-pane messenger layout ── */
     .mc-grid {
       display: grid;
-      grid-template-columns: 320px 1fr;
-      gap: 16px;
+      grid-template-columns: 360px minmax(0, 1fr);
+      gap: 18px;
       height: calc(100vh - var(--mode-header-h, 76px) - 120px);
       min-height: 540px;
+      width: 100%;
     }
     @media (max-width: 900px) {
       .mc-grid { grid-template-columns: 1fr; height: auto; }
