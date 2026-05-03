@@ -268,8 +268,9 @@ a { text-decoration: none; color: inherit; }
 .mode-icon.icon-br      { background: rgba(255,107,107,0.12); border-color: rgba(255,107,107,0.28); color: var(--coral); }
 .mode-icon.icon-trivia  { background: rgba(78,205,196,0.12); border-color: rgba(78,205,196,0.28); color: var(--teal); }
 .mode-icon.icon-venues   { background: rgba(255,215,0,0.12);  border-color: rgba(255,215,0,0.30);  color: var(--gold); }
-.mode-icon.icon-yourgames{ background: rgba(255,107,107,0.12); border-color: rgba(255,107,107,0.28); color: var(--coral); }
-.mode-icon.icon-schedule { background: rgba(78,205,196,0.12);  border-color: rgba(78,205,196,0.28);  color: var(--teal); }
+.mode-icon.icon-yourgames  { background: rgba(255,107,107,0.12); border-color: rgba(255,107,107,0.28); color: var(--coral); }
+.mode-icon.icon-schedule   { background: rgba(78,205,196,0.12);  border-color: rgba(78,205,196,0.28);  color: var(--teal); }
+.mode-icon.icon-gamecenter { background: rgba(168,225,12,0.12);  border-color: rgba(168,225,12,0.28);  color: var(--lime); }
 
 .mode-title {
   font-size: 1.55rem;

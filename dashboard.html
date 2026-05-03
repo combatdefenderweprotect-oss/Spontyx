@@ -592,32 +592,32 @@
 
 <!-- Main Content -->
 <div class="main">
-  <!-- Top Bar -->
-  <header class="topbar">
-    <button class="mobile-menu-btn" onclick="toggleSidebar()">
-      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
-    <div class="topbar-search">
-      <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" placeholder="Search leagues..." />
+
+  <!-- ═══ UNIFIED MODE HEADER ═══ -->
+  <div class="mode-header">
+    <div class="mode-header-content">
+      <div class="mode-header-left">
+        <div class="mode-icon icon-gamecenter">
+          <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+        <div>
+          <h1 class="mode-title">Game Center</h1>
+          <p class="mode-subtitle">Welcome back, <span id="dash-welcome-name">Bran</span> — your platform-wide control center.</p>
+        </div>
+      </div>
+      <div class="mode-header-right">
+        <button class="how-to-play" type="button">How It Works →</button>
+      </div>
     </div>
-    <div class="topbar-right">
-      <a href="notifications.html" class="topbar-btn" title="Notifications" style="text-decoration:none;">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-        <span class="notif-dot"></span>
-      </a>
-      <button class="topbar-btn" title="Messages">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-      </button>
-    </div>
-  </header>
+  </div>
+
+  <!-- Hidden legacy page-header kept for any unseen JS that targets
+       `.page-header h1 span`. Active welcome lives in #dash-welcome-name. -->
+  <div class="page-header" style="display:none;" aria-hidden="true">
+    <h1><span>Bran</span></h1>
+  </div>
 
   <div class="content">
-    <!-- Page Header -->
-    <div class="page-header">
-      <h1>Welcome back, <span>Bran</span></h1>
-      <p>Your prediction gaming hub — create, join, and compete.</p>
-    </div>
 
     <!-- ═══ PLAYER STATUS PANEL ═══ -->
     <div class="ps-panel">
@@ -822,7 +822,11 @@
     const p = SpontixStore.getPlayer();
 
     // Welcome uses username (handle), fallback to first name — strip any legacy @ prefix
-    document.querySelector('.page-header h1 span').textContent = (p.handle || p.name).replace(/^@/, '');
+    var welcomeName = (p.handle || p.name).replace(/^@/, '');
+    var dashWelcome = document.getElementById('dash-welcome-name');
+    if (dashWelcome) dashWelcome.textContent = welcomeName;
+    var legacyWelcome = document.querySelector('.page-header h1 span');
+    if (legacyWelcome) legacyWelcome.textContent = welcomeName;
 
     // Update player status panel (new selectors; old .profile-preview-* removed)
     SpontixStore.applyAvatarsToPage(); // renders .av-self with profile photo
@@ -846,7 +850,10 @@
     if (!profile) return;
     var displayName = profile.handle || profile.name || '';
     if (!displayName) return;
-    // Welcome header uses username
+    // Welcome header uses username — update both the new mode-header span
+    // and the hidden legacy .page-header h1 span (kept as safety net)
+    var dashWelcome2 = document.getElementById('dash-welcome-name');
+    if (dashWelcome2) dashWelcome2.textContent = displayName;
     var nameSpan = document.querySelector('.page-header h1 span');
     if (nameSpan) nameSpan.textContent = displayName;
     // Player status panel — name + handle (new selectors)
