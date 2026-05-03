@@ -64,7 +64,8 @@
     .topbar-spacer { width: 70px; }
 
     /* ══ SCREENS ══ */
-    .screen { display: none; min-height: calc(100vh - 54px); }
+    /* Height envelope = viewport minus the unified .mode-header (~76px) */
+    .screen { display: none; min-height: calc(100vh - var(--mode-header-h, 76px)); }
     .screen.active { display: flex; flex-direction: column; }
 
     /* ═══════════════════════════════
@@ -690,17 +691,22 @@
 <div id="sidebar-placeholder"></div>
 <main class="main">
 
-<!-- ══ TOP BAR ══ -->
-<div class="topbar">
-  <a href="dashboard.html" class="topbar-back">
-    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-    Back
-  </a>
-  <div class="topbar-center">
-    <div class="topbar-match">Sports Knowledge</div>
-    <div class="topbar-title">Trivia <span class="trivia-badge">Quiz</span></div>
+<!-- ═══ UNIFIED MODE HEADER ═══ -->
+<div class="mode-header">
+  <div class="mode-header-content">
+    <div class="mode-header-left">
+      <div class="mode-icon icon-trivia">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+      </div>
+      <div>
+        <h1 class="mode-title">Trivia</h1>
+        <p class="mode-subtitle">Test your sports knowledge. Solo, duels, or party modes.</p>
+      </div>
+    </div>
+    <div class="mode-header-right">
+      <button class="how-to-play" type="button">How to Play →</button>
+    </div>
   </div>
-  <div class="topbar-spacer"></div>
 </div>
 
 <!-- ═══════════════════════════════

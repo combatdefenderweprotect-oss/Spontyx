@@ -44,13 +44,14 @@
 
     /* ── PAGE SHELL ──
        .mp-page fills .main and manages its own internal scroll for the
-       full-screen Arena experience. */
+       full-screen Arena experience. Height envelope = viewport minus
+       the unified .mode-header (~76px). */
     .mp-page {
       display: flex;
       flex-direction: column;
       flex: 1;
-      min-height: 100vh;
-      max-height: 100vh;
+      min-height: calc(100vh - var(--mode-header-h, 76px));
+      max-height: calc(100vh - var(--mode-header-h, 76px));
       width: 100%;
       overflow: hidden;
     }
@@ -876,17 +877,32 @@
   <div class="app-shell">
     <div id="sidebar-placeholder"></div>
     <main class="main">
-    <div class="mp-page">
 
-      <!-- TOP BAR -->
-      <div class="mp-topbar">
-        <button class="mp-back" onclick="handleBack()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="15 18 9 12 15 6"/>
-          </svg>
-        </button>
-        <span id="mp-page-title">Multiplayer</span>
+    <!-- ═══ UNIFIED MODE HEADER ═══ -->
+    <div class="mode-header">
+      <div class="mode-header-content">
+        <div class="mode-header-left">
+          <button class="mp-back" onclick="handleBack()" title="Back" aria-label="Back" style="margin-right:4px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6"/>
+            </svg>
+          </button>
+          <div class="mode-icon icon-arena">
+            <svg viewBox="0 0 24 24"><path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/><path d="M9.5 17.5 21 6V3h-3L6.5 14.5"/><path d="M11 19l-6-6"/><path d="M8 16l-4 4"/><path d="M5 21l-2-2"/></svg>
+          </div>
+          <div>
+            <h1 class="mode-title">Arena</h1>
+            <p class="mode-subtitle">Real-time duels. 1v1 or 2v2. Every prediction matters.</p>
+          </div>
+          <span id="mp-page-title" style="display:none;">Arena</span>
+        </div>
+        <div class="mode-header-right">
+          <button class="how-to-play" type="button">How to Play →</button>
+        </div>
       </div>
+    </div>
+
+    <div class="mp-page">
 
       <!-- STEP BARS -->
       <div class="mp-steps">
@@ -898,15 +914,6 @@
       <!-- ═══ STEP 1: FORMAT ═══ -->
       <div id="step-1">
         <div class="s1-inner">
-          <div class="arena-hero">
-            <div class="arena-badge">
-              <span class="arena-badge-dot"></span>
-              Live Arena
-            </div>
-            <div class="arena-title">Enter the Arena</div>
-            <div class="arena-sub">Choose your format. Find your match. Prove it.</div>
-          </div>
-
           <div class="format-grid">
             <!-- 1v1 -->
             <div class="format-card card-1v1" id="fc-1v1" onclick="selectFormat('1v1')">

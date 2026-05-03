@@ -677,16 +677,27 @@
 <body>
 <div id="sidebar-placeholder"></div>
 <div class="main">
-    <!-- Subtle radial glow behind mode cards -->
-    <div class="br-bg-glow" aria-hidden="true"></div>
 
-    <div class="br-header">
-      <div class="br-icon">💀</div>
-      <div class="br-title">
-        <h1>Battle Royale</h1>
-        <p>Survive all rounds. Wrong answers cost HP. Last player alive wins.</p>
+    <!-- ═══ UNIFIED MODE HEADER ═══ -->
+    <div class="mode-header">
+      <div class="mode-header-content">
+        <div class="mode-header-left">
+          <div class="mode-icon icon-br">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="10" r="8"/><path d="M12 18v4"/><path d="M8 22h8"/><circle cx="9" cy="9" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.4" fill="currentColor" stroke="none"/></svg>
+          </div>
+          <div>
+            <h1 class="mode-title">Battle Royale</h1>
+            <p class="mode-subtitle">Survive each round. Wrong answers cost HP. Last player alive wins.</p>
+          </div>
+        </div>
+        <div class="mode-header-right">
+          <button class="how-to-play" type="button">How to Play →</button>
+        </div>
       </div>
     </div>
+
+    <!-- Subtle radial glow behind mode cards -->
+    <div class="br-bg-glow" aria-hidden="true"></div>
 
     <!-- Live-feel ambient row (atmospheric) -->
     <div class="br-live-row">
