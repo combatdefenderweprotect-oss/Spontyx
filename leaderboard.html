@@ -363,6 +363,176 @@
     .ar-sticky-rank strong { font-size: 1rem; color: var(--lime); display: block; line-height: 1.1; }
     .ar-sticky-name  { flex: 1; font-size: 0.85rem; font-weight: 700; }
     .ar-sticky-rating { font-size: 0.85rem; font-weight: 800; color: var(--lime); white-space: nowrap; }
+
+    /* ═════════════════════════════════════════════════════════════════
+       LEADERBOARD — Phase 1 chrome (live strip / filter rows / 2-col grid / right context panel)
+       ═════════════════════════════════════════════════════════════════ */
+
+    /* Custom mode-icon tint for the leaderboard (gold trophy) */
+    .mode-icon.icon-leaderboard {
+      background: rgba(255,215,0,0.12);
+      border-color: rgba(255,215,0,0.30);
+      color: var(--gold);
+    }
+
+    /* Live activity strip */
+    .lb-live-strip {
+      display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px;
+    }
+    .lb-live-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 20px; padding: 7px 14px;
+      font-size: 0.74rem; color: rgba(255,255,255,0.7); font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .lb-live-pill .num { color: var(--off-white); font-weight: 800; }
+    .lb-live-pill .lb-live-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--lime); box-shadow: 0 0 8px rgba(168,225,12,0.55);
+      animation: lb-live-blink 1.6s ease-in-out infinite;
+    }
+    .lb-live-pill.coral  .lb-live-dot { background: var(--coral);  box-shadow: 0 0 8px rgba(255,107,107,0.6); }
+    .lb-live-pill.purple .lb-live-dot { background: var(--purple); box-shadow: 0 0 8px rgba(124,92,252,0.6); }
+    @keyframes lb-live-blink { 0%,100%{opacity:1} 50%{opacity:0.45} }
+
+    /* Filter row system — 3 axes + special */
+    .lb-filters {
+      display: flex; flex-direction: column; gap: 10px;
+      margin-bottom: 22px;
+      padding: 14px 16px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: var(--radius-lg);
+    }
+    .lb-filter-line {
+      display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
+    }
+    .lb-filter-label {
+      font-size: 0.62rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--grey-dark);
+      width: 60px; flex-shrink: 0;
+    }
+    .lb-filter-line.lb-special { opacity: 0.85; }
+
+    /* Scope chips */
+    .lb-scope-chip {
+      padding: 6px 14px; border-radius: var(--radius-pill);
+      border: 1px solid rgba(255,255,255,0.1);
+      background: transparent; color: var(--grey);
+      font-family: 'Inter', sans-serif; font-size: 0.74rem; font-weight: 600;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .lb-scope-chip:hover { color: var(--off-white); border-color: rgba(168,225,12,0.3); }
+    .lb-scope-chip.active { background: var(--lime); color: var(--navy); border-color: var(--lime); }
+
+    /* Mode chip row reuses .view-tab — adjust to fit the new container */
+    .lb-mode-row { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+    .lb-mode-row .view-tab {
+      padding: 6px 12px; font-size: 0.74rem; border-radius: var(--radius-pill);
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .lb-mode-row .view-tab.arena-tint.active   { border-color: var(--lime); }
+    .lb-mode-row .view-tab.br-tint.active      { background: var(--coral); color:#fff; border-color: var(--coral); }
+    .lb-mode-row .view-tab.leagues-tint.active { background: var(--purple); color:#fff; border-color: var(--purple); }
+    .lb-mode-row .view-tab.trivia-tint:not(.disabled).active { background: var(--teal); color:#fff; border-color: var(--teal); }
+
+    /* Disabled "coming soon" chips */
+    .view-tab.disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      pointer-events: auto;       /* allow hover tooltip */
+      background: rgba(255,255,255,0.02);
+      color: var(--grey-dark);
+      border-color: rgba(255,255,255,0.06);
+    }
+    .view-tab.disabled:hover { transform: none; background: rgba(255,255,255,0.04); border-color: rgba(255,255,255,0.1); }
+    .lb-soon {
+      margin-left: 6px;
+      font-size: 0.55rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+      padding: 1px 6px; border-radius: 10px;
+      background: rgba(168,225,12,0.12); color: var(--lime);
+    }
+
+    /* Hide the legacy stand-alone view-tabs / time-filter blocks (they're now inside .lb-filters) */
+    body > .main > .content > .view-tabs,
+    body > .main > .content > .time-filter { display: none; }
+
+    /* Two-column grid */
+    .lb-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 320px;
+      gap: 24px;
+      align-items: start;
+    }
+    @media (max-width: 1100px) {
+      .lb-grid { grid-template-columns: 1fr; }
+    }
+    .lb-main-col, .lb-right-col {
+      display: flex; flex-direction: column; gap: 14px;
+      min-width: 0;
+    }
+
+    /* Right context panel */
+    .lb-ctx-card {
+      background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg);
+      padding: 16px 18px;
+    }
+    .lb-ctx-title {
+      font-size: 0.68rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--grey); margin-bottom: 12px;
+    }
+    .lb-ctx-rank-row {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;
+    }
+    .lb-ctx-rank-cell {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 10px 8px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.04);
+      border-radius: var(--radius-md);
+    }
+    .lb-ctx-rank-label { font-size: 0.6rem; font-weight: 700; color: var(--grey-dark); text-transform: uppercase; letter-spacing: 0.06em; }
+    .lb-ctx-rank-val { font-size: 1.1rem; font-weight: 800; color: var(--lime); font-variant-numeric: tabular-nums; }
+
+    .lb-ctx-rating {
+      display: flex; align-items: center; gap: 12px;
+      padding: 10px 12px;
+      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(255,255,255,0.05);
+      border-radius: var(--radius-md);
+      margin-bottom: 8px;
+    }
+    .lb-ctx-rating:last-child { margin-bottom: 0; }
+    .lb-ctx-rating.arena { border-color: rgba(168,225,12,0.18); background: rgba(168,225,12,0.04); }
+    .lb-ctx-rating.br    { border-color: rgba(255,107,107,0.20); background: rgba(255,107,107,0.04); }
+    .lb-ctx-rating.soon  { opacity: 0.55; }
+    .lb-ctx-rating-icon { font-size: 1.05rem; flex-shrink: 0; }
+    .lb-ctx-rating-info { flex: 1; min-width: 0; }
+    .lb-ctx-rating-label {
+      font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+      color: var(--grey); margin-bottom: 2px;
+    }
+    .lb-ctx-rating-line { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; font-size: 0.78rem; color: var(--off-white); }
+    .lb-ctx-rating-num { font-size: 1.05rem; font-weight: 800; }
+    .lb-ctx-rating.arena .lb-ctx-rating-num { color: var(--lime); }
+    .lb-ctx-rating.br    .lb-ctx-rating-num { color: var(--coral); }
+    .lb-ctx-rating-suffix { font-size: 0.7rem; color: var(--grey); }
+    .lb-ctx-rating-tier {
+      font-size: 0.6rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      background: rgba(255,255,255,0.06); color: var(--grey);
+    }
+    .lb-ctx-rating.arena .lb-ctx-rating-tier { background: rgba(168,225,12,0.14); color: var(--lime); }
+    .lb-ctx-rating.br    .lb-ctx-rating-tier { background: rgba(255,107,107,0.14); color: var(--coral); }
+    .lb-ctx-rating-soon {
+      font-size: 0.7rem; font-style: italic; color: var(--grey-dark);
+    }
+
+    .lb-ctx-target-line { font-size: 0.85rem; font-weight: 700; color: var(--off-white); margin-bottom: 4px; }
+    .lb-ctx-target-sub  { font-size: 0.7rem; color: var(--grey); }
     </style>
 </head>
 <body>
@@ -372,60 +542,86 @@
 
 <!-- Main -->
 <div class="main">
-  <header class="topbar">
-    <div class="topbar-search">
-      <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" placeholder="Search players..." />
+
+  <!-- ═══ UNIFIED MODE HEADER ═══ -->
+  <div class="mode-header">
+    <div class="mode-header-content">
+      <div class="mode-header-left">
+        <div class="mode-icon icon-leaderboard">
+          <svg viewBox="0 0 24 24"><path d="M6 9H4.5a2.5 2.5 0 010-5H6"/><path d="M18 9h1.5a2.5 2.5 0 000-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0012 0V2z"/></svg>
+        </div>
+        <div>
+          <h1 class="mode-title">Leaderboard</h1>
+          <p class="mode-subtitle">See where you stand. Climb the ranks. Flex on your mates.</p>
+        </div>
+      </div>
+      <div class="mode-header-right">
+        <button class="how-to-play" type="button">How Ranks Work →</button>
+      </div>
     </div>
-    <div class="topbar-right">
-      <a href="notifications.html" class="topbar-btn" title="Notifications" style="text-decoration:none;">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-        <span class="notif-dot"></span>
-      </a>
-      <button class="topbar-btn">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-      </button>
-    </div>
-  </header>
+  </div>
 
   <div class="content">
 
-    <div class="page-header">
-      <h1 class="page-title">Leaderboards</h1>
-      <p class="page-sub">See who's on top. Climb the ranks. Flex on your mates.</p>
+    <!-- ═══ LIVE ACTIVITY STRIP ═══ -->
+    <div class="lb-live-strip" aria-label="Live activity">
+      <span class="lb-live-pill"><span class="lb-live-dot"></span><span class="num">12</span> in Arena</span>
+      <span class="lb-live-pill coral"><span class="lb-live-dot"></span><span class="num">8</span> in Battle Royale</span>
+      <span class="lb-live-pill purple"><span class="lb-live-dot"></span><span class="num">3</span> leagues live</span>
+      <span class="lb-live-pill"><span class="lb-live-dot"></span><span class="num">142</span> online now</span>
     </div>
 
-    <!-- View Tabs -->
-    <div class="view-tabs">
-      <button class="view-tab active" onclick="switchView('global')">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
-        Global
-      </button>
-      <button class="view-tab" onclick="switchView('leagues')">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-        My Leagues
-      </button>
-      <button class="view-tab" onclick="switchView('friends')">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-        Friends
-      </button>
-      <button class="view-tab" onclick="switchView('arena')">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15 9 22 9 16 14 18 21 12 17 6 21 8 14 2 9 9 9 12 2"/></svg>
-        Arena
-      </button>
-      <button class="view-tab" onclick="switchView('br')">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
-        Battle Royale
-      </button>
+    <!-- ═══ FILTER ROW — three orthogonal axes ═══ -->
+    <div class="lb-filters">
+      <div class="lb-filter-line">
+        <span class="lb-filter-label">Scope</span>
+        <button class="lb-scope-chip active" data-scope="global"  onclick="selectScope(this,'global')">Global</button>
+        <button class="lb-scope-chip"        data-scope="friends" onclick="selectScope(this,'friends')">Friends</button>
+        <button class="lb-scope-chip"        data-scope="leagues" onclick="selectScope(this,'leagues')">My Leagues</button>
+      </div>
+
+      <div class="lb-filter-line">
+        <span class="lb-filter-label">Mode</span>
+        <!-- View Tabs (preserved JS handlers) — restyled as chips with mode tinting -->
+        <div class="view-tabs lb-mode-row">
+          <button class="view-tab active" onclick="switchView('global')">Global</button>
+          <button class="view-tab arena-tint" onclick="switchView('arena')">Arena</button>
+          <button class="view-tab br-tint" onclick="switchView('br')">Battle Royale</button>
+          <button class="view-tab leagues-tint" onclick="switchView('leagues')">Leagues</button>
+          <button class="view-tab" onclick="switchView('friends')" style="display:none" aria-hidden="true">Friends</button>
+
+          <button class="view-tab disabled" type="button" title="Coming soon" aria-disabled="true">
+            Combined <span class="lb-soon">Soon</span>
+          </button>
+          <button class="view-tab disabled trivia-tint" type="button" title="Coming soon" aria-disabled="true">
+            Trivia <span class="lb-soon">Soon</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="lb-filter-line">
+        <span class="lb-filter-label">Time</span>
+        <div class="time-filter">
+          <button class="time-chip active" onclick="selectTime(this)">This Week</button>
+          <button class="time-chip" onclick="selectTime(this)">This Month</button>
+          <button class="time-chip" onclick="selectTime(this)">This Season</button>
+          <button class="time-chip" onclick="selectTime(this)">All Time</button>
+        </div>
+      </div>
+
+      <div class="lb-filter-line lb-special">
+        <span class="lb-filter-label">Special</span>
+        <button class="view-tab disabled" type="button" title="Coming soon" aria-disabled="true">Rising <span class="lb-soon">Soon</span></button>
+        <button class="view-tab disabled" type="button" title="Coming soon" aria-disabled="true">Speed <span class="lb-soon">Soon</span></button>
+        <button class="view-tab disabled" type="button" title="Coming soon" aria-disabled="true">Clutch <span class="lb-soon">Soon</span></button>
+        <button class="view-tab disabled" type="button" title="Coming soon" aria-disabled="true">Survival <span class="lb-soon">Soon</span></button>
+        <button class="view-tab disabled" type="button" title="Coming soon" aria-disabled="true">Consistency <span class="lb-soon">Soon</span></button>
+      </div>
     </div>
 
-    <!-- Time Filter -->
-    <div class="time-filter">
-      <button class="time-chip active" onclick="selectTime(this)">This Week</button>
-      <button class="time-chip" onclick="selectTime(this)">This Month</button>
-      <button class="time-chip" onclick="selectTime(this)">This Season</button>
-      <button class="time-chip" onclick="selectTime(this)">All Time</button>
-    </div>
+    <!-- ═══ TWO-COLUMN GRID — main list + right context panel ═══ -->
+    <div class="lb-grid">
+      <div class="lb-main-col">
 
     <!-- ═══ GLOBAL VIEW ═══ -->
     <div class="view-panel active" id="view-global">
@@ -743,6 +939,85 @@
       <div id="br-table-section"></div>
     </div>
 
+      </div><!-- /.lb-main-col -->
+
+      <!-- ═══ RIGHT CONTEXT PANEL ═══ -->
+      <aside class="lb-right-col">
+
+        <div class="lb-ctx-card">
+          <div class="lb-ctx-title">Your ranking</div>
+          <div class="lb-ctx-rank-row">
+            <div class="lb-ctx-rank-cell">
+              <span class="lb-ctx-rank-label">Global</span>
+              <span class="lb-ctx-rank-val" id="ctx-rank-global">—</span>
+            </div>
+            <div class="lb-ctx-rank-cell">
+              <span class="lb-ctx-rank-label">Arena</span>
+              <span class="lb-ctx-rank-val" id="ctx-rank-arena">—</span>
+            </div>
+            <div class="lb-ctx-rank-cell">
+              <span class="lb-ctx-rank-label">BR</span>
+              <span class="lb-ctx-rank-val" id="ctx-rank-br">—</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="lb-ctx-card">
+          <div class="lb-ctx-title">Your ratings</div>
+          <div class="lb-ctx-rating arena">
+            <span class="lb-ctx-rating-icon">⚔</span>
+            <div class="lb-ctx-rating-info">
+              <div class="lb-ctx-rating-label">Arena</div>
+              <div class="lb-ctx-rating-line">
+                <span class="lb-ctx-rating-num" id="ctx-arena-num">500</span>
+                <span class="lb-ctx-rating-suffix">SR</span>
+                <span class="lb-ctx-rating-tier" id="ctx-arena-tier">Rookie</span>
+              </div>
+            </div>
+          </div>
+          <div class="lb-ctx-rating br">
+            <span class="lb-ctx-rating-icon">💀</span>
+            <div class="lb-ctx-rating-info">
+              <div class="lb-ctx-rating-label">Battle Royale</div>
+              <div class="lb-ctx-rating-line">
+                <span class="lb-ctx-rating-num" id="ctx-br-num">500</span>
+                <span class="lb-ctx-rating-suffix">BR</span>
+                <span class="lb-ctx-rating-tier" id="ctx-br-tier">Rookie</span>
+              </div>
+            </div>
+          </div>
+          <div class="lb-ctx-rating soon">
+            <span class="lb-ctx-rating-icon">🏅</span>
+            <div class="lb-ctx-rating-info">
+              <div class="lb-ctx-rating-label">Combined</div>
+              <div class="lb-ctx-rating-line">
+                <span class="lb-ctx-rating-soon">Coming soon</span>
+              </div>
+            </div>
+          </div>
+          <div class="lb-ctx-rating soon">
+            <span class="lb-ctx-rating-icon">🧠</span>
+            <div class="lb-ctx-rating-info">
+              <div class="lb-ctx-rating-label">Trivia</div>
+              <div class="lb-ctx-rating-line">
+                <span class="lb-ctx-rating-soon">Coming soon</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="lb-ctx-card">
+          <div class="lb-ctx-title">Next target</div>
+          <div class="lb-ctx-target" id="ctx-target">
+            <div class="lb-ctx-target-line">+— SR to next tier</div>
+            <div class="lb-ctx-target-sub">Rival: —</div>
+          </div>
+        </div>
+
+      </aside>
+
+    </div><!-- /.lb-grid -->
+
   </div>
 </div>
 
@@ -853,7 +1128,10 @@ async function loadArenaLeaderboard() {
     arenaData = [];
   }
   arenaLoaded = true;
-  renderArenaLeaderboard(arenaData);
+  // Only render Arena UI if user is actually on the Arena view; otherwise
+  // arenaData remains populated (right context panel reads from it).
+  if (currentView === 'arena') renderArenaLeaderboard(arenaData);
+  else hydrateRightPanel();
 }
 
 function renderArenaLeaderboard(data) {
@@ -966,6 +1244,7 @@ function renderArenaLeaderboard(data) {
   } else {
     hideArenaStickyCard();
   }
+  hydrateRightPanel();
 }
 
 function showArenaStickyCard(rank, player) {
@@ -1027,7 +1306,10 @@ async function loadBrLeaderboard() {
   }
 
   brData = data;
-  renderBrLeaderboard(data, uid);
+  // Only render BR UI if user is actually on the BR view; otherwise brData
+  // remains populated (right context panel reads from it).
+  if (currentView === 'br') renderBrLeaderboard(data, uid);
+  else hydrateRightPanel();
 }
 
 function renderBrLeaderboard(data, uid) {
@@ -1087,6 +1369,7 @@ function renderBrLeaderboard(data, uid) {
   } else {
     hideBrStickyCard();
   }
+  hydrateRightPanel();
 }
 
 function showBrStickyCard(rank, player) {
@@ -1112,20 +1395,133 @@ function hideBrStickyCard() {
 function switchView(view) {
   document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
   document.querySelectorAll('.view-panel').forEach(p => p.classList.remove('active'));
-  event.currentTarget.classList.add('active');
+
+  // Activate the corresponding mode chip (resilient when called without an event)
+  const triggered = (typeof event !== 'undefined' && event && event.currentTarget) ? event.currentTarget : null;
+  if (triggered && triggered.classList) {
+    triggered.classList.add('active');
+  } else {
+    const match = document.querySelector('.lb-mode-row .view-tab[onclick*="\'' + view + '\'"]');
+    if (match) match.classList.add('active');
+  }
+
   currentView = view;
   const panel = document.getElementById('view-' + view);
   if (panel) panel.classList.add('active');
+
+  // Sync scope chips for the 3 person-scope views
+  syncScopeChip(view);
+
   if (view === 'arena') {
     hideBrStickyCard();
     if (!arenaLoaded) loadArenaLeaderboard();
+    else renderArenaLeaderboard(arenaData);   // pre-loaded cache → render now
   } else if (view === 'br') {
     hideArenaStickyCard();
     if (!brLoaded) loadBrLeaderboard();
+    else renderBrLeaderboard(brData, SpontixStore.Session.getCurrentUserId()); // pre-loaded cache
   } else {
     hideArenaStickyCard();
     hideBrStickyCard();
     renderLeaderboard();
+  }
+
+  hydrateRightPanel();
+}
+
+// Scope chips are a quick filter for the 3 person-scope views.
+// Functionally a shortcut to switchView; mode chips remain the canonical control.
+function selectScope(chip, scope) {
+  switchView(scope);
+}
+function syncScopeChip(view) {
+  const map = { global: 'global', friends: 'friends', leagues: 'leagues' };
+  const targetScope = map[view];
+  document.querySelectorAll('.lb-scope-chip').forEach(c => {
+    c.classList.toggle('active', !!targetScope && c.dataset.scope === targetScope);
+  });
+}
+
+/* ── Right context panel hydration ──
+   Reads current user's row from the already-loaded `players` array (Global)
+   and the rating columns set by loadArenaLeaderboard / loadBrLeaderboard.
+   No new queries, no backend changes. */
+function hydrateRightPanel() {
+  try {
+    const uid = (typeof SpontixStore !== 'undefined' && SpontixStore.Session)
+      ? SpontixStore.Session.getCurrentUserId() : null;
+    if (!uid) return;
+
+    // Global rank — index in the loaded players array
+    const $rGlobal = document.getElementById('ctx-rank-global');
+    if ($rGlobal) {
+      if (players && players.length) {
+        const sorted = [...players].sort((a,b) => (b[currentCat] && b[currentCat][currentTime] || 0) - (a[currentCat] && a[currentCat][currentTime] || 0));
+        const i = sorted.findIndex(p => p.id === uid);
+        $rGlobal.textContent = i >= 0 ? '#' + (i + 1) : '—';
+      } else {
+        $rGlobal.textContent = '—';
+      }
+    }
+
+    // Arena rank + rating tier (uses arenaData populated by loadArenaLeaderboard)
+    const $rArena    = document.getElementById('ctx-rank-arena');
+    const $aNum      = document.getElementById('ctx-arena-num');
+    const $aTier     = document.getElementById('ctx-arena-tier');
+    if (arenaData && arenaData.length) {
+      const i = arenaData.findIndex(p => p.id === uid);
+      if ($rArena) $rArena.textContent = i >= 0 ? '#' + (i + 1) : '—';
+      if (i >= 0) {
+        const t = getArenaTier(arenaData[i].arena_rating);
+        if ($aNum)  $aNum.textContent  = arenaData[i].arena_rating;
+        if ($aTier) { $aTier.textContent = t.label; $aTier.className = 'lb-ctx-rating-tier ' + t.cls; }
+      }
+    } else if ($rArena) {
+      $rArena.textContent = '—';
+    }
+
+    // BR rank + rating tier (uses brData populated by loadBrLeaderboard)
+    const $rBr   = document.getElementById('ctx-rank-br');
+    const $bNum  = document.getElementById('ctx-br-num');
+    const $bTier = document.getElementById('ctx-br-tier');
+    if (brData && brData.length) {
+      const i = brData.findIndex(p => p.id === uid);
+      if ($rBr) $rBr.textContent = i >= 0 ? '#' + (i + 1) : '—';
+      if (i >= 0) {
+        const t = getBrTier(brData[i].br_rating);
+        if ($bNum)  $bNum.textContent  = brData[i].br_rating;
+        if ($bTier) { $bTier.textContent = t.label; $bTier.className = 'lb-ctx-rating-tier ' + t.cls; }
+      }
+    } else if ($rBr) {
+      $rBr.textContent = '—';
+    }
+
+    // Next target — use whichever rating panel has data; prefer Arena
+    const $tgt = document.getElementById('ctx-target');
+    if ($tgt) {
+      let line1 = 'Play your first match to set a target', line2 = 'Rival: —';
+      if (arenaData && arenaData.length) {
+        const i = arenaData.findIndex(p => p.id === uid);
+        if (i >= 0) {
+          const me = arenaData[i];
+          // Closest tier breakpoint above current rating
+          const breakpoints = [800,1100,1400,1700,1900,2200,2600,3000];
+          const next = breakpoints.find(b => b > me.arena_rating);
+          if (next) {
+            const t = getArenaTier(next);
+            line1 = '+' + (next - me.arena_rating) + ' SR to ' + t.label;
+          } else {
+            line1 = 'Top tier — defend your rank';
+          }
+          // Rival = nearest player above
+          const above = arenaData[i - 1];
+          if (above) line2 = 'Rival: @' + (above.handle || above.name) + ' (' + above.arena_rating + ' SR)';
+        }
+      }
+      $tgt.innerHTML = '<div class="lb-ctx-target-line">' + line1 + '</div><div class="lb-ctx-target-sub">' + line2 + '</div>';
+    }
+  } catch (e) {
+    console.warn('[leaderboard] right-panel hydrate error', e);
   }
 }
 
@@ -1148,6 +1544,7 @@ function renderLeaderboard() {
   if (currentView === 'global')  renderGlobalLeaderboard();
   else if (currentView === 'leagues') renderLeaguesLeaderboard();
   else if (currentView === 'friends') renderFriendsLeaderboard();
+  hydrateRightPanel();
 }
 
 // ── Global leaderboard ─────────────────────────────────────────────────
@@ -1317,6 +1714,22 @@ document.addEventListener('DOMContentLoaded', () => {
     else c.classList.remove('active');
   });
   loadLeaderboardData();
+  // Pre-load Arena + BR rankings so the right context panel can populate
+  // immediately without waiting for the user to click those tabs.
+  // Both are cheap single-table queries and run in parallel.
+  if (typeof loadArenaLeaderboard === 'function') loadArenaLeaderboard().catch(()=>{});
+  if (typeof loadBrLeaderboard    === 'function') loadBrLeaderboard().catch(()=>{});
+
+  // Honour ?view=arena|br|leagues|friends|global from the URL (used by the
+  // br-leaderboard.html redirect, and shareable deep links).
+  try {
+    const wantedView = new URLSearchParams(window.location.search).get('view');
+    const valid = ['global','arena','br','leagues','friends'];
+    if (wantedView && valid.indexOf(wantedView) !== -1) {
+      const tab = document.querySelector('.lb-mode-row .view-tab[onclick*="\'' + wantedView + '\'"]');
+      if (tab) tab.click(); else switchView(wantedView);
+    }
+  } catch (e) { /* ignore */ }
 });
 
 // Re-render if profile refreshes (handles sidebar update)
