@@ -1,5 +1,7 @@
 # Spontix — Project State & Developer Handoff
 
+Last updated 2026-05-04 — Continuation of the platform-wide UI sprint (commits `4ff076c` → `05ad70c`). New player surfaces and a critical BR fixture-list bug fix, **zero backend changes**: (1) Sidebar gets `Game Center` rename + new entries `Fixtures`, `Find Venues`, `Messages`, `Help`, `Support`. Profile footer becomes a 4-button action bar (Notifications / Messages / Support / Logout) with unread badges. (2) New `chat-popups.js` injects three sidebar popups on every player page — Notifications uses **real data** from `notifications` (migration 005), Messages + Support are clearly-labelled mock data. (3) New page `message-center.html` — modern 2-pane messenger (DMs + league chats), mock data, full conversation thread + composer + tabs. (4) New page `support.html` — contact form (Topic / Priority / Subject / Message + screenshot upload, 5 MB client-side limit) + Spontyx inbox + Quick Answers card linking to Help. (5) New page `help.html` — 7 categorised FAQ accordion with real-time search; **all answers are intentional `<em>— add answer —</em>` placeholders to fill in pre-launch.** Game Modes section follows the user's spec: each pillar gets *what is it / how does it work / how many players / what modes within it*. (6) `matches.html` (Fixtures) rebuilt as the central match-driven entry point: Sport + League chip filters cascading from real data, three primary CTAs per match (Create League / Enter Arena / Battle Royale) + Save (kept). (7) **Critical BR Step 2 fix**: SELECT was reading non-existent `league_name` column → entire query failed → empty state always shown. Fixed by mirroring `matches.html` SELECT and joining `sports_competitions` for canonical names. Window expanded -2h/+48h → -3h/+14d. (8) Dashboard "Ready to Play" gains Leagues card (4 cols); duplicate bottom 4-pillar grid removed. (9) Unified mode header now applied to: dashboard ("Game Center"), activity ("Your Games"), upcoming ("Schedule"), notifications ("Notifications"), venues ("Find Venues"), matches ("Fixtures"), leaderboard ("Leaderboard"). `.app-shell { flex: 1 }` promoted to global so all pages center consistently next to the sidebar. (10) BR vertical hierarchy under header (24/16/20/22 px). (11) `create-league.html`: Event League card hidden until NFL Draft 2027 launch. (12) **Leaderboard Phase 1** shipped — see `docs/LEADERBOARD_ARCHITECTURE.md` for the full audit; live activity strip, 3-axis filter system with disabled "Soon" chips for unbuilt boards, right context panel with Your Ranking / Your Ratings / Next Target, `?view=` deep links, `br-leaderboard.html` redirected to `leaderboard.html?view=br`. All existing dynamic IDs and JS functions preserved verbatim. Sole real-data new touch is the notifications popup (existing table); Messages/Support/Help-FAQ answers are demo content awaiting fill-in.
+
 Last updated 2026-05-03 — UI overhaul sprint shipped (commits `d32781b` → `4ff076c`). Six surfaces redesigned, zero backend changes: (1) `leagues-hub.html` rebuilt as a hero + status bar + Active/Upcoming/Finished section list; sidebar init bug fixed (`SpontixSidebar.init()` was called with no args). (2) `multiplayer.html` (Arena) wrapped in app-shell so sidebar persists; `const SpontixSidebar` const-vs-window bug fixed; `.app-shell { flex:1 }` + `.main { width: calc(100vw - 260px) }` corrects centering inside the shell; Step 1 widened to 1180px with scaled cards + bounded CTA. (3) `br-lobby.html` reframed from 1v1/FFA to Classic/Ranked modes (UI-only — DB still writes `mode='ffa'` until a Phase 4 server-side gate ships); lobby sizing constants `BR_MIN=4 / TARGET=10 / MAX=12` with 60s auto-fill + 15s target countdown; Ranked-dominant card hierarchy + ambient live-feel row + lime radial glow. (4) `trivia.html` wrapped in app-shell; `#screen-hub` rebuilt as a 3-column command center (profile/stats/tier · 3 large mode cards · recent + performance + suggested); demo-nav debug strip removed. (5) `dashboard.html` rebuilt as a game control center: Player Status panel (Arena lime + BR coral rating split, Last 5 pips, Next-level unlocks) → Live activity strip → Ready to Play 3-card row; Your Plan tier panel with usage bars; pillar cards gain pulsing status sub-lines + hover lift/glow. (6) **Unified mode header** added in `styles.css` (`.mode-header`, `:root --mode-header-h: 76px`) and applied to all four game-mode pages — old per-page hero blocks (`.lh-hero`, `.arena-hero`, `.br-header`, `.topbar`) removed; per-mode icon tints (`.icon-leagues/arena/br/trivia`); inert "How to Play" chip wired in a future sprint. **All existing dynamic IDs and JS functions preserved.** `docs/GAMEPLAY_ARCHITECTURE.md` and `docs/BR_SESSION_SYSTEM.md` updated with the canonical "Battle Royale — Final Product Definition" (survival, no 1v1/FFA, Classic/Ranked only, 8–12 players, no-answer = damage) plus a five-item Phase 4 server-side enforcement TODO for production Ranked BR.
 
 Last updated 2026-05-02 — Battle Royale Phase 3 ELO ratings deployed. Migration 050 (`update_br_ratings`) applied ✅. `update_br_ratings(p_session_id UUID)` SECURITY DEFINER RPC computes and writes ELO (SR) rating changes after a completed BR session. Reads placements from `br_session_players`, applies pairwise ELO against every other participant, then writes `br_rating_before/after/delta` to `br_session_players` and updates `users.br_rating/br_games_played/br_rating_updated_at`. ELO model: K-factor tiers (32 when `br_games_played < 5`, 24 when `< 20`, 20 when `≥ 20`); pairwise delta for each opponent = `K × (actual − expected)` where `expected = 1/(1 + 10^((opp_rating − own_rating)/400))`, actual = 1/0.5/0 for win/tie/loss; total delta normalised by `GREATEST(1, N−1)` to keep magnitude ~= 1v1 regardless of lobby size; rating floor 800 (starts at 1000); delta clamp [-100, +100]. Idempotent: returns `{skipped:true}` if any player already has `br_rating_before` set. Session must be `completed` and have ≥ 2 players with placements. GRANT EXECUTE to `authenticated, service_role`. All migrations 001–050 applied ✅.
@@ -1902,6 +1904,111 @@ See `supabase/functions/generate-questions/DEPLOY.md` for the full checklist inc
 ---
 
 ## Update Log
+
+### 2026-05-04 — Platform-wide UI continuation: popups, messaging, help center, fixtures, BR fixes
+
+Continuation of the 2026-05-03 sprint. **Zero backend, no migrations, no RPC changes, no routing rename.** Everything below is UI/UX, sidebar nav additions, three new player pages, and one defensive bug-fix for the leaderboard popup data.
+
+**Sidebar (`sidebar.js`):**
+- `Dashboard` label → **`Game Center`** (href and icon unchanged so all existing links still work).
+- New player nav entries:
+  - **Fixtures** (→ `matches.html`) under the schedule cluster
+  - **Find Venues** (→ `venues.html`) under new "Play in Person" section header
+  - **Messages** (→ `message-center.html`), **Help** (→ `help.html`), **Support** (→ `support.html`) under the Account section
+- Profile footer restructured: avatar + name/tier on top row, then a 4-button **action bar** below (🔔 Notifications · ✉️ Messages · 🛟 Support · ⏏ Logout). Logout merged into the same row instead of a one-off button. Unread badges on the notifications + messages buttons.
+- Sidebar.js auto-loads `chat-popups.js` once per page (player nav only) so every shell page gets the popup widgets without manual `<script>` tags.
+
+**`chat-popups.js` (new — popup widgets for the sidebar action bar):**
+- Three popups injected into `<body>` on first sidebar render: Notifications, Messages, Support.
+- **Notifications popup**: real data from `notifications` table (migration 005 triggers populate it). Shows last 8 items, "Mark all read" runs an `update is_read = true` against actual rows, badge count from unread, footer link → `notifications.html`.
+- **Messages popup**: 5 mock conversations. Click any row → expands inline quick-reply input + Send button. Clearly labelled "Demo data — backend ships in a future sprint". Footer link → `message-center.html`.
+- **Support popup**: 2-row mock inbox + textarea contact form. Footer link → `support.html`.
+- Click-outside / ESC closes. `window.SpontixPopups` exposed for debugging.
+
+**`message-center.html` (new):**
+- Unified mode header (purple `.icon-messages` tint) + tabs (All / Direct / Leagues) + modern 2-pane messenger:
+  - **Left**: conversations list with search input + "New message" button
+  - **Right**: active thread with avatars, day separators, you/them bubbles, online status, composer with Send button + Enter shortcut
+- Mobile: list and thread swap; back arrow returns to list
+- 5 mock conversations, 5 mock threads with realistic banter (player DMs + league chats)
+- Sending a message updates the local thread + bumps the list preview; toast notes that the backend ships later
+- Width: full content area (`width: 100%`, no `max-width` cap)
+
+**`support.html` (new):**
+- Unified mode header (teal help icon) + 2-column layout: contact form on the left, Spontyx inbox on the right
+- **Contact form**: Topic + Priority on a single 2-column row · Subject input · Message textarea · screenshot upload field (PNG/JPG, 5 MB client-side limit, drag-or-click drop zone with filename + clear button after pick) · Send button + "We typically respond in under 24h" hint inline
+- **Inbox**: 3 mock system messages with read/unread state
+- Width: fills available space (`width: 100%`, breakpoint 1100px for stack)
+- Form alignment uses `.sp-field` flex-column wrappers so labels sit cleanly above inputs (was inconsistent with bare `<div>` wrappers before)
+
+**`help.html` (new) + `support.html` Quick Answers card:**
+- Shared accordion + search system (`.help-*` classes in `styles.css`) — used on both pages so styling is one source of truth
+- **`help.html`** is the full FAQ encyclopedia: 7 grouped category cards with real-time search across category title + question text + answer text:
+  - Spontyx Basics · **Game Modes** (Leagues / Arena / Battle Royale / Trivia subsections — each gets 4 questions: *what is it · how does it work · how many players · what modes/sub-modes within it*) · Scoring & Multipliers · Leaderboards · Account & Tiers · Real-World Questions · Venues & Events
+- **`support.html`** Quick Answers card: same accordion system but a 6-question hand-picked subset + "See all answers →" link to `help.html`
+- All answers are intentionally `<em class="placeholder">— add answer —</em>` stubs for fill-in pre-launch. The user will populate real copy at the end.
+- Demo-data note on `help.html`: "Answers fill in pre-launch."
+
+**`matches.html` (Fixtures) — mode-driven entry-point redesign:**
+- Old `.page-header` ("Browse Matches") replaced with the unified `.mode-header` (lime `.icon-fixtures` tint, title "Fixtures", subtitle "All upcoming matches across every sport. Pick one and choose how you want to play it.")
+- Filter bar restructured into the same chip system used on BR Step 2 + leaderboard: search input + Sport row (Football today, multi-sport ready) + League row (dynamic chips from real `api_football_fixtures` + `sports_competitions` join). Sport→League cascade rebuilds available leagues; orphaned selections fall back to "All"
+- Removed: right sidebar (Overview stats + Competitions list — duplicated by chips), date-tabs (out of scope per the user's filter spec)
+- Per-card actions row: replaced the single "Match Live" button with **three primary CTAs + Save**:
+  - 🟣 **Create League** → `create-league.html?prefill_match=1&...` (existing prefill flow, pre-binds the match)
+  - 🟢 **Enter Arena** → `multiplayer.html`
+  - 🔴 **Battle Royale** → `br-lobby.html`
+  - 🔖 **Save** (kept) — adds match to Schedule; post-save inline CTA flow preserved
+- Actions row uses `flex-wrap` so it stacks gracefully on narrow screens
+
+**`br-lobby.html` Step 2 (Battlefield) — finally working:**
+- **Critical fix**: SELECT was `select('..., league_name')` but `api_football_fixtures` has **no** `league_name` column (only `league_id`). Postgres rejected the column → entire SELECT failed → empty state always shown regardless of how many fixtures existed. Now mirrors `matches.html` exactly: `fixture_id, league_id, kickoff_at, status_short, home_team_name, away_team_name, round`.
+- Window expanded from `-2h to +48h` (limit 60) → `-3h to +14d` (limit 200) — same as Fixtures.
+- League names canonicalised via `sports_competitions` join (`compById[league_id]`) → display chip names match Fixtures exactly.
+- Errors now surface in the empty-state message instead of being swallowed under generic copy.
+- BR Step 2 chip system itself (Sport / League cascading) was added in the prior session pass; now actually populates because the underlying query works.
+
+**Unified mode header now applied to:**
+- `dashboard.html` ("Game Center", lime icon) — replaces `.topbar` + "Welcome back, Bran" page-header. Subtitle dynamic: "Welcome back, {name} — your platform-wide control center." `#dash-welcome-name` span hydrated by both `hydrateFromStore()` and `applyRealProfile()`. Hidden legacy `.page-header h1 span` kept as a safety net for any unseen JS targeting it.
+- `activity.html` ("Your Games", coral icon — lightning bolt)
+- `upcoming.html` ("Schedule", teal icon — calendar)
+- `notifications.html` ("Notifications", coral bell). Also fixed missing `supabase-client.js` + `spontix-store.js` script tags that prevented the sidebar profile from rendering on this page.
+- `venues.html` ("Find Venues", gold pin)
+- `matches.html` ("Fixtures", lime clock)
+- `leaderboard.html` ("Leaderboard", gold trophy) — Phase 1 redesign per `docs/LEADERBOARD_ARCHITECTURE.md`. See its own dedicated entry below.
+
+**Mode header consistency fixes:**
+- `.app-shell { flex: 1; min-width: 0; width: 100% }` promoted to global in `styles.css` — was previously only scoped to `multiplayer.html`. Without it, body `display: flex` made `.app-shell` a flex item with default `flex: 0 1 auto` that could collapse, leaving `.main` narrower than the area next to the sidebar. This was why Leagues looked off-centre vs Arena.
+- BR `.main { padding: 28px 40px }` was wrapping the unified `.mode-header`, pushing it 40px inward vs Arena/Trivia. Fixed: `.main { padding: 0 0 40px }` + sibling selector `.main > *:not(.mode-header):not(.br-bg-glow) { padding-left: 40px; padding-right: 40px }` so the mode header is full-width like the other pages while BR's content beneath keeps the same 40px (16px mobile) inset.
+- `.icon-messages` (purple), `.icon-yourgames` (coral), `.icon-schedule` (teal), `.icon-gamecenter` (lime), `.icon-fixtures` (lime), `.icon-help` (teal), `.icon-leaderboard` (gold), `.icon-venues` (gold), `.icon-br` (coral), `.icon-arena` (lime), `.icon-leagues` (purple), `.icon-trivia` (teal) — full per-page tint palette for the shared `.mode-icon`.
+
+**Battle Royale lobby vertical hierarchy under header:**
+- Players row was sitting flush against the mode-header — cramped vs Arena and Trivia which already breathe via internal top padding.
+- Hierarchy applied (header → context → rules → interaction):
+  - header → `.br-live-row` (players online): 24px medium
+  - `.br-live-row` → `.br-tension` (survival strip): 16px small
+  - `.br-tension` → `.steps-bar`: 20px larger (kept)
+  - `.steps-bar` → step content: 22px (kept)
+- Also removed a previously-dead `.main > .mode-header + *:not(.br-bg-glow) { margin-top }` rule (the absolutely-positioned `.br-bg-glow` sits between the header and the next element in DOM, so the adjacent-sibling selector never matched).
+
+**Dashboard Ready-to-Play consolidation:**
+- "Ready to Play" grid expanded from 3 → 4 columns. Added **Leagues** card (purple icon) so all four pillar destinations are reachable from one row.
+- Removed the bottom 4-pillar `.action-cards-grid` block entirely. It was duplicating the same destinations and made the page feel longer than necessary. Single, clear mode-entry surface now.
+- Responsive: 4 cols ≥1100px → 2 cols 600–1099 → 1 col <600.
+
+**`create-league.html`: Event League hidden:**
+- Event League card commented out of Step 1 (debut at NFL Draft 2027). Players now see three types: Season-Long, Match Night, Custom.
+- The `'event'` value is still in the `typeNames` map and `selectType()` accepts any string, so any prefilled URL with `league_type=event` continues to work and re-enabling the card is purely an HTML uncomment.
+
+**Leaderboard Phase 1** — see commit `406bbca` and the dedicated `docs/LEADERBOARD_ARCHITECTURE.md` for the full audit. Highlights: unified mode header, live activity strip, 3-axis filter system (Scope · Mode · Time) with disabled "Soon" chips for Combined / Trivia / Rising / Speed / Clutch / Survival / Consistency, two-column grid (main list + 320px right context panel), pre-load Arena + BR data on init so the right panel populates without tab switches, `?view=` URL deep-link param, `br-leaderboard.html` redirect to `leaderboard.html?view=br`. Existing `loadLeaderboardData` / `loadArenaLeaderboard` / `loadBrLeaderboard` / `getLeagueLeaderboard` / `SpontixStoreAsync.getLeaderboard` and all render functions preserved verbatim.
+
+**Constraints honoured across the sprint:**
+- Zero backend / Supabase / RPC / migration / routing changes
+- All existing dynamic IDs preserved (`activity-alert`, `dash-xp-*`, `dash-arena-*`, `dash-trophy-count`, `badge-live`, `nav-games-sub`, `nav-schedule-sub`, `mp-page-title`)
+- All existing JS functions untouched (`selectMode`, `selectFormat`, `enterLobby`, `handleBack`, `goStep`, `goScreen`, `tryInstantiate`, `refreshWaitingRoom`, `switchView`, `selectTime`, `selectCat`, `loadArenaLeaderboard`, `loadBrLeaderboard`, etc.)
+- DB CHECK constraints (e.g. `br_sessions.mode IN ('1v1','ffa','2v2')`) untouched — Classic vs Ranked distinction is client-side only with the Phase 4 migration TODO documented in `docs/BR_SESSION_SYSTEM.md`
+- Notifications popup is the **only** new piece touching real data (uses the existing `notifications` table from migration 005). Messages + Support popups + Message Center page + Help/FAQ answers are all explicitly labelled "Demo data" / "Answers fill in pre-launch"
+
+---
 
 ### 2026-05-03 — UI overhaul sprint: dashboard, mode pages, unified header
 
