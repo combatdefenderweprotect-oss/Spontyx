@@ -12,15 +12,15 @@
 <style>
 /* ── Layout ─────────────────────────────────────────────────────────────── */
 /* .main keeps NO horizontal padding so the unified .mode-header sits full-width
-   like Arena/Trivia. Page-level inset is applied to children only. */
+   like Arena/Trivia. Page-level inset is applied to children only.
+   Vertical hierarchy under header: header → live-row (medium) → tension
+   (small) → steps (larger) → step content. */
 .main { padding: 0 0 40px; position: relative; }
 .main > *:not(.mode-header):not(.br-bg-glow) { padding-left: 40px; padding-right: 40px; }
-.main > .mode-header + *:not(.br-bg-glow) { margin-top: 28px; }
 
 @media (max-width: 900px) {
   .main { padding: 0 0 32px; }
   .main > *:not(.mode-header):not(.br-bg-glow) { padding-left: 16px; padding-right: 16px; }
-  .main > .mode-header + *:not(.br-bg-glow) { margin-top: 18px; }
 }
 
 /* Subtle radial glow behind the mode cards — pulls focus to the decision. */
@@ -58,12 +58,17 @@
 /* ── Live-feel row ──────────────────────────────────────────────────────── */
 .br-live-row {
   display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
-  margin-bottom: 14px;
+  /* Hierarchy: medium gap from header, small gap to survival strip */
+  margin-top: 24px;
+  margin-bottom: 16px;
   padding-left: 2px;
   font-size: 0.74rem;
   letter-spacing: 0.04em;
   color: rgba(255,255,255,0.42);
   font-variant-numeric: tabular-nums;
+}
+@media (max-width: 900px) {
+  .br-live-row { margin-top: 18px; margin-bottom: 12px; }
 }
 .br-live-item { display: inline-flex; align-items: center; gap: 6px; }
 .br-live-orb {
