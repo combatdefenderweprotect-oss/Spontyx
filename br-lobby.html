@@ -182,7 +182,7 @@
 /* Cinematic mode cards */
 .pv-modes {
   display: grid;
-  grid-template-columns: 1fr 1.06fr;
+  grid-template-columns: 1fr 1fr;
   gap: 18px;
   margin-bottom: 28px;
   align-items: stretch;
@@ -199,29 +199,11 @@
   transition: transform 0.2s cubic-bezier(0.16,1,0.3,1), border-color 0.18s, box-shadow 0.22s, background 0.18s;
 }
 .pv-mode:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.14); }
-.pv-mode.classic { opacity: 0.85; }
-.pv-mode.classic:hover { opacity: 1; border-color: rgba(168,225,12,0.30); }
-.pv-mode.classic.selected {
-  opacity: 1;
+.pv-mode.selected {
   border-color: var(--lime);
   background: var(--lime-dim);
-  box-shadow: 0 0 28px rgba(168,225,12,0.14), inset 0 0 0 1px rgba(168,225,12,0.4);
-  transform: translateY(-2px) scale(1.02);
-}
-.pv-mode.ranked {
-  transform: scale(1.02);
-  border-color: rgba(168,225,12,0.20);
-  box-shadow: 0 0 30px rgba(168,225,12,0.08);
-}
-.pv-mode.ranked:hover {
-  transform: scale(1.035) translateY(-2px);
-  border-color: rgba(168,225,12,0.45);
-  box-shadow: 0 0 40px rgba(168,225,12,0.18);
-}
-.pv-mode.ranked.selected {
-  transform: scale(1.035);
-  background: var(--lime-dim);
-  box-shadow: 0 0 44px rgba(168,225,12,0.26), inset 0 0 0 1px rgba(168,225,12,0.55);
+  box-shadow: 0 0 32px rgba(168,225,12,0.20), inset 0 0 0 1px rgba(168,225,12,0.45);
+  transform: translateY(-2px);
 }
 .pv-mode-recommend {
   position: absolute; top: 14px; right: 14px;
@@ -313,7 +295,7 @@
   .pv-btn-primary, .pv-hero {
     animation: none !important;
   }
-  .pv-mode.ranked, .pv-mode.ranked.selected, .pv-mode.classic.selected { transform: none !important; }
+  .pv-mode.selected { transform: none !important; }
 }
 
 /* Subtle radial glow behind the mode cards — pulls focus to the decision. */
@@ -1451,10 +1433,18 @@ function goStep(n) {
 // action buttons. The user can then pick Battlefield (manual) or Instant
 // Drop In (auto-join the busiest waiting lobby).
 function selectMode(mode) {
-  selectedMode = mode;
-  document.querySelectorAll('.mode-card').forEach(function(c) { c.classList.remove('selected'); });
-  document.getElementById('mode-' + mode).classList.add('selected');
+  var card    = document.getElementById('mode-' + mode);
   var actions = document.getElementById('step1-actions');
+  // Toggle off if clicking the already-selected card
+  if (selectedMode === mode) {
+    selectedMode = null;
+    if (card) card.classList.remove('selected');
+    if (actions) actions.style.display = 'none';
+    return;
+  }
+  selectedMode = mode;
+  document.querySelectorAll('.pv-mode').forEach(function(c) { c.classList.remove('selected'); });
+  if (card) card.classList.add('selected');
   if (actions) actions.style.display = '';
 }
 
