@@ -705,6 +705,11 @@
         <div class="type-card-check"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
       </div>
 
+      <!-- Event League — hidden until NFL Draft 2027 launch.
+           Re-enable this block to bring it back. JS keeps support for
+           leagueType === 'event' (typeNames map line ~2570), so no other
+           changes are needed when restoring. -->
+      <!--
       <div class="type-card" onclick="selectType(this, 'event')">
         <div class="type-card-icon" style="background:rgba(124,92,252,0.12);">
           <svg viewBox="0 0 24 24" stroke="var(--purple)" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
@@ -715,6 +720,7 @@
         </div>
         <div class="type-card-check"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
       </div>
+      -->
 
       <div class="type-card" onclick="selectType(this, 'match')">
         <div class="type-card-icon" style="background:rgba(255,107,107,0.12);">
