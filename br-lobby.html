@@ -115,6 +115,70 @@
 .step-section { display: none; }
 .step-section.active { display: block; }
 
+/* ── Battlefield head + mode pill ─────────────────────────────────────── */
+.bf-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 12px; margin-bottom: 10px;
+}
+.bf-mode-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 12px; border-radius: 999px;
+  background: var(--lime-dim);
+  border: 1px solid rgba(168,225,12,0.32);
+  color: var(--lime);
+  font-size: 0.66rem; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  white-space: nowrap;
+}
+.bf-mode-pill.ranked {
+  background: rgba(255,107,107,0.10);
+  border-color: rgba(255,107,107,0.32);
+  color: var(--coral);
+}
+
+/* ── Player-count badge on a match row ─────────────────────────────────── */
+.match-players-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 999px;
+  background: rgba(168,225,12,0.10);
+  border: 1px solid rgba(168,225,12,0.28);
+  color: var(--lime);
+  font-size: 0.7rem; font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.match-players-badge .pulse-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--lime);
+  box-shadow: 0 0 6px rgba(168,225,12,0.6);
+  animation: live-pulse 1.6s ease-in-out infinite;
+}
+.match-players-badge.empty {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.08);
+  color: var(--grey-dark);
+}
+.match-players-badge.empty .pulse-dot { background: var(--grey-dark); animation: none; box-shadow: none; }
+
+/* Late-match guard treatment */
+.match-row.too-late {
+  opacity: 0.45;
+  cursor: not-allowed;
+  position: relative;
+}
+.match-row.too-late:hover { transform: none; border-color: rgba(255,255,255,0.06); }
+.match-row.too-late::after {
+  content: 'Too late to join';
+  position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+  font-size: 0.62rem; font-weight: 700;
+  color: var(--coral);
+  background: rgba(255,107,107,0.08);
+  border: 1px solid rgba(255,107,107,0.22);
+  padding: 3px 9px; border-radius: 999px;
+  white-space: nowrap;
+}
+
 .section-title {
   font-size: 1rem;
   font-weight: 700;
@@ -755,8 +819,7 @@
     <div class="steps-bar">
       <div class="step-pill active" id="spill-1">① Mode</div>
       <div class="step-pill" id="spill-2">② Battlefield</div>
-      <div class="step-pill" id="spill-3">③ Scope</div>
-      <div class="step-pill" id="spill-4">④ Waiting Room</div>
+      <div class="step-pill" id="spill-3">③ Waiting Room</div>
     </div>
 
     <!-- ── Step 1: Mode (Classic vs Ranked) ──────────────────────────────── -->
@@ -784,41 +847,47 @@
         </div>
       </div>
 
-      <div class="action-row">
-        <button class="btn btn-primary" id="btn-next-1" onclick="goStep(2)" disabled>
+      <!-- After mode selection, two CTAs: instant matchmaking OR pick a battlefield. -->
+      <div class="action-row" id="step1-actions" style="display:none;">
+        <button class="btn btn-ghost" id="btn-pick-battlefield" onclick="goStep(2)">
           Pick Battlefield →
+        </button>
+        <button class="btn btn-primary" id="btn-instant-drop" onclick="instantDropIn()">
+          🔥 Instant Drop In
         </button>
       </div>
     </div>
 
-    <!-- ── Step 2: Match ─────────────────────────────────────────────────── -->
+    <!-- ── Step 2: Battlefield ───────────────────────────────────────────── -->
     <div class="step-section" id="step-2">
-      <p class="section-title">Choose your battlefield</p>
-      <p class="section-sub">Live matches drop questions in real time — most intense survival.</p>
+      <div class="bf-head">
+        <div>
+          <p class="section-title">Choose your battlefield</p>
+          <p class="section-sub">Pick the match you want to survive.</p>
+        </div>
+        <span class="bf-mode-pill" id="bf-mode-pill">Battlefield</span>
+      </div>
 
       <div class="match-search-row">
         <input type="text" id="match-search" placeholder="Search teams..." oninput="filterMatches()">
       </div>
 
       <div class="match-filters-wrap">
-        <!-- Sport chips — populated from real fixtures we have data for.
-             Today: Football only (per System Rules). New sports added here
-             as they ship. Hockey/Tennis lines kept disabled below as
-             roadmap markers — remove .disabled when their fixture pipeline
-             ships. -->
         <div class="match-filter-row" id="sport-filter-row">
           <span class="match-filter-label">Sport</span>
           <button class="match-filter-chip active" data-sport="all"      onclick="selectSport(this,'all')">All</button>
           <button class="match-filter-chip"        data-sport="football" onclick="selectSport(this,'football')">Football</button>
         </div>
 
-        <!-- League chips — populated dynamically from distinct league_name
-             values in api_football_fixtures (next 48h window). Filtered
-             further by selected sport. -->
         <div class="match-filter-row" id="league-filter-row">
           <span class="match-filter-label">League</span>
           <button class="match-filter-chip active" data-league="all" onclick="selectLeague(this,'all')">All</button>
-          <!-- league chips appended here by loadMatches() -->
+        </div>
+
+        <div class="match-filter-row" id="sort-filter-row">
+          <span class="match-filter-label">Sort</span>
+          <button class="match-filter-chip active" data-sort="time"    onclick="setSort(this,'time')">By kickoff time</button>
+          <button class="match-filter-chip"        data-sort="players" onclick="setSort(this,'players')">By players waiting</button>
         </div>
       </div>
 
@@ -828,37 +897,6 @@
 
       <div class="action-row">
         <button class="btn btn-ghost" onclick="goStep(1)">← Back</button>
-        <button class="btn btn-primary" id="btn-next-2" onclick="goStep(3)" disabled>
-          Set Scope →
-        </button>
-      </div>
-    </div>
-
-    <!-- ── Step 3: Match scope (de-emphasized) ───────────────────────────── -->
-    <div class="step-section" id="step-3">
-      <p class="section-title-small">Match scope</p>
-      <p class="section-sub" id="step3-match-label">Full Match</p>
-
-      <div class="half-grid compact">
-        <div class="half-card selected" onclick="selectHalf('full_match')" id="half-full">
-          <div class="half-card-name">Full Match</div>
-          <div class="half-card-sub">0′ – 90′</div>
-        </div>
-        <div class="half-card" onclick="selectHalf('first_half')" id="half-first">
-          <div class="half-card-name">First Half</div>
-          <div class="half-card-sub">0′ – 45′</div>
-        </div>
-        <div class="half-card" onclick="selectHalf('second_half')" id="half-second">
-          <div class="half-card-name">Second Half</div>
-          <div class="half-card-sub">45′ – 90′</div>
-        </div>
-      </div>
-
-      <div class="action-row">
-        <button class="btn btn-ghost" onclick="goStep(2)">← Back</button>
-        <button class="btn btn-primary" id="btn-enter" onclick="enterLobby()">
-          Enter Battle Royale →
-        </button>
       </div>
     </div>
 
@@ -973,9 +1011,11 @@ window.addEventListener('DOMContentLoaded', async function() {
 });
 
 // ── Step navigation ───────────────────────────────────────────────────────────
+// Three-step flow: ① Mode → ② Battlefield → ③ Waiting Room (overlay).
 function goStep(n) {
   document.querySelectorAll('.step-section').forEach(function(s) { s.classList.remove('active'); });
-  document.getElementById('step-' + n).classList.add('active');
+  var sec = document.getElementById('step-' + n);
+  if (sec) sec.classList.add('active');
 
   document.querySelectorAll('.step-pill').forEach(function(p, i) {
     p.classList.remove('active', 'done');
@@ -983,10 +1023,16 @@ function goStep(n) {
     else if (i === n - 1) p.classList.add('active');
   });
 
-  if (n === 2 && allMatches.length === 0) loadMatches();
-  if (n === 3 && selectedMatch) {
-    document.getElementById('step3-match-label').textContent =
-      selectedMatch.home_team_name + ' vs ' + selectedMatch.away_team_name;
+  if (n === 2) {
+    // Update mode pill at top of Battlefield
+    var pill = document.getElementById('bf-mode-pill');
+    if (pill) {
+      var label = (selectedMode === 'ranked') ? '⚔️ Ranked Survival' : '🎯 Classic Survival';
+      pill.textContent = label;
+      pill.classList.toggle('ranked', selectedMode === 'ranked');
+    }
+    if (allMatches.length === 0) loadMatches();
+    else loadWaitingPlayerCounts();   // refresh counts on re-entry
   }
 }
 
@@ -994,17 +1040,16 @@ function goStep(n) {
 // 'classic' or 'ranked'. UI-only distinction; both map to DB mode='ffa' for now
 // (DB CHECK constraint allows only '1v1' | 'ffa' | '2v2'). Server-side rating
 // gate for Ranked is Phase 4 — see docs/BR_SESSION_SYSTEM.md.
+//
+// NEW (per user spec): clicking a mode card immediately reveals the two
+// action buttons. The user can then pick Battlefield (manual) or Instant
+// Drop In (auto-join the busiest waiting lobby).
 function selectMode(mode) {
   selectedMode = mode;
   document.querySelectorAll('.mode-card').forEach(function(c) { c.classList.remove('selected'); });
   document.getElementById('mode-' + mode).classList.add('selected');
-  var nextBtn = document.getElementById('btn-next-1');
-  nextBtn.disabled = false;
-  // Step 3 CTA label reflects mode choice
-  var enterBtn = document.getElementById('btn-enter');
-  if (enterBtn) {
-    enterBtn.textContent = (mode === 'ranked') ? 'Enter Ranked Survival →' : 'Enter Battle Royale →';
-  }
+  var actions = document.getElementById('step1-actions');
+  if (actions) actions.style.display = '';
 }
 
 // ── Match loading ─────────────────────────────────────────────────────────────
@@ -1073,7 +1118,70 @@ async function loadMatches() {
   // Populate league chips from real fixture data only — no fake leagues.
   rebuildLeagueChips();
 
+  // Load player-counts in parallel; renderMatches first so the list paints
+  // immediately, then it re-renders once counts arrive.
   renderMatches(allMatches);
+  loadWaitingPlayerCounts();
+}
+
+// ── Player counts per match (real data) ──────────────────────────────────────
+// Two queries:
+//   1. waiting br_sessions for our visible match list
+//   2. count of players per session
+// Aggregated client-side into playerCountByMatch[match_id] = N.
+var playerCountByMatch = {};   // match_id (string) → total waiting players
+async function loadWaitingPlayerCounts() {
+  if (!allMatches.length) return;
+  var ids = allMatches.map(function(m){ return String(m.fixture_id); });
+  try {
+    // Step 1: waiting BR sessions for these matches
+    var sessRes = await window.sb
+      .from('br_sessions')
+      .select('id, match_id')
+      .eq('status', 'waiting')
+      .in('match_id', ids);
+    if (!sessRes || !sessRes.data || sessRes.data.length === 0) {
+      playerCountByMatch = {};
+      renderMatches(applyCurrentFilters());
+      return;
+    }
+    var sessions = sessRes.data;
+    var sessIds  = sessions.map(function(s){ return s.id; });
+    var sessToMatch = {};
+    sessions.forEach(function(s){ sessToMatch[s.id] = String(s.match_id); });
+
+    // Step 2: players in those sessions
+    var playerRes = await window.sb
+      .from('br_session_players')
+      .select('session_id')
+      .in('session_id', sessIds);
+
+    var counts = {};
+    (playerRes.data || []).forEach(function(p){
+      var mid = sessToMatch[p.session_id];
+      if (mid) counts[mid] = (counts[mid] || 0) + 1;
+    });
+    playerCountByMatch = counts;
+  } catch (e) {
+    console.warn('[br-lobby] player count load failed', e);
+    playerCountByMatch = {};
+  }
+  renderMatches(applyCurrentFilters());
+}
+
+// ── Late-match guard ─────────────────────────────────────────────────────────
+// Block joining when the match is finished/cancelled OR less than ~10 minutes
+// of regulation remain (2H + minute >= 80). BR rounds run ~2 min each so a
+// fresh 4-question pool wouldn't finish before the final whistle.
+var DEAD_STATUSES = ['FT','AET','PEN','CANC','PST','ABD','SUSP','INT'];
+function isMatchTooLate(m) {
+  if (!m || !m.status_short) return false;
+  if (DEAD_STATUSES.indexOf(m.status_short) !== -1) return true;
+  // We don't fetch status_elapsed in the SELECT (it's not in the column list),
+  // so we conservatively allow live matches and rely on the resolver/lobby
+  // to handle edge cases. Future improvement: include status_elapsed and
+  // block 2H + elapsed >= 80.
+  return false;
 }
 
 // Build league chip row from currently-loaded fixtures, filtered by selected
@@ -1140,16 +1248,31 @@ function selectLeague(chip, leagueName) {
   filterMatches();
 }
 
-function filterMatches() {
-  var q = document.getElementById('match-search').value.toLowerCase();
-  var filtered = allMatches.filter(function(m) {
+// Sort state — kickoff time (default) or players-waiting (busiest first).
+var selectedSort = 'time';
+function setSort(chip, sort) {
+  selectedSort = sort;
+  document.querySelectorAll('#sort-filter-row .match-filter-chip').forEach(function(c) {
+    c.classList.toggle('active', c === chip);
+  });
+  filterMatches();
+}
+
+// Helper used by both filterMatches and async player-count refresh.
+function applyCurrentFilters() {
+  var qEl = document.getElementById('match-search');
+  var q   = qEl ? qEl.value.toLowerCase() : '';
+  return allMatches.filter(function(m) {
     var name      = (m.home_team_name + ' ' + m.away_team_name).toLowerCase();
     var sportOk   = selectedSport  === 'all' || sportOf(m) === selectedSport;
     var leagueOk  = selectedLeague === 'all' || m.league_display === selectedLeague;
     var searchOk  = !q || name.includes(q);
     return sportOk && leagueOk && searchOk;
   });
-  renderMatches(filtered);
+}
+
+function filterMatches() {
+  renderMatches(applyCurrentFilters());
 }
 
 function renderMatches(matches) {
@@ -1159,38 +1282,63 @@ function renderMatches(matches) {
     return;
   }
 
-  var isLive = function(s) { return ['1H','HT','2H','ET','BT'].includes(s); };
+  // Apply the active sort BEFORE rendering.
+  var sorted = matches.slice();
+  if (selectedSort === 'players') {
+    sorted.sort(function(a, b) {
+      var pa = playerCountByMatch[String(a.fixture_id)] || 0;
+      var pb = playerCountByMatch[String(b.fixture_id)] || 0;
+      if (pb !== pa) return pb - pa;                                      // most-waited first
+      return new Date(a.kickoff_at) - new Date(b.kickoff_at);             // tie-break: kickoff
+    });
+  } else {
+    sorted.sort(function(a, b) { return new Date(a.kickoff_at) - new Date(b.kickoff_at); });
+  }
+
+  var isLive = function(s) { return ['1H','HT','2H','ET','BT','P'].includes(s); };
   var isSoon = function(m) {
     var diff = (new Date(m.kickoff_at) - Date.now()) / 60000;
     return diff >= 0 && diff <= 60;
   };
 
-  list.innerHTML = matches.map(function(m) {
-    var live = isLive(m.status_short);
-    var soon = !live && isSoon(m);
+  list.innerHTML = sorted.map(function(m) {
+    var live        = isLive(m.status_short);
+    var soon        = !live && isSoon(m);
     var statusClass = live ? 'live' : soon ? 'soon' : 'upcoming';
-    var timeStr = live ? '' : formatKickoff(m.kickoff_at);
-    var liveBadge = live ? '<span class="match-row-live-badge">LIVE</span>' : '';
-    var selected = selectedMatch && selectedMatch.fixture_id === m.fixture_id ? ' selected' : '';
-    return '<div class="match-row' + selected + '" onclick="selectMatch(' + m.fixture_id + ')">' +
+    var timeStr     = live ? '' : formatKickoff(m.kickoff_at);
+    var liveBadge   = live ? '<span class="match-row-live-badge">LIVE</span>' : '';
+    var tooLate     = isMatchTooLate(m);
+    var rowCls      = 'match-row' + (tooLate ? ' too-late' : '');
+    var clickHandler = tooLate ? '' : ' onclick="selectMatch(' + m.fixture_id + ')"';
+
+    var count       = playerCountByMatch[String(m.fixture_id)] || 0;
+    var playersBadge = count > 0
+      ? '<span class="match-players-badge"><span class="pulse-dot"></span>' + count + ' waiting</span>'
+      : '<span class="match-players-badge empty"><span class="pulse-dot"></span>0 waiting</span>';
+
+    return '<div class="' + rowCls + '"' + clickHandler + '>' +
       '<div class="match-row-status ' + statusClass + '"></div>' +
       '<div class="match-row-teams">' +
         '<div class="match-row-name">' + esc(m.home_team_name) + ' vs ' + esc(m.away_team_name) + '</div>' +
-        '<div class="match-row-comp">' + esc(m.league_name || '') + '</div>' +
+        '<div class="match-row-comp">' + esc(m.league_display || '') + '</div>' +
       '</div>' +
+      playersBadge +
       '<div class="match-row-time">' + (live ? liveBadge : timeStr) + '</div>' +
     '</div>';
   }).join('');
 }
 
-var _matchLookup = {};
+// Match click → instant join. No more Step 3 / Scope picker.
 function selectMatch(fixtureId) {
   var m = allMatches.find(function(x) { return x.fixture_id == fixtureId; });
   if (!m) return;
+  if (isMatchTooLate(m)) {
+    showToast('That match is too late to join — too little time left for a survival round.', true);
+    return;
+  }
   selectedMatch = m;
-  document.querySelectorAll('.match-row').forEach(function(r) { r.classList.remove('selected'); });
-  event.currentTarget.classList.add('selected');
-  document.getElementById('btn-next-2').disabled = false;
+  selectedHalf  = 'full_match';      // dropped Scope step — always full match
+  enterLobby();
 }
 
 function formatKickoff(iso) {
@@ -1202,19 +1350,64 @@ function formatKickoff(iso) {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
-// ── Half scope ────────────────────────────────────────────────────────────────
-function selectHalf(half) {
-  selectedHalf = half;
-  document.querySelectorAll('.half-card').forEach(function(c) { c.classList.remove('selected'); });
-  var map = { 'full_match': 'half-full', 'first_half': 'half-first', 'second_half': 'half-second' };
-  document.getElementById(map[half]).classList.add('selected');
+// ── Instant Drop In ──────────────────────────────────────────────────────────
+// Find the busiest waiting BR session across all current fixtures + join its
+// match. Fallback: if no waiting sessions exist, jump to Battlefield so the
+// user can pick.
+async function instantDropIn() {
+  if (!selectedMode) return;
+  var btn = document.getElementById('btn-instant-drop');
+  var prev = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = 'Finding lobby…';
+
+  try {
+    if (!allMatches.length) await loadMatches();
+    if (!allMatches.length) throw new Error('No fixtures available — try again soon');
+
+    await loadWaitingPlayerCounts();
+
+    // Build candidate list: matches that have at least 1 player waiting AND
+    // are not too late to join.
+    var candidates = allMatches
+      .filter(function(m) { return !isMatchTooLate(m); })
+      .map(function(m) { return { m: m, count: playerCountByMatch[String(m.fixture_id)] || 0 }; })
+      .sort(function(a, b) {
+        if (b.count !== a.count) return b.count - a.count;             // busiest first
+        return new Date(a.m.kickoff_at) - new Date(b.m.kickoff_at);    // tie-break: soonest
+      });
+
+    var hot = candidates.find(function(c) { return c.count > 0; });
+    if (!hot) {
+      // Nobody waiting anywhere — bounce to Battlefield so the user can pick.
+      btn.disabled = false;
+      btn.textContent = prev;
+      showToast('No active lobbies — pick a battlefield to start a fresh one.');
+      goStep(2);
+      return;
+    }
+
+    selectedMatch = hot.m;
+    selectedHalf  = 'full_match';
+    await enterLobby();
+  } catch (err) {
+    btn.disabled = false;
+    btn.textContent = prev;
+    showToast(err.message || 'Could not drop in', true);
+  }
 }
 
 // ── Enter lobby ───────────────────────────────────────────────────────────────
+// No more dedicated "Enter Battle Royale" button (Step 3 was dropped).
+// Triggered by selectMatch() click on a match row, OR by instantDropIn()
+// after the busiest waiting session is picked.
 async function enterLobby() {
-  var btn = document.getElementById('btn-enter');
-  btn.disabled = true;
-  btn.textContent = 'Creating session…';
+  // Soft loading affordance — busy match row, dimmed step 1 buttons.
+  var dropBtn = document.getElementById('btn-instant-drop');
+  var pickBtn = document.getElementById('btn-pick-battlefield');
+  if (dropBtn) dropBtn.disabled = true;
+  if (pickBtn) pickBtn.disabled = true;
+  document.querySelectorAll('.match-row').forEach(function(r) { r.style.pointerEvents = 'none'; });
 
   try {
     // 1. Find or create a br_match_pools placeholder
@@ -1233,14 +1426,14 @@ async function enterLobby() {
     });
     // Ignore duplicate join (23505 = unique_violation — already in session)
     if (joinErr && joinErr.code !== '23505') {
-      // 23000-range codes may indicate br_session_not_waiting — propagate that
       throw new Error(joinErr.message);
     }
 
     showWaitingRoom(sessionId);
   } catch (err) {
-    btn.disabled = false;
-    btn.textContent = 'Enter Battle Royale →';
+    if (dropBtn) { dropBtn.disabled = false; dropBtn.textContent = '🔥 Instant Drop In'; }
+    if (pickBtn) pickBtn.disabled = false;
+    document.querySelectorAll('.match-row').forEach(function(r) { r.style.pointerEvents = ''; });
     showToast(err.message || 'Failed to enter lobby', true);
   }
 }
