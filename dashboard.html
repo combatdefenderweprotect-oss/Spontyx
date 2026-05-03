@@ -320,6 +320,262 @@
     }
 
 
+    /* ═══════════════════════════════════════════════════════════════════
+       NEW DASHBOARD COMPONENTS — Game Control Center
+       Player status + Ready to Play + Live strip + Your Plan
+       ═══════════════════════════════════════════════════════════════════ */
+
+    /* ── Player Status Panel (rebuild of profile-preview) ── */
+    .ps-panel {
+      background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg);
+      padding: 22px 26px;
+      margin-bottom: 18px;
+      position: relative;
+      overflow: hidden;
+    }
+    .ps-panel::before {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 0% 50%, rgba(168,225,12,0.06), transparent 55%);
+      pointer-events: none;
+    }
+    .ps-top { display: flex; align-items: center; gap: 18px; position: relative; }
+    .ps-avatar {
+      width: 58px; height: 58px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--lime), var(--teal));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.35rem; font-weight: 900; color: var(--navy);
+      flex-shrink: 0;
+    }
+    .ps-id { flex: 1; min-width: 0; }
+    .ps-name { font-size: 1.1rem; font-weight: 800; letter-spacing: -0.3px; }
+    .ps-handle { font-size: 0.75rem; color: var(--grey); margin-bottom: 6px; }
+    .ps-tier {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 3px 11px; border-radius: var(--radius-pill);
+      background: rgba(168,225,12,0.1); border: 1px solid rgba(168,225,12,0.22);
+      font-size: 0.62rem; font-weight: 700; color: var(--lime);
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .ps-link {
+      flex-shrink: 0; padding: 8px 16px; border-radius: var(--radius-pill);
+      border: 1px solid rgba(255,255,255,0.1); color: var(--grey);
+      font-size: 0.74rem; font-weight: 600; text-decoration: none;
+      display: inline-flex; align-items: center; gap: 6px;
+      transition: all 0.15s;
+    }
+    .ps-link:hover { border-color: rgba(168,225,12,0.4); color: var(--off-white); }
+    .ps-link svg { width: 13px; height: 13px; stroke: currentColor; stroke-width: 2; fill: none; }
+
+    /* XP bar — uses existing dash-xp-* IDs */
+    .ps-xp { margin-top: 16px; position: relative; }
+    .ps-xp .xp-bar-wrap { margin-top: 0; }
+
+    /* Ratings split: Arena (lime) | BR (coral) */
+    .ps-ratings {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+      margin-top: 14px; position: relative;
+    }
+    @media (max-width: 540px) { .ps-ratings { grid-template-columns: 1fr; } }
+    .ps-rating {
+      background: rgba(255,255,255,0.025);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-md);
+      padding: 12px 14px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .ps-rating.arena { border-color: rgba(168,225,12,0.18); background: rgba(168,225,12,0.04); }
+    .ps-rating.br    { border-color: rgba(255,107,107,0.22); background: rgba(255,107,107,0.04); }
+    .ps-rating-icon {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1rem; flex-shrink: 0;
+    }
+    .ps-rating.arena .ps-rating-icon { background: rgba(168,225,12,0.14); color: var(--lime); }
+    .ps-rating.br    .ps-rating-icon { background: rgba(255,107,107,0.14); color: var(--coral); }
+    .ps-rating-info { flex: 1; min-width: 0; }
+    .ps-rating-label {
+      font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--grey); margin-bottom: 2px;
+    }
+    .ps-rating-value {
+      display: flex; align-items: baseline; gap: 6px; font-size: 0.78rem; color: var(--off-white);
+    }
+    .ps-rating-value .num { font-size: 1.05rem; font-weight: 800; }
+    .ps-rating.arena .ps-rating-value .num { color: var(--lime); }
+    .ps-rating.br    .ps-rating-value .num { color: var(--coral); }
+    .ps-rating-tier {
+      font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+    .ps-rating.arena .ps-rating-tier { background: rgba(168,225,12,0.14); color: var(--lime); }
+    .ps-rating.br    .ps-rating-tier { background: rgba(255,107,107,0.14); color: var(--coral); }
+
+    /* Last 5 + Next level unlocks footer row */
+    .ps-footer {
+      display: grid; grid-template-columns: auto 1fr; gap: 18px; align-items: center;
+      margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.05);
+      position: relative;
+    }
+    @media (max-width: 700px) { .ps-footer { grid-template-columns: 1fr; gap: 10px; } }
+    .ps-last5 { display: flex; align-items: center; gap: 8px; }
+    .ps-last5-label {
+      font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--grey-dark);
+    }
+    .ps-last5-row { display: inline-flex; gap: 4px; }
+    .ps-last5-pip {
+      width: 18px; height: 18px; border-radius: 5px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.6rem; font-weight: 800;
+    }
+    .ps-last5-pip.w { background: rgba(168,225,12,0.18); color: var(--lime); }
+    .ps-last5-pip.l { background: rgba(255,107,107,0.18); color: var(--coral); }
+    .ps-last5-pip.d { background: rgba(255,255,255,0.08); color: var(--grey); }
+    .ps-unlocks {
+      display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end;
+    }
+    @media (max-width: 700px) { .ps-unlocks { justify-content: flex-start; } }
+    .ps-unlocks-label {
+      font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em;
+      color: var(--grey-dark);
+    }
+    .ps-unlock-pill {
+      font-size: 0.68rem; font-weight: 600; color: rgba(255,255,255,0.6);
+      padding: 3px 10px; border-radius: 20px;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    /* ── Live activity strip ── */
+    .live-strip {
+      display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 18px;
+    }
+    .live-pill {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 20px; padding: 7px 14px;
+      font-size: 0.74rem; color: rgba(255,255,255,0.7); font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .live-pill .num { color: var(--off-white); font-weight: 800; }
+    .live-pill .live-dot {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--lime); box-shadow: 0 0 8px rgba(168,225,12,0.55);
+      animation: live-blink 1.6s ease-in-out infinite;
+    }
+    .live-pill.coral .live-dot { background: var(--coral); box-shadow: 0 0 8px rgba(255,107,107,0.6); }
+    .live-pill.purple .live-dot { background: var(--purple); box-shadow: 0 0 8px rgba(124,92,252,0.6); }
+    @keyframes live-blink { 0%,100%{opacity:1} 50%{opacity:0.45} }
+
+    /* ── Ready to Play (3 large CTA cards) ── */
+    .ready-section { margin-bottom: 22px; }
+    .ready-headline {
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+      color: var(--grey); margin-bottom: 10px;
+    }
+    .ready-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+    }
+    @media (max-width: 900px) { .ready-grid { grid-template-columns: 1fr; } }
+    .ready-card {
+      background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.07);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      display: flex; align-items: center; gap: 14px;
+      text-decoration: none; color: inherit; cursor: pointer;
+      transition: transform 0.18s cubic-bezier(0.16,1,0.3,1), border-color 0.18s, box-shadow 0.22s, background 0.18s;
+      position: relative; overflow: hidden;
+    }
+    .ready-card:hover { transform: translateY(-2px) scale(1.01); }
+    .ready-card.arena:hover { border-color: rgba(168,225,12,0.45); background: rgba(168,225,12,0.04); box-shadow: 0 0 24px rgba(168,225,12,0.14); }
+    .ready-card.br:hover    { border-color: rgba(255,107,107,0.45); background: rgba(255,107,107,0.04); box-shadow: 0 0 24px rgba(255,107,107,0.14); }
+    .ready-card.trivia:hover { border-color: rgba(78,205,196,0.45); background: rgba(78,205,196,0.04); box-shadow: 0 0 24px rgba(78,205,196,0.14); }
+    .ready-icon {
+      width: 44px; height: 44px; border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; font-size: 1.2rem;
+    }
+    .ready-card.arena  .ready-icon { background: rgba(168,225,12,0.14); color: var(--lime); }
+    .ready-card.br     .ready-icon { background: rgba(255,107,107,0.14); color: var(--coral); }
+    .ready-card.trivia .ready-icon { background: rgba(78,205,196,0.14); color: var(--teal); }
+    .ready-body { flex: 1; min-width: 0; }
+    .ready-title { font-size: 0.95rem; font-weight: 800; margin-bottom: 2px; }
+    .ready-sub { font-size: 0.72rem; color: var(--grey); margin-bottom: 4px; }
+    .ready-cta {
+      font-size: 0.62rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
+      color: var(--grey-dark);
+    }
+    .ready-card.arena:hover  .ready-cta { color: var(--lime); }
+    .ready-card.br:hover     .ready-cta { color: var(--coral); }
+    .ready-card.trivia:hover .ready-cta { color: var(--teal); }
+    .ready-arrow svg { width: 14px; height: 14px; stroke: var(--grey); stroke-width: 2.5; fill: none; }
+
+    /* Game-mode status sub-line — appended to existing .action-card */
+    .action-card-status {
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+      margin-top: 4px; opacity: 0.85;
+      display: inline-flex; align-items: center; gap: 5px;
+    }
+    .action-card-status .dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: currentColor; opacity: 0.9;
+      animation: live-blink 1.6s ease-in-out infinite;
+    }
+    .action-card.lime-accent .action-card-status   { color: rgba(26,26,46,0.75); }
+    .action-card.purple-accent .action-card-status { color: rgba(255,255,255,0.85); }
+    .action-card.coral-accent .action-card-status  { color: rgba(255,255,255,0.85); }
+    .action-card.teal-accent .action-card-status   { color: var(--teal); }
+    .action-card.multi-accent .action-card-status  { color: var(--lime); }
+
+    /* Card hover enhancement (without breaking existing accent variants) */
+    .action-card { will-change: transform; }
+    .action-card:hover { transform: translateY(-2px) scale(1.015); box-shadow: 0 8px 24px rgba(0,0,0,0.25); }
+
+    /* ── Your Plan (tier panel) ── */
+    .plan-panel {
+      background: var(--navy-card);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: var(--radius-lg);
+      padding: 20px 24px;
+      margin-bottom: 28px;
+    }
+    .plan-head {
+      display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .plan-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--grey); }
+    .plan-tier-pill {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 4px 12px; border-radius: var(--radius-pill);
+      background: rgba(168,225,12,0.1); border: 1px solid rgba(168,225,12,0.22);
+      font-size: 0.7rem; font-weight: 800; color: var(--lime);
+      text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .plan-resets { font-size: 0.7rem; color: var(--grey-dark); }
+    .plan-rows { display: flex; flex-direction: column; gap: 10px; }
+    .plan-row {
+      display: grid; grid-template-columns: 1fr auto; gap: 10px 16px; align-items: center;
+    }
+    .plan-row-label { font-size: 0.8rem; color: var(--off-white); font-weight: 600; }
+    .plan-row-usage { font-size: 0.74rem; color: var(--grey); font-variant-numeric: tabular-nums; }
+    .plan-row-usage .used { color: var(--off-white); font-weight: 700; }
+    .plan-row-bar {
+      grid-column: 1 / -1;
+      height: 5px; background: rgba(255,255,255,0.06); border-radius: 3px; overflow: hidden;
+    }
+    .plan-row-fill {
+      height: 100%; background: linear-gradient(90deg, var(--lime), var(--teal));
+      border-radius: 3px; transition: width 0.6s ease;
+    }
+    .plan-row-fill.warn   { background: linear-gradient(90deg, #FF9F43, var(--coral)); }
+    .plan-row-fill.full   { background: var(--coral); }
+    .plan-placeholder-note {
+      margin-top: 12px; font-size: 0.65rem; color: var(--grey-dark);
+      font-style: italic; opacity: 0.75;
+    }
+
     /* ── Responsive ── */
     @media (max-width: 900px) {
       .action-cards-grid, .nav-links-grid { grid-template-columns: 1fr; }
@@ -359,50 +615,123 @@
       <p>Your prediction gaming hub — create, join, and compete.</p>
     </div>
 
-    <!-- Profile Preview -->
-    <div class="profile-preview">
-      <div class="profile-preview-avatar av-self">B</div>
-      <div class="profile-preview-info">
-        <div class="profile-preview-name">Bran</div>
-        <div class="profile-preview-handle">@bran_predicts</div>
-        <span class="profile-preview-tier">Pro (Trial)</span>
-        <div class="xp-bar-wrap" id="dash-xp-bar-wrap" style="display:none;">
+    <!-- ═══ PLAYER STATUS PANEL ═══ -->
+    <div class="ps-panel">
+      <div class="ps-top">
+        <div class="ps-avatar av-self">B</div>
+        <div class="ps-id">
+          <div class="ps-name">Bran</div>
+          <div class="ps-handle">@bran_predicts</div>
+          <span class="ps-tier">Pro (Trial)</span>
+        </div>
+        <a href="profile.html" class="ps-link">
+          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          View Profile
+        </a>
+      </div>
+
+      <!-- XP bar (existing IDs preserved for hydration) -->
+      <div class="ps-xp">
+        <div class="xp-bar-wrap" id="dash-xp-bar-wrap">
           <div class="xp-level-badge" id="dash-xp-level">1</div>
           <div class="xp-bar-track"><div class="xp-bar-fill" id="dash-xp-fill" style="width:0%"></div></div>
           <div class="xp-bar-label" id="dash-xp-label">0 / 100 XP</div>
         </div>
-        <div class="arena-rating-row" id="dash-arena-rating-row" style="display:none;">
-          <div class="arena-rating-badge arena-tier-rookie" id="dash-arena-tier">Rookie</div>
-          <div class="arena-rating-num" id="dash-arena-rating-num">500 SR</div>
+      </div>
+
+      <!-- Arena (lime) | Battle Royale (coral) ratings -->
+      <div class="ps-ratings">
+        <div class="ps-rating arena" id="dash-arena-rating-row">
+          <div class="ps-rating-icon">⚔</div>
+          <div class="ps-rating-info">
+            <div class="ps-rating-label">Arena</div>
+            <div class="ps-rating-value">
+              <span class="num" id="dash-arena-rating-num">500</span>
+              <span>SR</span>
+              <span class="ps-rating-tier arena-tier-rookie" id="dash-arena-tier">Rookie</span>
+            </div>
+          </div>
+        </div>
+        <div class="ps-rating br" id="dash-br-rating-row">
+          <div class="ps-rating-icon">💀</div>
+          <div class="ps-rating-info">
+            <div class="ps-rating-label">Battle Royale</div>
+            <div class="ps-rating-value">
+              <span class="num" id="dash-br-rating-num">500</span>
+              <span>BR</span>
+              <span class="ps-rating-tier" id="dash-br-tier">Rookie</span>
+            </div>
+          </div>
         </div>
       </div>
-      <div class="pp-divider"></div>
-      <div class="profile-preview-stats">
-        <div class="pp-stat">
-          <span class="pp-stat-value lime">1,240</span>
-          <span class="pp-stat-label">ELO</span>
+
+      <!-- Last 5 + Next-level unlocks -->
+      <div class="ps-footer">
+        <div class="ps-last5">
+          <span class="ps-last5-label">Last 5</span>
+          <div class="ps-last5-row" id="dash-last5">
+            <span class="ps-last5-pip w" title="Win">W</span>
+            <span class="ps-last5-pip w" title="Win">W</span>
+            <span class="ps-last5-pip l" title="Loss">L</span>
+            <span class="ps-last5-pip w" title="Win">W</span>
+            <span class="ps-last5-pip w" title="Win">W</span>
+          </div>
         </div>
-        <div class="pp-stat">
-          <span class="pp-stat-value teal">68%</span>
-          <span class="pp-stat-label">Win Rate</span>
-        </div>
-        <div class="pp-stat">
-          <span class="pp-stat-value purple">7</span>
-          <span class="pp-stat-label">Best Streak</span>
-        </div>
-        <div class="pp-stat">
-          <span class="pp-stat-value coral" id="dash-trophy-count">4</span>
-          <span class="pp-stat-label">Trophies</span>
+        <div class="ps-unlocks">
+          <span class="ps-unlocks-label">Next level unlocks</span>
+          <span class="ps-unlock-pill">More daily games</span>
+          <span class="ps-unlock-pill">Ranked access</span>
+          <span class="ps-unlock-pill">Higher limits</span>
         </div>
       </div>
-      <div class="pp-divider"></div>
-      <a href="profile.html" class="profile-preview-link">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-        View Profile
-      </a>
+
+      <!-- Hidden legacy element kept so any unseen JS write to dash-trophy-count
+           doesn't crash. Removed from visual UI per spec. -->
+      <span id="dash-trophy-count" style="display:none;">0</span>
     </div>
 
-    <!-- Unanswered Questions Alert — populated dynamically -->
+    <!-- ═══ LIVE ACTIVITY STRIP ═══ -->
+    <div class="live-strip" aria-label="Live activity">
+      <span class="live-pill"><span class="live-dot"></span><span class="num">12</span> in Arena</span>
+      <span class="live-pill coral"><span class="live-dot"></span><span class="num">8</span> in Battle Royale</span>
+      <span class="live-pill purple"><span class="live-dot"></span><span class="num">3</span> leagues live</span>
+    </div>
+
+    <!-- ═══ READY TO PLAY ═══ -->
+    <div class="ready-section">
+      <div class="ready-headline">Ready to play</div>
+      <div class="ready-grid">
+        <a href="multiplayer.html" class="ready-card arena">
+          <div class="ready-icon">⚔️</div>
+          <div class="ready-body">
+            <div class="ready-title">Join Arena match</div>
+            <div class="ready-sub">Arena match available now</div>
+            <div class="ready-cta">Find opponent →</div>
+          </div>
+          <div class="ready-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </a>
+        <a href="br-lobby.html" class="ready-card br">
+          <div class="ready-icon">💀</div>
+          <div class="ready-body">
+            <div class="ready-title">Enter Battle Royale</div>
+            <div class="ready-sub">Battle Royale lobby filling</div>
+            <div class="ready-cta">Survive →</div>
+          </div>
+          <div class="ready-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </a>
+        <a href="trivia.html" class="ready-card trivia">
+          <div class="ready-icon">🧠</div>
+          <div class="ready-body">
+            <div class="ready-title">Continue Trivia</div>
+            <div class="ready-sub">Trivia challenge ready</div>
+            <div class="ready-cta">Quick play →</div>
+          </div>
+          <div class="ready-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+        </a>
+      </div>
+    </div>
+
+    <!-- ═══ FOR YOU — personalized trigger (existing dynamic alert preserved) ═══ -->
     <div id="activity-alert"></div>
 
     <!-- Game Mode Pillar Cards -->
@@ -416,6 +745,7 @@
         <div class="action-card-body">
           <div class="action-card-title">Leagues</div>
           <div class="action-card-desc">Compete with friends. Create, join, or discover leagues.</div>
+          <div class="action-card-status"><span class="dot"></span>Leaderboards live</div>
         </div>
       </a>
 
@@ -427,6 +757,7 @@
         <div class="action-card-body">
           <div class="action-card-title">Arena</div>
           <div class="action-card-desc">Live 1v1 or 2v2 duels. Find a match, enter the arena.</div>
+          <div class="action-card-status"><span class="dot"></span>Ranked ready</div>
         </div>
       </a>
 
@@ -438,6 +769,7 @@
         <div class="action-card-body">
           <div class="action-card-title">Battle Royale</div>
           <div class="action-card-desc">Survive every round. Last prediction standing wins.</div>
+          <div class="action-card-status"><span class="dot"></span>Session available</div>
         </div>
       </a>
 
@@ -449,9 +781,42 @@
         <div class="action-card-body">
           <div class="action-card-title">Trivia</div>
           <div class="action-card-desc">Solo, 1v1, or party modes. Sports knowledge wins.</div>
+          <div class="action-card-status"><span class="dot"></span>Daily challenges available</div>
         </div>
       </a>
 
+    </div>
+
+    <!-- ═══ YOUR PLAN (tier panel) ═══ -->
+    <div class="plan-panel">
+      <div class="plan-head">
+        <div class="plan-title">Your Plan</div>
+        <span class="plan-tier-pill">Pro (Trial)</span>
+        <span class="plan-resets">Resets in 7h 23m</span>
+      </div>
+      <div class="plan-rows">
+        <div class="plan-row">
+          <span class="plan-row-label">Live answers per match</span>
+          <span class="plan-row-usage"><span class="used">2</span> / 5</span>
+          <div class="plan-row-bar"><div class="plan-row-fill" style="width:40%"></div></div>
+        </div>
+        <div class="plan-row">
+          <span class="plan-row-label">Battle Royale games today</span>
+          <span class="plan-row-usage"><span class="used">3</span> / 5</span>
+          <div class="plan-row-bar"><div class="plan-row-fill warn" style="width:60%"></div></div>
+        </div>
+        <div class="plan-row">
+          <span class="plan-row-label">Daily trivia</span>
+          <span class="plan-row-usage"><span class="used">5</span> / 15</span>
+          <div class="plan-row-bar"><div class="plan-row-fill" style="width:33%"></div></div>
+        </div>
+        <div class="plan-row">
+          <span class="plan-row-label">Real-world questions</span>
+          <span class="plan-row-usage">Pro · unlimited</span>
+          <div class="plan-row-bar"><div class="plan-row-fill" style="width:100%"></div></div>
+        </div>
+      </div>
+      <div class="plan-placeholder-note">UI placeholder · live usage data wires up in a later sprint.</div>
     </div>
 
     <!-- Quick Nav Links -->
@@ -499,19 +864,16 @@
     // Welcome uses username (handle), fallback to first name — strip any legacy @ prefix
     document.querySelector('.page-header h1 span').textContent = (p.handle || p.name).replace(/^@/, '');
 
-    // Update profile preview section
+    // Update player status panel (new selectors; old .profile-preview-* removed)
     SpontixStore.applyAvatarsToPage(); // renders .av-self with profile photo
-    document.querySelector('.profile-preview-name').textContent = p.name;
-    document.querySelector('.profile-preview-handle').textContent = (p.handle || '').replace(/^@/, '');
-    document.querySelector('.profile-preview-tier').textContent = SpontixStore.getTierLabel(p.tier);
+    var psName  = document.querySelector('.ps-name');
+    var psHand  = document.querySelector('.ps-handle');
+    var psTier  = document.querySelector('.ps-tier');
+    if (psName) psName.textContent = p.name;
+    if (psHand) psHand.textContent = (p.handle || '').replace(/^@/, '');
+    if (psTier) psTier.textContent = SpontixStore.getTierLabel(p.tier);
 
-    // Update profile preview stats
-    const statValues = document.querySelectorAll('.profile-preview-stats .pp-stat-value');
-    statValues[0].textContent = SpontixStore.formatNumber(p.totalPoints); // ELO
-    statValues[1].textContent = SpontixStore.getWinRate(p) + '%'; // Win Rate
-    statValues[2].textContent = p.bestStreak; // Best Streak
-
-    // Hydrate trophy count
+    // Hydrate trophy count (legacy element kept hidden — see #dash-trophy-count)
     var trophyEl = document.getElementById('dash-trophy-count');
     if (trophyEl) {
       trophyEl.textContent = SpontixStore.getTrophies().length;
@@ -527,12 +889,11 @@
     // Welcome header uses username
     var nameSpan = document.querySelector('.page-header h1 span');
     if (nameSpan) nameSpan.textContent = displayName;
-    // Profile card shows full name
-    var previewName = document.querySelector('.profile-preview-name');
-    if (previewName) previewName.textContent = profile.name || displayName;
-    // Handle row
-    var previewHandle = document.querySelector('.profile-preview-handle');
-    if (previewHandle) previewHandle.textContent = profile.handle || '';
+    // Player status panel — name + handle (new selectors)
+    var psNameEl = document.querySelector('.ps-name');
+    if (psNameEl) psNameEl.textContent = profile.name || displayName;
+    var psHandleEl = document.querySelector('.ps-handle');
+    if (psHandleEl) psHandleEl.textContent = profile.handle || '';
     // Sidebar also uses username
     var sidebarName = document.querySelector('.sidebar-profile-name');
     if (sidebarName) sidebarName.textContent = displayName;
@@ -575,9 +936,12 @@
     var tier = getArenaTier(rating);
     var badge = document.getElementById('dash-arena-tier');
     badge.textContent = tier.label;
-    badge.className   = 'arena-rating-badge ' + tier.cls;
+    // Keep ps-rating-tier (new) class so panel styling holds, plus the tier color class
+    badge.className   = 'ps-rating-tier ' + tier.cls;
+    // Numeric "SR" suffix is rendered as a static span in the new markup;
+    // here we just write the number (and games-played hint) into the .num span.
     document.getElementById('dash-arena-rating-num').textContent =
-      rating + ' SR' + (gamesPlayed > 0 ? ' · ' + gamesPlayed + ' played' : '');
+      rating + (gamesPlayed > 0 ? ' (' + gamesPlayed + ')' : '');
     row.style.display = 'flex';
   }
 
