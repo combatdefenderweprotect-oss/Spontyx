@@ -238,23 +238,34 @@
 
         <div class="sp-card" style="margin-top:18px;">
           <div class="sp-card-title">Quick answers</div>
-          <div class="sp-card-sub">The most common things people ask.</div>
-          <div class="sp-faq-item">
-            <div class="sp-faq-q">How do scoring multipliers work?</div>
-            <div class="sp-faq-a">Points = base × time pressure × difficulty × streak × comeback × clutch. Live cards show estimated points before you answer.</div>
+          <div class="sp-card-sub">The most common things people ask. Search or expand any topic.</div>
+
+          <div class="help-search" style="max-width:none;">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="sp-help-search" placeholder="Search how-tos, modes, scoring, account…" oninput="filterSupportHelp()" />
           </div>
-          <div class="sp-faq-item">
-            <div class="sp-faq-q">Why was my question voided?</div>
-            <div class="sp-faq-a">Usually because the match was cancelled, postponed, or the resolver couldn't read official stats. Voided questions don't affect your streak or score.</div>
+
+          <div id="sp-help-list">
+            <div class="help-item"><button class="help-q" type="button">How are points calculated? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+              <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+            <div class="help-item"><button class="help-q" type="button">What's the difference between Classic and Ranked Battle Royale? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+              <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+            <div class="help-item"><button class="help-q" type="button">How does Arena ELO work? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+              <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+            <div class="help-item"><button class="help-q" type="button">Why was my question voided? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+              <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+            <div class="help-item"><button class="help-q" type="button">When does my Pro trial end? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+              <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+            <div class="help-item"><button class="help-q" type="button">How do I delete my account? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+              <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
           </div>
-          <div class="sp-faq-item">
-            <div class="sp-faq-q">When does my Pro trial end?</div>
-            <div class="sp-faq-a">Check your Game Center → Your Plan card. The "Resets in" timer counts daily caps; tier expiry is shown on the Profile page.</div>
-          </div>
-          <div class="sp-faq-item">
-            <div class="sp-faq-q">Can I delete my account?</div>
-            <div class="sp-faq-a">Yes — message us via the form above and we'll handle the data deletion within 7 days.</div>
-          </div>
+
+          <div id="sp-help-empty" class="help-empty" style="display:none;">No answers match — try the full help center.</div>
+
+          <a class="help-see-all" href="help.html">
+            See all answers
+            <svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2.5;"><polyline points="9 18 15 12 9 6"/></svg>
+          </a>
         </div>
       </div>
 
@@ -347,6 +358,26 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+// Quick-answers accordion (delegated to .help-q)
+document.addEventListener('click', e => {
+  const q = e.target.closest('#sp-help-list .help-q');
+  if (!q) return;
+  q.parentElement.classList.toggle('open');
+});
+
+function filterSupportHelp() {
+  const q = (document.getElementById('sp-help-search').value || '').toLowerCase().trim();
+  let any = false;
+  document.querySelectorAll('#sp-help-list .help-item').forEach(item => {
+    const text = (item.querySelector('.help-q')?.textContent || '').toLowerCase();
+    const ans  = (item.querySelector('.help-a')?.textContent || '').toLowerCase();
+    const match = !q || text.includes(q) || ans.includes(q);
+    item.style.display = match ? '' : 'none';
+    if (match) any = true;
+  });
+  document.getElementById('sp-help-empty').style.display = any ? 'none' : '';
 }
 
 document.addEventListener('DOMContentLoaded', renderInbox);

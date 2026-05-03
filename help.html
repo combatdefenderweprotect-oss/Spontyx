@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="view-transition" content="same-origin">
+  <title>Help & FAQ — Spontyx</title>
+  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    .main { padding: 0 0 48px; }
+    @media (max-width: 900px) { .main { margin-left: 0; } }
+    .help-inner { padding: 24px 32px 0; width: 100%; max-width: 1100px; margin: 0 auto; }
+    @media (max-width: 900px) { .help-inner { padding: 18px 14px 0; } }
+
+    .help-toolbar {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 12px; margin-bottom: 6px; flex-wrap: wrap;
+    }
+    .help-demo-note {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px; border-radius: 999px;
+      background: rgba(255,159,67,0.08); border: 1px solid rgba(255,159,67,0.22);
+      color: #FF9F43; font-size: 0.62rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.06em;
+    }
+  </style>
+</head>
+<body>
+
+<div id="sidebar-placeholder"></div>
+
+<main class="main">
+
+  <!-- ═══ UNIFIED MODE HEADER ═══ -->
+  <div class="mode-header">
+    <div class="mode-header-content">
+      <div class="mode-header-left">
+        <div class="mode-icon icon-help">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div>
+          <h1 class="mode-title">Help &amp; FAQ</h1>
+          <p class="mode-subtitle">How Spontyx works — game modes, scoring, leaderboards, account. Search anything.</p>
+        </div>
+      </div>
+      <div class="mode-header-right">
+        <a class="how-to-play" href="support.html">Contact support →</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="help-inner">
+
+    <div class="help-toolbar">
+      <div class="help-search">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="help-search" placeholder="Search how-tos, modes, scoring, account…" oninput="filterHelp()" />
+      </div>
+      <span class="help-demo-note">Answers fill in pre-launch</span>
+    </div>
+
+    <div id="help-list">
+
+      <!-- ═══ Spontyx Basics ═══ -->
+      <section class="help-cat" data-cat="basics">
+        <div class="help-cat-head">
+          <div class="help-cat-icon lime">⚡</div>
+          <div>
+            <div class="help-cat-title">Spontyx Basics</div>
+            <div class="help-cat-sub">Getting started, accounts, and the platform overview.</div>
+          </div>
+        </div>
+
+        <div class="help-item"><button class="help-q" type="button">What is Spontyx? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">How do I sign up and get started? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">Which sports are supported? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">Can I play on mobile? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+      </section>
+
+      <!-- ═══ Game Modes — one sub-section per pillar ═══ -->
+      <section class="help-cat" data-cat="modes">
+        <div class="help-cat-head">
+          <div class="help-cat-icon purple">🎮</div>
+          <div>
+            <div class="help-cat-title">Game Modes</div>
+            <div class="help-cat-sub">The four pillars — what each is, how it works, who it's for.</div>
+          </div>
+        </div>
+
+        <div class="help-sub-title">Leagues</div>
+        <div class="help-item"><button class="help-q" type="button">What is Leagues? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">How does a league work? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">How many players can join? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">What league formats are there? (Season-Long, Match Night, Custom) <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+
+        <div class="help-sub-title">Arena</div>
+        <div class="help-item"><button class="help-q" type="button">What is Arena? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">How does an Arena match work? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">How many players are in an Arena match? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">What are the Arena formats? (1v1, 2v2) <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+
+        <div class="help-sub-title">Battle Royale</div>
+        <div class="help-item"><button class="help-q" type="button">What is Battle Royale? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">How does a Battle Royale session work? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">How many players are in a BR lobby? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">What's the difference between Classic and Ranked BR? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">What happens to my HP and how do eliminations work? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+
+        <div class="help-sub-title">Trivia</div>
+        <div class="help-item"><button class="help-q" type="button">What is Trivia? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">How does Trivia work? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">How many players are in a Trivia game? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">What Trivia modes can I play? (Solo, 1v1 Duel, Party) <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+      </section>
+
+      <!-- ═══ Scoring & Multipliers ═══ -->
+      <section class="help-cat" data-cat="scoring">
+        <div class="help-cat-head">
+          <div class="help-cat-icon coral">🎯</div>
+          <div>
+            <div class="help-cat-title">Scoring &amp; Multipliers</div>
+            <div class="help-cat-sub">How your points are calculated, why one question is worth more than another.</div>
+          </div>
+        </div>
+
+        <div class="help-item"><button class="help-q" type="button">How are points calculated? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">What do the time pressure / streak / clutch / comeback / difficulty multipliers do? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">What does the badge on a question (HIGH VALUE / CLUTCH / FAST) mean? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">Why was my question voided and what happens to my streak? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+      </section>
+
+      <!-- ═══ Leaderboards ═══ -->
+      <section class="help-cat" data-cat="leaderboards">
+        <div class="help-cat-head">
+          <div class="help-cat-icon gold">🏆</div>
+          <div>
+            <div class="help-cat-title">Leaderboards</div>
+            <div class="help-cat-sub">Arena ELO, Battle Royale rating, tiers, weekly resets, friends.</div>
+          </div>
+        </div>
+
+        <div class="help-item"><button class="help-q" type="button">How does Arena ELO (SR) work? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">How is Battle Royale rating different from Arena? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">What do the rank tiers (Rookie / Bronze / Silver / Gold / etc.) mean? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">Who counts as a friend on the leaderboard? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">When does the weekly leaderboard reset? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+      </section>
+
+      <!-- ═══ Account & Tiers ═══ -->
+      <section class="help-cat" data-cat="account">
+        <div class="help-cat-head">
+          <div class="help-cat-icon teal">👤</div>
+          <div>
+            <div class="help-cat-title">Account &amp; Tiers</div>
+            <div class="help-cat-sub">Starter / Pro / Elite, billing, daily limits, deletion.</div>
+          </div>
+        </div>
+
+        <div class="help-item"><button class="help-q" type="button">What's the difference between Starter, Pro, and Elite? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">When does my Pro trial end? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">What are the daily limits per tier? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">How do I cancel or change my plan? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">How do I delete my account? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+      </section>
+
+      <!-- ═══ Real-World Questions ═══ -->
+      <section class="help-cat" data-cat="realworld">
+        <div class="help-cat-head">
+          <div class="help-cat-icon orange">📰</div>
+          <div>
+            <div class="help-cat-title">Real-World Questions</div>
+            <div class="help-cat-sub">Premium questions built from current news, transfers, and announcements.</div>
+          </div>
+        </div>
+
+        <div class="help-item"><button class="help-q" type="button">What is a Real-World question? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">How are Real-World questions verified and resolved? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">Why don't I see Real-World questions on my Starter account? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">How is the confidence level (low / medium / high) decided? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+      </section>
+
+      <!-- ═══ Venues & Events ═══ -->
+      <section class="help-cat" data-cat="venues">
+        <div class="help-cat-head">
+          <div class="help-cat-icon gold">📍</div>
+          <div>
+            <div class="help-cat-title">Venues &amp; Events</div>
+            <div class="help-cat-sub">Playing in person, finding sports bars, reservations.</div>
+          </div>
+        </div>
+
+        <div class="help-item"><button class="help-q" type="button">How do venue events work? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">How do I find venues near me? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">Can I reserve a spot at a venue event? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+        <div class="help-item"><button class="help-q" type="button">What trophies can I win at venue events? <span class="help-q-mark"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span></button>
+          <div class="help-a"><em class="placeholder">— add answer —</em></div></div>
+      </section>
+
+    </div>
+
+    <div id="help-empty" class="help-empty" style="display:none;">
+      No answers match your search. <a href="support.html" style="color:var(--lime);">Contact support →</a>
+    </div>
+
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+<script src="sidebar.js"></script>
+<script>SpontixSidebar.init({ type: 'player', active: 'help.html' });</script>
+<script>
+// Accordion — any number open at once
+document.addEventListener('click', e => {
+  const q = e.target.closest('.help-q');
+  if (!q) return;
+  q.parentElement.classList.toggle('open');
+});
+
+// Real-time search filter — matches against question text + category title
+function filterHelp() {
+  const q = (document.getElementById('help-search').value || '').toLowerCase().trim();
+  let anyVisible = false;
+  document.querySelectorAll('#help-list .help-cat').forEach(cat => {
+    const catTitle = (cat.querySelector('.help-cat-title')?.textContent || '').toLowerCase();
+    let catHasMatch = false;
+    cat.querySelectorAll('.help-item').forEach(item => {
+      const text = (item.querySelector('.help-q')?.textContent || '').toLowerCase();
+      const ans  = (item.querySelector('.help-a')?.textContent || '').toLowerCase();
+      const isMatch = !q || text.includes(q) || ans.includes(q) || catTitle.includes(q);
+      item.style.display = isMatch ? '' : 'none';
+      if (isMatch) { catHasMatch = true; anyVisible = true; }
+    });
+    // Sub-titles only visible if they have at least one matching item under them
+    cat.querySelectorAll('.help-sub-title').forEach(sub => {
+      let n = sub.nextElementSibling, has = false;
+      while (n && !n.classList.contains('help-sub-title')) {
+        if (n.classList.contains('help-item') && n.style.display !== 'none') { has = true; break; }
+        n = n.nextElementSibling;
+      }
+      sub.style.display = has ? '' : 'none';
+    });
+    cat.style.display = catHasMatch ? '' : 'none';
+  });
+  document.getElementById('help-empty').style.display = anyVisible ? 'none' : '';
+}
+</script>
+</body>
+</html>
