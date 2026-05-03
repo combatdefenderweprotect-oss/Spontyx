@@ -13,16 +13,17 @@
     /* Inherit shared .main margin-left:260px next to fixed sidebar. */
     .main { padding: 0 0 40px; }
     @media (max-width: 900px) { .main { margin-left: 0; } }
-    .sp-inner { padding: 28px 32px 0; max-width: 980px; margin: 0 auto; }
+    /* Fill the full available width next to the sidebar — no max-width cap. */
+    .sp-inner { padding: 28px 32px 0; width: 100%; }
     @media (max-width: 900px) { .sp-inner { padding: 18px 14px 0; } }
 
     .sp-grid {
       display: grid;
-      grid-template-columns: 1.4fr 1fr;
+      grid-template-columns: minmax(0, 1.5fr) minmax(320px, 1fr);
       gap: 22px;
       margin-top: 8px;
     }
-    @media (max-width: 900px) { .sp-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 1100px) { .sp-grid { grid-template-columns: 1fr; } }
 
     .sp-card {
       background: var(--navy-card);
@@ -34,26 +35,85 @@
       font-size: 0.95rem; font-weight: 800; color: var(--off-white); margin-bottom: 6px;
     }
     .sp-card-sub {
-      font-size: 0.8rem; color: var(--grey); margin-bottom: 16px;
+      font-size: 0.8rem; color: var(--grey); margin-bottom: 18px;
     }
 
-    .sp-form { display: flex; flex-direction: column; gap: 12px; }
-    .sp-form label { font-size: 0.7rem; font-weight: 700; color: var(--grey); text-transform: uppercase; letter-spacing: 0.06em; }
-    .sp-form select, .sp-form input, .sp-form textarea {
+    .sp-form { display: flex; flex-direction: column; gap: 14px; }
+    /* Each label+input pair stacks vertically with consistent spacing. */
+    .sp-field { display: flex; flex-direction: column; gap: 6px; }
+    .sp-form label {
+      font-size: 0.62rem; font-weight: 800; color: var(--grey);
+      text-transform: uppercase; letter-spacing: 0.08em;
+    }
+    .sp-form select, .sp-form input[type="text"], .sp-form textarea {
+      width: 100%; box-sizing: border-box;
       background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 10px; padding: 10px 14px;
+      border-radius: 10px; padding: 11px 14px;
       color: var(--off-white); font-family: inherit; font-size: 0.85rem; outline: none;
+      transition: border-color 0.15s;
     }
-    .sp-form textarea { min-height: 120px; resize: vertical; }
-    .sp-form select:focus, .sp-form input:focus, .sp-form textarea:focus { border-color: rgba(168,225,12,0.4); }
+    .sp-form textarea { min-height: 140px; resize: vertical; line-height: 1.5; }
+    .sp-form select:focus,
+    .sp-form input[type="text"]:focus,
+    .sp-form textarea:focus { border-color: rgba(168,225,12,0.4); }
+
+    /* Two-column row (Topic / Priority) — collapses on narrow screens. */
+    .sp-row-2col {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+    }
+    @media (max-width: 600px) { .sp-row-2col { grid-template-columns: 1fr; } }
+
+    /* File / screenshot upload */
+    .sp-upload {
+      position: relative; display: flex; align-items: center; gap: 10px;
+      padding: 14px;
+      background: rgba(255,255,255,0.025);
+      border: 1px dashed rgba(255,255,255,0.18);
+      border-radius: 10px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .sp-upload:hover { border-color: rgba(168,225,12,0.4); background: rgba(168,225,12,0.04); }
+    .sp-upload.has-file { border-color: rgba(168,225,12,0.45); background: rgba(168,225,12,0.06); border-style: solid; }
+    .sp-upload input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer;
+    }
+    .sp-upload-icon {
+      width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
+      background: rgba(168,225,12,0.10); color: var(--lime);
+      display: flex; align-items: center; justify-content: center;
+    }
+    .sp-upload-icon svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
+    .sp-upload-info { flex: 1; min-width: 0; }
+    .sp-upload-name {
+      font-size: 0.82rem; font-weight: 700; color: var(--off-white);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .sp-upload-hint { font-size: 0.7rem; color: var(--grey); margin-top: 2px; }
+    .sp-upload-clear {
+      flex-shrink: 0; background: transparent; border: none; color: var(--grey-dark);
+      cursor: pointer; padding: 6px; border-radius: 6px;
+      transition: color 0.15s, background 0.15s;
+      position: relative; z-index: 1;
+    }
+    .sp-upload-clear:hover { color: var(--coral); background: rgba(255,107,107,0.08); }
+    .sp-upload-clear svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; pointer-events: none; }
+
+    .sp-form-actions {
+      display: flex; align-items: center; gap: 12px;
+      padding-top: 4px;
+    }
     .sp-send {
-      align-self: flex-start; margin-top: 4px;
       background: var(--lime); color: var(--navy); border: none;
-      border-radius: 999px; padding: 10px 22px;
-      font-family: inherit; font-size: 0.82rem; font-weight: 800; cursor: pointer;
-      transition: background 0.15s, transform 0.12s;
+      border-radius: 999px; padding: 11px 26px;
+      font-family: inherit; font-size: 0.84rem; font-weight: 800; cursor: pointer;
+      transition: background 0.15s, transform 0.12s, box-shadow 0.2s;
+      box-shadow: 0 4px 14px rgba(168,225,12,0.16);
     }
-    .sp-send:hover { background: #b8f00f; transform: translateY(-1px); }
+    .sp-send:hover { background: #b8f00f; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(168,225,12,0.24); }
+    .sp-form-hint {
+      font-size: 0.7rem; color: var(--grey-dark);
+    }
 
     .sp-inbox { display: flex; flex-direction: column; gap: 10px; }
     .sp-inbox-item {
@@ -120,21 +180,59 @@
           <div class="sp-card-title">Contact support</div>
           <div class="sp-card-sub">Bug, feature request, account question — anything. We typically respond in under 24h.</div>
           <form class="sp-form" onsubmit="event.preventDefault();sendSupport()">
-            <div>
-              <label for="sp-topic">Topic</label>
-              <select id="sp-topic">
-                <option>Bug report</option>
-                <option>Feature request</option>
-                <option>Account / billing</option>
-                <option>Gameplay question</option>
-                <option>Other</option>
-              </select>
+
+            <div class="sp-row-2col">
+              <div class="sp-field">
+                <label for="sp-topic">Topic</label>
+                <select id="sp-topic">
+                  <option>Bug report</option>
+                  <option>Feature request</option>
+                  <option>Account / billing</option>
+                  <option>Gameplay question</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="sp-field">
+                <label for="sp-priority">Priority</label>
+                <select id="sp-priority">
+                  <option>Normal</option>
+                  <option>Low — just FYI</option>
+                  <option>High — blocking me</option>
+                </select>
+              </div>
             </div>
-            <div>
+
+            <div class="sp-field">
+              <label for="sp-subject">Subject</label>
+              <input type="text" id="sp-subject" placeholder="Short summary…" />
+            </div>
+
+            <div class="sp-field">
               <label for="sp-body">Message</label>
-              <textarea id="sp-body" placeholder="Tell us what's going on…"></textarea>
+              <textarea id="sp-body" placeholder="Tell us what's going on — steps to reproduce, what you expected, what happened."></textarea>
             </div>
-            <button class="sp-send" type="submit">Send to support</button>
+
+            <div class="sp-field">
+              <label>Screenshot (optional)</label>
+              <label class="sp-upload" id="sp-upload-wrap">
+                <input type="file" id="sp-file" accept="image/*" onchange="onFilePick(this)" />
+                <div class="sp-upload-icon">
+                  <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor"/><polyline points="21 15 16 10 5 21"/></svg>
+                </div>
+                <div class="sp-upload-info">
+                  <div class="sp-upload-name" id="sp-upload-name">Drop a screenshot here, or click to attach</div>
+                  <div class="sp-upload-hint" id="sp-upload-hint">PNG / JPG · up to 5 MB</div>
+                </div>
+                <button type="button" class="sp-upload-clear" id="sp-upload-clear" onclick="clearFile(event)" style="display:none;" aria-label="Remove file">
+                  <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
+              </label>
+            </div>
+
+            <div class="sp-form-actions">
+              <button class="sp-send" type="submit">Send to support</button>
+              <span class="sp-form-hint">We typically respond in under 24h.</span>
+            </div>
           </form>
         </div>
 
@@ -197,10 +295,50 @@ function renderInbox() {
     </div>`).join('');
 }
 
+function onFilePick(input) {
+  const wrap  = document.getElementById('sp-upload-wrap');
+  const name  = document.getElementById('sp-upload-name');
+  const hint  = document.getElementById('sp-upload-hint');
+  const clr   = document.getElementById('sp-upload-clear');
+  const f     = input.files && input.files[0];
+  if (!f) return;
+  // Lightweight client-side guard (5 MB limit)
+  if (f.size > 5 * 1024 * 1024) {
+    showToast('File too big — keep it under 5 MB');
+    input.value = '';
+    return;
+  }
+  wrap.classList.add('has-file');
+  name.textContent = f.name;
+  hint.textContent = (f.size / 1024).toFixed(0) + ' KB · ' + (f.type || 'image');
+  clr.style.display = '';
+}
+
+function clearFile(e) {
+  e.preventDefault();
+  e.stopPropagation();
+  const wrap = document.getElementById('sp-upload-wrap');
+  const input = document.getElementById('sp-file');
+  const name  = document.getElementById('sp-upload-name');
+  const hint  = document.getElementById('sp-upload-hint');
+  const clr   = document.getElementById('sp-upload-clear');
+  input.value = '';
+  wrap.classList.remove('has-file');
+  name.textContent = 'Drop a screenshot here, or click to attach';
+  hint.textContent = 'PNG / JPG · up to 5 MB';
+  clr.style.display = 'none';
+}
+
 function sendSupport() {
   const body = (document.getElementById('sp-body').value || '').trim();
   if (!body) return showToast('Add a message first');
+  // Reset all fields after "send"
+  document.getElementById('sp-subject').value = '';
   document.getElementById('sp-body').value = '';
+  const fileInput = document.getElementById('sp-file');
+  if (fileInput.files && fileInput.files[0]) {
+    clearFile({ preventDefault(){}, stopPropagation(){} });
+  }
   showToast('Thanks — we\'ll get back to you soon (demo)');
 }
 
