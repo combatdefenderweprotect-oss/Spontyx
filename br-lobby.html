@@ -70,9 +70,11 @@
   pointer-events: none; opacity: 0.6;
 }
 
-/* Steps-bar removed visually — JS still references step-pill nodes for
-   active-state, kept hidden so old code paths don't crash. */
-.steps-bar { display: none; }
+/* Steps-bar — original .steps-bar { display:flex } rule lower in the file
+   wins by ordering, so we override here with !important to actually hide
+   the row. JS still references .step-pill nodes for active-state and
+   keeps working since they remain in the DOM. */
+.steps-bar { display: none !important; }
 
 /* Wrapper that sits above the background */
 .pv-page { position: relative; z-index: 1; padding: 24px 32px 0; width: 100%; }
