@@ -10,7 +10,9 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <style>
-    .content { flex: 1; min-width: 0; padding: 0 0 40px; }
+    /* Inherit shared .main margin-left:260px next to fixed sidebar. */
+    .main { padding: 0 0 40px; }
+    @media (max-width: 900px) { .main { margin-left: 0; } }
     .sp-inner { padding: 28px 32px 0; max-width: 980px; margin: 0 auto; }
     @media (max-width: 900px) { .sp-inner { padding: 18px 14px 0; } }
 
@@ -86,7 +88,7 @@
 
 <div id="sidebar-placeholder"></div>
 
-<main class="content">
+<main class="main">
 
   <!-- ═══ UNIFIED MODE HEADER ═══ -->
   <div class="mode-header">

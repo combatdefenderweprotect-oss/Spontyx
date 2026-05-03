@@ -10,7 +10,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <style>
-    .content { flex: 1; min-width: 0; padding: 0 0 32px; }
+    /* Inherit shared .main margin-left:260px next to fixed sidebar.
+       Inner padding is on .mc-inner so the unified .mode-header sits flush. */
+    .main { padding: 0 0 32px; }
+    @media (max-width: 900px) { .main { margin-left: 0; } }
     .mc-inner { padding: 22px 32px 0; max-width: 1320px; margin: 0 auto; }
     @media (max-width: 900px) { .mc-inner { padding: 16px 14px 0; } }
 
@@ -224,7 +227,7 @@
 
 <div id="sidebar-placeholder"></div>
 
-<main class="content">
+<main class="main">
 
   <!-- ═══ UNIFIED MODE HEADER ═══ -->
   <div class="mode-header">
