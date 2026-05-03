@@ -11,16 +11,289 @@
 <link rel="stylesheet" href="styles.css">
 <style>
 /* ── Layout ─────────────────────────────────────────────────────────────── */
-/* .main keeps NO horizontal padding so the unified .mode-header sits full-width
-   like Arena/Trivia. Page-level inset is applied to children only.
-   Vertical hierarchy under header: header → live-row (medium) → tension
-   (small) → steps (larger) → step content. */
-.main { padding: 0 0 40px; position: relative; }
-.main > *:not(.mode-header):not(.br-bg-glow) { padding-left: 40px; padding-right: 40px; }
-
+.main { padding: 0 0 60px; position: relative; }
+.main > .steps-bar,
+.main > .step-section { padding-left: 40px; padding-right: 40px; }
 @media (max-width: 900px) {
-  .main { padding: 0 0 32px; }
-  .main > *:not(.mode-header):not(.br-bg-glow) { padding-left: 16px; padding-right: 16px; }
+  .main { padding: 0 0 40px; }
+  .main > .steps-bar,
+  .main > .step-section { padding-left: 16px; padding-right: 16px; }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   STEP 1 (Mode) — cinematic survival lobby (promoted from preview).
+   All styles use the .pv-* prefix so they don't collide with anything.
+   Active only inside #step-1.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* Background layer — radial glow + subtle particles. Lives inside #step-1
+   so it disappears when user moves to Battlefield. */
+.pv-bg {
+  position: absolute; inset: 0; z-index: 0;
+  overflow: hidden; pointer-events: none;
+}
+.pv-bg::before {
+  content: '';
+  position: absolute;
+  left: 50%; top: 280px;
+  transform: translateX(-50%);
+  width: 920px; height: 560px;
+  background:
+    radial-gradient(ellipse at center,
+      rgba(168,225,12,0.10) 0%,
+      rgba(168,225,12,0.04) 35%,
+      rgba(124,92,252,0.04) 60%,
+      transparent 80%);
+  filter: blur(28px);
+  animation: pv-glow-pulse 8s ease-in-out infinite;
+}
+@keyframes pv-glow-pulse {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 0.85; }
+}
+#pv-particles {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  pointer-events: none; opacity: 0.55;
+}
+
+/* Wrapper that sits above the background */
+.pv-page { position: relative; z-index: 1; padding: 24px 32px 0; width: 100%; }
+.pv-inner { max-width: 1100px; margin: 0 auto; }
+@media (max-width: 700px) { .pv-page { padding: 18px 16px 0; } }
+
+/* Hero */
+.pv-hero { text-align: center; margin-bottom: 28px; animation: pv-fade-up 0.6s cubic-bezier(0.16,1,0.3,1) both; }
+@keyframes pv-fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.pv-eyebrow {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 14px; border-radius: 999px;
+  background: rgba(255,107,107,0.10);
+  border: 1px solid rgba(255,107,107,0.25);
+  color: var(--coral);
+  font-size: 0.62rem; font-weight: 800;
+  letter-spacing: 0.13em; text-transform: uppercase;
+  margin-bottom: 18px;
+}
+.pv-eyebrow-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--coral);
+  box-shadow: 0 0 10px rgba(255,107,107,0.55);
+  animation: pv-blink 1.6s ease-in-out infinite;
+}
+@keyframes pv-blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+.pv-headline {
+  font-size: clamp(2.1rem, 4.6vw, 3.4rem);
+  font-weight: 900;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--off-white);
+  margin: 0 0 14px;
+}
+.pv-headline em { font-style: normal; color: var(--lime); }
+.pv-subline {
+  font-size: 0.95rem;
+  color: var(--grey);
+  max-width: 520px; margin: 0 auto;
+  line-height: 1.55;
+}
+
+/* Live activity strip */
+.pv-live { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-bottom: 16px; }
+.pv-live-pill {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--navy-card);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 999px;
+  padding: 7px 14px;
+  font-size: 0.74rem; font-weight: 600;
+  color: var(--grey);
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  animation: pv-pill-in 0.5s cubic-bezier(0.16,1,0.3,1) forwards;
+  transition: transform 0.18s, border-color 0.18s, box-shadow 0.22s;
+}
+.pv-live-pill:nth-child(1) { animation-delay: 0.10s; }
+.pv-live-pill:nth-child(2) { animation-delay: 0.22s; }
+.pv-live-pill:nth-child(3) { animation-delay: 0.34s; }
+.pv-live-pill:nth-child(4) { animation-delay: 0.46s; }
+@keyframes pv-pill-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.pv-live-pill:hover {
+  transform: translateY(-1px);
+  border-color: rgba(168,225,12,0.30);
+  box-shadow: 0 4px 14px rgba(168,225,12,0.08);
+}
+.pv-live-pill .num { color: var(--off-white); font-weight: 800; }
+.pv-live-pill.danger .num { color: var(--coral); }
+.pv-live-pill .pulse-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: var(--lime);
+  box-shadow: 0 0 8px rgba(168,225,12,0.55);
+  animation: pv-blink 1.6s ease-in-out infinite;
+}
+
+/* Survival warning strip */
+.pv-warn {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  background: linear-gradient(90deg, rgba(255,107,107,0.08) 0%, rgba(255,107,107,0.04) 50%, rgba(168,225,12,0.05) 100%);
+  border: 1px solid rgba(255,107,107,0.20);
+  border-radius: var(--radius-lg);
+  padding: 12px 18px;
+  margin-bottom: 28px;
+  box-shadow: 0 0 20px rgba(255,107,107,0.05);
+  animation: pv-fade-up 0.6s 0.5s cubic-bezier(0.16,1,0.3,1) both;
+}
+@media (max-width: 700px) { .pv-warn { grid-template-columns: 1fr; gap: 6px; } }
+.pv-warn-item {
+  display: inline-flex; align-items: center; gap: 8px;
+  justify-content: center;
+  font-size: 0.82rem; font-weight: 600;
+  color: rgba(255,255,255,0.85);
+}
+@media (max-width: 700px) { .pv-warn-item { justify-content: flex-start; } }
+
+/* Cinematic mode cards */
+.pv-modes {
+  display: grid;
+  grid-template-columns: 1fr 1.06fr;
+  gap: 18px;
+  margin-bottom: 28px;
+  align-items: stretch;
+  animation: pv-fade-up 0.7s 0.7s cubic-bezier(0.16,1,0.3,1) both;
+}
+@media (max-width: 700px) { .pv-modes { grid-template-columns: 1fr; } }
+.pv-mode {
+  position: relative;
+  padding: 26px 26px 24px;
+  background: var(--navy-card);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: var(--radius-lg);
+  cursor: pointer; overflow: hidden;
+  transition: transform 0.2s cubic-bezier(0.16,1,0.3,1), border-color 0.18s, box-shadow 0.22s, background 0.18s;
+}
+.pv-mode:hover { transform: translateY(-2px); border-color: rgba(255,255,255,0.14); }
+.pv-mode.classic { opacity: 0.85; }
+.pv-mode.classic:hover { opacity: 1; border-color: rgba(168,225,12,0.30); }
+.pv-mode.classic.selected {
+  opacity: 1;
+  border-color: var(--lime);
+  background: var(--lime-dim);
+  box-shadow: 0 0 28px rgba(168,225,12,0.14), inset 0 0 0 1px rgba(168,225,12,0.4);
+  transform: translateY(-2px) scale(1.02);
+}
+.pv-mode.ranked {
+  transform: scale(1.02);
+  border-color: rgba(168,225,12,0.20);
+  box-shadow: 0 0 30px rgba(168,225,12,0.08);
+}
+.pv-mode.ranked:hover {
+  transform: scale(1.035) translateY(-2px);
+  border-color: rgba(168,225,12,0.45);
+  box-shadow: 0 0 40px rgba(168,225,12,0.18);
+}
+.pv-mode.ranked.selected {
+  transform: scale(1.035);
+  background: var(--lime-dim);
+  box-shadow: 0 0 44px rgba(168,225,12,0.26), inset 0 0 0 1px rgba(168,225,12,0.55);
+}
+.pv-mode-recommend {
+  position: absolute; top: 14px; right: 14px;
+  font-size: 0.6rem; font-weight: 800;
+  letter-spacing: 0.08em; text-transform: uppercase;
+  padding: 3px 10px; border-radius: 999px;
+  background: rgba(168,225,12,0.12);
+  color: var(--lime);
+  border: 1px solid rgba(168,225,12,0.32);
+}
+.pv-mode-icon { font-size: 1.9rem; margin-bottom: 14px; display: block; line-height: 1; }
+.pv-mode-name {
+  font-size: 1.4rem; font-weight: 900;
+  color: var(--off-white); margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+.pv-mode-desc { font-size: 0.88rem; color: var(--grey); line-height: 1.5; margin-bottom: 16px; }
+.pv-mode-badge {
+  display: inline-block;
+  font-size: 0.62rem; font-weight: 800;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  padding: 4px 11px; border-radius: 999px;
+  background: rgba(255,255,255,0.05);
+  color: rgba(255,255,255,0.6);
+  border: 1px solid rgba(255,255,255,0.08);
+}
+.pv-mode.ranked .pv-mode-badge {
+  background: rgba(168,225,12,0.10);
+  color: var(--lime);
+  border-color: rgba(168,225,12,0.32);
+}
+.pv-mode-check {
+  position: absolute; bottom: 14px; right: 14px;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: var(--lime); color: var(--navy);
+  display: none; align-items: center; justify-content: center;
+}
+.pv-mode-check svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 3; }
+.pv-mode.selected .pv-mode-check { display: flex; animation: pv-check-in 0.22s ease-out; }
+@keyframes pv-check-in { from { transform: scale(0.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+/* Action buttons after mode selection */
+.pv-cta-row {
+  display: flex; gap: 12px; justify-content: center; flex-wrap: wrap;
+  animation: pv-fade-up 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+.pv-btn {
+  display: inline-flex; align-items: center; gap: 10px;
+  padding: 13px 28px; border-radius: 999px;
+  border: 1px solid transparent;
+  font-family: 'Inter', sans-serif; font-size: 0.92rem; font-weight: 800;
+  cursor: pointer; outline: none;
+  transition: transform 0.16s, box-shadow 0.22s, background 0.18s, border-color 0.18s;
+}
+.pv-btn-primary {
+  background: var(--lime); color: var(--navy);
+  box-shadow: 0 0 24px rgba(168,225,12,0.24), 0 6px 18px rgba(0,0,0,0.25);
+  animation: pv-cta-breathe 3.2s ease-in-out infinite;
+}
+.pv-btn-primary:hover {
+  background: #b8f00f; transform: scale(1.04);
+  box-shadow: 0 0 36px rgba(168,225,12,0.36), 0 8px 22px rgba(0,0,0,0.3);
+}
+.pv-btn-primary:active { transform: scale(0.97); }
+.pv-btn-primary:disabled {
+  background: rgba(168,225,12,0.45); cursor: not-allowed;
+  animation: none; box-shadow: none; transform: none; opacity: 0.6;
+}
+.pv-btn-ghost {
+  background: rgba(255,255,255,0.04);
+  border-color: rgba(255,255,255,0.14);
+  color: var(--off-white);
+}
+.pv-btn-ghost:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(168,225,12,0.4);
+  transform: scale(1.02);
+}
+.pv-btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+@keyframes pv-cta-breathe {
+  0%, 100% { box-shadow: 0 0 24px rgba(168,225,12,0.24), 0 6px 18px rgba(0,0,0,0.25); }
+  50%      { box-shadow: 0 0 34px rgba(168,225,12,0.34), 0 6px 20px rgba(0,0,0,0.30); }
+}
+
+/* prefers-reduced-motion — kill non-essential animations */
+@media (prefers-reduced-motion: reduce) {
+  .pv-bg::before, .pv-eyebrow-dot, .pv-live-pill .pulse-dot,
+  .pv-live-pill, .pv-warn, .pv-modes, .pv-cta-row,
+  .pv-btn-primary, .pv-hero {
+    animation: none !important;
+  }
+  .pv-mode.ranked, .pv-mode.ranked.selected, .pv-mode.classic.selected { transform: none !important; }
 }
 
 /* Subtle radial glow behind the mode cards — pulls focus to the decision. */
@@ -799,62 +1072,79 @@
       </div>
     </div>
 
-    <!-- Subtle radial glow behind mode cards -->
-    <div class="br-bg-glow" aria-hidden="true"></div>
-
-    <!-- Live-feel ambient row (atmospheric) -->
-    <div class="br-live-row">
-      <span class="br-live-item"><span class="br-live-orb"></span> <span class="br-live-num">1,247</span> players online</span>
-      <span class="br-live-item">⚔️ <span class="br-live-num">18</span> lobbies forming</span>
-      <span class="br-live-item">💀 Avg survival: <span class="br-live-num">~8 min</span></span>
-    </div>
-
-    <!-- Tension strip -->
-    <div class="br-tension">
-      <span class="br-tension-item"><span class="br-tension-dot"></span> 💀 Players get eliminated</span>
-      <span class="br-tension-item">⚡ No answer = HP loss</span>
-      <span class="br-tension-item">🏆 Only one survives</span>
-    </div>
-
     <div class="steps-bar">
       <div class="step-pill active" id="spill-1">① Mode</div>
       <div class="step-pill" id="spill-2">② Battlefield</div>
       <div class="step-pill" id="spill-3">③ Waiting Room</div>
     </div>
 
-    <!-- ── Step 1: Mode (Classic vs Ranked) ──────────────────────────────── -->
+    <!-- ═══ STEP 1 — Cinematic survival lobby (Mode pick) ═══ -->
     <div class="step-section active" id="step-1">
-      <p class="section-title">Choose your mode</p>
-      <p class="section-sub">Same survival gameplay. Ranked counts toward your BR rating.</p>
 
-      <div class="mode-grid">
-        <div class="mode-card" onclick="selectMode('classic')" id="mode-classic">
-          <div class="mode-card-wm">💀</div>
-          <div class="mode-check">✓</div>
-          <div class="mode-card-icon">🎯</div>
-          <div class="mode-card-name">Classic</div>
-          <div class="mode-card-sub">Casual survival. No rating pressure.</div>
-          <div class="mode-tag">Practice · No ELO</div>
-        </div>
-        <div class="mode-card" onclick="selectMode('ranked')" id="mode-ranked">
-          <span class="mode-ribbon">Recommended</span>
-          <div class="mode-card-wm">🏆</div>
-          <div class="mode-check">✓</div>
-          <div class="mode-card-icon">⚔️</div>
-          <div class="mode-card-name">Ranked</div>
-          <div class="mode-card-sub">Identical gameplay. Rating on the line.</div>
-          <div class="mode-tag tag-coral">Survive · ELO applies</div>
-        </div>
+      <!-- Animated background — particles + radial glow -->
+      <div class="pv-bg" aria-hidden="true">
+        <canvas id="pv-particles"></canvas>
       </div>
 
-      <!-- After mode selection, two CTAs: instant matchmaking OR pick a battlefield. -->
-      <div class="action-row" id="step1-actions" style="display:none;">
-        <button class="btn btn-ghost" id="btn-pick-battlefield" onclick="goStep(2)">
-          Pick Battlefield →
-        </button>
-        <button class="btn btn-primary" id="btn-instant-drop" onclick="instantDropIn()">
-          🔥 Instant Drop In
-        </button>
+      <div class="pv-page">
+        <div class="pv-inner">
+
+          <!-- Hero -->
+          <section class="pv-hero">
+            <span class="pv-eyebrow">
+              <span class="pv-eyebrow-dot"></span>
+              Survival Mode · Live Lobbies
+            </span>
+            <h1 class="pv-headline">Last one <em>standing</em> wins.</h1>
+            <p class="pv-subline">Every wrong answer costs HP. Survive longer than everyone else.</p>
+          </section>
+
+          <!-- Live activity strip (count-up on load) -->
+          <div class="pv-live">
+            <span class="pv-live-pill"><span class="pulse-dot"></span><span class="num" data-target="1247">0</span> players online</span>
+            <span class="pv-live-pill">⚔️ <span class="num" data-target="18">0</span> lobbies forming</span>
+            <span class="pv-live-pill danger">💀 <span class="num" data-target="3">0</span> eliminated last minute</span>
+            <span class="pv-live-pill">⏱ Avg survival: <span class="num">~8 min</span></span>
+          </div>
+
+          <!-- Survival warning strip -->
+          <div class="pv-warn">
+            <span class="pv-warn-item">💀 Players get eliminated</span>
+            <span class="pv-warn-item">⚡ No answer = HP loss</span>
+            <span class="pv-warn-item">🏆 Only one survives</span>
+          </div>
+
+          <!-- Mode selection — two cinematic cards -->
+          <div class="pv-modes">
+            <div class="pv-mode classic" id="mode-classic" onclick="selectMode('classic')">
+              <span class="pv-mode-icon">🎯</span>
+              <div class="pv-mode-name">Classic</div>
+              <p class="pv-mode-desc">Casual survival. No rating impact.</p>
+              <span class="pv-mode-badge">Practice · No ELO</span>
+              <span class="pv-mode-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+            </div>
+
+            <div class="pv-mode ranked" id="mode-ranked" onclick="selectMode('ranked')">
+              <span class="pv-mode-recommend">Recommended</span>
+              <span class="pv-mode-icon">⚔️</span>
+              <div class="pv-mode-name">Ranked</div>
+              <p class="pv-mode-desc">High risk. Real consequences.</p>
+              <span class="pv-mode-badge">Survive · ELO Applies</span>
+              <span class="pv-mode-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></span>
+            </div>
+          </div>
+
+          <!-- Two CTAs — appear after mode select -->
+          <div class="pv-cta-row" id="step1-actions" style="display:none;">
+            <button class="pv-btn pv-btn-ghost" id="btn-pick-battlefield" onclick="goStep(2)">
+              Pick Battlefield →
+            </button>
+            <button class="pv-btn pv-btn-primary" id="btn-instant-drop" onclick="instantDropIn()">
+              🔥 Instant Drop In
+            </button>
+          </div>
+
+        </div>
       </div>
     </div>
 
@@ -1007,8 +1297,97 @@ window.addEventListener('DOMContentLoaded', async function() {
     return;
   }
 
+  // Cinematic Step 1 niceties — count-up live numbers + ambient particles
+  pvCountUp();
+  pvInitParticles();
+
   await loadMatches();
 });
+
+/* ─── Step 1 — count-up animation for live pill numbers ─── */
+function pvCountUp() {
+  document.querySelectorAll('.pv-live-pill .num[data-target]').forEach(function(el) {
+    var target = parseInt(el.dataset.target, 10) || 0;
+    if (!target) return;
+    var dur = 900;
+    var start = performance.now();
+    function tick(now) {
+      var t = Math.min(1, (now - start) / dur);
+      var eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = Math.floor(eased * target).toLocaleString();
+      if (t < 1) requestAnimationFrame(tick);
+      else el.textContent = target.toLocaleString();
+    }
+    requestAnimationFrame(tick);
+  });
+}
+
+/* ─── Step 1 — gentle particle field, lime + faint purple ─── */
+function pvInitParticles() {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  var canvas = document.getElementById('pv-particles');
+  if (!canvas) return;
+  var ctx = canvas.getContext('2d');
+  var dpr = window.devicePixelRatio || 1;
+  var w = 0, h = 0;
+  var PARTICLE_COUNT = 22;
+  var particles = [];
+
+  function resize() {
+    var r = canvas.getBoundingClientRect();
+    w = r.width; h = r.height;
+    canvas.width  = w * dpr;
+    canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  function spawn() {
+    return {
+      x:  Math.random() * w,
+      y:  h + Math.random() * 60,
+      r:  0.5 + Math.random() * 1.4,
+      vy: 0.10 + Math.random() * 0.20,
+      vx: (Math.random() - 0.5) * 0.08,
+      a:  0.10 + Math.random() * 0.25,
+      hue: Math.random() < 0.85 ? 'lime' : 'purple',
+    };
+  }
+  function reset() {
+    particles.length = 0;
+    for (var i = 0; i < PARTICLE_COUNT; i++) {
+      var p = spawn();
+      p.y = Math.random() * h;
+      particles.push(p);
+    }
+  }
+  var last = performance.now();
+  function tick(now) {
+    var dt = Math.min(48, now - last);
+    last = now;
+    ctx.clearRect(0, 0, w, h);
+    for (var i = 0; i < particles.length; i++) {
+      var p = particles[i];
+      p.y -= p.vy * (dt / 16);
+      p.x += p.vx * (dt / 16);
+      if (p.y < -10 || p.x < -10 || p.x > w + 10) {
+        particles[i] = spawn();
+        continue;
+      }
+      ctx.beginPath();
+      ctx.fillStyle = p.hue === 'lime'
+        ? 'rgba(168, 225, 12, ' + p.a + ')'
+        : 'rgba(124, 92, 252, ' + (p.a * 0.85) + ')';
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    requestAnimationFrame(tick);
+  }
+  resize(); reset(); requestAnimationFrame(tick);
+  var resizeTmo;
+  window.addEventListener('resize', function() {
+    clearTimeout(resizeTmo);
+    resizeTmo = setTimeout(function() { resize(); reset(); }, 120);
+  });
+}
 
 // ── Step navigation ───────────────────────────────────────────────────────────
 // Three-step flow: ① Mode → ② Battlefield → ③ Waiting Room (overlay).
