@@ -1029,22 +1029,29 @@ async function loadMatches() {
   var lower    = new Date(now.getTime() - 3  * 60 * 60 * 1000).toISOString();
   var upper    = new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000).toISOString();
 
+  // NOTE: api_football_fixtures has NO league_name column (only league_id).
+  // Selecting league_name made the query fail silently — same SELECT as
+  // matches.html now, plus a join to sports_competitions for the display name.
   var { data, error } = await window.sb
     .from('api_football_fixtures')
-    .select('fixture_id, home_team_name, away_team_name, kickoff_at, status_short, league_id, league_name')
+    .select('fixture_id, league_id, kickoff_at, status_short, home_team_name, away_team_name, round')
     .gte('kickoff_at', lower)
     .lte('kickoff_at', upper)
     .order('kickoff_at', { ascending: true })
     .limit(200);
 
-  if (error || !data || data.length === 0) {
+  if (error) {
+    console.warn('[br-lobby] fixtures query error:', error);
+    list.innerHTML = '<div class="match-empty">Could not load fixtures: ' + (error.message || 'unknown error') + '</div>';
+    return;
+  }
+  if (!data || data.length === 0) {
     list.innerHTML = '<div class="match-empty">No upcoming fixtures available right now. Check back soon — fixtures sync regularly.</div>';
     return;
   }
 
-  // Join sports_competitions so league chips show canonical names (e.g.
-  // "Premier League") instead of whatever happens to be in
-  // api_football_fixtures.league_name. Same approach as matches.html.
+  // Join sports_competitions so league chips show canonical names
+  // (e.g. "Premier League"). Same approach as matches.html.
   var apiLeagueIds = [...new Set(data.map(function(f) { return f.league_id; }).filter(Boolean))];
   var compById = {};
   if (apiLeagueIds.length) {
@@ -1059,7 +1066,7 @@ async function loadMatches() {
 
   // Decorate each fixture with the canonical league display name.
   allMatches = data.map(function(f) {
-    f.league_display = compById[f.league_id] || f.league_name || ('League ' + f.league_id);
+    f.league_display = compById[f.league_id] || ('League ' + f.league_id);
     return f;
   });
 
@@ -1080,8 +1087,7 @@ function rebuildLeagueChips() {
   var leagueSet = new Set();
   allMatches.forEach(function(m) {
     if (selectedSport !== 'all' && sportOf(m) !== selectedSport) return;
-    var name = m.league_display || m.league_name;
-    if (name) leagueSet.add(name);
+    if (m.league_display) leagueSet.add(m.league_display);
   });
   var leagues = [...leagueSet].sort();
 
@@ -1138,9 +1144,8 @@ function filterMatches() {
   var q = document.getElementById('match-search').value.toLowerCase();
   var filtered = allMatches.filter(function(m) {
     var name      = (m.home_team_name + ' ' + m.away_team_name).toLowerCase();
-    var leagueOf  = m.league_display || m.league_name;
     var sportOk   = selectedSport  === 'all' || sportOf(m) === selectedSport;
-    var leagueOk  = selectedLeague === 'all' || leagueOf === selectedLeague;
+    var leagueOk  = selectedLeague === 'all' || m.league_display === selectedLeague;
     var searchOk  = !q || name.includes(q);
     return sportOk && leagueOk && searchOk;
   });
