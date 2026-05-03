@@ -10,46 +10,32 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 <style>
-    /* ── Main ── */
-    .topbar {
-      padding: 16px 32px; display: flex; align-items: center; gap: 16px;
-      border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy);
-      position: sticky; top: 0; z-index: 50;
+    /* ── Layout — fill area next to sidebar (no max-width cap) ── */
+    .content { padding: 24px 32px 40px; flex: 1; width: 100%; max-width: 1100px; margin: 0 auto; }
+    @media (max-width: 900px) { .content { padding: 18px 16px 32px; } }
+
+    /* ── Toolbar (search + bulk actions) ── */
+    .notif-toolbar {
+      display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+      margin-bottom: 18px;
     }
-    .topbar-search { flex: 1; max-width: 400px; position: relative; }
-    .topbar-search input {
-      width: 100%; padding: 10px 14px 10px 40px; background: var(--navy-light);
-      border: 1px solid rgba(255,255,255,0.08); border-radius: var(--radius-pill);
+    .notif-search {
+      flex: 1; min-width: 220px; position: relative;
+    }
+    .notif-search input {
+      width: 100%; padding: 10px 14px 10px 40px;
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-pill);
       color: var(--off-white); font-size: 0.85rem; font-family: inherit; outline: none;
+      transition: border-color 0.15s;
     }
-    .topbar-search input::placeholder { color: var(--grey-dark); }
-    .topbar-search input:focus { border-color: rgba(168,225,12,0.3); }
-    .topbar-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--grey-dark); }
-    .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
-    .topbar-btn {
-      width: 40px; height: 40px; border-radius: 50%; border: none;
-      background: var(--navy-light); cursor: pointer; display: flex;
-      align-items: center; justify-content: center; position: relative; transition: background 0.2s;
+    .notif-search input::placeholder { color: var(--grey-dark); }
+    .notif-search input:focus { border-color: rgba(168,225,12,0.4); }
+    .notif-search svg {
+      position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+      width: 15px; height: 15px; stroke: var(--grey-dark); fill: none; stroke-width: 2;
     }
-    .topbar-btn:hover { background: var(--navy-hover); }
-    .topbar-btn svg { width: 18px; height: 18px; stroke: var(--grey); fill: none; stroke-width: 1.8; }
-    .topbar-btn .notif-dot {
-      position: absolute; top: 8px; right: 8px; width: 8px; height: 8px;
-      background: var(--coral); border-radius: 50%; border: 2px solid var(--navy);
-    }
-    .topbar-btn.active-page { background: var(--lime-dim); }
-    .topbar-btn.active-page svg { stroke: var(--lime); }
-
-    .content { padding: 32px; flex: 1; max-width: 800px; }
-
-    /* ── Page Header ── */
-    .page-header {
-      display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; flex-wrap: wrap; gap: 12px;
-    }
-    .page-header-left h1 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 4px; }
-    .page-header-left h1 span { color: var(--lime); }
-    .page-header-left p { color: var(--grey); font-size: 0.85rem; }
-    .header-actions { display: flex; gap: 8px; }
+    .header-actions { display: flex; gap: 8px; flex-shrink: 0; }
     .header-btn {
       padding: 8px 16px; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.1);
       background: transparent; color: var(--grey); font-size: 0.78rem; font-weight: 600;
@@ -169,32 +155,32 @@
 
 <!-- Main -->
 <div class="main">
-  <header class="topbar">
-    <button class="mobile-menu-btn" onclick="toggleSidebar()">
-      <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
-    </button>
-    <div class="topbar-search">
-      <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input type="text" placeholder="Search notifications..." id="searchInput" oninput="filterNotifs()" />
+
+  <!-- ═══ UNIFIED MODE HEADER ═══ -->
+  <div class="mode-header">
+    <div class="mode-header-content">
+      <div class="mode-header-left">
+        <div class="mode-icon icon-yourgames">
+          <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+        </div>
+        <div>
+          <h1 class="mode-title">Notifications</h1>
+          <p class="mode-subtitle">Stay on top of everything happening across your leagues.</p>
+        </div>
+      </div>
+      <div class="mode-header-right">
+        <button class="how-to-play" type="button">How It Works →</button>
+      </div>
     </div>
-    <div class="topbar-right">
-      <a href="notifications.html" class="topbar-btn active-page" title="Notifications" style="text-decoration:none;">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-        <span class="notif-dot"></span>
-      </a>
-      <button class="topbar-btn" title="Messages">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-      </button>
-    </div>
-  </header>
+  </div>
 
   <div class="content">
 
-    <!-- Page Header -->
-    <div class="page-header">
-      <div class="page-header-left">
-        <h1><span>Notifications</span></h1>
-        <p>Stay on top of everything happening across your leagues.</p>
+    <!-- Toolbar: search + bulk actions -->
+    <div class="notif-toolbar">
+      <div class="notif-search">
+        <svg viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" placeholder="Search notifications..." id="searchInput" oninput="filterNotifs()" />
       </div>
       <div class="header-actions">
         <button class="header-btn" onclick="markAllRead()">
