@@ -29,11 +29,22 @@
     }
     /* (page-enter keyframe is provided by styles.css; no override needed) */
 
+    /* ── APP-SHELL & MAIN — guarantee .main fills the area next to the sidebar.
+       body has `display: flex` from styles.css; without these rules .app-shell
+       defaults to flex:0 1 auto and collapses, leaving .main narrower than the
+       viewport and pushing content visually left. Scoped to this page only. */
+    .app-shell { flex: 1; width: 100%; min-width: 0; }
+    .main {
+      width: calc(100vw - 260px);   /* 260px = sidebar width from styles.css */
+      max-width: calc(100vw - 260px);
+    }
+    @media (max-width: 900px) {
+      .main { width: 100vw; max-width: 100vw; }  /* sidebar collapses on mobile */
+    }
+
     /* ── PAGE SHELL ──
-       .main is governed by styles.css (margin-left: 260px next to fixed
-       sidebar; flex column; min-height: 100vh). We do not override it.
-       The full-screen Arena experience is achieved by the .mp-page
-       wrapper, which fills .main and manages its own internal scroll. */
+       .mp-page fills .main and manages its own internal scroll for the
+       full-screen Arena experience. */
     .mp-page {
       display: flex;
       flex-direction: column;
