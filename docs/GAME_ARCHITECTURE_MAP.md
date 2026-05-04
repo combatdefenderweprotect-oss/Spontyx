@@ -72,8 +72,10 @@ Long-term competitive prediction leagues. Players join a league tied to a sport 
 ### Gaps / next steps
 - Session pacing for Match Night (legacy "Type 1") leagues — fixed question budget, chaining, match summary card — is designed in `SESSION_CONTINUATION_DESIGN.txt` but not built
 - Season-Long + Custom (legacy "Type 2") pacing is effectively what runs today
-- **Season-Long creation flow rebuild pending** — implementation must follow the [`LEAGUE_CREATION_FLOW.md`](LEAGUE_CREATION_FLOW.md) canonical spec (Path A / Path B, fixture-driven lifecycle, knockout-safe end conditions, League Completion Evaluation process, zero-fixtures UX rule). Includes Path A multi-competition selector, knockout-patience handling, past-fixture exclusion at query time, and the `creation_path` + `api_sports_league_ids[]` schema additions
-- **Data dependency**: `team_still_active` and `season_end_date` external signals required before Season-Long Path A can correctly handle cup competitions in production. Without these signals, knockout competitions cannot be fully resolved correctly and require fallback behavior (permissive default — see canonical spec § Data dependencies)
+- ✅ **Season-Long creation flow rebuilt and shipped (2026-05-04)** per [`LEAGUE_CREATION_FLOW.md`](LEAGUE_CREATION_FLOW.md). Migration 051 + edge function fan-out + UI fork live. Path A multi-comp, Path A single-comp, Path B all verified in production. Match Night and Custom unaffected.
+- **Completion Evaluator NOT built.** Season-Long leagues stay `active` indefinitely until built. Tracked in [`LEAGUE_COMPLETION_EVALUATOR_TODO.md`](LEAGUE_COMPLETION_EVALUATOR_TODO.md).
+- **Data dependency**: `team_still_active` and `season_end_date` external signals not yet sourced. Production runs on the conservative `sports_teams`-registration fallback for Path A. UI copy never claims active participation with certainty.
+- **Cup coverage in `sports_teams`** may be sparse — Path A will under-detect cup participation in those cases (separate sync-job task).
 
 ---
 

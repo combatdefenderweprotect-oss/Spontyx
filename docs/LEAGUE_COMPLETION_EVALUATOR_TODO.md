@@ -153,14 +153,15 @@ function evaluate(league):
 
 ---
 
-## What is implemented today (launch)
+## What is implemented today (post Season-Long ship 2026-05-04)
 
 Nothing on the evaluator side. Specifically:
 
 - ❌ No scheduled job evaluates Season-Long leagues for completion.
 - ❌ No `team_still_active` signal.
 - ❌ No `season_end_date` signal.
-- ✅ `creation_path` and `api_sports_league_ids[]` are persisted on `leagues` (migration 051) so the evaluator has the inputs it needs once built.
+- ✅ `creation_path` and `api_sports_league_ids[]` are persisted on `leagues` (migration 051 applied to production). Verified: Path A leagues with multiple competitions store `[140, 2]`-shaped arrays; Path B stores `[140]`; Match Night/Custom store `[<comp>]` mirrored from the legacy singular column.
 - ✅ `league_end_date` is auto-derived as `max(kickoff_at)` of loaded fixtures at creation time. Per spec § R4 this is informational only — NOT a completion signal.
+- ✅ B1 quota floor sets `ai_total_quota = weekly × max(loaded_weeks, 30)` for Season-Long so generation continues for at least a season. This is a fixed-constant approximation pending the real `season_end_date` signal.
 
-A Season-Long league created today remains `status = 'active'` indefinitely until the evaluator ships or an admin manually completes it.
+A Season-Long league created today remains `status = 'active'` indefinitely until the evaluator ships or an admin manually completes it. The pre-shipped UI uses the conservative `sports_teams`-registration fallback for Path A competition selection — UI copy never claims "team still active in competition" until the real signal exists.

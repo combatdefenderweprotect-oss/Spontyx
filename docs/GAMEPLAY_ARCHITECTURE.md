@@ -117,12 +117,18 @@ You pick a match you actually care about and you put your knowledge on the line 
 - `discover.html` — "Discover" section inside the hub
 - `create-league.html` — reached from a format-specific CTA, not as the primary entry
 
+### Status (2026-05-04)
+
+- ✅ **Season-Long creation flow shipped** — Path A (team-based, multi-competition) and Path B (competition-based) both live and verified in production data. Migration 051 applied; `generate-questions` redeployed with multi-competition fan-out. See [`LEAGUE_CREATION_FLOW.md`](LEAGUE_CREATION_FLOW.md) revision 5.
+- ✅ Match Night and Custom League continue working unchanged.
+
 ### Gaps / next steps
 
-- **Season-Long creation flow rebuild pending** — implementation must follow the [`LEAGUE_CREATION_FLOW.md`](LEAGUE_CREATION_FLOW.md) canonical spec (Path A team-based / Path B competition-based, fixture-driven lifecycle, knockout-safe end conditions, League Completion Evaluation process, zero-fixtures UX rule).
-- Leagues hub page not built — `my-leagues.html` is still the de facto pillar entry.
-- `team_still_active` and `season_end_date` external signals not yet sourced — see canonical spec § Data dependencies. Without these signals, knockout competitions cannot be fully resolved correctly and the evaluator must use a permissive fallback.
-- Match Night session pacing (legacy "Type 1") — fixed question budget, chaining, match summary card — designed in `SESSION_CONTINUATION_DESIGN.txt`, not built.
+- **League Completion Evaluator not built.** Season-Long leagues created today stay `status='active'` indefinitely. Manual admin closure required if needed. Backlog: [`LEAGUE_COMPLETION_EVALUATOR_TODO.md`](LEAGUE_COMPLETION_EVALUATOR_TODO.md).
+- **External signals `team_still_active` and `season_end_date` not yet sourced.** Production currently uses the conservative `sports_teams`-registration fallback for Path A competition detection (UI copy avoids certainty wording). Knockout competitions cannot be fully resolved correctly without these signals.
+- **Cup coverage in `sports_teams` may be sparse.** If a team's cup registration row isn't in `sports_teams`, Path A under-detects cup participation. Sync coverage is a separate task.
+- **Match Night session pacing** (legacy "Type 1") — fixed question budget, chaining, match summary card — designed in `SESSION_CONTINUATION_DESIGN.txt`, not built.
+- **Leagues hub page** not built — `my-leagues.html` is still the de facto pillar entry.
 
 ---
 
