@@ -1022,8 +1022,10 @@
       </div>
     </div>
 
-    <!-- Team Mode -->
-    <div class="team-mode-section">
+    <!-- Team Mode — hidden 2026-05-04: only 'individual' play mode supported for all 3 league types
+         (Season-Long, Match Night, Custom). The block is left in the DOM (display:none) so
+         restoreStepState's selectors that target .team-mode-section keep working without errors. -->
+    <div class="team-mode-section" style="display:none;">
       <label class="form-label">Play Mode</label>
       <div class="mode-toggle">
         <div class="mode-card selected" onclick="selectPlayMode('individual')">
@@ -1885,9 +1887,9 @@ function restoreStepState(step) {
       c.classList.toggle('selected', (i === 0 && playMode === 'individual') || (i === 1 && playMode === 'team'));
     });
     document.getElementById('team-config').classList.toggle('visible', playMode === 'team');
-    // Restore singleplayer state
+    // Restore singleplayer state — Team Mode section is permanently hidden (Individual only) since 2026-05-04
     const teamSection = document.querySelector('.team-mode-section');
-    if (teamSection) teamSection.style.display = sessionType === 'singleplayer' ? 'none' : '';
+    if (teamSection) teamSection.style.display = 'none';
     const slider = document.getElementById('player-slider');
     if (slider) slider.disabled = sessionType === 'singleplayer';
     validateStep1();
@@ -2853,9 +2855,9 @@ function selectSessionType(type, el) {
   const multiCard = document.querySelector('#play-experience-cards .mode-card:first-child');
   if (multiCard) multiCard.style.display = isSolo ? 'none' : '';
 
-  // Singleplayer: hide team mode (can't have teams in a solo session)
+  // Team Mode section permanently hidden (Individual only, all league types) since 2026-05-04
   const teamSection = document.querySelector('.team-mode-section');
-  if (teamSection) teamSection.style.display = isSolo ? 'none' : '';
+  if (teamSection) teamSection.style.display = 'none';
 
   // Singleplayer: hide League Access (Public/Private) — solo is always private to the user
   const visSection = document.querySelector('.visibility-section');
