@@ -2137,10 +2137,13 @@ async function onSlTeamSearch() {
       resultsEl.style.display = 'block';
       return;
     }
+    // Encode JSON.stringify output for safe insertion inside double-quoted onclick attribute
+    // (raw quotes would terminate the attribute and silently break the click handler).
+    const _attrJson = (v) => JSON.stringify(v).replace(/"/g, '&quot;');
     resultsEl.innerHTML = uniq.slice(0, 20).map(t =>
       '<div class="sl-team-row" style="padding:10px 14px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.04);" ' +
       'onmouseover="this.style.background=\'rgba(168,225,12,0.08)\'" onmouseout="this.style.background=\'\'" ' +
-      'onclick="selectSlTeam(' + t.api_team_id + ', ' + JSON.stringify(t.name) + ', ' + JSON.stringify(t.sport) + ')">' +
+      'onclick="selectSlTeam(' + t.api_team_id + ', ' + _attrJson(t.name) + ', ' + _attrJson(t.sport) + ')">' +
       '<strong>' + escSlHtml(t.name) + '</strong></div>'
     ).join('');
     resultsEl.style.display = 'block';
