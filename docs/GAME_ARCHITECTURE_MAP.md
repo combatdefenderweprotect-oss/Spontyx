@@ -59,7 +59,8 @@ Long-term competitive prediction leagues. Players join a league tied to a sport 
 | `league.html` — Realtime feed + leaderboard + stats tab | ✅ Live |
 | `create-league.html` — 5-step wizard | ✅ Live |
 | `discover.html` — public league discovery | ✅ Live |
-| `my-leagues.html` — player's leagues | ✅ Live |
+| ~~`my-leagues.html`~~ | 🗑 Removed 2026-05-04 — folded into `leagues-hub.html` |
+| `leagues-hub.html` — real-data Active/Upcoming/Finished + Source filter (All/Created/Joined) + Type filter (Season-Long/Match Night/Custom) with colored badges | ✅ Live |
 | `activity.html` — open question alerts | ✅ Live |
 | Pre-match status strip (lifecycle UX) | ✅ Live |
 | REAL_WORLD card (context + confidence + sources) | ✅ Live |
@@ -236,6 +237,31 @@ Knowledge-based question sessions, independent of live match data. Players answe
 - The timing model (`visible_from` / `answer_closes_at` / `resolves_after`) does not apply — replace with per-round timers managed by the session
 - XP (`award_xp()` RPC) can be reused for trivia rewards
 - Tier gating infrastructure can be reused (already has trivia daily/monthly counters in `TIER_LIMITS`)
+
+---
+
+## Clubs (social layer, v1 — 2026-05-04)
+
+Not a pillar — a **social layer on top of the four pillars**. Private groups of users who play together and compete on a shared leaderboard.
+
+### Status
+
+| Component | Status | Location |
+|---|---|---|
+| `clubs.html` page (mock data, 2-column layout) | ✅ Live | new file |
+| Sidebar nav entry | ✅ Live | `sidebar.js` |
+| Quick-action club-game tagging (sessionStorage + `?club=` URL param) | ✅ Live (write-side) | `clubs.html` |
+| Quick-action consumers (BR / Trivia / Create League read club marker) | ❌ Not built | by design for v1 |
+| `clubs` / `club_members` / `club_games` tables | ❌ Not built | future migration |
+| Club leaderboard aggregation (only club games count) | ❌ Not built | depends on `club_games` |
+| Real-time activity feed | ❌ Not built | future Realtime |
+| Roles, invites, kick/leave | ❌ Not built | v2 |
+| Multiple clubs per user | ❌ Not built | currently one hardcoded mock |
+| Club-vs-club competitions | ❌ Not designed | post-v2 |
+
+### Critical product rule
+
+Club leaderboard MUST count only games played inside the club. Solo / public / external games never count. Cannot be enforced until `club_games` persistence ships — explicit TODO documented in `clubs.html`.
 
 ---
 

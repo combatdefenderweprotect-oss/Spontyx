@@ -1,5 +1,23 @@
 # Spontix — Project State & Developer Handoff
 
+Last updated 2026-05-04 — **Leagues hub real-data wiring + Clubs v1 + my-leagues.html removed.**
+
+**`leagues-hub.html`** — placeholders gone, real user leagues now load from Supabase. `loadUserLeagues()` queries `league_members → leagues` for the current user, joins `sports_competitions` for display names, computes per-league member counts, and buckets each league into Active / Upcoming / Finished by `league_start_date` / `league_end_date` / `status`. Two filter rows added above the section list: **Source** (All / Created by me / Joined) and **Type** (All types / Season-Long / Match Night / Custom). Type filter chips and per-card type badges use the same colour system as the create-league.html Step 1 cards — lime for Season-Long, coral for Match Night, teal for Custom. Filters combine independently. Cards are the existing row layout (icon + name + badges + meta + Enter League button) — a brief experiment with a grid card style was reverted per user preference. **Critical fix**: the page was missing the `<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>` CDN tag → `window.sb` was undefined → status bar query and the new league-load both threw `TypeError: Cannot read properties of undefined (reading 'from')`. Added the CDN script before `supabase-client.js`.
+
+**`leagues-hub.html` league type detection** — `leagueTypeKey(l)` returns `'season' | 'match' | 'custom'` from `creation_path` (Path A/B → season), then `league_start_date === league_end_date` → match, else custom. Used by both the Type filter and the per-card colored badge.
+
+**`my-leagues.html` removed.** Three files updated to redirect to `leagues-hub.html` instead: `notifications.html` (3 fallback links), `league.html` (sidebar active marker + 2 post-action redirects in delete/leave league flows), `spontix-architecture.html` (3 architecture-map references). `git rm my-leagues.html` confirmed clean — no remaining references in any HTML or JS file. The leagues hub is now the single canonical leagues entry point.
+
+**Clubs v1 shipped** (UI + structure + basic data flow only; no DB schema, no backend wiring):
+- New page `clubs.html` (~660 lines, single file, mock data inline). Layout per spec: top header (name / member count / Invite button), then 2-column grid (collapses below 1100px). Left ~63%: dominant **Leaderboard** card (weekly / all-time tabs, podium highlight on top 3, "you" highlight) → **Activity feed** card (scrollable). Right ~37%: **Quick Actions** card (Play Battle Royale / Start Trivia / Create League — three vertically stacked buttons with type-colored icons) → **Members list** card (compact rows with avatar / name / rank). Mock club: 12 members, 8 activity items.
+- Sidebar nav entry added: `Clubs` between Trivia and Find Venues, group icon (consistent with Leagues icon style).
+- Club-game tagging mechanism: when a Quick Action is clicked, `sessionStorage` is set with `{ clubId, clubName, kind, ts }` under key `spontix_club_game`, AND the destination URL gets `?club=<clubId>` appended. Existing flows (BR, Trivia, Create League) currently **ignore** these signals — by design for v1. When club-game persistence ships, the resolver / leaderboard reads them.
+- TODO block at bottom of `clubs.html` lists v2 backlog: real DB schema (`clubs`, `club_members`, `club_games`), persisting `clubId` on resulting BR/Trivia/League rows so the resolver can credit club leaderboard, real-time activity feed, roles + invites + kick/leave, multiple clubs per user (currently one hardcoded mock), club-vs-club competitions.
+
+**Critical product rule documented in clubs.html header comment**: club leaderboard counts ONLY games played inside the club. Solo / public / external games must never count. Not enforceable in v1 (no club-game persistence) — explicit TODO.
+
+---
+
 Last updated 2026-05-04 — **Season-Long League rebuild shipped** (commits `b41fa90` → `74f6fd2`). Migration 051 applied ✅; `generate-questions` redeployed ✅. New canonical model implemented end-to-end per [`docs/LEAGUE_CREATION_FLOW.md`](docs/LEAGUE_CREATION_FLOW.md): three league types in Step 1 (Season-Long / Match Night / Custom), with Season-Long forking in Step 2 into **Path A (team-based, multi-competition)** or **Path B (competition-based)**.
 
 **Migration 051** adds `creation_path TEXT CHECK IN ('team','competition')` and `api_sports_league_ids INTEGER[]` to `leagues`. Trivial backfill: existing rows mirror their `api_sports_league_id` into a one-element array. Legacy rows with NULL `creation_path` continue to work via the existing `api_sports_league_id` column. Two new indexes (creation_path partial, GIN on the array).

@@ -113,8 +113,8 @@ You pick a match you actually care about and you put your knowledge on the line 
 - Sidebar entry "Leagues" links here, not to `my-leagues.html`
 
 **Sub-pages remain but become secondary:**
-- `my-leagues.html` — "My Leagues" section inside the hub
-- `discover.html` — "Discover" section inside the hub
+- ~~`my-leagues.html`~~ — **removed 2026-05-04.** Leagues-hub now serves as the canonical entry point with real-data Active/Upcoming/Finished sections, Source filter (All/Created/Joined), and Type filter (Season-Long/Match Night/Custom) with colored badges.
+- `discover.html` — "Discover" section, reachable from the hero CTA
 - `create-league.html` — reached from a format-specific CTA, not as the primary entry
 
 ### Status (2026-05-04)
@@ -371,6 +371,39 @@ Trivia requires a full backend build before it can be a real pillar:
 - XP awarded on completion
 
 **This is a separate sprint.** No Trivia backend work should begin until the other three pillars are fully surfaced in the frontend.
+
+---
+
+## Clubs (social layer, v1 — 2026-05-04)
+
+### What Clubs is
+
+Clubs is a **social competitive layer on top of the four gameplay pillars**, not a fifth pillar. A Club is a private group of users who play together (Leagues, Arena, Battle Royale, Trivia) and compete on a shared leaderboard.
+
+### Critical product rule
+
+> **Club leaderboard counts ONLY games played inside the club.** Solo games, public games, and games outside the club must never count. Currently NOT enforceable — see TODO below.
+
+### Current state — what exists
+
+**Frontend:** `clubs.html` page (v1, mock data) with the canonical layout:
+- Top: club header (name / member count / Invite button)
+- Below: 2-column grid (collapses below 1100px)
+  - Left ~63%: Leaderboard (weekly / all-time tabs, podium highlight) → Activity feed
+  - Right ~37%: Quick Actions (BR / Trivia / Create League) → Members list
+- Sidebar nav entry: `Clubs` between Trivia and Find Venues
+
+**Club-game tagging mechanism (stub):** Quick Actions set `sessionStorage.spontix_club_game = { clubId, clubName, kind, ts }` and append `?club=<clubId>` to the destination URL. Existing flows currently ignore these signals — by design for v1.
+
+### Not built yet (v2 backlog)
+
+- DB schema: `clubs`, `club_members`, `club_games` (game-id reference + winner + points)
+- Persisting `clubId` on resulting BR / Trivia / League rows so the resolver credits club leaderboard
+- Leaderboard query that aggregates from `club_games` only — never from regular game rows
+- Real-time activity feed (Realtime on `club_games`)
+- Roles (admin / member), invite tokens, kick / leave
+- Multiple clubs per user (currently one hardcoded mock club)
+- Club-vs-club competitions (post-v2)
 
 ---
 
