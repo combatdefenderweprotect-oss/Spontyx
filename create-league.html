@@ -2851,9 +2851,10 @@ function selectSessionType(type, el) {
   document.querySelectorAll('#play-experience-cards .mode-card').forEach(c => c.classList.remove('selected'));
   if (el) el.classList.add('selected');
 
-  // Singleplayer: hide the Multiplayer card — solo setup shows Solo only
+  // Both cards stay visible so user can toggle between Solo and Multiplayer freely.
+  // (Previously the Multiplayer card was hidden when Solo was selected → user got stuck.)
   const multiCard = document.querySelector('#play-experience-cards .mode-card:first-child');
-  if (multiCard) multiCard.style.display = isSolo ? 'none' : '';
+  if (multiCard) multiCard.style.display = '';
 
   // Team Mode section permanently hidden (Individual only, all league types) since 2026-05-04
   const teamSection = document.querySelector('.team-mode-section');
