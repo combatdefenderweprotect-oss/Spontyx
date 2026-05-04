@@ -297,6 +297,19 @@
       opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 999; white-space: nowrap;
     }
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    /* Filter chips (My Leagues / Created / Joined) */
+    .lh-filter-chip {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.08);
+      color: var(--grey-light);
+      padding: 7px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .lh-filter-chip:hover { border-color: rgba(168,225,12,0.4); color: #fff; }
+    .lh-filter-chip.active { background: var(--lime); color: #0a0a14; border-color: var(--lime); font-weight: 600; }
   </style>
 </head>
 <body>
@@ -370,114 +383,21 @@
         </div>
       </section>
 
+      <!-- Filter chips: All / Created by me / Joined -->
+      <div class="lh-filter-row" style="display:flex; gap:8px; margin:8px 0 18px; flex-wrap:wrap;">
+        <button class="lh-filter-chip active" data-filter="all" onclick="setLeagueFilter('all')">All</button>
+        <button class="lh-filter-chip" data-filter="created" onclick="setLeagueFilter('created')">Created by me</button>
+        <button class="lh-filter-chip" data-filter="joined" onclick="setLeagueFilter('joined')">Joined</button>
+      </div>
+
       <!-- ═══ ACTIVE ═══ -->
       <section class="lh-section">
         <div class="lh-section-head">
           <h2 class="lh-section-title active">Active</h2>
-          <span class="lh-section-count" id="count-active">3</span>
+          <span class="lh-section-count" id="count-active">0</span>
         </div>
         <div class="lh-list" id="list-active">
-
-          <a href="league.html" class="lh-card live">
-            <div class="lh-card-icon lime">LL</div>
-            <div class="lh-card-info">
-              <div class="lh-card-top">
-                <span class="lh-card-name">LaLiga Legends 24/25</span>
-                <span class="lh-badge owner">Owner</span>
-                <span class="lh-badge public">Public</span>
-                <span class="lh-badge live"><span class="lh-live-dot"></span>Live</span>
-              </div>
-              <div class="lh-card-status live-text">Matchday live now · 2 open questions</div>
-              <div class="lh-card-meta">
-                <span class="lh-card-meta-item">
-                  <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                  8 / 12 members
-                </span>
-                <span class="lh-card-meta-item">
-                  <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
-                  Football · La Liga
-                </span>
-                <span class="lh-card-meta-item">
-                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  Season
-                </span>
-              </div>
-            </div>
-            <div class="lh-card-rank">
-              <span class="lh-rank-value">1st</span>
-              <span class="lh-rank-label">Rank</span>
-              <span class="lh-rank-points">2,840 pts</span>
-            </div>
-            <span class="lh-enter-btn">
-              Enter League
-              <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-            </span>
-          </a>
-
-          <a href="league.html" class="lh-card">
-            <div class="lh-card-icon coral">LF</div>
-            <div class="lh-card-info">
-              <div class="lh-card-top">
-                <span class="lh-card-name">La Liga Fanatics</span>
-                <span class="lh-badge public">Public</span>
-              </div>
-              <div class="lh-card-status">3 open questions · Next match: Real Madrid vs Sevilla</div>
-              <div class="lh-card-meta">
-                <span class="lh-card-meta-item">
-                  <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                  342 members
-                </span>
-                <span class="lh-card-meta-item">
-                  <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
-                  Football · La Liga
-                </span>
-                <span class="lh-card-meta-item">
-                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  Season
-                </span>
-              </div>
-            </div>
-            <div class="lh-card-rank">
-              <span class="lh-rank-value">14th</span>
-              <span class="lh-rank-label">Rank</span>
-              <span class="lh-rank-points">3,120 pts</span>
-            </div>
-            <span class="lh-enter-btn">
-              Enter League
-              <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-            </span>
-          </a>
-
-          <a href="league.html" class="lh-card">
-            <div class="lh-card-icon teal">SM</div>
-            <div class="lh-card-info">
-              <div class="lh-card-top">
-                <span class="lh-card-name">Solo Match — Arsenal vs Chelsea</span>
-                <span class="lh-badge solo">Solo</span>
-              </div>
-              <div class="lh-card-status">1 open question · Match in progress</div>
-              <div class="lh-card-meta">
-                <span class="lh-card-meta-item">
-                  <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
-                  Football · Premier League
-                </span>
-                <span class="lh-card-meta-item">
-                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  Single match
-                </span>
-              </div>
-            </div>
-            <div class="lh-card-rank">
-              <span class="lh-rank-value solo">Solo</span>
-              <span class="lh-rank-label">Mode</span>
-              <span class="lh-rank-points">485 pts</span>
-            </div>
-            <span class="lh-enter-btn">
-              Enter League
-              <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-            </span>
-          </a>
-
+          <div class="lh-empty" id="empty-active" style="display:none; padding:18px; text-align:center; color:var(--grey-dark); font-size:0.9rem;">No active leagues yet.</div>
         </div>
       </section>
 
@@ -485,80 +405,10 @@
       <section class="lh-section">
         <div class="lh-section-head">
           <h2 class="lh-section-title">Upcoming</h2>
-          <span class="lh-section-count" id="count-upcoming">2</span>
+          <span class="lh-section-count" id="count-upcoming">0</span>
         </div>
         <div class="lh-list" id="list-upcoming">
-
-          <a href="league.html" class="lh-card">
-            <div class="lh-card-icon purple">UK</div>
-            <div class="lh-card-info">
-              <div class="lh-card-top">
-                <span class="lh-card-name">UCL Knockout Crew</span>
-                <span class="lh-badge owner">Owner</span>
-                <span class="lh-badge private">Private</span>
-              </div>
-              <div class="lh-card-status">Starts soon · Next match: PSG vs Bayern</div>
-              <div class="lh-card-meta">
-                <span class="lh-card-meta-item">
-                  <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                  5 / 8 members
-                </span>
-                <span class="lh-card-meta-item">
-                  <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
-                  Football · UCL
-                </span>
-                <span class="lh-card-meta-item">
-                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  Season
-                </span>
-              </div>
-            </div>
-            <div class="lh-card-rank">
-              <span class="lh-rank-value mid">—</span>
-              <span class="lh-rank-label">Rank</span>
-              <span class="lh-rank-points">Not started</span>
-            </div>
-            <span class="lh-enter-btn">
-              Enter League
-              <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-            </span>
-          </a>
-
-          <a href="league.html" class="lh-card">
-            <div class="lh-card-icon teal">DN</div>
-            <div class="lh-card-info">
-              <div class="lh-card-top">
-                <span class="lh-card-name">Draft Night Crew</span>
-                <span class="lh-badge owner">Owner</span>
-                <span class="lh-badge public">Public</span>
-              </div>
-              <div class="lh-card-status">Season starts in 2 days</div>
-              <div class="lh-card-meta">
-                <span class="lh-card-meta-item">
-                  <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                  10 / 15 members
-                </span>
-                <span class="lh-card-meta-item">
-                  <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
-                  Hockey · NHL
-                </span>
-                <span class="lh-card-meta-item">
-                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                  Season
-                </span>
-              </div>
-            </div>
-            <div class="lh-card-rank">
-              <span class="lh-rank-value mid">—</span>
-              <span class="lh-rank-label">Rank</span>
-              <span class="lh-rank-points">Not started</span>
-            </div>
-            <span class="lh-enter-btn">
-              Enter League
-              <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-            </span>
-          </a>
-
+          <div class="lh-empty" id="empty-upcoming" style="display:none; padding:18px; text-align:center; color:var(--grey-dark); font-size:0.9rem;">No upcoming leagues.</div>
         </div>
       </section>
 
@@ -566,71 +416,10 @@
       <section class="lh-section">
         <div class="lh-section-head">
           <h2 class="lh-section-title">Finished</h2>
-          <span class="lh-section-count" id="count-finished">2</span>
+          <span class="lh-section-count" id="count-finished">0</span>
         </div>
         <div class="lh-list" id="list-finished">
-
-          <a href="league.html" class="lh-card finished">
-            <div class="lh-card-icon lime">PL</div>
-            <div class="lh-card-info">
-              <div class="lh-card-top">
-                <span class="lh-card-name">Premier League 23/24</span>
-                <span class="lh-badge ended">Ended</span>
-                <span class="lh-badge winner">1st Place</span>
-              </div>
-              <div class="lh-card-status">Finished · Sep 2023 — May 2024</div>
-              <div class="lh-card-meta">
-                <span class="lh-card-meta-item">
-                  <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                  12 members
-                </span>
-                <span class="lh-card-meta-item">
-                  <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
-                  Football · Premier League
-                </span>
-              </div>
-            </div>
-            <div class="lh-card-rank">
-              <span class="lh-rank-value">1st</span>
-              <span class="lh-rank-label">Final Rank</span>
-              <span class="lh-rank-points">4,560 pts</span>
-            </div>
-            <span class="lh-enter-btn">
-              View
-              <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-            </span>
-          </a>
-
-          <a href="league.html" class="lh-card finished">
-            <div class="lh-card-icon purple">WC</div>
-            <div class="lh-card-info">
-              <div class="lh-card-top">
-                <span class="lh-card-name">World Cup 2022 Preds</span>
-                <span class="lh-badge ended">Ended</span>
-              </div>
-              <div class="lh-card-status">Finished · Nov 2022 — Dec 2022</div>
-              <div class="lh-card-meta">
-                <span class="lh-card-meta-item">
-                  <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                  256 members
-                </span>
-                <span class="lh-card-meta-item">
-                  <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>
-                  Football · World Cup
-                </span>
-              </div>
-            </div>
-            <div class="lh-card-rank">
-              <span class="lh-rank-value mid">3rd</span>
-              <span class="lh-rank-label">Final Rank</span>
-              <span class="lh-rank-points">3,210 pts</span>
-            </div>
-            <span class="lh-enter-btn">
-              View
-              <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
-            </span>
-          </a>
-
+          <div class="lh-empty" id="empty-finished" style="display:none; padding:18px; text-align:center; color:var(--grey-dark); font-size:0.9rem;">No finished leagues yet.</div>
         </div>
       </section>
 
@@ -656,6 +445,160 @@
     setTimeout(function(){ t.classList.remove('show'); }, duration || 2500);
   }
 
+  /* ── My Leagues state ── */
+  var currentLeagueFilter = 'all'; // 'all' | 'created' | 'joined'
+  var allUserLeagues = [];         // raw leagues array, hydrated once
+  var currentUserId  = null;
+
+  function escLh(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+
+  function leagueIconLetters(name) {
+    if (!name) return 'LG';
+    var parts = name.trim().split(/\s+/).slice(0, 2);
+    return parts.map(function(p){ return p[0]; }).join('').toUpperCase().slice(0, 2);
+  }
+
+  function leagueIconColor(idx) {
+    var colors = ['lime', 'coral', 'teal', 'purple'];
+    return colors[idx % colors.length];
+  }
+
+  function leagueSportLabel(l) {
+    var sport = l.sport || 'Football';
+    var compName = l.comp_name || '';
+    return sport + (compName ? (' · ' + compName) : '');
+  }
+
+  function leagueTypeLabel(l) {
+    if (l.creation_path === 'team') return 'Season · Team';
+    if (l.creation_path === 'competition') return 'Season · Competition';
+    if (l.league_start_date && l.league_end_date && l.league_start_date === l.league_end_date) return 'Match Night';
+    return 'Custom';
+  }
+
+  function leagueStatusBucket(l) {
+    // Today vs league_start_date / league_end_date.
+    var today = new Date(); today.setHours(0,0,0,0);
+    var start = l.league_start_date ? new Date(l.league_start_date + 'T00:00:00') : null;
+    var end   = l.league_end_date   ? new Date(l.league_end_date   + 'T00:00:00') : null;
+    if (l.status === 'completed' || (end && end < today)) return 'finished';
+    if (start && start > today) return 'upcoming';
+    return 'active'; // default — running, no end date, or end in future
+  }
+
+  function renderLeagueCard(l, isOwner) {
+    var name = escLh(l.name || 'Untitled League');
+    var icon = leagueIconLetters(l.name);
+    var iconCls = leagueIconColor(l.id ? l.id.charCodeAt(0) : 0);
+    var memberLine = (l.member_count != null) ? (l.member_count + (l.max_members ? (' / ' + l.max_members) : '') + ' members') : '';
+    var visBadge = l.type === 'private'
+      ? '<span class="lh-badge private">Private</span>'
+      : '<span class="lh-badge public">Public</span>';
+    var ownerBadge = isOwner ? '<span class="lh-badge owner">Owner</span>' : '';
+    var bucket = leagueStatusBucket(l);
+    var finishedCls = bucket === 'finished' ? ' finished' : '';
+
+    return '' +
+      '<a href="league.html?id=' + escLh(l.id) + '" class="lh-card' + finishedCls + '">' +
+        '<div class="lh-card-icon ' + iconCls + '">' + icon + '</div>' +
+        '<div class="lh-card-info">' +
+          '<div class="lh-card-top">' +
+            '<span class="lh-card-name">' + name + '</span>' +
+            ownerBadge + visBadge +
+          '</div>' +
+          '<div class="lh-card-status">' + leagueTypeLabel(l) + (l.league_start_date ? (' · from ' + l.league_start_date) : '') + '</div>' +
+          '<div class="lh-card-meta">' +
+            (memberLine ? '<span class="lh-card-meta-item"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>' + escLh(memberLine) + '</span>' : '') +
+            '<span class="lh-card-meta-item"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>' + escLh(leagueSportLabel(l)) + '</span>' +
+          '</div>' +
+        '</div>' +
+        '<span class="lh-enter-btn">Enter League<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>' +
+      '</a>';
+  }
+
+  function applyLeagueFilter() {
+    var filtered;
+    if (currentLeagueFilter === 'created') filtered = allUserLeagues.filter(function(l){ return l.is_owner; });
+    else if (currentLeagueFilter === 'joined') filtered = allUserLeagues.filter(function(l){ return !l.is_owner; });
+    else filtered = allUserLeagues.slice();
+
+    var byBucket = { active: [], upcoming: [], finished: [] };
+    filtered.forEach(function(l){ byBucket[leagueStatusBucket(l)].push(l); });
+
+    function renderInto(listId, countId, emptyId, items) {
+      var listEl = document.getElementById(listId);
+      var countEl = document.getElementById(countId);
+      var emptyEl = document.getElementById(emptyId);
+      if (!listEl) return;
+      // Wipe everything except the empty-state node
+      Array.from(listEl.querySelectorAll('.lh-card')).forEach(function(n){ n.remove(); });
+      if (items.length === 0) {
+        emptyEl.style.display = 'block';
+      } else {
+        emptyEl.style.display = 'none';
+        var html = items.map(function(l){ return renderLeagueCard(l, l.is_owner); }).join('');
+        emptyEl.insertAdjacentHTML('beforebegin', html);
+      }
+      countEl.textContent = items.length;
+    }
+    renderInto('list-active',   'count-active',   'empty-active',   byBucket.active);
+    renderInto('list-upcoming', 'count-upcoming', 'empty-upcoming', byBucket.upcoming);
+    renderInto('list-finished', 'count-finished', 'empty-finished', byBucket.finished);
+  }
+
+  function setLeagueFilter(f) {
+    currentLeagueFilter = f;
+    document.querySelectorAll('.lh-filter-chip').forEach(function(c){
+      c.classList.toggle('active', c.dataset.filter === f);
+    });
+    applyLeagueFilter();
+  }
+
+  async function loadUserLeagues() {
+    if (!currentUserId || !window.sb) return;
+    var sb = window.sb;
+    // Leagues the user is a member of (covers join + own, since owner is auto-added to league_members on create)
+    var { data: memberRows } = await sb
+      .from('league_members').select('league_id').eq('user_id', currentUserId);
+    var memberIds = (memberRows || []).map(function(r){ return r.league_id; });
+    if (memberIds.length === 0) { allUserLeagues = []; applyLeagueFilter(); return; }
+
+    var { data: leagues, error } = await sb
+      .from('leagues')
+      .select('id, name, sport, type, owner_id, max_members, status, creation_path, api_sports_league_id, api_sports_league_ids, league_start_date, league_end_date, created_at')
+      .in('id', memberIds)
+      .order('created_at', { ascending: false });
+    if (error) { console.warn('[leagues-hub] load failed', error); return; }
+
+    var leagueIds = leagues.map(function(l){ return l.id; });
+    var compIds = Array.from(new Set(leagues.flatMap(function(l){
+      return Array.isArray(l.api_sports_league_ids) && l.api_sports_league_ids.length
+        ? l.api_sports_league_ids
+        : (l.api_sports_league_id != null ? [l.api_sports_league_id] : []);
+    })));
+    var compNameById = {};
+    if (compIds.length) {
+      var { data: comps } = await sb.from('sports_competitions').select('api_league_id, name').in('api_league_id', compIds);
+      (comps || []).forEach(function(c){ compNameById[c.api_league_id] = c.name; });
+    }
+    // Member counts per league
+    var memberCountByLeague = {};
+    var { data: allMembers } = await sb.from('league_members').select('league_id').in('league_id', leagueIds);
+    (allMembers || []).forEach(function(r){ memberCountByLeague[r.league_id] = (memberCountByLeague[r.league_id] || 0) + 1; });
+
+    allUserLeagues = leagues.map(function(l){
+      var primaryComp = (Array.isArray(l.api_sports_league_ids) && l.api_sports_league_ids.length)
+        ? l.api_sports_league_ids[0]
+        : l.api_sports_league_id;
+      return Object.assign({}, l, {
+        is_owner:     l.owner_id === currentUserId,
+        comp_name:    compNameById[primaryComp] || '',
+        member_count: memberCountByLeague[l.id] || 1,
+      });
+    });
+    applyLeagueFilter();
+  }
+
   /* ── Hydrate status bar with light Supabase signals (existing data fetching pattern) ── */
   document.addEventListener('DOMContentLoaded', async function() {
     SpontixSidebar.init({ type: 'player', active: 'leagues-hub.html' });
@@ -663,6 +606,7 @@
     try {
       var uid = SpontixStore.Session.getCurrentUserId();
       if (!uid) return;
+      currentUserId = uid;
       var sb = window.sb;
 
       // Leagues joined (active count)
@@ -709,6 +653,9 @@
     } catch(e) {
       console.warn('[leagues-hub] status bar load error:', e);
     }
+
+    // Load + render the user's leagues into Active / Upcoming / Finished sections
+    try { await loadUserLeagues(); } catch(e) { console.warn('[leagues-hub] leagues load error:', e); }
   });
 
 </script>
