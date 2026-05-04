@@ -812,7 +812,7 @@
           <option value="other"  disabled hidden>Other (coming soon)</option>
         </select>
       </div>
-      <div class="form-group">
+      <div class="form-group" id="comp-form-group">
         <label class="form-label">Competition</label>
         <select class="form-input" id="league-comp" onchange="onCompetitionChange(); validateStep1()">
           <option value="">Loading...</option>
@@ -1972,6 +1972,13 @@ async function onSportChange() {
     opt.dataset.row = JSON.stringify(c);
     compEl.appendChild(opt);
   });
+
+  // Season-Long: also reload Path B competitions and reset Path A team state when sport changes.
+  if (leagueType === 'season') {
+    if (typeof loadSlPathBCompetitions === 'function') { try { await loadSlPathBCompetitions(); } catch(e) { /* ignore */ } }
+    if (typeof clearSlTeam === 'function') { try { clearSlTeam(); } catch(e) { /* ignore */ } }
+  }
+
   validateStep1();
 }
 
@@ -2052,6 +2059,10 @@ function initSeasonLongStep(reloadComps) {
   document.getElementById('dates-section').style.display = 'none';
   document.getElementById('match-select-group').style.display = 'none';
   document.getElementById('matchnight-extra').style.display = 'none';
+  // Season-Long: Sport drives both Path A team search and Path B competition picker.
+  // Hide the legacy Competition dropdown — it's only used by Match Night / Custom.
+  var compFG = document.getElementById('comp-form-group');
+  if (compFG) compFG.style.display = 'none';
 
   // Show the season-long fork
   document.getElementById('season-long-fork').style.display = 'block';
@@ -2413,6 +2424,9 @@ function initMatchNightStep(reloadComps) {
   // Hide Season-Long fork (in case user is switching from Season-Long)
   var slFork = document.getElementById('season-long-fork');
   if (slFork) slFork.style.display = 'none';
+  // Restore the legacy Competition dropdown for Match Night
+  var compFGm = document.getElementById('comp-form-group');
+  if (compFGm) compFGm.style.display = '';
 
   // Show match night fields
   document.getElementById('match-select-group').style.display = 'block';
@@ -2441,6 +2455,12 @@ function initStandardStep(reloadComps) {
   // Hide Season-Long fork
   var slFork2 = document.getElementById('season-long-fork');
   if (slFork2) slFork2.style.display = 'none';
+  // Restore the legacy Competition dropdown for Custom League
+  var compFGc = document.getElementById('comp-form-group');
+  if (compFGc) compFGc.style.display = '';
+  // Restore the legacy Competition dropdown for Custom League
+  var compFGc = document.getElementById('comp-form-group');
+  if (compFGc) compFGc.style.display = '';
 
   // Reset match night state
   matchNightMode = '';
