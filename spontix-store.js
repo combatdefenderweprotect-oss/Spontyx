@@ -3231,6 +3231,9 @@ SpontixStore._mapLeagueFromDb = function (row, memberUserIds) {
     // Falls back to [apiSportsLeagueId] for legacy rows. See docs/LEAGUE_CREATION_FLOW.md.
     creationPath:        row.creation_path        || null,
     apiSportsLeagueIds:  row.api_sports_league_ids || (row.api_sports_league_id ? [row.api_sports_league_id] : null),
+    // League Scoring V2 (migration 052) — when true, players pick Normal/High/Very High per answer.
+    // When false (default), all answers score Normal (+10 / 0).
+    confidenceScoringEnabled: !!row.confidence_scoring_enabled,
     // Play mode (migration 029): 'singleplayer' | 'multiplayer'
     // Independent of subscription tier — tier rules apply to both modes.
     playMode:            row.play_mode            || 'multiplayer',
@@ -3269,6 +3272,8 @@ SpontixStore._mapLeagueToDb = function (l) {
   // Season-Long multi-competition (migration 051)
   if (l.creationPath !== undefined)        out.creation_path         = l.creationPath;
   if (l.apiSportsLeagueIds !== undefined)  out.api_sports_league_ids = l.apiSportsLeagueIds;
+  // League Scoring V2 (migration 052)
+  if (l.confidenceScoringEnabled !== undefined) out.confidence_scoring_enabled = !!l.confidenceScoringEnabled;
   if (l.prematchGenerationMode !== undefined)     out.prematch_generation_mode      = l.prematchGenerationMode;
   if (l.prematchPublishOffsetHours !== undefined) out.prematch_publish_offset_hours = l.prematchPublishOffsetHours;
   // Intensity preset + question budgets (migration 017)
@@ -3370,6 +3375,8 @@ SpontixStoreAsync.createLeague = async function (data) {
     // Season-Long multi-competition (migration 051) — accepts snake_case from create-league.html
     creationPath:        data.creation_path       || null,
     apiSportsLeagueIds:  data.api_sports_league_ids || null,
+    // League Scoring V2 (migration 052)
+    confidenceScoringEnabled: !!data.confidence_scoring_enabled,
     prematchGenerationMode:     data.prematch_generation_mode     || 'automatic',
     prematchPublishOffsetHours: data.prematch_publish_offset_hours != null ? data.prematch_publish_offset_hours : 24,
     // Intensity preset + question budgets (migration 017)

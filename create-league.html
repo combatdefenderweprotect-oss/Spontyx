@@ -1149,17 +1149,13 @@
         <div class="option-chip" onclick="toggleChip(this)">
           <div class="option-chip-label">Pre-match</div>
         </div>
-        <div class="option-chip" onclick="toggleChip(this)" data-min-tier="pro" data-feature="News & Rumours questions">
+        <div class="option-chip" onclick="toggleChip(this)" data-min-tier="pro" data-feature="Real World questions">
           <span class="lock-badge">Pro</span>
-          <div class="option-chip-label">News & Rumours</div>
+          <div class="option-chip-label">Real World</div>
         </div>
         <div class="option-chip" onclick="toggleChip(this)" data-min-tier="elite" data-feature="Custom Questions">
           <span class="lock-badge">Elite</span>
           <div class="option-chip-label">Custom Questions</div>
-        </div>
-        <div class="option-chip" onclick="toggleChip(this)" data-min-tier="elite" data-feature="Scheduled Questions">
-          <span class="lock-badge">Elite</span>
-          <div class="option-chip-label">Scheduled Qs</div>
         </div>
       </div>
     </div>
@@ -1176,33 +1172,25 @@
     <div style="margin-bottom:4px;">
       <label class="form-label">Game Mechanics</label>
     </div>
+    <!-- League Scoring V2 (migration 052) — Confidence Scoring is the only scoring mechanic.
+         Risky Answers / Streak Bonuses / Betting-Style Predictions toggles were removed
+         2026-05-04 because they were never wired to scoring or generation logic.
+         Live Stats Feed kept (Elite) — wired to live_match_stats + Stats tab in league.html.
+         Time-pressure / streak / comeback / clutch / difficulty multipliers are not applied
+         to league questions under V2 — leagues are flat +10/0 (Normal). -->
     <div class="toggle-row">
       <div class="toggle-info">
-        <div class="toggle-label">Risky Answers <span class="tier-badge pro">Pro</span></div>
-        <div class="toggle-desc">Players can double down for 2x points</div>
+        <div class="toggle-label">Confidence Scoring</div>
+        <div class="toggle-desc">Players choose Normal (+10/0), High (+15/-5), or Very High (+20/-10) before each answer. Off → flat +10/0.</div>
       </div>
-      <label class="toggle-switch" data-min-tier="pro" data-feature="Risky Answers"><input type="checkbox" /><span class="slider"></span></label>
-    </div>
-    <div class="toggle-row">
-      <div class="toggle-info">
-        <div class="toggle-label">Streak Bonuses <span class="tier-badge pro">Pro</span></div>
-        <div class="toggle-desc">Consecutive correct answers earn multipliers</div>
-      </div>
-      <label class="toggle-switch" data-min-tier="pro" data-feature="Streak Bonuses"><input type="checkbox" /><span class="slider"></span></label>
+      <label class="toggle-switch" id="confidence-toggle" onclick="toggleConfidenceScoring(event)"><input type="checkbox" id="confidence-checkbox" /><span class="slider"></span></label>
     </div>
     <div class="toggle-row">
       <div class="toggle-info">
         <div class="toggle-label">Live Stats Feed <span class="tier-badge elite">Elite</span></div>
-        <div class="toggle-desc">Real-time match data alongside questions</div>
+        <div class="toggle-desc">Real-time match data alongside questions (live score, events, lineups, H2H).</div>
       </div>
       <label class="toggle-switch" data-min-tier="elite" data-feature="Live Stats Feed"><input type="checkbox" /><span class="slider"></span></label>
-    </div>
-    <div class="toggle-row">
-      <div class="toggle-info">
-        <div class="toggle-label">Betting-Style Predictions <span class="tier-badge elite">Elite</span></div>
-        <div class="toggle-desc">Odds, spreads, and over/under questions</div>
-      </div>
-      <label class="toggle-switch" data-min-tier="elite" data-feature="Betting-Style Predictions"><input type="checkbox" /><span class="slider"></span></label>
     </div>
     <div class="toggle-row" id="leaderboard-toggle-row">
       <div class="toggle-info">
@@ -1283,7 +1271,7 @@
 
     <div class="upgrade-nudge">
       <div class="upgrade-nudge-icon"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22C12 22 4 16 4 10C4 6 7 3 10 3C11.2 3 12 3.6 12 3.6S12.8 3 14 3C17 3 20 6 20 10C20 16 12 22 12 22Z"/></svg></div>
-      <div class="upgrade-nudge-text">Unlock <strong>Risky Answers, Streak Bonuses</strong>, all question types, and more with Pro — just $5.99/mo.</div>
+      <div class="upgrade-nudge-text">Unlock <strong>Real World questions, Confidence Scoring</strong>, all question types, and more with Pro — just $5.99/mo.</div>
       <button class="upgrade-nudge-btn">Upgrade</button>
     </div>
 
@@ -1502,8 +1490,8 @@
       <div class="review-row" id="review-teams-row" style="display:none;"><span class="review-label">Teams</span><span class="review-value" id="review-teams">—</span></div>
       <div class="review-row"><span class="review-label">Question Types</span><span class="review-value" id="review-qtypes">—</span></div>
       <div class="review-row" id="review-players-row"><span class="review-label">Max Players</span><span class="review-value" id="review-players">—</span></div>
-      <div class="review-row"><span class="review-label">Risky Answers</span><span class="review-value" id="review-risky">—</span></div>
-      <div class="review-row"><span class="review-label">Streaks</span><span class="review-value" id="review-streaks">—</span></div>
+      <!-- League Scoring V2 (migration 052) — replaces dead Risky/Streak review rows. -->
+      <div class="review-row"><span class="review-label">Confidence Scoring</span><span class="review-value" id="review-confidence">Off</span></div>
       <div class="review-row"><span class="review-label">AI Questions</span><span class="review-value" id="review-ai-questions" style="color:var(--grey);">Off</span></div>
       <div class="review-row" id="review-trophy-row"><span class="review-label">Winner's Trophy</span><span class="review-value" id="review-trophy" style="color:#FFD700;">League Champion</span></div>
     </div>
@@ -1557,6 +1545,18 @@ let slSelectedCompIds   = [];     // array of api_league_id selected by user
 let slLoadedFixtures    = [];     // [{ kickoff_at, league_id }]
 
 let aiQuestionsEnabled = false;
+
+// League Scoring V2 (migration 052) — Confidence Scoring toggle. Default OFF.
+// When OFF: flat +10 / 0 (Normal). When ON: players pick Normal / High / Very High per answer.
+let confidenceScoringEnabled = false;
+function toggleConfidenceScoring(ev) {
+  // The label wraps the checkbox — let native behaviour update it, then read & sync state.
+  // Defer to next tick so the checkbox state is the post-click value.
+  setTimeout(function() {
+    var cb = document.getElementById('confidence-checkbox');
+    confidenceScoringEnabled = !!(cb && cb.checked);
+  }, 0);
+}
 // Holds the full row from sports_competitions for the chosen competition
 let selectedCompetition = null;
 // Holds the full row from sports_teams for the chosen team
@@ -3208,19 +3208,17 @@ function populateReview() {
   document.getElementById('review-qtypes').textContent = selectedTypes.join(', ') || 'None selected';
 
   document.getElementById('review-players').textContent = document.getElementById('player-slider').value;
+  // League Scoring V2 (migration 052) — show whether Confidence Scoring is on for this league.
   (function() {
-    var _p = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
-    var _t = _p ? (_p.tier || 'starter') : 'starter';
-    var _l = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(_t) : null;
-    var riskyEl   = document.getElementById('review-risky');
-    var streakEl  = document.getElementById('review-streaks');
-    if (riskyEl) {
-      riskyEl.textContent  = (_l && _l.riskyAnswers)   ? '✓ Enabled' : 'Locked (Pro)';
-      riskyEl.style.color  = (_l && _l.riskyAnswers)   ? 'var(--lime)' : 'var(--grey-dark)';
-    }
-    if (streakEl) {
-      streakEl.textContent = (_l && _l.streakBonuses)  ? '✓ Enabled' : 'Locked (Pro)';
-      streakEl.style.color = (_l && _l.streakBonuses)  ? 'var(--lime)' : 'var(--grey-dark)';
+    var confEl = document.getElementById('review-confidence');
+    if (confEl) {
+      if (confidenceScoringEnabled) {
+        confEl.textContent = 'On — players pick Normal / High / Very High per answer';
+        confEl.style.color = 'var(--lime)';
+      } else {
+        confEl.textContent = 'Off — flat +10 / 0';
+        confEl.style.color = 'var(--grey-dark)';
+      }
     }
   })();
   document.getElementById('review-code').textContent = document.getElementById('generated-code').textContent;
@@ -3419,6 +3417,8 @@ async function launchLeague() {
     // Season-Long multi-competition (migration 051)
     creation_path:         resolvedCreationPath,
     api_sports_league_ids: resolvedLeagueIds,
+    // League Scoring V2 (migration 052) — creator-controlled confidence toggle (default false)
+    confidence_scoring_enabled: !!confidenceScoringEnabled,
     league_start_date:    resolvedStart || null,
     league_end_date:      resolvedEnd   || null,
     // Match Night: always enable AI questions. Season-Long: always enable when at least

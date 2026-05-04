@@ -545,6 +545,28 @@ function computeStreakMultiplier(streakAtAnswer: number | null): number {
   return 1.0;
 }
 
+// ─────────────────────────────────────────────────────────────────────
+// League Scoring V2 (migration 052) — flat points, optional confidence.
+//
+// Applied to ALL league-bound questions (q.league_id IS NOT NULL).
+// Replaces the multi-multiplier formula entirely for leagues. NO time
+// pressure, streak, comeback, clutch, or difficulty multipliers apply
+// to league questions under V2.
+//
+// Confidence honored only when league.confidence_scoring_enabled = true.
+// When false → always Normal regardless of player's stored confidence.
+// ─────────────────────────────────────────────────────────────────────
+function calculateLeagueAnswerPoints(
+  isCorrect: boolean,
+  confidenceLevel: string | null | undefined,
+): number {
+  const c = (confidenceLevel ?? 'normal') as string;
+  if (c === 'very_high') return isCorrect ?  20 : -10;
+  if (c === 'high')      return isCorrect ?  15 :  -5;
+  /* normal (or anything unrecognised) */
+  return isCorrect ? 10 : 0;
+}
+
 function computeComebackMultiplier(leaderGapAtAnswer: number | null): number {
   const gap = leaderGapAtAnswer ?? 0;
   if (gap > 100) return 1.3;
@@ -568,10 +590,59 @@ async function markCorrectAnswers(
       'id', 'user_id', 'answer', 'answered_at',
       // Submission-time scoring context (migration 006)
       'streak_at_answer', 'leader_gap_at_answer', 'clutch_multiplier_at_answer',
+      // League Scoring V2 (migration 052)
+      'confidence_level',
     ].join(', '))
     .eq('question_id', q.id);
 
   if (error || !answers?.length) return;
+
+  // ── League Scoring V2 branch (migration 052) ──────────────────────
+  // For league-bound questions, use flat +10/0 (Normal) with optional
+  // confidence multiplier. Skip the multi-multiplier formula entirely.
+  // Arena (q.arena_session_id) and BR (q.br_session_id) keep the legacy
+  // formula — branch falls through.
+  if (q.league_id) {
+    let confidenceEnabled = false;
+    const { data: leagueRow, error: leagueErr } = await sb
+      .from('leagues')
+      .select('confidence_scoring_enabled')
+      .eq('id', q.league_id)
+      .single();
+    if (leagueErr) {
+      console.warn('[resolve-questions] league fetch failed for confidence flag:', leagueErr.message, 'q:', q.id, 'league:', q.league_id);
+      // fail-closed → Normal scoring
+    } else if (leagueRow) {
+      confidenceEnabled = !!leagueRow.confidence_scoring_enabled;
+    }
+
+    const nowL = new Date().toISOString();
+    for (const a of answers) {
+      const isCorrect = (a.answer === outcome);
+      // When confidence scoring is disabled for the league, always score Normal
+      // regardless of what the player stored at submit time.
+      const effectiveConf = confidenceEnabled ? (a.confidence_level ?? 'normal') : 'normal';
+      const finalPts = calculateLeagueAnswerPoints(isCorrect, effectiveConf);
+
+      await sb.from('player_answers').update({
+        is_correct:    isCorrect,
+        points_earned: finalPts,
+        resolved_at:   nowL,
+        multiplier_breakdown: {
+          model:               'league_v2',
+          confidence_enabled:  confidenceEnabled,
+          confidence_used:     effectiveConf,
+          confidence_stored:   a.confidence_level ?? 'normal',
+          base_correct_value:  isCorrect ? finalPts : null,
+          base_wrong_value:    isCorrect ? null : finalPts,
+          total:               finalPts,
+          note:                isCorrect ? 'league_v2_correct' : 'league_v2_wrong',
+        },
+      }).eq('id', a.id);
+    }
+    return;
+  }
+  // ── End League Scoring V2 branch — Arena/BR continue below with legacy formula ──
 
   // Question-level scoring values (migration 006)
   // base_value: 6 (filler) / 10 (medium stat) / 12 (player) / 15 (outcome) / 20 (high-value event)

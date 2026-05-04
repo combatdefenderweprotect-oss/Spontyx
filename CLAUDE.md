@@ -1,5 +1,27 @@
 # Spontix — Project State & Developer Handoff
 
+Last updated 2026-05-04 — **League Scoring V2 implemented (pending deploy).** Canonical spec: [`docs/LEAGUE_SCORING_V2.md`](docs/LEAGUE_SCORING_V2.md). Migration 052 written and ready. Applies to ALL league-bound questions (Season-Long, Match Night, Custom — anything where `questions.league_id IS NOT NULL`). Arena and Battle Royale UNCHANGED.
+
+**What V2 deletes for leagues:** the entire multi-multiplier formula (`base_value × time_pressure × difficulty × streak × comeback × clutch`). No speed reward, no streak multiplier, no comeback multiplier, no clutch multiplier, no difficulty tiers, no per-category base values. League questions now score flat +10/0 (Normal) or, optionally, with creator-enabled confidence (+15/-5 High, +20/-10 Very High). Negative scores allowed.
+
+**Migration 052 (`backend/migrations/052_league_scoring_v2.sql`):** additive. Adds `player_answers.confidence_level TEXT DEFAULT 'normal'` (CHECK enum) and `leagues.confidence_scoring_enabled BOOLEAN DEFAULT false`. Existing rows get the column defaults — no backfill needed. Idempotent.
+
+**Resolver (`supabase/functions/resolve-questions/index.ts`):** branches on `q.league_id`. League branch reads `confidence_level` from each answer + `confidence_scoring_enabled` from the league once per question (fail-closed — read error → Normal scoring + warning log). Skips the legacy formula entirely for leagues. Arena (`arena_session_id`) and BR (`br_session_id`) fall through to the unchanged V1 formula. New helper `calculateLeagueAnswerPoints(isCorrect, confidenceLevel)` lives next to the legacy multiplier helpers (which remain for Arena/BR). When league has confidence OFF but a player's stored `confidence_level` is non-Normal, the resolver forces Normal scoring.
+
+**`league.html`:** new `renderConfidenceStrip()` renders a 3-chip selector (Normal / High / Very High) above the answer buttons when `currentLeague.confidenceScoringEnabled === true`. Default selection is Normal. Locks when answer is submitted (read-only thereafter). New `pendingConfidence` state map. `handleAnswer()` now sends `confidence_level` in the player_answers upsert. `loadAndRenderQuestions()` SELECT extended to fetch `confidence_level` so the locked chip displays after refresh.
+
+**`create-league.html`:** four dead toggle rows removed (Risky Answers, Streak Bonuses, Live Stats Feed, Betting-Style Predictions — none had ever been wired to scoring or generation logic). Replaced with a single Confidence Scoring toggle, default OFF. New state var `confidenceScoringEnabled`, new handler `toggleConfidenceScoring()`, new `confidence_scoring_enabled` field on the launch payload. Review screen "Risky Answers / Streaks" rows replaced with a single "Confidence Scoring" row that shows On / Off.
+
+**`spontix-store.js`:** bidirectional mapping for `confidence_scoring_enabled ↔ confidenceScoringEnabled`. `createLeague` accepts the snake_case field from the wizard.
+
+**Backward compatibility:** already-resolved answers stay frozen (resolver only acts on `pending` rows). In-flight unresolved answers in pre-V2 leagues will score under V2 at next resolver run (flat +10/0 since `confidence_scoring_enabled` defaults to false). Mid-league scoring jump was explicitly accepted as the migration cost. The legacy V1 formula and helpers remain in the resolver for Arena and BR — do not delete them.
+
+**Documentation:** new file [`docs/LEAGUE_SCORING_V2.md`](docs/LEAGUE_SCORING_V2.md) — full spec, scope, removal list, scoring table, UI rules, resolver rules, backward-compat, 14-row test matrix.
+
+**Pending deploy:** migration not yet applied; resolver not yet redeployed.
+
+---
+
 Last updated 2026-05-04 — **Leagues hub real-data wiring + Clubs v1 + my-leagues.html removed.**
 
 **`leagues-hub.html`** — placeholders gone, real user leagues now load from Supabase. `loadUserLeagues()` queries `league_members → leagues` for the current user, joins `sports_competitions` for display names, computes per-league member counts, and buckets each league into Active / Upcoming / Finished by `league_start_date` / `league_end_date` / `status`. Two filter rows added above the section list: **Source** (All / Created by me / Joined) and **Type** (All types / Season-Long / Match Night / Custom). Type filter chips and per-card type badges use the same colour system as the create-league.html Step 1 cards — lime for Season-Long, coral for Match Night, teal for Custom. Filters combine independently. Cards are the existing row layout (icon + name + badges + meta + Enter League button) — a brief experiment with a grid card style was reverted per user preference. **Critical fix**: the page was missing the `<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>` CDN tag → `window.sb` was undefined → status bar query and the new league-load both threw `TypeError: Cannot read properties of undefined (reading 'from')`. Added the CDN script before `supabase-client.js`.

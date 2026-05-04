@@ -526,6 +526,31 @@
     .question-card.rw-card:hover { border-color: rgba(124,92,252,0.4); }
     .rw-source { font-size: 0.62rem; color: rgba(124,92,252,0.55); font-style: italic; margin-top: 2px; }
     .rw-context { font-size: 0.78rem; color: rgba(255,255,255,0.55); line-height: 1.45; margin: 6px 0 2px; font-style: italic; }
+    /* League Scoring V2 — Confidence selector (migration 052) */
+    .conf-strip {
+      display: flex; flex-direction: column; gap: 6px;
+      margin: 10px 0 4px;
+      padding: 10px 12px;
+      background: rgba(168,225,12,0.04);
+      border: 1px solid rgba(168,225,12,0.18);
+      border-radius: 10px;
+    }
+    .conf-strip-label { font-size: 0.7rem; font-weight: 700; color: #A8E10C; text-transform: uppercase; letter-spacing: 0.05em; }
+    .conf-strip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .conf-chip {
+      flex: 1 1 calc(33% - 6px); min-width: 110px;
+      padding: 8px 10px; border-radius: 8px; cursor: pointer;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+      text-align: center; transition: all 0.15s;
+    }
+    .conf-chip:hover { border-color: rgba(168,225,12,0.4); }
+    .conf-chip.active { background: rgba(168,225,12,0.15); border-color: #A8E10C; }
+    .conf-chip-name { font-size: 0.78rem; font-weight: 700; color: #fff; margin-bottom: 1px; }
+    .conf-chip-pts  { font-size: 0.66rem; color: var(--grey-light, #B8B8C7); }
+    .conf-chip.active .conf-chip-pts { color: #A8E10C; }
+    .conf-chip.locked { opacity: 0.55; cursor: default; }
+    .conf-locked-note { font-size: 0.66rem; color: var(--grey-dark, #6B6B7C); margin-top: 4px; }
+
     .rw-confidence { display: inline-block; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 6px; border-radius: 3px; margin-left: 6px; vertical-align: middle; }
     .rw-confidence.high   { background: rgba(168,225,12,0.15); color: #A8E10C; }
     .rw-confidence.medium { background: rgba(255,159,67,0.15); color: #FF9F43; }
@@ -964,6 +989,11 @@
 // ── Global state ──────────────────────────────────────
 var currentLeague    = null;
 var currentLeagueId  = null;
+
+// League Scoring V2 (migration 052) — pending confidence selection per question.
+// Reset to 'normal' on each question render. Set by user clicking the Confidence
+// strip BEFORE pressing an answer button. Locked once an answer is submitted.
+var pendingConfidence = {}; // questionId → 'normal' | 'high' | 'very_high'
 var currentUserId    = null;
 var currentLeagueIsSolo         = false;  // true for play_mode='singleplayer'
 var currentLeagueMultiplayerMode = null;  // '1v1' | '2v2' | null
@@ -1357,7 +1387,7 @@ async function loadAndRenderQuestions(silent) {
       var qIds = qs.map(function(q) { return q.id; });
       var aRes = await window.sb
         .from('player_answers')
-        .select('question_id, answer, is_correct, points_earned, multiplier_breakdown')
+        .select('question_id, answer, is_correct, points_earned, multiplier_breakdown, confidence_level')
         .eq('user_id', currentUserId)
         .in('question_id', qIds);
       (aRes.data || []).forEach(function(a) {
@@ -2058,10 +2088,54 @@ function getLiveQuotaState(q) {
   return { limit: limit, used: used, exhausted: used >= limit };
 }
 
+// League Scoring V2 (migration 052) — render the confidence chooser.
+// Returns '' when the league has confidence scoring disabled OR when the
+// question is not yet open. Once an answer is locked we render a read-only
+// summary of the locked-in confidence.
+function renderConfidenceStrip(q, myAns, open) {
+  var enabled = !!(currentLeague && currentLeague.confidenceScoringEnabled);
+  if (!enabled) return '';
+  // Already answered → locked summary
+  var locked = !!(myAns && myAns.answer);
+  // Resolver fall-back: pending in-memory selection, else stored, else 'normal'
+  var current = pendingConfidence[q.id]
+    || (myAns && myAns.confidence_level)
+    || 'normal';
+
+  function chip(level, name, pts) {
+    var isActive = current === level;
+    var clickAttr = (locked || !open)
+      ? 'class="conf-chip locked' + (isActive ? ' active' : '') + '"'
+      : 'class="conf-chip' + (isActive ? ' active' : '') + '" onclick="selectConfidence(\'' + escAttr(q.id) + '\', \'' + level + '\')"';
+    return '<div ' + clickAttr + '>' +
+      '<div class="conf-chip-name">' + name + '</div>' +
+      '<div class="conf-chip-pts">' + pts + '</div>' +
+    '</div>';
+  }
+
+  return '<div class="conf-strip">' +
+    '<div class="conf-strip-label">' + (locked ? 'Confidence (locked)' : 'Confidence — pick before you answer') + '</div>' +
+    '<div class="conf-strip-row">' +
+      chip('normal',    'Normal',     '+10 / 0') +
+      chip('high',      'High',       '+15 / -5') +
+      chip('very_high', 'Very High',  '+20 / -10') +
+    '</div>' +
+    (locked ? '<div class="conf-locked-note">Locked when you submitted your answer.</div>' : '') +
+  '</div>';
+}
+
+function selectConfidence(qid, level) {
+  if (level !== 'normal' && level !== 'high' && level !== 'very_high') return;
+  pendingConfidence[qid] = level;
+  // Re-render only this question's card if possible; full re-render is fine for v1.
+  loadAndRenderQuestions(true);
+}
+
 function renderOptions(q, opts, myAns, open, resolved) {
   var quotaState = open ? getLiveQuotaState(q) : null;
   var liveExhausted = quotaState && quotaState.exhausted && !myAns;
-  var html = '<div class="question-options">';
+  var html = renderConfidenceStrip(q, myAns, open);
+  html += '<div class="question-options">';
   opts.forEach(function(opt) {
     var classes = 'question-option';
     var extra   = '';
@@ -2172,6 +2246,12 @@ async function handleAnswer(btn, questionId, answer) {
   myAnswers[questionId] = myAnswers[questionId] || {};
   myAnswers[questionId].answer = answer;
 
+  // League Scoring V2 (migration 052) — capture confidence at lock time.
+  // Honored by resolver only when league.confidence_scoring_enabled = true,
+  // but we always send it so the historical record is faithful.
+  var _conf = pendingConfidence[questionId] || 'normal';
+  if (_conf !== 'normal' && _conf !== 'high' && _conf !== 'very_high') _conf = 'normal';
+
   try {
     var payload = {
       question_id:          questionId,
@@ -2181,6 +2261,8 @@ async function handleAnswer(btn, questionId, answer) {
       answered_at:          new Date().toISOString(),
       // Submission-time scoring context (migration 006)
       leader_gap_at_answer: leaderGap,
+      // League Scoring V2 (migration 052)
+      confidence_level:     _conf,
     };
     // Only include if non-null — guards against pre-migration schema
     if (clutch !== null && clutch !== undefined) {
