@@ -952,7 +952,7 @@
 <script src="supabase-client.js"></script>
 <script src="spontix-store.js"></script>
 <script src="sidebar.js"></script>
-<script>SpontixSidebar.init({ type: 'player', active: 'my-leagues.html' });</script>
+<script>SpontixSidebar.init({ type: 'player', active: 'leagues-hub.html' });</script>
 <script>
 // ════════════════════════════════════════════════════════
 //  league.html — live engine v2
@@ -1034,7 +1034,7 @@ function confirmDeleteLeague() {
       var result = await SpontixStoreAsync.deleteLeague(currentLeagueId);
       if (result.ok) {
         showToast('League deleted');
-        setTimeout(function() { window.location = 'my-leagues.html'; }, 900);
+        setTimeout(function() { window.location = 'leagues-hub.html'; }, 900);
       } else {
         showToast('Could not delete league: ' + (result.error || 'unknown error'));
       }
@@ -1052,7 +1052,7 @@ function confirmLeaveLeague() {
       var result = await SpontixStoreAsync.leaveLeague(currentLeagueId);
       if (result && result.ok !== false) {
         showToast('You left the league');
-        setTimeout(function() { window.location = 'my-leagues.html'; }, 900);
+        setTimeout(function() { window.location = 'leagues-hub.html'; }, 900);
       } else {
         showToast('Could not leave league');
       }

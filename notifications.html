@@ -273,7 +273,7 @@
       case 'league.member_joined':
         iconSvg  = SVG.social;
         textHtml = '<strong>' + esc(ctx.actor_name) + '</strong> joined your league <span class="hl-lime">' + esc(ctx.league_name) + '</span>.';
-        linkUrl  = n.related_id ? 'league.html?id=' + n.related_id : 'my-leagues.html';
+        linkUrl  = n.related_id ? 'league.html?id=' + n.related_id : 'leagues-hub.html';
         actionHtml = '<button class="notif-action secondary" onclick="event.stopPropagation();goTo(\'' + n.id + '\',\'' + linkUrl + '\')">View League</button>';
         break;
 
@@ -281,7 +281,7 @@
         iconSvg  = SVG.question;
         var qt   = ctx.question_text || 'New question';
         qt = qt.length > 65 ? qt.slice(0, 65) + '…' : qt;
-        linkUrl  = ctx.league_id ? 'league.html?id=' + ctx.league_id : 'my-leagues.html';
+        linkUrl  = ctx.league_id ? 'league.html?id=' + ctx.league_id : 'leagues-hub.html';
         textHtml = 'New question in <span class="hl-purple">' + esc(ctx.league_name) + '</span>: &ldquo;<strong>' + esc(qt) + '</strong>&rdquo;';
         actionHtml = '<button class="notif-action primary" onclick="event.stopPropagation();goTo(\'' + n.id + '\',\'' + linkUrl + '\')">Answer</button>';
         break;
@@ -290,7 +290,7 @@
         iconSvg = SVG.question;
         var qt2 = ctx.question_text || 'A question';
         qt2 = qt2.length > 55 ? qt2.slice(0, 55) + '…' : qt2;
-        linkUrl = ctx.league_id ? 'league.html?id=' + ctx.league_id : 'my-leagues.html';
+        linkUrl = ctx.league_id ? 'league.html?id=' + ctx.league_id : 'leagues-hub.html';
         if (ctx.is_correct) {
           textHtml = '&ldquo;<strong>' + esc(qt2) + '</strong>&rdquo; — your answer was <span class="hl-lime">correct</span>! You earned <span class="hl-lime">+' + (ctx.points_earned || 0) + ' pts</span>.';
         } else {
