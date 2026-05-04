@@ -323,12 +323,60 @@
     /* League type badge on cards */
     .lh-type-badge {
       display: inline-flex; align-items:center; gap:5px;
-      padding: 2px 8px; border-radius: 10px;
-      font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+      padding: 2px 9px; border-radius: 999px;
+      font-size: 0.58rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
     }
     .lh-type-badge.season { background: rgba(168,225,12,0.12); color: var(--lime); border: 1px solid rgba(168,225,12,0.3); }
     .lh-type-badge.match  { background: rgba(255,107,107,0.12); color: var(--coral); border: 1px solid rgba(255,107,107,0.3); }
     .lh-type-badge.custom { background: rgba(78,205,196,0.12); color: var(--teal); border: 1px solid rgba(78,205,196,0.3); }
+
+    /* ── Grid card style (ported from my-leagues.html for consistency) ── */
+    .lh-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+    .lh-list .lh-empty { grid-column: 1 / -1; }
+    .lh-card {
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px; padding: 22px; display: flex; flex-direction: column; gap: 14px;
+      transition: border-color 0.2s, transform 0.15s; cursor: pointer; text-decoration: none; color: inherit;
+    }
+    .lh-card:hover { border-color: rgba(168,225,12,0.25); transform: translateY(-2px); }
+    .lh-card-header { display: flex; align-items: flex-start; gap: 14px; }
+    .lh-card-icon {
+      width: 52px; height: 52px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.05rem; font-weight: 900; flex-shrink: 0;
+    }
+    .lh-card-icon.lime   { background: rgba(168,225,12,0.12); color: var(--lime); }
+    .lh-card-icon.coral  { background: rgba(255,107,107,0.12); color: var(--coral); }
+    .lh-card-icon.teal   { background: rgba(78,205,196,0.12); color: var(--teal); }
+    .lh-card-icon.purple { background: rgba(124,92,252,0.12); color: var(--purple, #7C5CFC); }
+    .lh-card-title-area { flex: 1; min-width: 0; }
+    .lh-card-name { font-size: 1.05rem; font-weight: 800; margin-bottom: 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; }
+    .lh-card-badges { display: flex; flex-wrap: wrap; gap: 5px; }
+    .lh-card-meta { font-size: 0.75rem; color: var(--grey-light); display: flex; flex-direction: column; gap: 5px; }
+    .lh-card-meta-item { display: flex; align-items: center; gap: 6px; }
+    .lh-card-meta-item svg { width: 13px; height: 13px; stroke: var(--grey-dark); fill: none; stroke-width: 2; flex-shrink: 0; }
+    .lh-card-stats {
+      display: flex; gap: 0; border-top: 1px solid rgba(255,255,255,0.06); padding-top: 14px; margin-top: auto;
+    }
+    .lh-card-stat { flex: 1; text-align: center; }
+    .lh-card-stat + .lh-card-stat { border-left: 1px solid rgba(255,255,255,0.06); }
+    .lh-card-stat-value { font-size: 1.05rem; font-weight: 800; color: #fff; }
+    .lh-card-stat-value.lime { color: var(--lime); }
+    .lh-card-stat-label { font-size: 0.6rem; color: var(--grey-dark); text-transform: uppercase; letter-spacing: 0.5px; margin-top: 2px; }
+    .lh-card-actions { display: flex; gap: 8px; justify-content: flex-end; padding-top: 4px; }
+    .lh-card-action {
+      width: 34px; height: 34px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.08);
+      background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center;
+      transition: all 0.2s;
+    }
+    .lh-card-action:hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.15); }
+    .lh-card-action svg { width: 15px; height: 15px; stroke: var(--grey-light); fill: none; stroke-width: 1.8; }
+    /* Legacy small badges (Owner/Public/Private) reused */
+    .lh-badge { font-size: 0.58rem; font-weight: 800; padding: 2px 9px; border-radius: 999px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .lh-badge.owner   { background: rgba(168,225,12,0.12); color: var(--lime); }
+    .lh-badge.public  { background: rgba(168,225,12,0.08); color: var(--lime); }
+    .lh-badge.private { background: rgba(255,107,107,0.08); color: var(--coral); }
+    @media (max-width: 700px) { .lh-list { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -538,27 +586,57 @@
       ? '<span class="lh-badge private">Private</span>'
       : '<span class="lh-badge public">Public</span>';
     var ownerBadge = isOwner ? '<span class="lh-badge owner">Owner</span>' : '';
-    var bucket = leagueStatusBucket(l);
-    var finishedCls = bucket === 'finished' ? ' finished' : '';
     var typeKey = leagueTypeKey(l);
     var typeBadge = '<span class="lh-type-badge ' + typeKey + '">' + leagueTypeBadgeLabel(typeKey) + '</span>';
+    var typeLine  = leagueTypeLabel(l) + (l.league_start_date ? (' · from ' + l.league_start_date) : '');
+
+    // v1: rank/points use placeholder until per-league user score query is wired.
+    var yourRank = (l.your_rank   != null) ? ('#' + l.your_rank)   : '—';
+    var yourPts  = (l.your_points != null) ? l.your_points         : '0';
+
+    var enterUrl = 'league.html?id=' + escLh(l.id);
+    var actions = '' +
+      '<div class="lh-card-actions">' +
+        '<button class="lh-card-action" title="Settings" onclick="event.stopPropagation(); event.preventDefault(); window.location.href=\'' + enterUrl + '#settings\';">' +
+          '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>' +
+        '</button>' +
+        '<button class="lh-card-action" title="Share" onclick="event.stopPropagation(); event.preventDefault(); shareLeague(\'' + escLh(l.id) + '\');">' +
+          '<svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>' +
+        '</button>' +
+      '</div>';
 
     return '' +
-      '<a href="league.html?id=' + escLh(l.id) + '" class="lh-card' + finishedCls + '">' +
-        '<div class="lh-card-icon ' + iconCls + '">' + icon + '</div>' +
-        '<div class="lh-card-info">' +
-          '<div class="lh-card-top">' +
-            '<span class="lh-card-name">' + name + '</span>' +
-            typeBadge + ownerBadge + visBadge +
-          '</div>' +
-          '<div class="lh-card-status">' + leagueTypeLabel(l) + (l.league_start_date ? (' · from ' + l.league_start_date) : '') + '</div>' +
-          '<div class="lh-card-meta">' +
-            (memberLine ? '<span class="lh-card-meta-item"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/></svg>' + escLh(memberLine) + '</span>' : '') +
-            '<span class="lh-card-meta-item"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>' + escLh(leagueSportLabel(l)) + '</span>' +
+      '<a href="' + enterUrl + '" class="lh-card">' +
+        '<div class="lh-card-header">' +
+          '<div class="lh-card-icon ' + iconCls + '">' + icon + '</div>' +
+          '<div class="lh-card-title-area">' +
+            '<div class="lh-card-name">' + name + '</div>' +
+            '<div class="lh-card-badges">' + typeBadge + ownerBadge + visBadge + '</div>' +
           '</div>' +
         '</div>' +
-        '<span class="lh-enter-btn">Enter League<svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></span>' +
+        '<div class="lh-card-meta">' +
+          (memberLine ? '<div class="lh-card-meta-item"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>' + escLh(memberLine) + '</div>' : '') +
+          '<div class="lh-card-meta-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>' + escLh(typeLine) + '</div>' +
+          '<div class="lh-card-meta-item"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg>' + escLh(leagueSportLabel(l)) + '</div>' +
+        '</div>' +
+        '<div class="lh-card-stats">' +
+          '<div class="lh-card-stat"><div class="lh-card-stat-value">' + escLh(yourRank) + '</div><div class="lh-card-stat-label">Your Rank</div></div>' +
+          '<div class="lh-card-stat"><div class="lh-card-stat-value lime">' + escLh(yourPts) + '</div><div class="lh-card-stat-label">Points</div></div>' +
+        '</div>' +
+        actions +
       '</a>';
+  }
+
+  /* Share helper — invoked from card action button */
+  function shareLeague(id) {
+    var url = window.location.origin + '/league.html?id=' + id;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(function(){
+        var t = document.getElementById('toast'); if (t) { t.textContent = 'League link copied'; t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); }, 2000); }
+      });
+    } else {
+      window.prompt('Copy this league link:', url);
+    }
   }
 
   function applyLeagueFilter() {
