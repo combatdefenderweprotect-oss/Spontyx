@@ -1181,7 +1181,24 @@
     <div class="toggle-row">
       <div class="toggle-info">
         <div class="toggle-label">Confidence Scoring</div>
-        <div class="toggle-desc">Players choose Normal (+10/0), High (+15/-5), or Very High (+20/-10) before each answer. Off → flat +10/0.</div>
+        <div class="toggle-desc">Before each answer, players pick how sure they are. Sure picks win bigger — but wrong guesses cost points. Off → everyone scores the same: +10 for right, 0 for wrong.</div>
+        <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">
+          <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;background:rgba(168,225,12,0.08);border:1px solid rgba(168,225,12,0.25);font-size:0.7rem;">
+            <strong style="color:#A8E10C;">Safe</strong>
+            <span style="color:rgba(255,255,255,0.7);">+10 right · 0 wrong</span>
+          </span>
+          <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;background:rgba(255,159,67,0.08);border:1px solid rgba(255,159,67,0.25);font-size:0.7rem;">
+            <strong style="color:#FF9F43;">Confident</strong>
+            <span style="color:rgba(255,255,255,0.7);">+15 right · −5 wrong</span>
+          </span>
+          <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;background:rgba(255,107,107,0.08);border:1px solid rgba(255,107,107,0.3);font-size:0.7rem;">
+            <strong style="color:#FF6B6B;">All in</strong>
+            <span style="color:rgba(255,255,255,0.7);">+20 right · −10 wrong</span>
+          </span>
+        </div>
+        <div style="margin-top:8px;font-size:0.7rem;color:rgba(255,255,255,0.45);font-style:italic;">
+          Tip: rewards risk-takers and turns close games into comebacks.
+        </div>
       </div>
       <label class="toggle-switch" id="confidence-toggle" onclick="toggleConfidenceScoring(event)"><input type="checkbox" id="confidence-checkbox" /><span class="slider"></span></label>
     </div>
