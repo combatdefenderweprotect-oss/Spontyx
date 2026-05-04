@@ -297,7 +297,9 @@
       opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 999; white-space: nowrap;
     }
     #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-    /* Filter chips (My Leagues / Created / Joined) */
+    /* Filter chips */
+    .lh-filter-row { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .lh-filter-label { font-size:0.7rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--grey-dark); margin-right:4px; }
     .lh-filter-chip {
       background: rgba(255,255,255,0.03);
       border: 1px solid rgba(255,255,255,0.08);
@@ -310,6 +312,23 @@
     }
     .lh-filter-chip:hover { border-color: rgba(168,225,12,0.4); color: #fff; }
     .lh-filter-chip.active { background: var(--lime); color: #0a0a14; border-color: var(--lime); font-weight: 600; }
+    /* Type chips: tinted-active so each type is recognisable even when not active */
+    .lh-filter-chip[data-type="season"] { color: var(--lime); border-color: rgba(168,225,12,0.25); }
+    .lh-filter-chip[data-type="season"].active { background: var(--lime); color: #0a0a14; border-color: var(--lime); }
+    .lh-filter-chip[data-type="match"] { color: var(--coral); border-color: rgba(255,107,107,0.25); }
+    .lh-filter-chip[data-type="match"].active { background: var(--coral); color: #1a0a0e; border-color: var(--coral); }
+    .lh-filter-chip[data-type="custom"] { color: var(--teal); border-color: rgba(78,205,196,0.25); }
+    .lh-filter-chip[data-type="custom"].active { background: var(--teal); color: #051a17; border-color: var(--teal); }
+
+    /* League type badge on cards */
+    .lh-type-badge {
+      display: inline-flex; align-items:center; gap:5px;
+      padding: 2px 8px; border-radius: 10px;
+      font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    }
+    .lh-type-badge.season { background: rgba(168,225,12,0.12); color: var(--lime); border: 1px solid rgba(168,225,12,0.3); }
+    .lh-type-badge.match  { background: rgba(255,107,107,0.12); color: var(--coral); border: 1px solid rgba(255,107,107,0.3); }
+    .lh-type-badge.custom { background: rgba(78,205,196,0.12); color: var(--teal); border: 1px solid rgba(78,205,196,0.3); }
   </style>
 </head>
 <body>
@@ -383,11 +402,20 @@
         </div>
       </section>
 
-      <!-- Filter chips: All / Created by me / Joined -->
-      <div class="lh-filter-row" style="display:flex; gap:8px; margin:8px 0 18px; flex-wrap:wrap;">
+      <!-- Filter row 1: Source -->
+      <div class="lh-filter-row" style="margin:8px 0 10px;">
+        <span class="lh-filter-label">Source</span>
         <button class="lh-filter-chip active" data-filter="all" onclick="setLeagueFilter('all')">All</button>
         <button class="lh-filter-chip" data-filter="created" onclick="setLeagueFilter('created')">Created by me</button>
         <button class="lh-filter-chip" data-filter="joined" onclick="setLeagueFilter('joined')">Joined</button>
+      </div>
+      <!-- Filter row 2: Type (Season-Long / Match Night / Custom — colors match create-league.html Step 1) -->
+      <div class="lh-filter-row" style="margin:0 0 18px;">
+        <span class="lh-filter-label">Type</span>
+        <button class="lh-filter-chip active" data-type-filter="all" onclick="setLeagueTypeFilter('all')">All types</button>
+        <button class="lh-filter-chip" data-type-filter="season" data-type="season" onclick="setLeagueTypeFilter('season')">Season-Long</button>
+        <button class="lh-filter-chip" data-type-filter="match"  data-type="match"  onclick="setLeagueTypeFilter('match')">Match Night</button>
+        <button class="lh-filter-chip" data-type-filter="custom" data-type="custom" onclick="setLeagueTypeFilter('custom')">Custom</button>
       </div>
 
       <!-- ═══ ACTIVE ═══ -->
@@ -447,8 +475,9 @@
   }
 
   /* ── My Leagues state ── */
-  var currentLeagueFilter = 'all'; // 'all' | 'created' | 'joined'
-  var allUserLeagues = [];         // raw leagues array, hydrated once
+  var currentLeagueFilter     = 'all'; // 'all' | 'created' | 'joined'
+  var currentLeagueTypeFilter = 'all'; // 'all' | 'season' | 'match' | 'custom'
+  var allUserLeagues = [];             // raw leagues array, hydrated once
   var currentUserId  = null;
 
   function escLh(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
@@ -477,6 +506,19 @@
     return 'Custom';
   }
 
+  // Maps a league row to one of: 'season' | 'match' | 'custom' (used by type filter + badge color).
+  function leagueTypeKey(l) {
+    if (l.creation_path === 'team' || l.creation_path === 'competition') return 'season';
+    if (l.league_start_date && l.league_end_date && l.league_start_date === l.league_end_date) return 'match';
+    return 'custom';
+  }
+
+  function leagueTypeBadgeLabel(key) {
+    if (key === 'season') return 'Season-Long';
+    if (key === 'match')  return 'Match Night';
+    return 'Custom';
+  }
+
   function leagueStatusBucket(l) {
     // Today vs league_start_date / league_end_date.
     var today = new Date(); today.setHours(0,0,0,0);
@@ -498,6 +540,8 @@
     var ownerBadge = isOwner ? '<span class="lh-badge owner">Owner</span>' : '';
     var bucket = leagueStatusBucket(l);
     var finishedCls = bucket === 'finished' ? ' finished' : '';
+    var typeKey = leagueTypeKey(l);
+    var typeBadge = '<span class="lh-type-badge ' + typeKey + '">' + leagueTypeBadgeLabel(typeKey) + '</span>';
 
     return '' +
       '<a href="league.html?id=' + escLh(l.id) + '" class="lh-card' + finishedCls + '">' +
@@ -505,7 +549,7 @@
         '<div class="lh-card-info">' +
           '<div class="lh-card-top">' +
             '<span class="lh-card-name">' + name + '</span>' +
-            ownerBadge + visBadge +
+            typeBadge + ownerBadge + visBadge +
           '</div>' +
           '<div class="lh-card-status">' + leagueTypeLabel(l) + (l.league_start_date ? (' · from ' + l.league_start_date) : '') + '</div>' +
           '<div class="lh-card-meta">' +
@@ -522,6 +566,10 @@
     if (currentLeagueFilter === 'created') filtered = allUserLeagues.filter(function(l){ return l.is_owner; });
     else if (currentLeagueFilter === 'joined') filtered = allUserLeagues.filter(function(l){ return !l.is_owner; });
     else filtered = allUserLeagues.slice();
+
+    if (currentLeagueTypeFilter !== 'all') {
+      filtered = filtered.filter(function(l){ return leagueTypeKey(l) === currentLeagueTypeFilter; });
+    }
 
     var byBucket = { active: [], upcoming: [], finished: [] };
     filtered.forEach(function(l){ byBucket[leagueStatusBucket(l)].push(l); });
@@ -549,8 +597,16 @@
 
   function setLeagueFilter(f) {
     currentLeagueFilter = f;
-    document.querySelectorAll('.lh-filter-chip').forEach(function(c){
+    document.querySelectorAll('.lh-filter-chip[data-filter]').forEach(function(c){
       c.classList.toggle('active', c.dataset.filter === f);
+    });
+    applyLeagueFilter();
+  }
+
+  function setLeagueTypeFilter(f) {
+    currentLeagueTypeFilter = f;
+    document.querySelectorAll('.lh-filter-chip[data-type-filter]').forEach(function(c){
+      c.classList.toggle('active', c.dataset.typeFilter === f);
     });
     applyLeagueFilter();
   }
