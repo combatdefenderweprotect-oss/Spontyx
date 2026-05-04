@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<!--
+  Clubs (v1) — social competitive layer.
+  v1 scope: UI + structure + basic data flow only. Mock data, no DB schema.
+  Quick-action launches set sessionStorage `spontix_club_game = { clubId, clubName }`
+  so existing flows (BR, Trivia, Create League) can later read & honor it.
+  Club leaderboard MUST count only games played inside the club — not enforced
+  in this v1 since there's no club-game persistence yet.
+-->
+<html lang="en">
+<head>
+  <meta name="view-transition" content="same-origin" />
+  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Clubs</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    :root {
+      --club-accent: #A8E10C;
+      --club-accent-soft: rgba(168,225,12,0.12);
+    }
+
+    .clubs-wrap { width: 100%; padding: 28px 36px 48px; }
+
+    /* ── Header ── */
+    .club-header {
+      background: linear-gradient(135deg, rgba(168,225,12,0.08), rgba(124,92,252,0.04));
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px;
+      padding: 22px 26px;
+      display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+      margin-bottom: 22px;
+    }
+    .club-avatar {
+      width: 64px; height: 64px; border-radius: 14px;
+      background: linear-gradient(135deg, var(--club-accent), #6BB30A);
+      color: #0a0a14; font-size: 1.6rem; font-weight: 800;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .club-header-info { flex: 1; min-width: 200px; }
+    .club-name { font-size: 1.6rem; font-weight: 800; color: #fff; margin-bottom: 2px; }
+    .club-meta { display: flex; gap: 12px; font-size: 0.82rem; color: var(--grey-light); flex-wrap: wrap; }
+    .club-meta-item { display: inline-flex; align-items: center; gap: 6px; }
+    .club-meta-item svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
+    .club-desc { color: var(--grey-light); font-size: 0.86rem; margin-top: 6px; max-width: 540px; line-height: 1.45; }
+    .club-header-actions { display: flex; gap: 10px; flex-shrink: 0; }
+    .club-btn {
+      padding: 10px 16px; border-radius: 10px; font-weight: 600; font-size: 0.85rem;
+      cursor: pointer; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04);
+      color: #fff; display: inline-flex; align-items: center; gap: 6px;
+    }
+    .club-btn:hover { border-color: var(--club-accent); }
+    .club-btn.primary { background: var(--club-accent); color: #0a0a14; border-color: var(--club-accent); }
+    .club-btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; }
+
+    /* ── Two-column layout ── */
+    .club-grid { display: grid; grid-template-columns: 1.7fr 1fr; gap: 22px; align-items: start; }
+    @media (max-width: 1100px) { .club-grid { grid-template-columns: 1fr; } }
+
+    /* ── Cards ── */
+    .club-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 18px 20px;
+      margin-bottom: 18px;
+    }
+    .club-card-head {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 14px;
+    }
+    .club-card-title { font-size: 1.05rem; font-weight: 700; color: #fff; }
+
+    /* ── Leaderboard tabs ── */
+    .lb-tabs { display: flex; gap: 6px; }
+    .lb-tab {
+      padding: 6px 14px; border-radius: 18px; font-size: 0.78rem; font-weight: 600;
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      color: var(--grey-light); cursor: pointer;
+    }
+    .lb-tab.active { background: var(--club-accent); color: #0a0a14; border-color: var(--club-accent); }
+
+    /* ── Leaderboard rows ── */
+    .lb-list { display: flex; flex-direction: column; gap: 6px; }
+    .lb-row {
+      display: grid; grid-template-columns: 50px 1fr auto auto; gap: 12px; align-items: center;
+      padding: 12px 14px; border-radius: 10px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.04);
+    }
+    .lb-row.podium { background: linear-gradient(90deg, rgba(168,225,12,0.06), transparent 65%); border-color: rgba(168,225,12,0.2); }
+    .lb-row.you    { border-color: var(--club-accent); background: rgba(168,225,12,0.08); }
+    .lb-rank { font-size: 1.4rem; font-weight: 800; color: var(--grey-light); text-align: center; }
+    .lb-row.podium .lb-rank { color: var(--club-accent); }
+    .lb-rank .medal { font-size: 1.6rem; }
+    .lb-name { font-weight: 600; color: #fff; }
+    .lb-handle { color: var(--grey-dark); font-size: 0.78rem; margin-left: 6px; }
+    .lb-points { font-size: 0.95rem; font-weight: 700; color: var(--club-accent); white-space: nowrap; }
+    .lb-delta { font-size: 0.72rem; color: var(--grey-dark); white-space: nowrap; }
+    .lb-delta.up   { color: var(--club-accent); }
+    .lb-delta.down { color: var(--coral, #FF6B6B); }
+
+    /* ── Activity feed ── */
+    .feed-list { display: flex; flex-direction: column; gap: 4px; max-height: 420px; overflow-y: auto; }
+    .feed-row {
+      display: flex; align-items: flex-start; gap: 10px;
+      padding: 10px 12px; border-radius: 8px;
+    }
+    .feed-row:hover { background: rgba(255,255,255,0.02); }
+    .feed-avatar {
+      width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+      background: rgba(168,225,12,0.15); color: var(--club-accent);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.72rem;
+    }
+    .feed-text { flex: 1; font-size: 0.84rem; line-height: 1.4; color: var(--grey-light); }
+    .feed-text strong { color: #fff; }
+    .feed-time { font-size: 0.7rem; color: var(--grey-dark); white-space: nowrap; flex-shrink: 0; }
+
+    /* ── Quick actions ── */
+    .qa-list { display: flex; flex-direction: column; gap: 8px; }
+    .qa-btn {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 14px; border-radius: 10px; cursor: pointer;
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+      color: #fff; font-weight: 600; font-size: 0.88rem; text-decoration: none;
+      transition: all 0.15s;
+    }
+    .qa-btn:hover { transform: translateX(2px); }
+    .qa-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .qa-icon svg { width: 16px; height: 16px; fill: none; stroke-width: 2; }
+    .qa-icon.lime  { background: rgba(168,225,12,0.12); }  .qa-icon.lime svg  { stroke: var(--club-accent); }
+    .qa-icon.coral { background: rgba(255,107,107,0.12); } .qa-icon.coral svg { stroke: var(--coral, #FF6B6B); }
+    .qa-icon.teal  { background: rgba(78,205,196,0.12); }  .qa-icon.teal svg  { stroke: var(--teal, #4ECDC4); }
+    .qa-icon.purple{ background: rgba(124,92,252,0.12); }  .qa-icon.purple svg{ stroke: var(--purple, #7C5CFC); }
+    .qa-btn:hover.lime,   .qa-btn:hover.coral,   .qa-btn:hover.teal,   .qa-btn:hover.purple { border-color: rgba(255,255,255,0.18); }
+    .qa-sub { font-size: 0.7rem; font-weight: 500; color: var(--grey-dark); margin-top: 1px; }
+
+    /* ── Members list ── */
+    .mem-list { display: flex; flex-direction: column; gap: 4px; max-height: 420px; overflow-y: auto; }
+    .mem-row {
+      display: grid; grid-template-columns: 32px 1fr auto; gap: 10px; align-items: center;
+      padding: 8px 10px; border-radius: 8px;
+    }
+    .mem-row:hover { background: rgba(255,255,255,0.02); }
+    .mem-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: rgba(168,225,12,0.15); color: var(--club-accent);
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: 0.74rem;
+    }
+    .mem-name { font-size: 0.85rem; font-weight: 600; color: #fff; }
+    .mem-rank { font-size: 0.74rem; color: var(--grey-dark); }
+    .mem-rank.top { color: var(--club-accent); font-weight: 700; }
+
+    /* TODO banner — make it obvious we're on v1 / mock data */
+    .club-todo {
+      margin-top: 14px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      background: rgba(255,159,67,0.08);
+      border: 1px solid rgba(255,159,67,0.25);
+      color: #FFB976; font-size: 0.78rem; line-height: 1.45;
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-shell">
+  <div id="sidebar-placeholder"></div>
+
+  <main class="main">
+    <!-- Mode header -->
+    <div class="mode-header">
+      <div class="mode-header-left">
+        <div class="mode-icon icon-leagues">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/>
+          </svg>
+        </div>
+        <div>
+          <h1 class="mode-title">Clubs</h1>
+          <div class="mode-subtitle">Private groups. Members compete on a shared leaderboard.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="clubs-wrap">
+
+      <!-- ═══ HEADER ═══ -->
+      <section class="club-header">
+        <div class="club-avatar" id="club-avatar">SC</div>
+        <div class="club-header-info">
+          <div class="club-name" id="club-name">Spontyx Crew</div>
+          <div class="club-meta">
+            <span class="club-meta-item">
+              <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+              <span id="club-member-count">12</span> members
+            </span>
+            <span class="club-meta-item">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Founded May 2026
+            </span>
+          </div>
+          <div class="club-desc">A private circle where the crew plays Battle Royale, Trivia, and runs leagues together. Only club games count toward the leaderboard.</div>
+        </div>
+        <div class="club-header-actions">
+          <button class="club-btn primary" onclick="copyInviteLink()">
+            <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="23" y1="11" x2="17" y2="11"/></svg>
+            Invite
+          </button>
+        </div>
+      </section>
+
+      <!-- ═══ MAIN GRID ═══ -->
+      <div class="club-grid">
+
+        <!-- ── LEFT COLUMN: Leaderboard + Activity ── -->
+        <div>
+
+          <!-- LEADERBOARD -->
+          <section class="club-card">
+            <div class="club-card-head">
+              <div class="club-card-title">Leaderboard</div>
+              <div class="lb-tabs">
+                <button class="lb-tab active" data-tab="weekly" onclick="switchLbTab('weekly')">This week</button>
+                <button class="lb-tab" data-tab="alltime" onclick="switchLbTab('alltime')">All-time</button>
+              </div>
+            </div>
+            <div class="lb-list" id="lb-list">
+              <!-- rendered by JS -->
+            </div>
+            <div class="club-todo">
+              <strong>v1 — mock data.</strong> Real leaderboard will wire up once club-game persistence ships. Only games launched from the club will count.
+            </div>
+          </section>
+
+          <!-- ACTIVITY FEED -->
+          <section class="club-card">
+            <div class="club-card-head">
+              <div class="club-card-title">Activity</div>
+              <span style="font-size:0.74rem;color:var(--grey-dark);">Recent club events</span>
+            </div>
+            <div class="feed-list" id="feed-list">
+              <!-- rendered by JS -->
+            </div>
+          </section>
+
+        </div>
+
+        <!-- ── RIGHT COLUMN: Quick Actions + Members ── -->
+        <div>
+
+          <!-- QUICK ACTIONS -->
+          <section class="club-card">
+            <div class="club-card-head">
+              <div class="club-card-title">Quick actions</div>
+            </div>
+            <div class="qa-list">
+              <a href="#" class="qa-btn" onclick="launchClubGame('battle-royale'); return false;">
+                <span class="qa-icon coral">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="10" r="8"/><path d="M12 18v4"/><path d="M8 22h8"/></svg>
+                </span>
+                <span>
+                  <div>Play Battle Royale</div>
+                  <div class="qa-sub">Club lobby · members only</div>
+                </span>
+              </a>
+              <a href="#" class="qa-btn" onclick="launchClubGame('trivia'); return false;">
+                <span class="qa-icon teal">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </span>
+                <span>
+                  <div>Start Trivia</div>
+                  <div class="qa-sub">Same questions for all members</div>
+                </span>
+              </a>
+              <a href="#" class="qa-btn" onclick="launchClubGame('league'); return false;">
+                <span class="qa-icon lime">
+                  <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                </span>
+                <span>
+                  <div>Create League</div>
+                  <div class="qa-sub">Run a league inside the club</div>
+                </span>
+              </a>
+            </div>
+          </section>
+
+          <!-- MEMBERS -->
+          <section class="club-card">
+            <div class="club-card-head">
+              <div class="club-card-title">Members</div>
+              <span style="font-size:0.74rem;color:var(--grey-dark);" id="mem-count-pill">12</span>
+            </div>
+            <div class="mem-list" id="mem-list">
+              <!-- rendered by JS -->
+            </div>
+          </section>
+
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Toast -->
+<div id="toast"></div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="spontix-store.js"></script>
+<script src="sidebar.js"></script>
+<script src="utils.js"></script>
+<script>
+
+  /* ────────────────────────────────────────────────────────────────
+     Clubs v1 — mock data + UI logic.
+     Real persistence to be added in a follow-up: clubs / club_members /
+     club_games tables + scoring rules. See TODO at bottom of file.
+     ──────────────────────────────────────────────────────────────── */
+
+  // Mock club. In v2 this will come from Supabase keyed by URL ?id=<club-id>.
+  var mockClub = {
+    id: 'club-spontyx-crew',
+    name: 'Spontyx Crew',
+    description: 'A private circle where the crew plays Battle Royale, Trivia, and runs leagues together.',
+    members: [
+      { id: 'u1', name: 'Bran Predicts',     handle: 'bran',     points_week: 320, points_total: 4280 },
+      { id: 'u2', name: 'Marcus Tan',        handle: 'marcusT',  points_week: 280, points_total: 3950 },
+      { id: 'u3', name: 'Jake Reyes',        handle: 'jakeR',    points_week: 240, points_total: 3720 },
+      { id: 'u4', name: 'Sofia Linde',       handle: 'sofiaL',   points_week: 210, points_total: 3500 },
+      { id: 'u5', name: 'Diego Park',        handle: 'diegoP',   points_week: 190, points_total: 3290 },
+      { id: 'u6', name: 'Yara Kim',          handle: 'yaraK',    points_week: 170, points_total: 3120 },
+      { id: 'u7', name: 'Tom Holloway',      handle: 'tomH',     points_week: 140, points_total: 2950 },
+      { id: 'u8', name: 'Nadia Rivers',      handle: 'nadiaR',   points_week: 120, points_total: 2840 },
+      { id: 'u9', name: 'Leo Brandt',        handle: 'leoB',     points_week:  90, points_total: 2610 },
+      { id: 'u10', name: 'Mara Cole',        handle: 'maraC',    points_week:  60, points_total: 2410 },
+      { id: 'u11', name: 'Owen Mendez',      handle: 'owenM',    points_week:  40, points_total: 2200 },
+      { id: 'u12', name: 'Ines Vidal',       handle: 'inesV',    points_week:  20, points_total: 2050 },
+    ],
+    activity: [
+      { user: 'Bran Predicts',    action: 'won Battle Royale (Club)',         minsAgo: 12 },
+      { user: 'Marcus Tan',       action: 'finished #1 in Trivia (Club)',     minsAgo: 47 },
+      { user: 'Jake Reyes',       action: 'created league: Champions Run',    minsAgo: 95 },
+      { user: 'Sofia Linde',      action: 'won Battle Royale (Club)',         minsAgo: 180 },
+      { user: 'Diego Park',       action: 'joined the club',                  minsAgo: 240 },
+      { user: 'Yara Kim',         action: 'finished #2 in Trivia (Club)',     minsAgo: 360 },
+      { user: 'Tom Holloway',     action: 'joined the club',                  minsAgo: 720 },
+      { user: 'Nadia Rivers',     action: 'won Battle Royale (Club)',         minsAgo: 1440 },
+    ],
+  };
+
+  var currentLbTab = 'weekly'; // 'weekly' | 'alltime'
+
+  /* ── Helpers ── */
+  function escClubs(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+  function initials(name) {
+    if (!name) return '??';
+    var parts = name.trim().split(/\s+/).slice(0, 2);
+    return parts.map(function(p){ return p[0]; }).join('').toUpperCase();
+  }
+  function timeAgo(mins) {
+    if (mins < 60) return mins + 'm ago';
+    if (mins < 60 * 24) return Math.floor(mins / 60) + 'h ago';
+    return Math.floor(mins / (60 * 24)) + 'd ago';
+  }
+
+  /* ── Toast ── */
+  function showToast(msg, dur) {
+    var t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(function(){ t.classList.remove('show'); }, dur || 2500);
+  }
+
+  /* ── Render ── */
+  function renderHeader() {
+    document.getElementById('club-avatar').textContent = initials(mockClub.name);
+    document.getElementById('club-name').textContent   = mockClub.name;
+    document.getElementById('club-member-count').textContent = mockClub.members.length;
+    document.getElementById('mem-count-pill').textContent    = mockClub.members.length;
+  }
+
+  function renderLeaderboard() {
+    var sorted = mockClub.members.slice().sort(function(a, b) {
+      return currentLbTab === 'weekly'
+        ? (b.points_week  - a.points_week)
+        : (b.points_total - a.points_total);
+    });
+    // Pretend you are "bran" for the highlight (TODO: replace with real auth lookup)
+    var youHandle = (typeof SpontixStore !== 'undefined' && SpontixStore.getPlayer)
+      ? (SpontixStore.getPlayer().handle || 'bran') : 'bran';
+
+    var html = sorted.map(function(m, i) {
+      var rank   = i + 1;
+      var isPodium = rank <= 3;
+      var isYou    = m.handle === youHandle;
+      var medal    = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '';
+      var pts      = currentLbTab === 'weekly' ? m.points_week : m.points_total;
+      // delta is mocked; in v2, derive from previous-period snapshot
+      var delta    = rank <= 3 ? '↑' : (rank > 8 ? '↓' : '–');
+      var deltaCls = rank <= 3 ? 'up' : (rank > 8 ? 'down' : '');
+      return '<div class="lb-row' + (isPodium ? ' podium' : '') + (isYou ? ' you' : '') + '">' +
+        '<div class="lb-rank">' + (medal ? '<span class="medal">' + medal + '</span>' : rank) + '</div>' +
+        '<div><span class="lb-name">' + escClubs(m.name) + '</span><span class="lb-handle">@' + escClubs(m.handle) + '</span></div>' +
+        '<div class="lb-points">' + pts.toLocaleString() + ' pts</div>' +
+        '<div class="lb-delta ' + deltaCls + '">' + delta + '</div>' +
+      '</div>';
+    }).join('');
+    document.getElementById('lb-list').innerHTML = html;
+  }
+
+  function renderActivity() {
+    var html = mockClub.activity.map(function(a) {
+      return '<div class="feed-row">' +
+        '<div class="feed-avatar">' + escClubs(initials(a.user)) + '</div>' +
+        '<div class="feed-text"><strong>' + escClubs(a.user) + '</strong> ' + escClubs(a.action) + '</div>' +
+        '<div class="feed-time">' + timeAgo(a.minsAgo) + '</div>' +
+      '</div>';
+    }).join('');
+    document.getElementById('feed-list').innerHTML = html;
+  }
+
+  function renderMembers() {
+    var sorted = mockClub.members.slice().sort(function(a, b) { return b.points_total - a.points_total; });
+    var html = sorted.slice(0, 20).map(function(m, i) {
+      var rank = i + 1;
+      var rankCls = rank <= 3 ? 'mem-rank top' : 'mem-rank';
+      return '<div class="mem-row">' +
+        '<div class="mem-avatar">' + escClubs(initials(m.name)) + '</div>' +
+        '<div><div class="mem-name">' + escClubs(m.name) + '</div></div>' +
+        '<div class="' + rankCls + '">#' + rank + '</div>' +
+      '</div>';
+    }).join('');
+    document.getElementById('mem-list').innerHTML = html;
+  }
+
+  /* ── Tabs ── */
+  function switchLbTab(tab) {
+    currentLbTab = tab;
+    document.querySelectorAll('.lb-tab').forEach(function(t){
+      t.classList.toggle('active', t.dataset.tab === tab);
+    });
+    renderLeaderboard();
+  }
+
+  /* ── Quick actions: route to existing flows + carry a club marker ── */
+  function launchClubGame(kind) {
+    // sessionStorage marker — existing flows can read this later to honor `clubGame: true`
+    // and associate scoring with the club. v1: no consumer reads it yet.
+    try {
+      sessionStorage.setItem('spontix_club_game', JSON.stringify({
+        clubId: mockClub.id,
+        clubName: mockClub.name,
+        kind: kind,
+        ts: Date.now(),
+      }));
+    } catch(e) {}
+
+    if (kind === 'battle-royale') {
+      window.location.href = 'br-lobby.html?club=' + encodeURIComponent(mockClub.id);
+    } else if (kind === 'trivia') {
+      window.location.href = 'trivia.html?club=' + encodeURIComponent(mockClub.id);
+    } else if (kind === 'league') {
+      window.location.href = 'create-league.html?club=' + encodeURIComponent(mockClub.id);
+    }
+  }
+
+  function copyInviteLink() {
+    var link = window.location.origin + '/clubs.html?join=' + mockClub.id;
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(link).then(function() { showToast('Invite link copied'); });
+    } else {
+      showToast('Invite: ' + link);
+    }
+  }
+
+  /* ── Init ── */
+  document.addEventListener('DOMContentLoaded', function() {
+    try { SpontixSidebar.init({ type: 'player', active: 'clubs.html' }); } catch(e) {}
+    renderHeader();
+    renderLeaderboard();
+    renderActivity();
+    renderMembers();
+  });
+
+  /*
+  ──────────────────────────────────────────────────────────────────
+  TODO — Clubs v2 (NOT in this sprint):
+    1. DB schema: clubs, club_members, club_games (game-id reference + winner + points awarded)
+    2. Quick-action launches must persist clubId on the resulting BR/Trivia/League so the
+       resolver can credit club leaderboard.
+    3. Leaderboard query: aggregate club_games scoring by member; never include non-club games.
+    4. Real-time activity feed (Supabase Realtime on club_games).
+    5. Roles (admin / member), invite tokens, kick/leave.
+    6. Multiple clubs per user — list view + switcher (currently this page hardcodes one mock club).
+    7. Club-vs-club competitions (post-v2).
+  ──────────────────────────────────────────────────────────────────
+  */
+</script>
+</body>
+</html>
