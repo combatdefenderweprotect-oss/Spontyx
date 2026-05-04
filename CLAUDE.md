@@ -389,47 +389,32 @@ Every time a question is generated, resolved, or displayed — explicitly identi
 - Tiered subscription model (Starter / Pro / Elite for players; Venue Starter / Pro / Elite for venues) gates advanced features.
 - Leagues can opt in to **AI-generated Real World questions** — prediction questions built from live sports API data + current news, auto-validated and published with a "Real World" badge.
 
-### Two league types — CRITICAL DISTINCTION
+### Three league types — CRITICAL DISTINCTION
 
-> **MVP NOTE:** Type 1 single-match is the target launch experience. Type 2 season league infrastructure exists and runs for seed leagues — do not break it. Do not build further Type 2 behaviour pre-launch. Type 1 session pacing (question budget, chaining, match summary card) is documented below but NOT YET IMPLEMENTED — it is a post-launch sprint.
+> **Canonical spec:** [`docs/LEAGUE_CREATION_FLOW.md`](docs/LEAGUE_CREATION_FLOW.md) is the single source of truth for league types, fixture loading, and lifecycle rules. The summary below is a cross-reference. If this section and the spec disagree, the spec wins.
 
-These are not the same system with different parameters. They have different logic, different constraints, and different UX expectations. Before working on anything related to live questions, generation, pacing, or session flow — know which type you are in.
+Step 1 of `create-league.html` presents three types. They are not variants of one system. They have different lifecycles, different fixture sources, and different generation behaviour. Before working on anything related to live questions, generation, pacing, or session flow — know which type you are in.
 
----
+| Type | What it is | Fixture source | Lifecycle | Generation pacing |
+|---|---|---|---|---|
+| **Season-Long League** | A team's full remaining season (Path A) OR a competition's full remaining season (Path B). Elite-only. | Auto-loaded from `api_football_fixtures`, past matches always excluded | Ends when fixture source is genuinely exhausted (team eliminated from all selected competitions OR all selected seasons concluded). Knockout draw gaps do NOT end the league. | Continuous (legacy "Type 2") — no per-match budget |
+| **Match Night** | One specific fixture, any competition incl. cups. All tiers. | Single user-picked fixture | Ends when that match resolves | Closed session (legacy "Type 1") — fixed budget, session pacing |
+| **Custom League** | Flexible catch-all. All tiers. | Creator-defined: custom date range, hand-picked fixtures, special rules | Ends on creator-defined date | Continuous |
 
-**Type 1 — Single-match live league: a CLOSED GAME SESSION**
+**Critical fixture rules (Season-Long only):**
+- Past matches (`kickoff_at < now()`) are always excluded.
+- No manual fixture picking — Season-Long is fully auto-populated.
+- Knockout patience: "no scheduled future fixture right now" must NOT end the league. End requires team elimination OR official season end.
+- Mid-season creation = remainder of current season only. No "next season" option.
 
-The user chooses one specific match to play. This behaves like a real game mode with a defined start, a defined end, and controlled pacing throughout.
+**Legacy Type 1 / Type 2 mapping** (kept for reference — older sections of this doc still use these terms):
+- Legacy "Type 1 (single-match)" ≈ Match Night.
+- Legacy "Type 2 (season)" ≈ Season-Long + Custom (both use continuous generation).
+- Where this CLAUDE.md says "Type 1" → read as Match Night. Where it says "Type 2" → read as Season-Long or Custom.
 
-Configurable at creation:
-- Which half: first half / second half / full match
-- Total question budget: min 5, max 20
-- Mode: pre-match only / live only / hybrid
+**What applies to which type (generation/session behaviour):**
 
-Rules:
-- The budget is fixed. Questions are paced across the match to fill it — not generated freely.
-- Session logic (question chaining, holding card, match summary card) applies here.
-- Event-driven and time-driven live questions both apply — but count against the budget ceiling.
-- When the match ends, the active phase is over.
-
----
-
-**Type 2 — Season or long-term league: an ONGOING SYSTEM**
-
-This is not a session. It is a content layer that runs continuously over multiple matches across weeks or a season. There is no game mode start/end per match — the league just keeps generating and resolving questions.
-
-Rules:
-- No fixed per-match question budget.
-- Questions generated continuously per league AI quota settings (weekly/total limits, sport, team scope).
-- No session pacing. No match-level question ceiling.
-- Players accumulate points across many matches. The competition runs for weeks or a full season.
-- Session continuation UI (chaining, holding card) can still improve experience, but the underlying generation is not session-constrained.
-
----
-
-**What applies to which type:**
-
-| Concept | Type 1 (single-match) | Type 2 (season) |
+| Concept | Match Night (legacy Type 1) | Season-Long & Custom (legacy Type 2) |
 |---|---|---|
 | Question budget per match | Yes — 5 to 20, fixed at creation | No |
 | Session pacing | Yes — questions spread across match | No |
@@ -438,10 +423,10 @@ Rules:
 | Blowout adaptation | Yes — adapt, never stop | Yes — adapt, never stop |
 | Question chaining UI | Yes — core session mechanic | Nice to have, not required |
 | Match summary card | Yes — session endpoint | Yes — marks match completion |
-| Continuous AI generation | No — single match, closed budget | Yes — runs indefinitely |
+| Continuous AI generation | No — single match, closed budget | Yes — runs indefinitely until fixture source exhausted |
 | Per-match AI quota limits | Not applicable (budget set at creation) | Yes — weekly/total quota from league settings |
 
-**The rule**: session pacing and question budget logic lives in Type 1 only. Season leagues use continuous generation logic and are not constrained by match-level session rules.
+**The rule**: session pacing and question budget logic lives in Match Night only. Season-Long and Custom use continuous generation and are not constrained by match-level session rules.
 
 ### Main features implemented so far
 | Feature | Status |

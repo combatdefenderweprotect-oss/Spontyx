@@ -40,18 +40,28 @@ The defining characteristic of Leagues: questions are generated before or during
 
 ### League formats — the full pillar
 
-Leagues is not one product. It is a family of formats that share the same scoring engine:
+> **Canonical spec for league creation:** [`docs/LEAGUE_CREATION_FLOW.md`](LEAGUE_CREATION_FLOW.md). The summary below references it. If this section and the spec disagree, the spec wins.
 
-| Format | Scope | Who plays |
-|---|---|---|
-| **Solo Match Prediction** | One match, one player | Single player vs the match |
-| **Match League** | One match, multiple players | Friends, public, or venue audience |
-| **Gameweek League** | One round of fixtures | Ongoing competition across a matchday |
-| **Season League** | Full season | Long-term competition across many weeks |
-| **Custom League** | Defined by creator | Any combination of scope and members |
-| **Venue League** | Match Night at a physical venue | Venue-hosted, audience plays live |
+Leagues is not one product. The Step 1 of `create-league.html` presents three primary types, each with a fixed lifecycle:
 
-All formats use the same question system (`CORE_MATCH_PREMATCH`, `CORE_MATCH_LIVE`, `REAL_WORLD`), the same scoring formula, and the same leaderboard infrastructure.
+| Type | Scope | Fixture source | Lifecycle | Tier |
+|---|---|---|---|---|
+| **Season-Long League** | Path A: a team's full remaining season across one/many/all of its competitions. Path B: a competition's full remaining season. | Auto-loaded from `api_football_fixtures`, past matches always excluded | Ends when the underlying fixture source is genuinely exhausted (team eliminated from all selected competitions OR all selected seasons have officially concluded). Knockout draw gaps do NOT end the league. | Elite |
+| **Match Night** | One specific fixture, any competition incl. cups | Single user-picked fixture | Ends when that match resolves | All tiers |
+| **Custom League** | Flexible catch-all — custom date ranges, hand-picked fixtures, special rules | Creator-defined | Ends on creator-defined date | All tiers |
+
+All three use the same question system (`CORE_MATCH_PREMATCH`, `CORE_MATCH_LIVE`, `REAL_WORLD`), the same scoring formula, and the same leaderboard infrastructure.
+
+**Season-Long has critical lifecycle rules** that distinguish it from any time-bound concept:
+- **R1 — Past exclusion**: every fixture query enforces `kickoff_at >= now()`.
+- **R2 — Fixture-source exhaustion**: end condition is fixture exhaustion, not a date. The `league_end_date` field is informational only.
+- **R3 — Knockout patience**: a temporary absence of scheduled fixtures (between knockout rounds, before draws) does NOT end the league. The league ends only when the team is eliminated from ALL selected competitions OR ALL selected seasons have officially concluded. Requires external `team_still_active` and `season_ended` signals — see the canonical spec for the data dependency TODO.
+- **R5 — Mid-season creation**: covers remainder of current season only. No "next season" option.
+
+Other formats listed in earlier versions of this doc (Solo Match Prediction, Match League, Gameweek League, Venue League) are play-mode and audience-source variants that map onto the three creation types above:
+- **Solo / multiplayer / friends-only** = `play_mode` toggle + privacy setting on any of the three types.
+- **Venue audience** = a Match Night created by a venue with QR/PIN entry.
+- **Gameweek** = a Custom League with a one-round date range.
 
 ### Why a player plays Leagues
 
@@ -89,7 +99,7 @@ You pick a match you actually care about and you put your knowledge on the line 
 - A new user cannot tell from the navigation that Leagues includes solo prediction, match nights, season leagues, venue events, and friend groups
 - The sidebar entry goes directly to `my-leagues.html` — skipping the pillar concept entirely
 - The `create-league.html` wizard buries all format variation inside a single flow rather than presenting distinct products
-- The formats (Solo, Match, Gameweek, Season, Custom, Venue) are never surfaced by name anywhere in the UI
+- The three creation types (Season-Long, Match Night, Custom) and their play-mode variants (Solo, Friends, Venue) are never surfaced by name on the hub
 - A player arriving at `my-leagues.html` sees a list of leagues — they have no understanding of what Leagues is as a product
 
 ### Target state — what Leagues should look like
@@ -97,7 +107,7 @@ You pick a match you actually care about and you put your knowledge on the line 
 **Leagues hub page (to be created):**
 - Entry point for the entire pillar
 - Shows the player's active leagues grouped by format
-- Has clear format cards: Solo Prediction, Match Night, Gameweek, Season, Custom, Venue
+- Has clear creation-type cards: Season-Long League, Match Night, Custom League — each linking to the spec'd flow in [`docs/LEAGUE_CREATION_FLOW.md`](LEAGUE_CREATION_FLOW.md)
 - Each format card links to a context-appropriate creation or discovery flow
 - CTA paths: "Play solo", "Create a league", "Join a public league", "Find a venue"
 - Sidebar entry "Leagues" links here, not to `my-leagues.html`
@@ -106,6 +116,13 @@ You pick a match you actually care about and you put your knowledge on the line 
 - `my-leagues.html` — "My Leagues" section inside the hub
 - `discover.html` — "Discover" section inside the hub
 - `create-league.html` — reached from a format-specific CTA, not as the primary entry
+
+### Gaps / next steps
+
+- **Season-Long creation flow rebuild pending** — implementation must follow the [`LEAGUE_CREATION_FLOW.md`](LEAGUE_CREATION_FLOW.md) canonical spec (Path A team-based / Path B competition-based, fixture-driven lifecycle, knockout-safe end conditions, League Completion Evaluation process, zero-fixtures UX rule).
+- Leagues hub page not built — `my-leagues.html` is still the de facto pillar entry.
+- `team_still_active` and `season_end_date` external signals not yet sourced — see canonical spec § Data dependencies. Without these signals, knockout competitions cannot be fully resolved correctly and the evaluator must use a permissive fallback.
+- Match Night session pacing (legacy "Type 1") — fixed question budget, chaining, match summary card — designed in `SESSION_CONTINUATION_DESIGN.txt`, not built.
 
 ---
 

@@ -147,12 +147,15 @@ Deno.serve(async (req: Request) => {
 
   try {
     // ── Fetch all AI-enabled leagues ──────────────────────────────────
-    const { data: leagues, error: leagueErr } = await sb
+    // Migration 051 added creation_path + api_sports_league_ids[] to support
+    // Season-Long Path A multi-competition leagues. Spec: docs/LEAGUE_CREATION_FLOW.md.
+    const { data: leagueRows, error: leagueErr } = await sb
       .from('leagues')
       .select(`
         id, name, sport, scope, session_type,
         scoped_team_id, scoped_team_name,
         api_sports_league_id, api_sports_team_id, api_sports_season,
+        creation_path, api_sports_league_ids,
         ai_weekly_quota, ai_total_quota,
         league_start_date, league_end_date, owner_id,
         prematch_question_budget, live_question_budget,
@@ -160,12 +163,37 @@ Deno.serve(async (req: Request) => {
         created_at
       `)
       .eq('ai_questions_enabled', true)
-      .not('api_sports_league_id', 'is', null);
+      // Accept either the legacy singular or the new array column.
+      .or('api_sports_league_id.not.is.null,api_sports_league_ids.not.is.null');
 
     if (leagueErr) throw new Error(`league fetch failed: ${leagueErr.message}`);
-    if (!leagues || !leagues.length) {
+    if (!leagueRows || !leagueRows.length) {
       await finaliseRun(sb, runId, runStats, 'completed');
       return new Response(JSON.stringify({ ok: true, message: 'no enabled leagues' }), { status: 200 });
+    }
+
+    // ── Fan out multi-competition leagues into per-competition virtual entries ──
+    // For each league, the effective competition list is api_sports_league_ids when
+    // populated, otherwise [api_sports_league_id]. Each (league, competition) pair
+    // becomes one virtual entry the rest of the pipeline can process unchanged.
+    // Path B and legacy single-competition rows produce exactly one entry — identical
+    // to pre-migration-051 behaviour. Path A produces N entries for an N-competition
+    // selection. Question writes still use league.id, so all generated questions land
+    // under the same league row.
+    const leagues: LeagueWithConfig[] = [];
+    for (const lr of (leagueRows as any[])) {
+      const compIds: number[] = Array.isArray(lr.api_sports_league_ids) && lr.api_sports_league_ids.length > 0
+        ? lr.api_sports_league_ids.filter((x: any) => x != null)
+        : (lr.api_sports_league_id != null ? [lr.api_sports_league_id] : []);
+      if (compIds.length === 0) continue;
+      for (const compId of compIds) {
+        leagues.push({ ...lr, api_sports_league_id: compId } as LeagueWithConfig);
+      }
+    }
+
+    if (leagues.length === 0) {
+      await finaliseRun(sb, runId, runStats, 'completed');
+      return new Response(JSON.stringify({ ok: true, message: 'no resolvable competitions' }), { status: 200 });
     }
 
     runStats.leaguesEvaluated = leagues.length;

@@ -158,6 +158,13 @@ export interface LeagueWithConfig {
   api_sports_league_id: number;
   api_sports_team_id: number | null;
   api_sports_season: number;
+  // ── Season-Long multi-competition (migration 051) ─────────────────────
+  // creation_path: 'team' (Path A) | 'competition' (Path B) | null (Match Night/Custom/legacy).
+  // api_sports_league_ids: full competition list. The pipeline fans out each league row
+  // into one virtual entry per competition with api_sports_league_id overridden, so all
+  // downstream code continues to read the singular field. Spec: docs/LEAGUE_CREATION_FLOW.md.
+  creation_path?: 'team' | 'competition' | null;
+  api_sports_league_ids?: number[] | null;
   ai_weekly_quota: number;
   ai_total_quota: number;
   league_start_date: string | null;

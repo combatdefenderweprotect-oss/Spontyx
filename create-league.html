@@ -1,4 +1,11 @@
 <!DOCTYPE html>
+<!--
+  League creation flow — canonical spec: docs/LEAGUE_CREATION_FLOW.md
+  Three types only: Season-Long (Path A team / Path B competition, Elite-only,
+  fixture-source-exhaustion lifecycle, knockout-patience rule), Match Night
+  (single fixture), Custom (creator-defined).
+  If this file diverges from the spec, the spec wins — fix the code.
+-->
 <html lang="en">
 <head>
   <meta name="view-transition" content="same-origin" />
@@ -859,6 +866,78 @@
     </div>
     <div class="form-hint" style="margin-top:-8px;margin-bottom:8px;">Used to calculate your AI question quota for the league duration.</div>
 
+    <!-- ============================================================
+         SEASON-LONG FORK — Path A (team) / Path B (competition)
+         Spec: docs/LEAGUE_CREATION_FLOW.md
+         Shown only when leagueType === 'season'. Hidden otherwise.
+         Replaces the legacy scope-toggle + dates inputs for Season-Long.
+         ============================================================ -->
+    <div id="season-long-fork" style="display:none;">
+
+      <!-- Path picker -->
+      <div class="form-group">
+        <label class="form-label">How do you want to follow this season?</label>
+        <div class="form-hint" style="margin-bottom:14px;">Pick a team to follow across competitions, or pick one competition.</div>
+        <div class="scope-toggle" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="scope-card" id="sl-path-a-card" onclick="selectSeasonPath('team')">
+            <div class="scope-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--lime)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg>
+            </div>
+            <div>
+              <div class="scope-card-name">Follow a team</div>
+              <div class="scope-card-desc">Track all remaining fixtures for one team across selected competitions.</div>
+            </div>
+          </div>
+          <div class="scope-card" id="sl-path-b-card" onclick="selectSeasonPath('competition')">
+            <div class="scope-card-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+            </div>
+            <div>
+              <div class="scope-card-name">Follow a competition</div>
+              <div class="scope-card-desc">Track every remaining fixture in one competition.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- PATH A: Team-based -->
+      <div id="sl-path-a" style="display:none;">
+        <div class="form-group">
+          <label class="form-label">Pick your team</label>
+          <input type="text" class="form-input" id="sl-team-search" placeholder="Search team (e.g. Barcelona, Liverpool)..." oninput="onSlTeamSearch()" autocomplete="off" />
+          <div id="sl-team-results" style="margin-top:8px; max-height:220px; overflow-y:auto; border:1px solid rgba(255,255,255,0.06); border-radius:10px; display:none;"></div>
+          <div id="sl-team-selected" style="display:none; margin-top:10px; padding:10px 14px; background:rgba(168,225,12,0.08); border:1px solid rgba(168,225,12,0.3); border-radius:10px; display:flex; align-items:center; justify-content:space-between; gap:12px;">
+            <div><strong id="sl-team-selected-name"></strong> <span style="color:var(--grey-dark); font-size:0.8rem;" id="sl-team-selected-comp-count"></span></div>
+            <button type="button" onclick="clearSlTeam()" style="background:none; border:1px solid rgba(255,255,255,0.15); color:var(--grey-light); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:0.75rem;">Change</button>
+          </div>
+        </div>
+
+        <div class="form-group" id="sl-comps-group" style="display:none;">
+          <label class="form-label">Select competitions</label>
+          <div class="form-hint" style="margin-bottom:10px;">Choose one, several, or all. Past matches are always excluded.</div>
+          <div id="sl-comps-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+          <div id="sl-comps-empty" style="display:none; padding:14px; background:rgba(255,107,107,0.08); border:1px solid rgba(255,107,107,0.25); border-radius:10px; color:var(--coral); font-size:0.85rem;"></div>
+        </div>
+      </div>
+
+      <!-- PATH B: Competition-based -->
+      <div id="sl-path-b" style="display:none;">
+        <div class="form-group">
+          <label class="form-label">Select competition</label>
+          <select class="form-input" id="sl-comp-select" onchange="onSlCompetitionSelect()">
+            <option value="">Loading…</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Preview / summary -->
+      <div id="sl-preview" style="display:none; margin-top:18px; padding:14px 16px; background:rgba(124,92,252,0.06); border:1px solid rgba(124,92,252,0.2); border-radius:12px;">
+        <div style="font-size:0.78rem; text-transform:uppercase; letter-spacing:0.05em; color:var(--purple); font-weight:700; margin-bottom:8px;">League preview</div>
+        <div id="sl-preview-body" style="font-size:0.88rem; line-height:1.5; color:var(--grey-light);"></div>
+      </div>
+
+    </div>
+
     <div class="form-group" id="match-select-group" style="display:none;">
       <label class="form-label">Match</label>
       <select class="form-input" id="league-match" onchange="onMatchSelect()">
@@ -1463,6 +1542,18 @@ const totalSteps = 5;
 let leagueType = '';
 let invitedCount = 0;
 let leagueScope = 'full_league';
+
+// ── Season-Long state (Phase 4 — docs/LEAGUE_CREATION_FLOW.md) ──
+// seasonPath: 'team' (Path A) | 'competition' (Path B) | null
+let seasonPath          = null;
+let slSelectedTeam      = null;   // { api_team_id, name, sport }
+let slTeamSearchTimer   = null;
+// Each entry: { api_league_id, name, sport, season, future_count, next_kickoff, has_registration, selected }
+let slCompCandidates    = [];
+let slSelectedCompIds   = [];     // array of api_league_id selected by user
+// Fixture set loaded by previewSeasonLong() — used to derive end date
+let slLoadedFixtures    = [];     // [{ kickoff_at, league_id }]
+
 let aiQuestionsEnabled = false;
 // Holds the full row from sports_competitions for the chosen competition
 let selectedCompetition = null;
@@ -1777,9 +1868,11 @@ function restoreStepState(step) {
     document.getElementById('custom-duration').classList.toggle('show', leagueType === 'custom');
   }
   if (step === 1) {
-    // Re-init match night vs standard layout
+    // Re-init match night vs season-long vs standard layout
     if (leagueType === 'match') {
       initMatchNightStep(false);
+    } else if (leagueType === 'season') {
+      initSeasonLongStep(false);
     } else {
       initStandardStep(false);
     }
@@ -1838,6 +1931,17 @@ function validateStep1() {
     const match = document.getElementById('league-match').value;
     const ok = name.length > 0 && comp !== '' && match !== '' && matchNightMode !== '';
     document.getElementById('btn-next-1').disabled = !ok;
+  } else if (leagueType === 'season') {
+    // Season-Long: require name + a path + path-specific selections.
+    // Per spec § Validation rules: at least one selected competition is required.
+    // Future-fixture count of zero is acceptable (knockout-patience rule).
+    let pathOk = false;
+    if (seasonPath === 'team') {
+      pathOk = !!slSelectedTeam && slSelectedCompIds.length >= 1;
+    } else if (seasonPath === 'competition') {
+      pathOk = !!selectedCompetition;
+    }
+    document.getElementById('btn-next-1').disabled = !(name.length > 0 && pathOk);
   } else {
     document.getElementById('btn-next-1').disabled = !(name.length > 0 && comp && comp !== '');
   }
@@ -1924,10 +2028,372 @@ function onTeamChange() {
 function initStep1() {
   if (leagueType === 'match') {
     initMatchNightStep(true);
+  } else if (leagueType === 'season') {
+    initSeasonLongStep(true);
   } else {
     initStandardStep(true);
   }
 }
+
+// ══════════════════════════════════════════
+//  SEASON-LONG FLOW (Phase 4 — docs/LEAGUE_CREATION_FLOW.md)
+//  Path A (team) and Path B (competition) — fixture-driven, auto-dated.
+// ══════════════════════════════════════════
+
+function initSeasonLongStep(reloadComps) {
+  // Title/subtitle
+  document.querySelector('#step-1 .wizard-title').textContent = 'Season-Long setup';
+  document.querySelector('#step-1 .wizard-sub').textContent =
+    'Follow a team or a competition for the rest of the season. Fixtures are added automatically.';
+
+  // Hide legacy/standard fields
+  document.getElementById('scope-section').style.display = 'none';
+  document.getElementById('scoped-team-group').style.display = 'none';
+  document.getElementById('dates-section').style.display = 'none';
+  document.getElementById('match-select-group').style.display = 'none';
+  document.getElementById('matchnight-extra').style.display = 'none';
+
+  // Show the season-long fork
+  document.getElementById('season-long-fork').style.display = 'block';
+
+  // Reset state
+  seasonPath = null;
+  slSelectedTeam = null;
+  slCompCandidates = [];
+  slSelectedCompIds = [];
+  slLoadedFixtures = [];
+  document.getElementById('sl-path-a-card').classList.remove('selected');
+  document.getElementById('sl-path-b-card').classList.remove('selected');
+  document.getElementById('sl-path-a').style.display = 'none';
+  document.getElementById('sl-path-b').style.display = 'none';
+  document.getElementById('sl-team-search').value = '';
+  document.getElementById('sl-team-results').style.display = 'none';
+  document.getElementById('sl-team-results').innerHTML = '';
+  document.getElementById('sl-team-selected').style.display = 'none';
+  document.getElementById('sl-comps-group').style.display = 'none';
+  document.getElementById('sl-comps-list').innerHTML = '';
+  document.getElementById('sl-preview').style.display = 'none';
+
+  // Path B uses the existing standard competition list — keep selectedCompetition behaviour reset
+  selectedCompetition = null;
+
+  // Same RW tier gate as standard leagues
+  applyRealWorldTierGating();
+
+  if (reloadComps) {
+    loadSlPathBCompetitions();
+  }
+  validateStep1();
+}
+
+function selectSeasonPath(path) {
+  seasonPath = path;
+  document.getElementById('sl-path-a-card').classList.toggle('selected', path === 'team');
+  document.getElementById('sl-path-b-card').classList.toggle('selected', path === 'competition');
+  document.getElementById('sl-path-a').style.display = path === 'team' ? 'block' : 'none';
+  document.getElementById('sl-path-b').style.display = path === 'competition' ? 'block' : 'none';
+  // Reset the other path's state when switching
+  if (path === 'team') {
+    selectedCompetition = null;
+    document.getElementById('sl-comp-select').value = '';
+  } else {
+    slSelectedTeam = null;
+    slSelectedCompIds = [];
+    slCompCandidates = [];
+    document.getElementById('sl-team-selected').style.display = 'none';
+    document.getElementById('sl-team-search').value = '';
+    document.getElementById('sl-comps-group').style.display = 'none';
+  }
+  document.getElementById('sl-preview').style.display = 'none';
+  validateStep1();
+}
+
+// ── Path A: team search ──
+async function onSlTeamSearch() {
+  const q = document.getElementById('sl-team-search').value.trim();
+  const resultsEl = document.getElementById('sl-team-results');
+  if (slTeamSearchTimer) clearTimeout(slTeamSearchTimer);
+  if (q.length < 2) { resultsEl.style.display = 'none'; resultsEl.innerHTML = ''; return; }
+  slTeamSearchTimer = setTimeout(async () => {
+    if (!window.sb) return;
+    // Search distinct teams across all competitions for the selected sport
+    const sport = document.getElementById('league-sport').value || 'football';
+    const { data, error } = await window.sb
+      .from('sports_teams')
+      .select('api_team_id, name, sport')
+      .eq('sport', sport)
+      .ilike('name', '%' + q + '%')
+      .limit(40);
+    if (error) { console.warn('[sl-team-search]', error); return; }
+    // Deduplicate by api_team_id (a team appears once per competition row)
+    const seen = new Set();
+    const uniq = [];
+    (data || []).forEach(r => {
+      const k = String(r.api_team_id);
+      if (!seen.has(k)) { seen.add(k); uniq.push(r); }
+    });
+    if (uniq.length === 0) {
+      resultsEl.innerHTML = '<div style="padding:10px 14px; color:var(--grey-dark); font-size:0.85rem;">No teams found.</div>';
+      resultsEl.style.display = 'block';
+      return;
+    }
+    resultsEl.innerHTML = uniq.slice(0, 20).map(t =>
+      '<div class="sl-team-row" style="padding:10px 14px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.04);" ' +
+      'onmouseover="this.style.background=\'rgba(168,225,12,0.08)\'" onmouseout="this.style.background=\'\'" ' +
+      'onclick="selectSlTeam(' + t.api_team_id + ', ' + JSON.stringify(t.name) + ', ' + JSON.stringify(t.sport) + ')">' +
+      '<strong>' + escSlHtml(t.name) + '</strong></div>'
+    ).join('');
+    resultsEl.style.display = 'block';
+  }, 250);
+}
+
+function escSlHtml(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function selectSlTeam(apiTeamId, name, sport) {
+  slSelectedTeam = { api_team_id: apiTeamId, name: name, sport: sport };
+  document.getElementById('sl-team-search').value = name;
+  document.getElementById('sl-team-results').style.display = 'none';
+  document.getElementById('sl-team-results').innerHTML = '';
+  document.getElementById('sl-team-selected-name').textContent = name;
+  document.getElementById('sl-team-selected').style.display = 'flex';
+  await loadSlCompetitionsForTeam();
+  validateStep1();
+}
+
+function clearSlTeam() {
+  slSelectedTeam = null;
+  slCompCandidates = [];
+  slSelectedCompIds = [];
+  document.getElementById('sl-team-search').value = '';
+  document.getElementById('sl-team-selected').style.display = 'none';
+  document.getElementById('sl-comps-group').style.display = 'none';
+  document.getElementById('sl-comps-list').innerHTML = '';
+  document.getElementById('sl-preview').style.display = 'none';
+  validateStep1();
+}
+
+// Detect competitions for the selected team (Phase 5 — fixture helper).
+// Conservative `sports_teams`-registration fallback per spec § Data dependencies.
+async function loadSlCompetitionsForTeam() {
+  const listEl  = document.getElementById('sl-comps-list');
+  const groupEl = document.getElementById('sl-comps-group');
+  const emptyEl = document.getElementById('sl-comps-empty');
+  listEl.innerHTML = '<div style="padding:10px; color:var(--grey-dark); font-size:0.85rem;">Loading competitions…</div>';
+  groupEl.style.display = 'block';
+  emptyEl.style.display = 'none';
+  slCompCandidates = [];
+  slSelectedCompIds = [];
+
+  if (!window.sb || !slSelectedTeam) return;
+  const sport = slSelectedTeam.sport || 'football';
+  const teamId = slSelectedTeam.api_team_id;
+
+  // 1) Competitions where this team has a registration row in sports_teams
+  const { data: regRows, error: regErr } = await window.sb
+    .from('sports_teams')
+    .select('api_league_id')
+    .eq('sport', sport)
+    .eq('api_team_id', teamId);
+  if (regErr) { console.warn('[sl-comps] sports_teams', regErr); }
+  const regCompIds = Array.from(new Set((regRows || []).map(r => r.api_league_id).filter(x => x != null)));
+
+  // 2) Competition metadata (name, season, display order)
+  const { data: compRows, error: compErr } = await window.sb
+    .from('sports_competitions')
+    .select('api_league_id, name, sport, api_season, display_order')
+    .eq('sport', sport)
+    .eq('is_active', true)
+    .in('api_league_id', regCompIds.length ? regCompIds : [-1]); // guard empty IN
+  if (compErr) { console.warn('[sl-comps] sports_competitions', compErr); }
+  const compsById = {};
+  (compRows || []).forEach(c => { compsById[c.api_league_id] = c; });
+
+  // 3) Future fixture counts per competition
+  const nowIso = new Date().toISOString();
+  let fxRows = [];
+  if (regCompIds.length) {
+    const { data, error } = await window.sb
+      .from('api_football_fixtures')
+      .select('league_id, kickoff_at')
+      .or('home_team_id.eq.' + teamId + ',away_team_id.eq.' + teamId)
+      .in('league_id', regCompIds)
+      .gte('kickoff_at', nowIso)
+      .order('kickoff_at', { ascending: true });
+    if (error) { console.warn('[sl-comps] fixtures', error); }
+    fxRows = data || [];
+  }
+  const fxByComp = {};
+  fxRows.forEach(f => {
+    const k = f.league_id;
+    if (!fxByComp[k]) fxByComp[k] = [];
+    fxByComp[k].push(f);
+  });
+
+  // 4) Build candidate list: union of (registered competitions) + (any with future fixtures)
+  const allCompIds = Array.from(new Set([...regCompIds, ...Object.keys(fxByComp).map(Number)]));
+  slCompCandidates = allCompIds.map(id => {
+    const c = compsById[id] || {};
+    const fxs = fxByComp[id] || [];
+    return {
+      api_league_id:    id,
+      name:             c.name || ('Competition #' + id),
+      sport:            sport,
+      season:           c.api_season || null,
+      display_order:    c.display_order || 999,
+      future_count:     fxs.length,
+      next_kickoff:     fxs[0] ? fxs[0].kickoff_at : null,
+      has_registration: regCompIds.includes(id),
+    };
+  }).sort((a, b) => (b.future_count - a.future_count) || (a.display_order - b.display_order));
+
+  if (slCompCandidates.length === 0) {
+    listEl.innerHTML = '';
+    emptyEl.style.display = 'block';
+    emptyEl.textContent = 'No competitions found for this team. The season may have ended or the data is not yet synced.';
+    return;
+  }
+
+  // 5) Render multi-select chips with future count + zero-fixture note (spec § R3 UX rule)
+  listEl.innerHTML = slCompCandidates.map(c => {
+    const checked = slSelectedCompIds.includes(c.api_league_id) ? 'checked' : '';
+    let statusLine;
+    if (c.future_count > 0) {
+      const next = new Date(c.next_kickoff);
+      const dateStr = next.toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
+      statusLine = '<span style="color:var(--lime); font-weight:600;">' + c.future_count + ' upcoming</span> · next ' + dateStr;
+    } else {
+      // Conservative fallback wording — no certainty, per spec revision 4
+      statusLine = '<span style="color:var(--orange, #FF9F43);">No fixtures scheduled yet — competition availability detected. More fixtures may appear if the team progresses or data updates.</span>';
+    }
+    return '<label class="sl-comp-row" style="display:flex; align-items:flex-start; gap:12px; padding:12px 14px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); border-radius:10px; cursor:pointer;">' +
+      '<input type="checkbox" data-id="' + c.api_league_id + '" ' + checked + ' onchange="onSlCompToggle(this)" style="margin-top:3px;" />' +
+      '<div style="flex:1;"><div style="font-weight:600; color:var(--white); margin-bottom:2px;">' + escSlHtml(c.name) + '</div>' +
+      '<div style="font-size:0.78rem; line-height:1.4;">' + statusLine + '</div></div>' +
+      '</label>';
+  }).join('');
+}
+
+function onSlCompToggle(cb) {
+  const id = parseInt(cb.dataset.id, 10);
+  if (cb.checked) {
+    if (!slSelectedCompIds.includes(id)) slSelectedCompIds.push(id);
+  } else {
+    slSelectedCompIds = slSelectedCompIds.filter(x => x !== id);
+  }
+  previewSeasonLong();
+  validateStep1();
+}
+
+// ── Path B: competition picker ──
+async function loadSlPathBCompetitions() {
+  const sel = document.getElementById('sl-comp-select');
+  sel.innerHTML = '<option value="">Loading…</option>';
+  if (!window.sb) return;
+  const sport = document.getElementById('league-sport').value || 'football';
+  const { data, error } = await window.sb
+    .from('sports_competitions')
+    .select('api_league_id, name, sport, api_season, display_order')
+    .eq('sport', sport)
+    .eq('is_active', true)
+    .order('display_order');
+  if (error) { console.warn('[sl-pathb] comps', error); return; }
+  sel.innerHTML = '<option value="">Select competition…</option>' +
+    (data || []).map(c => '<option value="' + c.api_league_id + '" data-row=\'' + JSON.stringify(c).replace(/'/g, '&#39;') + '\'>' + escSlHtml(c.name) + '</option>').join('');
+}
+
+async function onSlCompetitionSelect() {
+  const sel = document.getElementById('sl-comp-select');
+  const opt = sel.options[sel.selectedIndex];
+  if (!opt || !opt.dataset.row) {
+    selectedCompetition = null;
+    document.getElementById('sl-preview').style.display = 'none';
+    validateStep1();
+    return;
+  }
+  const c = JSON.parse(opt.dataset.row);
+  selectedCompetition = {
+    api_league_id: c.api_league_id,
+    name:          c.name,
+    sport:         c.sport,
+    season:        c.api_season,
+  };
+  await previewSeasonLong();
+  validateStep1();
+}
+
+// Phase 5: load fixtures for the current Season-Long selection and render preview.
+// Path A: fixtures for selected team across selected competitions.
+// Path B: fixtures for selected competition.
+async function previewSeasonLong() {
+  slLoadedFixtures = [];
+  const previewEl = document.getElementById('sl-preview');
+  const bodyEl    = document.getElementById('sl-preview-body');
+  if (!window.sb) { previewEl.style.display = 'none'; return; }
+  const nowIso = new Date().toISOString();
+  let fixtureCount = 0;
+  let dateRangeStr = '';
+  let bodyHtml = '';
+  let hasKnockoutGapNote = false;
+
+  if (seasonPath === 'team' && slSelectedTeam && slSelectedCompIds.length > 0) {
+    const teamId = slSelectedTeam.api_team_id;
+    const { data, error } = await window.sb
+      .from('api_football_fixtures')
+      .select('fixture_id, league_id, kickoff_at, home_team_name, away_team_name')
+      .or('home_team_id.eq.' + teamId + ',away_team_id.eq.' + teamId)
+      .in('league_id', slSelectedCompIds)
+      .gte('kickoff_at', nowIso)
+      .order('kickoff_at', { ascending: true })
+      .limit(500);
+    if (error) { console.warn('[sl-preview]', error); return; }
+    slLoadedFixtures = data || [];
+    fixtureCount = slLoadedFixtures.length;
+    // Knockout gap detection: any selected comp with zero loaded fixtures
+    const compsWithFx = new Set(slLoadedFixtures.map(f => f.league_id));
+    hasKnockoutGapNote = slSelectedCompIds.some(id => !compsWithFx.has(id));
+
+    const compNames = slSelectedCompIds.map(id => {
+      const c = slCompCandidates.find(x => x.api_league_id === id);
+      return c ? c.name : ('#' + id);
+    });
+    bodyHtml = '<div style="margin-bottom:6px;"><strong>Team:</strong> ' + escSlHtml(slSelectedTeam.name) + '</div>' +
+               '<div style="margin-bottom:6px;"><strong>Competitions:</strong> ' + compNames.map(escSlHtml).join(', ') + '</div>';
+
+  } else if (seasonPath === 'competition' && selectedCompetition) {
+    const { data, error } = await window.sb
+      .from('api_football_fixtures')
+      .select('fixture_id, league_id, kickoff_at, home_team_name, away_team_name')
+      .eq('league_id', selectedCompetition.api_league_id)
+      .gte('kickoff_at', nowIso)
+      .order('kickoff_at', { ascending: true })
+      .limit(500);
+    if (error) { console.warn('[sl-preview]', error); return; }
+    slLoadedFixtures = data || [];
+    fixtureCount = slLoadedFixtures.length;
+    bodyHtml = '<div style="margin-bottom:6px;"><strong>Competition:</strong> ' + escSlHtml(selectedCompetition.name) + '</div>';
+  } else {
+    previewEl.style.display = 'none';
+    return;
+  }
+
+  if (slLoadedFixtures.length > 0) {
+    const first = new Date(slLoadedFixtures[0].kickoff_at);
+    const last  = new Date(slLoadedFixtures[slLoadedFixtures.length - 1].kickoff_at);
+    const fmt = (d) => d.toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' });
+    dateRangeStr = fmt(first) + ' → ' + fmt(last);
+  }
+
+  bodyHtml += '<div style="margin-bottom:6px;"><strong>Future fixtures loaded:</strong> ' + fixtureCount + '</div>';
+  if (dateRangeStr) bodyHtml += '<div style="margin-bottom:6px;"><strong>Practical date range:</strong> ' + dateRangeStr + '</div>';
+  if (hasKnockoutGapNote) {
+    bodyHtml += '<div style="margin-top:10px; padding:10px 12px; background:rgba(255,159,67,0.08); border:1px solid rgba(255,159,67,0.3); border-radius:8px; color:#FFB976; font-size:0.82rem;">' +
+                'More fixtures may be added if your team progresses (knockout draws not yet announced).' +
+                '</div>';
+  }
+  bodyEl.innerHTML = bodyHtml;
+  previewEl.style.display = 'block';
+}
+
 
 // reloadComps = true means we fire the competition loader; false = skip (already loaded)
 function initMatchNightStep(reloadComps) {
@@ -1940,6 +2406,10 @@ function initMatchNightStep(reloadComps) {
   document.getElementById('scope-section').style.display = 'none';
   document.getElementById('scoped-team-group').style.display = 'none';
   document.getElementById('dates-section').style.display = 'none';
+
+  // Hide Season-Long fork (in case user is switching from Season-Long)
+  var slFork = document.getElementById('season-long-fork');
+  if (slFork) slFork.style.display = 'none';
 
   // Show match night fields
   document.getElementById('match-select-group').style.display = 'block';
@@ -1957,13 +2427,17 @@ function initStandardStep(reloadComps) {
   document.querySelector('#step-1 .wizard-sub').textContent =
     'Name it, pick your sport, and choose the competition.';
 
-  // Show standard fields
+  // Show standard fields (Custom League uses these)
   document.getElementById('scope-section').style.display = 'block';
   document.getElementById('dates-section').style.display = 'flex';
 
   // Hide match night fields
   document.getElementById('match-select-group').style.display = 'none';
   document.getElementById('matchnight-extra').style.display = 'none';
+
+  // Hide Season-Long fork
+  var slFork2 = document.getElementById('season-long-fork');
+  if (slFork2) slFork2.style.display = 'none';
 
   // Reset match night state
   matchNightMode = '';
@@ -2613,12 +3087,33 @@ function populateReview() {
   }
 
   // Scope + Team
-  document.getElementById('review-scope').textContent = leagueScope === 'team_specific' ? 'Team Specific' : 'Full League';
-  if (leagueScope === 'team_specific' && selectedScopedTeam) {
-    document.getElementById('review-team-row').style.display = 'flex';
-    document.getElementById('review-team').textContent = selectedScopedTeam.name;
+  // Season-Long: read from the new Path A / Path B state, not the legacy globals (B2 fix).
+  if (leagueType === 'season') {
+    if (seasonPath === 'team' && slSelectedTeam) {
+      const compNames = (slSelectedCompIds || []).map(id => {
+        const c = (slCompCandidates || []).find(x => x.api_league_id === id);
+        return c ? c.name : ('#' + id);
+      });
+      document.getElementById('review-scope').textContent = 'Team-based · ' +
+        (compNames.length === 1 ? '1 competition' : compNames.length + ' competitions');
+      document.getElementById('review-team-row').style.display = 'flex';
+      document.getElementById('review-team').textContent = slSelectedTeam.name +
+        (compNames.length ? ' — ' + compNames.join(', ') : '');
+    } else if (seasonPath === 'competition' && selectedCompetition) {
+      document.getElementById('review-scope').textContent = 'Competition-based · ' + (selectedCompetition.name || 'Competition');
+      document.getElementById('review-team-row').style.display = 'none';
+    } else {
+      document.getElementById('review-scope').textContent = 'Season-Long';
+      document.getElementById('review-team-row').style.display = 'none';
+    }
   } else {
-    document.getElementById('review-team-row').style.display = 'none';
+    document.getElementById('review-scope').textContent = leagueScope === 'team_specific' ? 'Team Specific' : 'Full League';
+    if (leagueScope === 'team_specific' && selectedScopedTeam) {
+      document.getElementById('review-team-row').style.display = 'flex';
+      document.getElementById('review-team').textContent = selectedScopedTeam.name;
+    } else {
+      document.getElementById('review-team-row').style.display = 'none';
+    }
   }
 
   // Match / Event
@@ -2630,10 +3125,23 @@ function populateReview() {
     document.getElementById('review-match-row').style.display = 'none';
   }
 
-  // Duration — show start/end dates if set, otherwise custom league duration
+  // Duration — show start/end dates if set, otherwise custom league duration.
+  // Season-Long: derive from loaded fixtures since the date inputs are hidden (B3 fix).
   const startVal = document.getElementById('league-start-date').value;
   const endVal   = document.getElementById('league-end-date').value;
-  if (startVal && endVal) {
+  if (leagueType === 'season') {
+    document.getElementById('review-duration-row').style.display = 'flex';
+    const slStart = new Date().toISOString().slice(0, 10);
+    if (slLoadedFixtures && slLoadedFixtures.length > 0) {
+      const slEnd = new Date(slLoadedFixtures[slLoadedFixtures.length - 1].kickoff_at).toISOString().slice(0, 10);
+      document.getElementById('review-duration').textContent =
+        slStart + ' → ' + slEnd + ' (' + slLoadedFixtures.length + ' fixture' + (slLoadedFixtures.length === 1 ? '' : 's') + ' loaded)';
+    } else {
+      // Knockout-gap: no fixtures scheduled yet but team may still be active
+      document.getElementById('review-duration').textContent =
+        'From ' + slStart + ' — fixtures will be added as they are scheduled';
+    }
+  } else if (startVal && endVal) {
     document.getElementById('review-duration-row').style.display = 'flex';
     document.getElementById('review-duration').textContent = startVal + ' → ' + endVal;
   } else if (leagueType === 'custom') {
@@ -2766,12 +3274,10 @@ async function launchLeague() {
   const startVal  = document.getElementById('league-start-date').value;
   const endVal    = document.getElementById('league-end-date').value;
 
-  // Compute AI quota
+  // Tier weekly quota — used below after dates are resolved (B1 fix).
   const tier      = player ? (player.tier || 'starter') : 'starter';
   const _launchLimits = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(tier) : null;
   const weekly    = (_launchLimits && _launchLimits.aiWeeklyQuota) || 2;
-  const diffMs    = startVal && endVal ? new Date(endVal) - new Date(startVal) : 0;
-  const weeks     = diffMs > 0 ? Math.max(1, Math.ceil(diffMs / (7 * 24 * 60 * 60 * 1000))) : 1;
 
   // For Match Night: auto-derive start/end dates from the selected match kickoff
   let resolvedStart = startVal;
@@ -2781,6 +3287,35 @@ async function launchLeague() {
     const dateStr = kickoff.toISOString().slice(0, 10);
     resolvedStart = dateStr;
     resolvedEnd   = dateStr;
+  }
+
+  // For Season-Long: auto-derive dates per spec § R4.
+  // start = today; end = max(kickoff_at) of loaded fixtures (informational only).
+  // Manual date inputs are hidden for Season-Long, so startVal/endVal are empty.
+  if (leagueType === 'season') {
+    resolvedStart = new Date().toISOString().slice(0, 10);
+    if (slLoadedFixtures && slLoadedFixtures.length > 0) {
+      const lastKickoff = slLoadedFixtures[slLoadedFixtures.length - 1].kickoff_at;
+      resolvedEnd = new Date(lastKickoff).toISOString().slice(0, 10);
+    } else {
+      // Knockout-gap case: no fixtures loaded yet. Use today as a placeholder;
+      // R2 fixture-source-exhaustion governs the real lifecycle, not this date.
+      resolvedEnd = resolvedStart;
+    }
+  }
+
+  // ── Compute weeks AFTER all date overrides are resolved (B1 fix) ──
+  // The legacy version computed `weeks` from the raw input fields, which are
+  // hidden and empty for Season-Long → weeks always = 1 → ai_total_quota was
+  // ~10 questions for an entire season. Now we use the resolved dates.
+  // Knockout-gap fallback (resolvedEnd == resolvedStart) gets a sane minimum
+  // so quota isn't capped at 1 week's worth of questions.
+  const _diffMs = (resolvedStart && resolvedEnd) ? (new Date(resolvedEnd) - new Date(resolvedStart)) : 0;
+  let weeks = _diffMs > 0 ? Math.max(1, Math.ceil(_diffMs / (7 * 24 * 60 * 60 * 1000))) : 1;
+  if (leagueType === 'season') {
+    // Floor for Season-Long so a knockout-gap creation (no fixtures yet) still
+    // gets a meaningful season quota. ~30 weeks ≈ a typical European season.
+    weeks = Math.max(weeks, 30);
   }
 
   // ── Intensity preset → question budgets (migration 017) ──────────────
@@ -2796,6 +3331,45 @@ async function launchLeague() {
   // Singleplayer forces max_members = 1. The tier cap (liveQuestionsPerMatch etc.) is the same.
   const isSingleplayer = sessionType === 'singleplayer';
 
+  // ── Season-Long: resolve creation_path + multi-competition fields ──
+  // Spec: docs/LEAGUE_CREATION_FLOW.md § Storage. Path A and Path B both write
+  // api_sports_league_ids[]. Legacy api_sports_league_id is set to the primary
+  // (first) competition for backward compatibility with older code paths.
+  let resolvedCreationPath  = null;
+  let resolvedLeagueIds     = null;       // INTEGER[]
+  let resolvedPrimaryCompId = null;       // legacy single-comp scalar
+  let resolvedScopedTeamId  = null;
+  let resolvedScopedTeamName = null;
+  let resolvedScope         = leagueType === 'match' ? 'full_league' : leagueScope;
+  let resolvedSeason        = selectedCompetition ? selectedCompetition.season : null;
+
+  if (leagueType === 'season') {
+    if (seasonPath === 'team' && slSelectedTeam && slSelectedCompIds.length > 0) {
+      resolvedCreationPath  = 'team';
+      resolvedLeagueIds     = slSelectedCompIds.slice();
+      resolvedPrimaryCompId = slSelectedCompIds[0];
+      resolvedScopedTeamId  = String(slSelectedTeam.api_team_id);
+      resolvedScopedTeamName = slSelectedTeam.name;
+      resolvedScope         = 'team_specific';
+      // Season pulled from the first matching candidate
+      const primaryCand = slCompCandidates.find(c => c.api_league_id === resolvedPrimaryCompId);
+      resolvedSeason = primaryCand ? primaryCand.season : resolvedSeason;
+    } else if (seasonPath === 'competition' && selectedCompetition) {
+      resolvedCreationPath  = 'competition';
+      resolvedLeagueIds     = [selectedCompetition.api_league_id];
+      resolvedPrimaryCompId = selectedCompetition.api_league_id;
+      resolvedScope         = 'full_league';
+    }
+  } else {
+    // Match Night and Custom: keep legacy single-comp behaviour. Mirror the
+    // single comp into the array column so downstream code can always read
+    // api_sports_league_ids first.
+    resolvedPrimaryCompId = selectedCompetition ? selectedCompetition.api_league_id : null;
+    if (resolvedPrimaryCompId != null) resolvedLeagueIds = [resolvedPrimaryCompId];
+    resolvedScopedTeamId  = leagueScope === 'team_specific' && selectedScopedTeam ? String(selectedScopedTeam.api_team_id) : null;
+    resolvedScopedTeamName = leagueScope === 'team_specific' && selectedScopedTeam ? selectedScopedTeam.name : null;
+  }
+
   const leagueData = {
     name: document.getElementById('league-name').value || 'Untitled League',
     sport: sportEl.options[sportEl.selectedIndex].value,
@@ -2810,18 +3384,26 @@ async function launchLeague() {
     maxMembers: isSingleplayer ? 1 : (parseInt(document.getElementById('player-slider').value) || 50),
     trophy: selectedTrophy,
     // AI / sports fields
-    scope:                leagueType === 'match' ? 'full_league' : leagueScope,
-    scoped_team_id:       leagueScope === 'team_specific' && selectedScopedTeam ? selectedScopedTeam.api_team_id : null,
-    scoped_team_name:     leagueScope === 'team_specific' && selectedScopedTeam ? selectedScopedTeam.name : null,
-    api_sports_league_id: selectedCompetition ? selectedCompetition.api_league_id : null,
-    api_sports_team_id:   leagueScope === 'team_specific' && selectedScopedTeam ? selectedScopedTeam.api_team_id : null,
-    api_sports_season:    selectedCompetition ? selectedCompetition.season : null,
+    scope:                resolvedScope,
+    scoped_team_id:       resolvedScopedTeamId,
+    scoped_team_name:     resolvedScopedTeamName,
+    api_sports_league_id: resolvedPrimaryCompId,
+    api_sports_team_id:   resolvedScopedTeamId,
+    api_sports_season:    resolvedSeason,
+    // Season-Long multi-competition (migration 051)
+    creation_path:         resolvedCreationPath,
+    api_sports_league_ids: resolvedLeagueIds,
     league_start_date:    resolvedStart || null,
     league_end_date:      resolvedEnd   || null,
-    // Match Night: always enable AI questions; mode stored for future pipeline use
-    ai_questions_enabled: leagueType === 'match' ? !!selectedCompetition : (aiQuestionsEnabled && !!selectedCompetition),
-    ai_weekly_quota:      leagueType === 'match' ? weekly : (aiQuestionsEnabled ? weekly : null),
-    ai_total_quota:       leagueType === 'match' ? weekly : (aiQuestionsEnabled ? weekly * weeks : null),
+    // Match Night: always enable AI questions. Season-Long: always enable when at least
+    // one competition is bound (resolvedPrimaryCompId). Custom/standard: respect aiQuestionsEnabled toggle.
+    ai_questions_enabled: leagueType === 'match'
+      ? !!resolvedPrimaryCompId
+      : (leagueType === 'season'
+          ? !!resolvedPrimaryCompId
+          : (aiQuestionsEnabled && !!selectedCompetition)),
+    ai_weekly_quota:      (leagueType === 'match' || leagueType === 'season') ? weekly : (aiQuestionsEnabled ? weekly : null),
+    ai_total_quota:       (leagueType === 'match' || leagueType === 'season') ? weekly * weeks : (aiQuestionsEnabled ? weekly * weeks : null),
     // Pre-match scheduling (migration 018)
     prematch_generation_mode:      prematchScheduleMode,
     prematch_publish_offset_hours: prematchPublishOffset,

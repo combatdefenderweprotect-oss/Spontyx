@@ -3225,6 +3225,12 @@ SpontixStore._mapLeagueFromDb = function (row, memberUserIds) {
     aiQuestionsEnabled:  row.ai_questions_enabled || false,
     aiWeeklyQuota:       row.ai_weekly_quota      || null,
     aiTotalQuota:        row.ai_total_quota       || null,
+    // Season-Long multi-competition (migration 051)
+    // creationPath: 'team' (Path A) | 'competition' (Path B) | null (Match Night/Custom/legacy)
+    // apiSportsLeagueIds: array of competitions covered. Path A may be many; Path B is a one-element array.
+    // Falls back to [apiSportsLeagueId] for legacy rows. See docs/LEAGUE_CREATION_FLOW.md.
+    creationPath:        row.creation_path        || null,
+    apiSportsLeagueIds:  row.api_sports_league_ids || (row.api_sports_league_id ? [row.api_sports_league_id] : null),
     // Play mode (migration 029): 'singleplayer' | 'multiplayer'
     // Independent of subscription tier — tier rules apply to both modes.
     playMode:            row.play_mode            || 'multiplayer',
@@ -3260,6 +3266,9 @@ SpontixStore._mapLeagueToDb = function (l) {
   if (l.aiQuestionsEnabled !== undefined)  out.ai_questions_enabled = l.aiQuestionsEnabled;
   if (l.aiWeeklyQuota !== undefined)       out.ai_weekly_quota      = l.aiWeeklyQuota;
   if (l.aiTotalQuota !== undefined)        out.ai_total_quota       = l.aiTotalQuota;
+  // Season-Long multi-competition (migration 051)
+  if (l.creationPath !== undefined)        out.creation_path         = l.creationPath;
+  if (l.apiSportsLeagueIds !== undefined)  out.api_sports_league_ids = l.apiSportsLeagueIds;
   if (l.prematchGenerationMode !== undefined)     out.prematch_generation_mode      = l.prematchGenerationMode;
   if (l.prematchPublishOffsetHours !== undefined) out.prematch_publish_offset_hours = l.prematchPublishOffsetHours;
   // Intensity preset + question budgets (migration 017)
@@ -3358,6 +3367,9 @@ SpontixStoreAsync.createLeague = async function (data) {
     aiQuestionsEnabled:  data.ai_questions_enabled || false,
     aiWeeklyQuota:       data.ai_weekly_quota     || null,
     aiTotalQuota:        data.ai_total_quota      || null,
+    // Season-Long multi-competition (migration 051) — accepts snake_case from create-league.html
+    creationPath:        data.creation_path       || null,
+    apiSportsLeagueIds:  data.api_sports_league_ids || null,
     prematchGenerationMode:     data.prematch_generation_mode     || 'automatic',
     prematchPublishOffsetHours: data.prematch_publish_offset_hours != null ? data.prematch_publish_offset_hours : 24,
     // Intensity preset + question budgets (migration 017)
