@@ -3405,8 +3405,10 @@ async function launchLeague() {
       : (leagueType === 'season'
           ? !!resolvedPrimaryCompId
           : (aiQuestionsEnabled && !!selectedCompetition)),
-    ai_weekly_quota:      (leagueType === 'match' || leagueType === 'season') ? weekly : (aiQuestionsEnabled ? weekly : null),
-    ai_total_quota:       (leagueType === 'match' || leagueType === 'season') ? weekly * weeks : (aiQuestionsEnabled ? weekly * weeks : null),
+    // ai_weekly_quota / ai_total_quota are NOT NULL in the schema (default 0).
+    // Send 0 — never null — when AI questions are off (e.g. Custom League with the toggle off).
+    ai_weekly_quota:      (leagueType === 'match' || leagueType === 'season') ? weekly : (aiQuestionsEnabled ? weekly : 0),
+    ai_total_quota:       (leagueType === 'match' || leagueType === 'season') ? weekly * weeks : (aiQuestionsEnabled ? weekly * weeks : 0),
     // Pre-match scheduling (migration 018)
     prematch_generation_mode:      prematchScheduleMode,
     prematch_publish_offset_hours: prematchPublishOffset,
