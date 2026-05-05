@@ -198,7 +198,7 @@
     .question-card {
       background: var(--navy-card); border-radius: var(--radius-md); padding: 18px;
       border: 1px solid rgba(255,255,255,0.06); margin-bottom: 12px;
-      transition: border-color 0.2s;
+      transition: border-color 0.2s; position: relative; overflow: hidden;
     }
     .question-card:hover { border-color: rgba(255,255,255,0.1); }
     .question-card-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
@@ -592,6 +592,135 @@
     }
     .holding-tip strong { color: var(--grey); }
 
+    /* ── Holding card state variants ─────────────────── */
+
+    /* Shared dot base */
+    .holding-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      margin: 0 auto 12px;
+    }
+
+    /* 1. Match not started — very subtle grey pulse */
+    @keyframes pulse-ns {
+      0%, 100% { opacity: 0.5; transform: scale(1); }
+      50%       { opacity: 0.2; transform: scale(0.8); }
+    }
+    .holding-card.holding-ns { border-color: rgba(152,152,176,0.15); }
+    .holding-dot-ns {
+      background: var(--grey-dark);
+      animation: pulse-ns 3s ease-in-out infinite;
+    }
+
+    /* 2. Halftime — calm amber pulse, slower */
+    @keyframes pulse-ht {
+      0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(255,215,0,0); }
+      50%       { opacity: 0.6; transform: scale(0.8); box-shadow: 0 0 6px 2px rgba(255,215,0,0.12); }
+    }
+    .holding-card.holding-ht { border-color: rgba(255,215,0,0.25); }
+    .holding-dot-ht {
+      background: var(--gold);
+      animation: pulse-ht 2.8s ease-in-out infinite;
+    }
+    .holding-ht-badge {
+      display: inline-block;
+      background: rgba(255,215,0,0.1); color: var(--gold);
+      border: 1px solid rgba(255,215,0,0.25);
+      border-radius: var(--radius-pill);
+      font-size: 0.75rem; font-weight: 800; letter-spacing: 0.06em;
+      padding: 4px 14px; margin-bottom: 10px;
+    }
+
+    /* 3. Late match — coral glow, faster/stronger */
+    @keyframes pulse-late {
+      0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(255,107,107,0); }
+      50%       { opacity: 0.7; transform: scale(0.85); box-shadow: 0 0 8px 3px rgba(255,107,107,0.2); }
+    }
+    .holding-card.holding-late { border-color: rgba(255,107,107,0.2); }
+    .holding-dot-late {
+      background: var(--coral);
+      animation: pulse-late 1.2s ease-in-out infinite;
+    }
+    .holding-late-badge {
+      display: inline-block;
+      background: rgba(255,107,107,0.1); color: var(--coral);
+      border: 1px solid rgba(255,107,107,0.2);
+      border-radius: var(--radius-pill);
+      font-size: 0.75rem; font-weight: 800; letter-spacing: 0.04em;
+      padding: 4px 14px; margin-bottom: 10px;
+    }
+
+    /* 4. Budget exhausted — static, no pulse */
+    .holding-card.holding-budget { border-color: rgba(152,152,176,0.15); }
+    .holding-budget-icon {
+      width: 30px; height: 30px;
+      background: rgba(152,152,176,0.08);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      margin: 0 auto 10px;
+      color: var(--grey);
+    }
+
+    /* ── Moment flash — fixed strip, auto-dismisses ──── */
+    /* position:fixed means zero layout impact on the feed */
+    #moment-flash {
+      position: fixed; top: 0; left: 0; right: 0;
+      z-index: 200; pointer-events: none;
+      text-align: center; font-size: 0.7rem; font-weight: 800;
+      letter-spacing: 0.09em; text-transform: uppercase;
+      padding: 9px 16px;
+      color: var(--coral);
+      opacity: 0; /* hidden by default */
+    }
+    #moment-flash.moment-flash-visible {
+      animation: flash-in-out 1.6s ease-out forwards;
+      background: linear-gradient(180deg, rgba(255,107,107,0.09) 0%, transparent 100%);
+    }
+    #moment-flash.moment-flash-hv.moment-flash-visible {
+      background: linear-gradient(180deg, rgba(255,107,107,0.16) 0%, transparent 100%);
+    }
+    @keyframes flash-in-out {
+      0%   { opacity: 0; transform: translateY(-6px); }
+      14%  { opacity: 1; transform: translateY(0); }
+      70%  { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* ── Live question card entrance animation ─────── */
+    @keyframes live-question-enter {
+      from { opacity: 0; transform: translateY(-6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .live-question-enter {
+      animation: live-question-enter 280ms ease-out forwards;
+    }
+
+    /* ── Live context banner — above primary LIVE question text */
+    .live-context-banner {
+      font-size: 0.67rem; font-weight: 600;
+      color: var(--coral); opacity: 0.75;
+      text-transform: uppercase; letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+    .live-context-banner::before { content: '▸ '; }
+
+    /* ── Budget-exhausted upsell placeholder ─────────── */
+    .holding-upsell {
+      margin-top: 14px; padding-top: 12px;
+      border-top: 1px solid rgba(255,255,255,0.06);
+    }
+    .holding-upsell-text {
+      font-size: 0.72rem; color: var(--grey); margin-bottom: 8px;
+    }
+    .holding-upsell-btn {
+      display: inline-block; padding: 7px 18px;
+      border-radius: var(--radius-pill);
+      border: 1px solid rgba(168,225,12,0.2);
+      background: rgba(168,225,12,0.04);
+      color: rgba(168,225,12,0.35);
+      font-size: 0.72rem; font-weight: 700; font-family: inherit;
+      cursor: not-allowed; opacity: 0.6;
+    }
+
     /* ── Match context strip ─────────────────────────── */
     .match-context-strip {
       display: flex; align-items: center; gap: 8px;
@@ -635,6 +764,65 @@
     }
     .question-card.glow-correct { animation: glow-correct 0.7s ease-out; }
     .question-card.shake-wrong  { animation: shake-wrong 0.45s ease-out; }
+
+    /* ── Live tension strip (closed LIVE question, resolver not yet run) ── */
+    .live-tension-strip {
+      display: flex; align-items: center; gap: 8px; margin-top: 10px;
+      padding: 8px 10px; background: rgba(255,255,255,0.025); border-radius: 8px;
+      font-size: 0.72rem; color: var(--grey); font-style: italic;
+    }
+    .live-tension-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--coral);
+      flex-shrink: 0; animation: pulse-tension 2s ease-in-out infinite;
+    }
+    @keyframes pulse-tension {
+      0%, 100% { opacity: 0.35; transform: scale(1); }
+      50%       { opacity: 0.85; transform: scale(1.35); }
+    }
+
+    /* ── Result moment overlay (injected into card after resolve) ─────── */
+    .result-moment-overlay {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      padding: 12px 18px 16px; display: flex; flex-direction: column; gap: 3px;
+      pointer-events: none; z-index: 10;
+      animation: rmo-in 0.22s ease-out forwards;
+    }
+    .result-moment-overlay.rmo-out { animation: rmo-out 0.28s ease-in forwards; }
+    .result-moment-overlay.correct {
+      background: linear-gradient(to top, rgba(8,12,24,0.97) 65%, rgba(8,12,24,0));
+      border-top: 1px solid rgba(168,225,12,0.12);
+    }
+    .result-moment-overlay.wrong {
+      background: linear-gradient(to top, rgba(8,12,24,0.95) 65%, rgba(8,12,24,0));
+      border-top: 1px solid rgba(255,107,107,0.1);
+    }
+    .rmo-label {
+      font-size: 0.7rem; font-weight: 800; letter-spacing: 0.06em;
+      text-transform: uppercase; display: flex; align-items: center; gap: 6px;
+    }
+    .rmo-label.correct { color: var(--lime); }
+    .rmo-label.wrong   { color: var(--coral); }
+    .rmo-label svg {
+      width: 14px; height: 14px; stroke: currentColor; stroke-width: 2.5;
+      fill: none; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0;
+    }
+    .rmo-pts { font-size: 1.5rem; font-weight: 900; color: #fff; line-height: 1.1; }
+    .rmo-sub { font-size: 0.67rem; color: var(--grey); margin-top: 2px; }
+    @keyframes rmo-in {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes rmo-out {
+      from { opacity: 1; transform: translateY(0); }
+      to   { opacity: 0; transform: translateY(4px); }
+    }
+
+    /* ── Holding card fade-in after result moment ─────────────────────── */
+    @keyframes holding-fade-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .holding-card.fade-in-holding { animation: holding-fade-in 0.4s ease-out both; }
 
     /* ── Stats Tab ──────────────────────────────────────── */
     .stats-score-card{background:var(--navy-card);border-radius:var(--radius-lg);padding:24px;border:1px solid rgba(255,255,255,0.06);margin-bottom:16px;}
@@ -703,6 +891,8 @@
     .stats-empty-sub{font-size:0.82rem;color:var(--grey);line-height:1.5;}</style>
 </head>
 <body>
+<!-- Moment feeling flash — fixed overlay, shown briefly when a new LIVE question arrives -->
+<div id="moment-flash" aria-live="polite" aria-atomic="true"></div>
 
 <!-- Sidebar Overlay (mobile) -->
 <div class="sidebar-overlay" id="sidebar-overlay" onclick="toggleSidebar()"></div>
@@ -1000,6 +1190,69 @@ var currentLeagueMultiplayerMode = null;  // '1v1' | '2v2' | null
 var myAnswers        = {};   // questionId → { answer, is_correct, points_earned, multiplier_breakdown }
 var prevMyAnswers    = {};   // snapshot from previous poll cycle — used to detect newly-resolved correct answers
 var currentQuestions = [];   // full question set from last fetch
+var currentMatchStats   = null;  // { status, minute, home_score, away_score } — refreshed each poll
+// null = first load (no animation); Set after first render so only Realtime arrivals trigger the flash
+var prevLiveActiveIds        = null;
+var resultMomentActiveUntil  = 0; // epoch ms — set when result moment fires; used to fade-in holding card
+
+// ── Analytics hook ────────────────────────────────────
+// Fire-and-forget. Wire window.spontixAnalytics to any provider (Posthog, Amplitude, etc.) when ready.
+function spontixTrack(event, data) {
+  console.log('[spontix:track]', event, data);
+  if (typeof window.spontixAnalytics === 'function') {
+    try { window.spontixAnalytics(event, data); } catch(e) {}
+  }
+}
+
+// ── Live context banner text ──────────────────────────
+// Returns a short phrase explaining why the current LIVE question appeared.
+// Uses event_type first, falls back to match minute, then generic.
+function getLiveContextText(q) {
+  var et  = q ? (q.event_type || '') : '';
+  var min = q ? q.match_minute_at_generation : null;
+  var stats = currentMatchStats;
+  var isGoalless = stats && (stats.home_score || 0) === 0 && (stats.away_score || 0) === 0;
+
+  var map = {
+    'goal':        'After that goal…',
+    'penalty':     'Penalty kick moment…',
+    'red_card':    'Red card changed the game…',
+    'yellow_card': 'The match is heating up…',
+    'corner':      'Corner kick moment…',
+    'equaliser':   'The equaliser changes everything…',
+    'clean_sheet': isGoalless ? 'Still goalless — pressure is building…' : 'Clean sheet on the line…',
+    'next_scorer': 'Who scores next…',
+    'match_point': 'Big moment…',
+    'stat_threshold': 'The stats are talking…',
+  };
+  if (map[et]) return map[et];
+  if (min !== null && min !== undefined && min >= 80) return 'Late drama incoming…';
+  if (min !== null && min !== undefined && min >= 45) return 'Second half pressure…';
+  return 'Live moment';
+}
+
+// ── Moment flash trigger ──────────────────────────────
+var _HV_FLASH = ['goal', 'penalty', 'red_card', 'hockey_goal', 'match_point'];
+var _FLASH_LABELS = {
+  'goal': '⚡ Goal detected', 'penalty': '⚡ Penalty moment',
+  'red_card': '⚡ Red card', 'yellow_card': '⚡ Card shown',
+  'corner': '⚡ Corner kick', 'equaliser': '⚡ Equaliser',
+  'clean_sheet': '⚡ Big moment', 'next_scorer': '⚡ Big moment',
+  'match_point': '⚡ Big moment', 'stat_threshold': '⚡ Live moment',
+  'time_window': '⚡ Live moment',
+};
+function triggerMomentFlash(eventType) {
+  var flash = document.getElementById('moment-flash');
+  if (!flash) return;
+  var isHV = _HV_FLASH.indexOf(eventType) !== -1;
+  flash.textContent = _FLASH_LABELS[eventType] || '⚡ Live moment';
+  // Reset animation by removing class, forcing reflow, then re-adding
+  flash.className = '';
+  void flash.offsetWidth;
+  flash.className = 'moment-flash-visible' + (isHV ? ' moment-flash-hv' : '');
+  clearTimeout(flash._hideTimer);
+  flash._hideTimer = setTimeout(function() { flash.className = ''; }, 1700);
+}
 var pollInterval     = null; // setInterval handle
 var pollIntervalMs   = 0;    // current polling rate (5s active / 15s idle / 30s realtime-heartbeat)
 var tickTimer        = null; // 1s interval for timer bar + countdown text updates
@@ -1407,17 +1660,10 @@ async function loadAndRenderQuestions(silent) {
     } catch(e) { /* non-fatal — render without answer state */ }
   }
 
-  // ── Detect newly-resolved answers (float notif + card animation) ─
+  // ── Detect newly-resolved answers (snapshot for post-render animations) ─
   // Capture snapshot BEFORE overwriting prevMyAnswers so both checks use the same baseline.
   var prevSnapshot = prevMyAnswers;
   prevMyAnswers = JSON.parse(JSON.stringify(myAnswers));
-  Object.keys(myAnswers).forEach(function(qid) {
-    var curr = myAnswers[qid];
-    var prev = prevSnapshot[qid];
-    if (curr && curr.is_correct === true && !(prev && prev.is_correct === true)) {
-      showLbNotif(curr.points_earned || 0);
-    }
-  });
 
   currentQuestions = qs;
 
@@ -1447,6 +1693,57 @@ async function loadAndRenderQuestions(silent) {
 
   // ── Render ────────────────────────────────────────────
   var hasActive = qs.some(function(q) { return questionState(q) === 'active'; });
+
+  // Fetch live match stats when no active question, so we can show a contextual
+  // holding state (NS, HT, late match, budget exhausted, default). Prefers the
+  // most frequent LIVE-question match_id; falls back to any question's match_id
+  // so the NS state works before any LIVE questions have been generated.
+  if (!hasActive && window.sb) {
+    var _matchId = null;
+    var _liveCounts = {}, _allCounts = {};
+    qs.forEach(function(q) {
+      if (q.match_id) {
+        _allCounts[q.match_id] = (_allCounts[q.match_id] || 0) + 1;
+        if (q.question_type === 'CORE_MATCH_LIVE')
+          _liveCounts[q.match_id] = (_liveCounts[q.match_id] || 0) + 1;
+      }
+    });
+    var _pick = function(counts) {
+      var e = Object.entries(counts).sort(function(a,b){return b[1]-a[1];});
+      return e.length ? e[0][0] : null;
+    };
+    _matchId = _pick(_liveCounts) || _pick(_allCounts);
+    if (_matchId && !isNaN(parseInt(_matchId))) {
+      try {
+        var _statsRes = await window.sb.from('live_match_stats')
+          .select('status, minute, home_score, away_score')
+          .eq('fixture_id', parseInt(_matchId))
+          .maybeSingle();
+        currentMatchStats = _statsRes.data || null;
+      } catch(e) { currentMatchStats = null; }
+    } else {
+      currentMatchStats = null;
+    }
+  }
+
+  // ── Detect new LIVE active question (Moment Feeling Layer) ────────────────
+  // Build the set of currently-active LIVE question IDs. Compare against the
+  // previous render's set. prevLiveActiveIds === null means first page load —
+  // no animation fires to avoid false positives on initial render.
+  var _currentLiveActiveIds = new Set(
+    qs.filter(function(q) {
+      return q.question_type === 'CORE_MATCH_LIVE' && questionState(q) === 'active';
+    }).map(function(q) { return q.id; })
+  );
+  var _newLiveQuestion = null;
+  if (prevLiveActiveIds !== null) {
+    _currentLiveActiveIds.forEach(function(id) {
+      if (!_newLiveQuestion && !prevLiveActiveIds.has(id)) {
+        _newLiveQuestion = qs.find(function(q) { return q.id === id; }) || null;
+      }
+    });
+  }
+
   var html = '';
   var primarySet = false;
 
@@ -1473,7 +1770,43 @@ async function loadAndRenderQuestions(silent) {
 
   feed.innerHTML = html;
 
-  // ── Micro-animations: glow correct / shake wrong on newly-resolved ──
+  // ── Holding card fade-in after a result moment ────────────────────────────
+  if (Date.now() < resultMomentActiveUntil) {
+    var _hc = feed.querySelector('.holding-card');
+    if (_hc) { _hc.classList.add('fade-in-holding'); }
+  }
+
+  // ── Moment Feeling Layer — animate new LIVE question arrival ──────────────
+  // Update snapshot first so the next render cycle has a fresh baseline.
+  prevLiveActiveIds = _currentLiveActiveIds;
+
+  if (_newLiveQuestion) {
+    // 1. Flash strip (fixed overlay, auto-dismisses at 1.7s)
+    triggerMomentFlash(_newLiveQuestion.event_type || null);
+
+    // 2. Slide-in entrance on the primary question card
+    var _primaryCard = feed.querySelector('.primary-card');
+    if (_primaryCard) {
+      _primaryCard.classList.add('live-question-enter');
+      setTimeout(function() {
+        if (_primaryCard) _primaryCard.classList.remove('live-question-enter');
+      }, 320);
+    }
+
+    // 3. Analytics
+    spontixTrack('live_question_shown', {
+      questionId: _newLiveQuestion.id,
+      eventType:  _newLiveQuestion.event_type,
+      minute:     _newLiveQuestion.match_minute_at_generation,
+      leagueId:   currentLeagueId,
+    });
+    spontixTrack('live_context_banner_shown', {
+      contextText: getLiveContextText(_newLiveQuestion),
+      leagueId:    currentLeagueId,
+    });
+  }
+
+  // ── Micro-animations + Result Moment Layer: newly-resolved questions ─────
   Object.keys(myAnswers).forEach(function(qid) {
     var curr = myAnswers[qid];
     var prev = prevSnapshot[qid];
@@ -1482,8 +1815,11 @@ async function loadAndRenderQuestions(silent) {
     if (wasResolved) return; // already animated on a previous poll
     var card = feed.querySelector('[data-qid="' + qid + '"]');
     if (!card) return;
+    // Card-level animation (glow or shake)
     card.classList.add(curr.is_correct ? 'glow-correct' : 'shake-wrong');
     setTimeout(function() { card.classList.remove('glow-correct', 'shake-wrong'); }, 800);
+    // Result Moment Layer — in-card overlay + delayed lb notif
+    showResultMoment(card, curr.is_correct, curr.points_earned || 0);
   });
 
   updateLiveMatchCard(qs);
@@ -1518,6 +1854,70 @@ var HOLDING_TIPS = [
 var _holdingTipIdx = 0;
 
 function renderHoldingCard(qs) {
+  var liveQs = (qs || []).filter(function(q) { return q.question_type === 'CORE_MATCH_LIVE'; });
+  var liveGenerated = liveQs.length;
+  // Prefer live_questions_per_match (migration 054), fall back to legacy live_question_budget, then 6
+  var liveBudget = (currentLeague && currentLeague.live_questions_per_match != null)
+    ? currentLeague.live_questions_per_match
+    : (currentLeague && currentLeague.live_question_budget != null)
+      ? currentLeague.live_question_budget
+      : 6;
+
+  var matchStatus = currentMatchStats ? currentMatchStats.status : null;
+  var matchMinute = currentMatchStats ? (currentMatchStats.minute || 0) : 0;
+
+  // Priority 1 — Match not started
+  if (matchStatus === 'NS') {
+    spontixTrack('holding_state_shown', { state: 'ns', leagueId: currentLeagueId });
+    return '<div class="holding-card holding-ns">' +
+      '<div class="holding-dot holding-dot-ns"></div>' +
+      '<div class="holding-text">Match hasn\'t started yet</div>' +
+      '<div class="holding-sub">Live questions will begin when the match goes live.</div>' +
+      '</div>';
+  }
+
+  // Priority 2 — Half-time
+  if (matchStatus === 'HT') {
+    spontixTrack('holding_state_shown', { state: 'ht', leagueId: currentLeagueId });
+    return '<div class="holding-card holding-ht">' +
+      '<div class="holding-dot holding-dot-ht"></div>' +
+      '<div class="holding-ht-badge">HT</div>' +
+      '<div class="holding-text">Half-time break</div>' +
+      '<div class="holding-sub">Next question will appear in the second half.</div>' +
+      '</div>';
+  }
+
+  // Priority 3 — Late match (≥ 89')
+  if (matchMinute >= 89 && (matchStatus === '2H' || matchStatus === 'ET' || matchStatus === 'P')) {
+    spontixTrack('holding_state_shown', { state: 'late', leagueId: currentLeagueId });
+    return '<div class="holding-card holding-late">' +
+      '<div class="holding-dot holding-dot-late"></div>' +
+      '<div class="holding-late-badge">' + matchMinute + '\'</div>' +
+      '<div class="holding-text">Match almost over</div>' +
+      '<div class="holding-sub">No more questions will be generated.</div>' +
+      '</div>';
+  }
+
+  // Priority 4 — Budget exhausted
+  if (liveGenerated >= liveBudget) {
+    spontixTrack('holding_state_shown', { state: 'budget', leagueId: currentLeagueId });
+    spontixTrack('live_budget_exhausted_shown', { leagueId: currentLeagueId, budget: liveBudget });
+    return '<div class="holding-card holding-budget">' +
+      '<div class="holding-budget-icon">' +
+        '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>' +
+      '</div>' +
+      '<div class="holding-text">All live questions used</div>' +
+      '<div class="holding-sub">You\'ve reached the maximum number of live questions for this match.</div>' +
+      '<div class="holding-upsell">' +
+        '<div class="holding-upsell-text">Want to keep playing?</div>' +
+        // FUTURE: wire button to Stripe / credit system — do not enable until payment is implemented
+        '<button class="holding-upsell-btn" disabled>Unlock extra questions</button>' +
+      '</div>' +
+      '</div>';
+  }
+
+  // Priority 5 — Default: waiting for next live moment
+  spontixTrack('holding_state_shown', { state: 'default', leagueId: currentLeagueId });
   var resolvedCount = (qs || []).filter(function(q) { return q.resolution_status === 'resolved'; }).length;
   var tip = HOLDING_TIPS[_holdingTipIdx % HOLDING_TIPS.length];
   _holdingTipIdx++;
@@ -1526,8 +1926,8 @@ function renderHoldingCard(qs) {
     : '';
   return '<div class="holding-card">' +
     '<div class="holding-pulse"></div>' +
-    '<div class="holding-text">Next moment dropping soon</div>' +
-    '<div class="holding-sub">Stay tuned — a new question is on its way</div>' +
+    '<div class="holding-text">Waiting for the next live moment...</div>' +
+    '<div class="holding-sub">Next question coming soon</div>' +
     resolvedLine +
     '<div class="holding-tip">' + tip + '</div>' +
     '</div>';
@@ -1631,6 +2031,70 @@ function showLbNotif(pts) {
   el.classList.add('show');
   if (_lbNotifTimeout) clearTimeout(_lbNotifTimeout);
   _lbNotifTimeout = setTimeout(function() { el.classList.remove('show'); }, 3500);
+}
+
+// ── Derive local streak from loaded myAnswers ─────────────────────────────
+// Counts consecutive correct answers from the most recently resolved backwards.
+// Uses the already-loaded myAnswers object — no extra DB call needed.
+function deriveLocalStreak() {
+  var answers = Object.values(myAnswers)
+    .filter(function(a) { return a.is_correct !== null && a.is_correct !== undefined; });
+  var streak = 0;
+  for (var i = answers.length - 1; i >= 0; i--) {
+    if (answers[i].is_correct) streak++;
+    else break;
+  }
+  return streak;
+}
+
+// ── Result Moment Layer ───────────────────────────────────────────────────
+// Injects a transient in-card overlay showing result, points, and streak copy.
+// Fires once per resolution event (callers are already guarded by wasResolved).
+var _wrongCopies = ["So close…", "Next one’s coming."];
+function showResultMoment(card, isCorrect, pts) {
+  resultMomentActiveUntil = Date.now() + 1800;
+
+  var overlay = document.createElement('div');
+  overlay.className = 'result-moment-overlay ' + (isCorrect ? 'correct' : 'wrong');
+
+  if (isCorrect) {
+    var streak = deriveLocalStreak();
+    var streakHtml = '';
+    if (streak >= 2) {
+      var streakCopy = streak >= 4
+        ? 'On fire · ' + streak + ' in a row'
+        : streak + ' in a row';
+      streakHtml = '<div class="rmo-sub">' + streakCopy + '</div>';
+    }
+    overlay.innerHTML =
+      '<div class="rmo-label correct">' +
+        '<svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>' +
+        'Correct' +
+      '</div>' +
+      '<div class="rmo-pts">+' + pts + ' pts</div>' +
+      streakHtml;
+    // Stagger lb notif so it doesn't compete visually with the overlay entrance
+    setTimeout(function() { showLbNotif(pts); }, 420);
+  } else {
+    var copyIdx = parseInt(card.dataset.qid || '0', 36) % _wrongCopies.length;
+    overlay.innerHTML =
+      '<div class="rmo-label wrong">' +
+        '<svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+        'Wrong' +
+      '</div>' +
+      '<div class="rmo-sub">' + _wrongCopies[copyIdx] + '</div>';
+  }
+
+  card.appendChild(overlay);
+
+  // Hold, then fade out and remove
+  var holdMs = isCorrect ? 1050 : 800;
+  setTimeout(function() {
+    overlay.classList.add('rmo-out');
+    setTimeout(function() {
+      if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+    }, 300);
+  }, holdMs);
 }
 
 // ── Match context strip ────────────────────────────────
@@ -1915,6 +2379,13 @@ function renderQuestionCard(q, isPrimary) {
   // Timer bar (active questions only)
   var timerBar = open ? renderTimerBar(q) : '';
 
+  // ── Live context banner — primary LIVE active question only ────────────
+  // Explains to the player why this question appeared right now.
+  var liveContextBanner = '';
+  if (isPrimary && open && lane === 'LIVE') {
+    liveContextBanner = '<div class="live-context-banner">' + escHtml(getLiveContextText(q)) + '</div>';
+  }
+
   // ── Live anchored window strip ─────────────────────────────────────────
   // Shown only for active LIVE match_stat_window questions. Displays the
   // prediction window ("Window: 60'–65'") and answer lock minute.
@@ -1993,9 +2464,22 @@ function renderQuestionCard(q, isPrimary) {
         '</div>';
       })();
   } else if (pending) {
-    footerHtml = isPrematch
-      ? '<div class="q-awaiting">Match in progress · results will appear once the match ends (~2–3h after kickoff)</div>'
-      : '<div class="q-awaiting">Awaiting match result...</div>';
+    if (isPrematch) {
+      footerHtml = '<div class="q-awaiting">Match in progress · results will appear once the match ends (~2–3h after kickoff)</div>';
+    } else if (lane === 'LIVE') {
+      // Tension strip — closed LIVE question, resolver hasn't run yet
+      var tensionCopy = 'Result incoming…';
+      if (q.resolves_after) {
+        var msToResolve = new Date(q.resolves_after).getTime() - Date.now();
+        if (msToResolve > 0 && msToResolve < 120000) tensionCopy = 'This could decide your streak…';
+      }
+      footerHtml = '<div class="live-tension-strip">' +
+        '<span class="live-tension-dot"></span>' +
+        '<span>' + tensionCopy + '</span>' +
+        '</div>';
+    } else {
+      footerHtml = '<div class="q-awaiting">Awaiting match result...</div>';
+    }
   } else if (voided) {
     footerHtml = '<div class="q-voided">This question was voided and did not count.</div>';
   } else if (resolved && myAns) {
@@ -2012,6 +2496,7 @@ function renderQuestionCard(q, isPrimary) {
 
   return '<div class="' + cardClass + '" style="' + borderStyle + '" data-qid="' + q.id + '">' +
     '<div class="question-card-header">' + typeBadge + engBadges + timeLabel + '</div>' +
+    liveContextBanner +
     rwSource +
     pmStatusHtml +
     liveWindowHtml +
