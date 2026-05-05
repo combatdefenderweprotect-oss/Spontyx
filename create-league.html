@@ -1285,14 +1285,17 @@
       </div>
     </div>
 
-    <div class="upgrade-nudge">
+    <div class="upgrade-nudge" id="upgrade-banner-pro">
       <div class="upgrade-nudge-icon"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22C12 22 4 16 4 10C4 6 7 3 10 3C11.2 3 12 3.6 12 3.6S12.8 3 14 3C17 3 20 6 20 10C20 16 12 22 12 22Z"/></svg></div>
       <div class="upgrade-nudge-text">Unlock <strong>Real World questions, Confidence Scoring</strong>, all question types, and more with Pro — just $5.99/mo.</div>
       <button class="upgrade-nudge-btn">Upgrade</button>
     </div>
 
-    <!-- ── AI Real World Questions ── -->
-    <div class="form-group" style="margin-top:24px;">
+    <!-- ── AI Real World Questions ──
+         Block hidden from rendering: it duplicates the "Question Types" section.
+         Underlying feature, IDs (#ai-toggle, #ai-quota-*), and JS handlers are kept
+         intact in script blocks so toggle/quota logic continues to work. -->
+    <div class="form-group" id="ai-real-world-block" style="display:none;margin-top:24px;">
       <div class="ai-questions-card">
         <div class="ai-questions-header">
           <div style="flex:1;">
@@ -1811,6 +1814,14 @@ document.addEventListener('DOMContentLoaded', async function() {
 
   // Apply tier gates that are visible from page load (not match-night-specific)
   applyRealWorldTierGating();
+
+  // Hide the Pro upgrade banner for Elite users (already have full access)
+  try {
+    var _player = (typeof SpontixStore !== 'undefined') ? SpontixStore.getPlayer() : null;
+    var _tier = _player ? (_player.tier || 'starter') : 'starter';
+    var _banner = document.getElementById('upgrade-banner-pro');
+    if (_banner && _tier === 'elite') _banner.style.display = 'none';
+  } catch (e) { /* non-fatal */ }
 });
 
 function updateProgress() {
