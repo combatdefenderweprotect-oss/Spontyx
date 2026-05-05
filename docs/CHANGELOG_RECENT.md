@@ -12,6 +12,98 @@ For canonical specs, see the domain docs in this folder. This file is history on
 
 ## Recent updates (top-of-CLAUDE.md history)
 
+### 2026-05-05 — Dashboard plan panel: live usage data wired
+
+Replaced all hardcoded fake values in `dashboard.html` plan panel with real Supabase queries.
+
+**What changed:**
+- **My Leagues row** — live `league_members.user_id = user.id` count vs `leaguesJoinMax` tier limit
+- **Questions this week row** — live count from `questions` table (`created_at >= ISO week start`, `league_id IN user_leagues`) vs `leagueCount × aiWeeklyQuota`
+- **Real-world / month row** — live count from `questions` (`question_type = 'REAL_WORLD'`, `created_at >= month start`) vs per-league monthly cap; shown for Pro/Elite only, hidden for Starter
+- **Tier pill** — dynamic from `SpontixStore.getTierLabel(player.tier)` instead of hardcoded `"Pro (Trial)"`
+- **Resets in** — computed countdown to next Monday 00:00 UTC (ISO week boundary used by quota-checker)
+- Removed old rows: "Live answers per match", "Battle Royale games today", "Daily trivia", "Real-world questions · unlimited" — all had no reliable real-time data source
+- `loadAndRenderPlanPanel()` fires from inside `loadActivityAlert()` immediately after `leagueIds` is available — no extra `league_members` round-trip
+- Errors fail silently (empty rows, not broken UI)
+
+**No Edge Function changes. No migration.**
+
+---
+
+### 2026-05-05 — Sprint 1 production cleanup: MVP naming removed, dynamic season detection
+
+Removed all MVP-specific naming and comments from production code. No functional logic changed.
+
+**Renamed (generate-questions/index.ts):**
+- `MVP_UNSUPPORTED_SPORTS` → `UNSUPPORTED_SPORTS`
+- `sport_not_supported_mvp` skip reason → `sport_not_supported`
+- `MVP_MAX_ACTIVE_LIVE` → `MAX_ACTIVE_LIVE_QUESTIONS` (8 references; value still `3`)
+- Log key `real_world_attempt_skip_manual_review_mvp` → `real_world_attempt_skip_manual_review`
+- All `// MVP:` inline comments updated to plain production wording
+
+**Renamed (quota-checker.ts):**
+- Comment `(MVP safety rule)` → `(production pacing rule)` on 3-minute LIVE rate limit
+
+**sync-fixtures/index.ts — dynamic season detection (functional change):**
+- Removed `MVP_SEASON = 2025` hardcoded constant
+- Added `getCurrentSeason()` helper: returns `UTC year` if `month >= July`, else `UTC year − 1`
+- All 4 `MVP_SEASON` call sites replaced with `getCurrentSeason()` (fixtures API, standings API, two `mapFixture`/`mapStandings` fallbacks)
+- `MVP_LEAGUES` → `ACTIVE_LEAGUES` (values unchanged: `[39, 140]`)
+- As of 2026-05-05 (pre-July), `getCurrentSeason()` returns `2025` — identical to the old constant. Will auto-advance to `2026` in July.
+
+**Frontend:**
+- `help.html` — removed `"Answers fill in pre-launch"` visible badge from FAQ toolbar
+- `styles.css` — added `.help-item:has(em.placeholder) { display: none; }` — hides any FAQ entry whose answer has not yet been written
+
+**Deployed:** commit `8712565`, `generate-questions` + `sync-fixtures` redeployed via Supabase CLI.
+
+---
+
+### 2026-05-05 — REAL_WORLD pipeline: two critical bug fixes deployed (generate-questions v67, resolve-questions)
+
+Two bugs that had silently blocked all REAL_WORLD question generation since deployment were identified via audit, fixed, and deployed. Pipeline verified live in production; 0 REAL_WORLD questions existed before this fix.
+
+**F-1 — `match_lineup` `resolvesAfter` timing bug (critical)**
+
+`resolvesAfter` was set to bare `kickoff` timestamp instead of `kickoff + 91min`. Every TYPE 1 (injury/availability) question silently failed Stage 3 `checkTemporal` — `resolves_after >= deadline + 90min` was never satisfied — and was discarded before insert. No `match_lineup` question has ever been inserted since deployment.
+
+Fix: one-line change in `generate-questions/index.ts`:
+```diff
+- resolvesAfter = new Date(kickoffForLineup).toISOString();
++ resolvesAfter = new Date(kickoffForLineup + 91 * 60 * 1000).toISOString();
+```
+
+**F-2/F-3 — `manual_review` quota burn + AI verifier loop (high)**
+
+`manual_review` (TYPE 4/5 — coach sacking, transfers) was consuming the daily quota and triggering ~49 hourly OpenAI API Responses calls per question via `tryAiVerification`. Since no admin review UI exists in MVP, every `manual_review` question always auto-voids at `deadline + 1h` — the AI verifier calls were pure cost with zero user value.
+
+Two targeted MVP guards added:
+
+1. **Generator skip** — after Call 2, if `rwPredType === 'manual_review'`, skip with `real_world_attempt_skip_manual_review_mvp` and continue retry loop. Daily quota is not consumed; retry loop can find TYPE 1–3 instead.
+
+2. **Resolver skip** — `tryAiVerification` call removed for `manual_review`. Questions are logged and skipped; auto-void at `deadline + 1h` handles cleanup unchanged.
+
+Restore path: remove generation guard + re-add `tryAiVerification` call when admin UI ships.
+
+**Deploy steps:**
+- `generate-questions` redeployed (v67)
+- `resolve-questions` redeployed
+- Test league created in production (`8690517b`, elite owner `7af6704d`)
+- `league_members` row inserted to make league visible in Leagues Hub
+
+**End-to-end verification:** REAL_WORLD generation fires when a league has a match within 48h. First verification window opens 2026-05-07 ~12:00 UTC (Liverpool vs Chelsea). Verify with:
+```sql
+-- Must be 0
+SELECT COUNT(*) FROM questions WHERE question_type = 'REAL_WORLD' AND resolution_predicate->>'resolution_type' = 'manual_review';
+-- Gap must be >= 91 min
+SELECT EXTRACT(EPOCH FROM (resolves_after::timestamptz - answer_closes_at::timestamptz))/60 AS gap_min
+FROM questions WHERE resolution_predicate->>'resolution_type' = 'match_lineup' ORDER BY created_at DESC LIMIT 1;
+```
+
+**Scope:** `generate-questions/index.ts`, `resolve-questions/index.ts`. No migration.
+
+---
+
 ### 2026-05-05 — Result Moment Layer: LIVE question resolve UX (frontend only, no migration)
 
 New layer in `league.html` that makes the moment a LIVE question resolves feel emotional and game-like. Five sub-features, all additive, all league/LIVE-only. Arena, BR, Trivia, prematch, backend, resolver, and scoring logic unchanged.

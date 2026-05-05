@@ -1,7 +1,7 @@
 # LIVE Question System
 
-**Status: UI ✅ | Resolver ✅ | Generation ✅ Complete**  
-Last updated: 2026-05-05 — Migration 054 deployed: `live_questions_per_match` column (INT 1–10, default 6) added to `leagues`. Generation loop replaced with full budget + pre-HT quota + slot enforcement (`computePlannedSlots()`). Live QPM slider added to create-league UI. `checkTemporal` live-aware timing fix deployed (live branch no longer applies prematch 30-min/90-min rules). `event_driven` debounce deployed (fires only when `lastEventMinute > lastGenerationMinute`). Fixed-window enforcement deployed (extended `RELATIVE_PATTERNS` + `time_phrasing_requires_window_predicate` check). All migrations 021–054 applied; `generate-questions` redeployed.
+**Status: UI ✅ | Resolver ✅ | Generation ✅ | Quality Filter ✅ Complete**  
+Last updated: 2026-05-05 — Sprint 1 cleanup: `MVP_MAX_ACTIVE_LIVE` renamed to `MAX_ACTIVE_LIVE_QUESTIONS`, `sport_not_supported_mvp` renamed to `sport_not_supported`. No logic change. — Previous: Holding states + Moment Feeling Layer deployed (frontend only). Five-priority contextual holding card system (NS → HT → Late → Budget → Default) with per-state animations. Moment Feeling Layer: flash overlay, `.live-question-enter` entrance animation, and `getLiveContextText()` context banner for every new LIVE question arrival. `spontixTrack()` analytics hook wired to all holding states and LIVE question events. `live_match_stats` fetch extended to include `home_score, away_score` for score-aware copy. Budget fallback: `live_questions_per_match ?? live_question_budget ?? 6`. Monetization upsell placeholder (disabled) added to budget-exhausted card. No migration, no Supabase function deploy. — Previous: Window overlap guard (v65), live quality & diversity filter (v66).
 
 This document is the authoritative reference for the `CORE_MATCH_LIVE` question lane. Read it before building, modifying, or debugging any part of the live question system.
 
@@ -83,6 +83,7 @@ pg_cron (every 6h) → generate-questions Edge Function
       ① fetchInProgressFixturesFromCache() — queries live_match_stats for 1H/HT/2H/ET fixtures
       ② HT skip — status_short === 'HT' → skip with 'halftime_pause'
       ③ buildLiveContext() — reads live_match_stats; null return → skip with 'no_live_stats_available'
+         also fetches all CORE_MATCH_LIVE questions for this league+match → populates matchQuestions
       ④ ≥89 hard reject — match_minute ≥ 89 → skip with 'match_minute_too_late'
       ⑤ active cap check — activeQuestionCount ≥ 2 → skip with 'active_question_cap_reached'
       ⑥ budget check (ALL triggers) — generatedMinutes.length >= liveBudget → skip with 'live_budget_reached'
@@ -94,28 +95,35 @@ pg_cron (every 6h) → generate-questions Edge Function
       ⑨ rate limit check (time-driven only) — CORE_MATCH_LIVE generated in last 3 min → skip
          (event-driven bypasses checks ⑧ and ⑨)
       ⑩ buildContextPacket() — live fields populated from LiveMatchContext
-      ⑧ generateQuestions() — Call 1 (gpt-4o-mini), generates exactly 1 question
-      ⑨ convertToPredicate() — Call 2
-      ⑪ validateQuestion() — 5-stage validator (includes live_timing_validation)
-      ⑫ timing: answer_closes_at = minuteToTimestamp(kickoff, window_start_minute) for match_stat_window
-      ⑬ insert into questions with question_type = 'CORE_MATCH_LIVE', pool bypassed
+         recentCategories populated from matchQuestions market keys (last 5 non-voided)
+      ⑪ generateQuestions() — Call 1 (gpt-4o-mini), generates exactly 1 question
+      ⑫ convertToPredicate() — Call 2
+      ⑬ validateQuestion() — 6-stage validator (schema, entity, temporal, logic, live_timing, availability)
+      ⑭ window overlap guard — rejects match_stat_window whose [start,end] overlaps any pending window
+         stage: live_timing_validation, code: live_window_overlap
+      ⑮ checkLiveQuality() — live quality & diversity filter (lib/live-quality-filter.ts)
+         stage: live_quality — see §7 for rejection codes
+      ⑯ timing: answer_closes_at = minuteToTimestamp(kickoff, window_start_minute) for match_stat_window
+      ⑰ insert into questions with question_type = 'CORE_MATCH_LIVE', pool bypassed
 ```
 
 Note: live questions do NOT use the pool system. Live state is unique to each moment — there is nothing to reuse.
 
-### Live context fields (currently null in context packet)
+### Live context fields
 
-These fields are built by `context-builder.ts` but populated as null for prematch. For live generation they must be real:
+These fields are populated by `buildLiveContext()` in `context-builder.ts` for every live generation cycle:
 
 | Field | Source | Notes |
 |---|---|---|
 | `match_minute` | `live_match_stats.minute` | Current match clock |
 | `current_score` | `live_match_stats.home_score : away_score` | Live score |
 | `match_phase` | Derived from `match_minute` | early (0–20) / mid (20–70) / late (70+) |
-| `recent_events` | `live_match_stats.events` JSONB | Last 10 events (goals, cards, subs) |
-| `last_event_type` | Most recent goal/red card | `'goal'` / `'red_card'` / `'none'` |
-| `is_close_game` | `|home_score - away_score| <= 1` | Boolean |
-| `is_blowout` | `|home_score - away_score| >= 3` | Boolean |
+| `recent_events` | `live_match_stats.events` JSONB | Events since last generation |
+| `last_event_type` | Most recent significant event | `'goal'` / `'red_card'` / `'penalty'` / `'yellow_card'` / `'none'` |
+| `is_close_game` | `\|home_score - away_score\| <= 1` | Boolean |
+| `is_blowout` | `\|home_score - away_score\| >= 3` | Boolean |
+| `activeWindows` | Pending CORE_MATCH_LIVE questions | `[{start, end}]` — used for overlap guard |
+| `matchQuestions` | All CORE_MATCH_LIVE questions for this league+match | `[{question_text, resolution_predicate, match_minute_at_generation, resolution_status}]` — ordered oldest-first; used by live quality filter for consecutive-market and diversity checks |
 
 ### Match phase rules
 
@@ -160,7 +168,7 @@ These fields are built by `context-builder.ts` but populated as null for prematc
 ### Two types of limits — never confuse them
 
 **Safety rules** (apply to ALL tiers, no exceptions):
-- Max 3 active questions per league at any time (`MVP_MAX_ACTIVE_LIVE = 3` in `generate-questions/index.ts`; `maxActiveQuestions = 3` in context packet)
+- Max 3 active questions per league at any time (`MAX_ACTIVE_LIVE_QUESTIONS = 3` in `generate-questions/index.ts`; `maxActiveQuestions = 3` in context packet)
 - Max 1 new time-driven live question per 3 minutes per league
 - Minimum 90-second answer window
 - No generation after match ends (`status = 'FT'`)
@@ -452,7 +460,7 @@ Players are still competing against each other for league points even in a 4-0 m
 
 ### Max active questions
 
-**3 active questions** per league at any time (`MVP_MAX_ACTIVE_LIVE = 3` in `index.ts`; `maxActiveQuestions = 3` in the context packet).
+**3 active questions** per league at any time (`MAX_ACTIVE_LIVE_QUESTIONS = 3` in `index.ts`; `maxActiveQuestions = 3` in the context packet).
 
 Enforced via:
 1. `activeQuestionCount` from `buildLiveContext()` — reads pending CORE_MATCH_LIVE questions with open answer windows; skips generation if count ≥ 2 (enforced at index.ts safety check step ⑤)
@@ -526,11 +534,27 @@ Questions without a `match_stat_window` predicate (outcome, player, team questio
 
 ### Fallback rules
 
-1. No active live question → show holding card ("Next moment dropping soon")
+1. No active live question → show contextual holding card (5-priority system — see UI holding states below)
 2. Generation fails (API error, OpenAI error, validation failure) → log silently, show holding card
 3. Match state unavailable → skip live generation entirely for this cycle; do not void existing questions
 4. All retries exhausted → skip; do not generate a low-quality filler question
-5. `match_minute ≥ 89` → skip generation entirely; show holding card until final whistle
+5. `match_minute ≥ 89` → skip generation entirely; show "Match almost over" holding card until final whistle
+
+### UI holding states (priority order)
+
+When no active LIVE question exists, `league.html` shows exactly one contextual card determined by this priority:
+
+| Priority | Condition | State class | Title |
+|---|---|---|---|
+| 1 | `live_match_stats.status = 'NS'` | `.holding-ns` | Match hasn't started yet |
+| 2 | `live_match_stats.status = 'HT'` | `.holding-ht` | Half-time break |
+| 3 | `minute ≥ 89` AND status in `2H/ET/P` | `.holding-late` | Match almost over |
+| 4 | LIVE questions generated ≥ budget | `.holding-budget` | All live questions used |
+| 5 | default | `.holding-card` (default) | Waiting for the next live moment… |
+
+Match stats are fetched from `live_match_stats` (columns: `status, minute, home_score, away_score`) inside `loadAndRenderQuestions` when `!hasActive`. The fetch uses the most frequent LIVE-question `match_id`, falling back to any question's `match_id` so the NS state works before LIVE questions exist. Budget fallback: `live_questions_per_match ?? live_question_budget ?? 6`.
+
+The budget-exhausted card includes a disabled "Unlock extra questions" button — a future Stripe hook placeholder. No payment logic is implemented.
 
 **A skipped cycle is always correct.** A bad question destroys trust. A missing question for 5 minutes does not.
 
@@ -546,22 +570,23 @@ The live analytics layer is **deployed** (migration 023). It mirrors the prematc
 
 ### Validation stages and their rejection codes
 
-Two separate validation stages fire for live questions. Both are already implemented in `predicate-validator.ts`.
+Three stages fire for live questions. `live_timing_validation` and the window overlap code are in `predicate-validator.ts` / `index.ts`; `live_quality` is in `lib/live-quality-filter.ts`.
 
-#### Stage: `live_timing_validation` (implemented in predicate-validator.ts)
+#### Stage: `live_timing_validation` (implemented — predicate-validator.ts + index.ts)
 
-Runs for all live questions (skips prematch). Catches timing violations that the prompt alone cannot fully prevent.
+Runs for all live questions (skips prematch). Catches timing and structural violations that the prompt alone cannot fully prevent.
 
-| Rejection code | Condition | Fix |
+| Rejection code | Condition | Location |
 |---|---|---|
-| `relative_time_window_rejected` | `question_text` contains banned relative phrases: "next X minutes", "within X minutes", "coming minutes", "shortly", "soon", "over the next X minutes" | Use anchored phrasing: "between the Xth and Yth minute" / "before the Yth minute" / "before full-time" |
-| `time_phrasing_requires_window_predicate` | Question text references an anchored time window (e.g. "between the 60th", "before the 75th minute", "before full-time") but predicate is `match_stat` (full-match totals) | Use `match_stat_window` predicate for questions that reference a specific minute range |
-| `invalid_live_window` | `window_start_minute ≤ match_minute_at_generation` | Window must start strictly after the current match minute |
-| `answer_window_overlap` | `window_start_minute − match_minute_at_generation < 3` (or < 1 when match_minute ≥ 87) | Need at least 3 minutes between current play and window start to guarantee a valid 90-second answer window with delivery lag accounted for |
+| `relative_time_window_rejected` | `question_text` contains banned relative phrases: "next X minutes", "within X minutes", "coming minutes", "shortly", "soon", "over the next X minutes" | `checkLiveTiming` in predicate-validator.ts |
+| `time_phrasing_requires_window_predicate` | Question text references an anchored time window but predicate is `match_stat` (full-match totals) | `checkLiveTiming` in predicate-validator.ts |
+| `invalid_live_window` | `window_start_minute ≤ match_minute_at_generation` | `checkLiveTiming` in predicate-validator.ts |
+| `answer_window_overlap` | `window_start_minute − match_minute_at_generation < 3` (or < 1 when match_minute ≥ 87) | `checkLiveTiming` in predicate-validator.ts |
+| `live_window_overlap` | New question's `[window_start, window_end]` overlaps any existing pending `match_stat_window` for the same league+match | window overlap guard in index.ts (deployed v65) |
 
 #### Skip reason codes (generation loop — logged to `liveResult.skipReason`)
 
-These are set in `index.ts` before the AI call, not in the predicate validator.
+These are set in `index.ts` before the AI call.
 
 | Skip code | Condition |
 |---|---|
@@ -572,40 +597,74 @@ These are set in `index.ts` before the AI call, not in the predicate validator.
 | `live_budget_reached` | `generatedMinutes.length >= liveBudget` |
 | `pre_ht_quota_full` | First half and pre-HT generated count ≥ `floor(budget/2)` |
 | `no_slot_due` | Time-driven; no planned slot within ±2 min of current match minute |
-| `rate_limit_live` | Time-driven; CORE_MATCH_LIVE generated within last 3 min |
-| `sport_not_supported_mvp` | League sport is not football |
+| `rate_limit_3min_live` | Time-driven; CORE_MATCH_LIVE generated within last 3 min |
+| `sport_not_supported` | League sport is not football |
 
-These use `stage: 'live_timing_validation'` in the rejection log entry. No `reason`/`score` structured fields — just the `error` string.
+#### Stage: `live_quality` ✅ implemented — lib/live-quality-filter.ts
 
-#### Stage: `live_quality` (future — quality filter not yet implemented)
+Runs after `validateQuestion()` and the window overlap guard, before DB insert. Code-enforced — no prompt dependence. Only applies to league CORE_MATCH_LIVE (soccer). Arena and BR are not affected.
 
-The `live_timing_validation` stage catches structural timing violations. A full `live_quality` filter (mirroring the prematch quality filter) is not yet built — this is a post-launch item. When implemented, it will use `stage: 'live_quality'`:
-
+Rejection log entry shape:
 ```json
 {
   "attempt": 1,
   "stage": "live_quality",
-  "question_text": "Will there be a goal before the 75th minute?",
-  "error": "too_obvious_live (score=40)",
-  "reason": "too_obvious_live",
-  "score": 40,
+  "question_text": "Will [team] win the match?",
+  "error": "blowout_outcome_reject: winner question when score diff is 3 (3–0) — outcome too obvious",
+  "reason": "blowout_outcome_reject",
+  "score": 0,
   "fixture_id": "1234567",
-  "timestamp": "2026-04-28T20:00:00.000Z"
+  "timestamp": "2026-05-05T20:00:00.000Z"
 }
 ```
 
-### Normalized rejection reason codes (live_quality — future)
+### live_quality rejection codes (deployed v1)
 
-| Code | Meaning |
+**Hard reject rules** — always reject, no score threshold:
+
+| Code | Condition |
 |---|---|
-| `too_obvious_live` | Question is obvious given current score/state (e.g. "Will there be a goal?" when it's 0-0 in the 89th minute) |
-| `already_resolved` | The question's outcome is already determined (e.g. asking about clean sheet when the team has already conceded) |
-| `no_time_window` | Question has no clear resolution time boundary |
-| `low_value_window` | Answer window too short (<90s) or too long (>15 min — reduces tension) |
-| `invalid_stat` | Question references a stat field not resolvable from available match data |
-| `duplicate_live` | Near-duplicate of an already-active live question (same stat, same team, same window) |
-| `no_match_context` | Live match state unavailable — cannot generate a meaningful question |
-| `blowout_mismatch` | Question type is invalid for current score margin (e.g. equaliser question in a 4-0 match) |
+| `already_resolved_clean_sheet` | `clean_sheet_home` predicate AND `awayScore > 0` — OR — `clean_sheet_away` predicate AND `homeScore > 0` |
+| `already_resolved_btts` | `btts` predicate AND `homeScore > 0` AND `awayScore > 0` |
+| `blowout_outcome_reject` | `match_outcome_winner` predicate AND `scoreDiff ≥ 3` |
+| `equaliser_blowout_reject` | Question text matches equaliser/comeback phrasing AND `scoreDiff ≥ 2` |
+| `consecutive_same_market` | Same market key as last non-voided question AND `generationTrigger = 'time_driven'` |
+
+**Soft scoring rule** (event-driven only — v1 infrastructure, never rejects in v1):
+
+| Code | Penalty | v1 outcome |
+|---|---|---|
+| `event_driven_consecutive_same_market` | −30 | score = 70, above threshold (50) → allowed; event reactions may reuse the same market |
+
+### Market key taxonomy (deriveLiveMarketKey)
+
+Used by the live quality filter to classify predicates for consecutive and diversity checks:
+
+| Key | Predicate type | Condition |
+|---|---|---|
+| `goals_window` | `match_stat_window` | `field = 'goals'` |
+| `cards_window` | `match_stat_window` | `field = 'cards'` |
+| `match_outcome_winner` | `match_outcome` | `binary_condition.field = 'winner_team_id'` |
+| `draw` | `match_outcome` | `binary_condition.field = 'draw'` |
+| `clean_sheet_home` | `match_stat` | `field='away_score', op='eq', value=0` |
+| `clean_sheet_away` | `match_stat` | `field='home_score', op='eq', value=0` |
+| `btts` | `btts` | — |
+| `total_goals` | `match_stat` | `field='total_goals'` |
+| `player_goal` | `player_stat` | `field='goals'` |
+| `player_card` | `player_stat` | `field='cards'` / `'yellow_cards'` |
+
+### Frontend analytics hooks (`spontixTrack`)
+
+Lightweight fire-and-forget helper in `league.html`. Logs to console and delegates to `window.spontixAnalytics(event, data)` if defined — wire any provider (Posthog, Amplitude, etc.) there without touching `league.html`.
+
+| Event | Fired when | Key payload fields |
+|---|---|---|
+| `holding_state_shown` | Any holding card branch rendered | `state` (`ns`/`ht`/`late`/`budget`/`default`), `leagueId` |
+| `live_budget_exhausted_shown` | Budget-exhausted branch only | `leagueId`, `budget` |
+| `live_question_shown` | New LIVE question detected post-render | `questionId`, `eventType`, `minute`, `leagueId` |
+| `live_context_banner_shown` | Alongside `live_question_shown` | `contextText`, `leagueId` |
+
+No network calls. No external dependencies. All events are fire-and-forget; errors in the delegate are caught silently.
 
 ### Key metrics to track
 
@@ -634,7 +693,7 @@ ORDER BY day DESC LIMIT 20;
 
 The `analytics_live_quality_summary` view sources from `generation_run_leagues` filtered to live generation modes (`live_gap`, `live_event`). The `analytics_live_rejection_reasons` view extracts individual rejection log entries from the same source.
 
-Note: `analytics_live_quality_summary` and `analytics_live_score_distribution` for the **live_quality stage** (not yet implemented quality filter) are separate future views. Migration 023 covers the operational live generation analytics.
+The `live_quality` stage is now implemented and its rejection entries flow into `analytics_live_rejection_reasons` immediately. No additional migration is needed — the view already captures all rejection log entries regardless of stage.
 
 ---
 
@@ -698,8 +757,15 @@ Note: `analytics_live_quality_summary` and `analytics_live_score_distribution` f
 ### 4. UI
 
 - [ ] `CORE_MATCH_LIVE` questions always appear first in the question feed (above prematch and real world)
-- [ ] Holding card appears when no active question exists mid-match (not just at end)
+- [ ] Holding card shows correct contextual state (not generic): NS before kickoff; HT during half-time; "Match almost over" at ≥89'; budget-exhausted when LIVE questions hit budget; default otherwise
 - [ ] Holding card disappears immediately when a new live question becomes active
+- [ ] Each holding state has the correct per-state animation (grey pulse for NS, amber for HT, coral for late)
+- [ ] Budget-exhausted card shows disabled "Unlock extra questions" button only — no onclick, no payment logic
+- [ ] On new LIVE question arrival (Realtime): moment flash (`#moment-flash`) appears briefly at top of screen and auto-dismisses within 1.7s
+- [ ] Moment flash does NOT fire on first page load — only on Realtime-triggered re-renders that introduce a genuinely new question ID
+- [ ] Primary active LIVE question card animates in (`live-question-enter`: 280ms fade + slide-up)
+- [ ] Live context banner (`.live-context-banner`) appears above primary LIVE question text, e.g. "▸ After that goal…" — varies by `event_type` and match minute
+- [ ] Console shows `[spontix:track]` events: `holding_state_shown`, `live_question_shown`, `live_context_banner_shown`, `live_budget_exhausted_shown`
 - [ ] `LIVE` lane badge renders correctly (red dot + "LIVE" label)
 - [ ] HIGH VALUE / CLUTCH / FAST badges appear on correct questions
 - [ ] Timer bar counts down smoothly; turns red and pulses when < 60 seconds remaining

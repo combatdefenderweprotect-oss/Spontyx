@@ -1,7 +1,7 @@
 # REAL_WORLD Question System
 
 **Status: ✅ Fully deployed — pipeline live, resolver active, feed rendering**  
-Last updated: 2026-04-29 — AI-assisted fallback resolution added to resolver: `manual_review` and `match_lineup` (post-deadline) now attempt OpenAI Responses API + `web_search_preview` before auto-void. `resolution_source = 'ai_web_verification'` when AI resolves. Forbidden for `player_stat` / `match_stat` / `btts`. Bounded retry loop (MAX_RW_RETRIES=3) also live in generator.
+Last updated: 2026-05-05 — Sprint 1 cleanup: log key `real_world_attempt_skip_manual_review_mvp` renamed to `real_world_attempt_skip_manual_review`; `manual_review` section reframed as "blocked until admin UI ships" (not MVP-specific). — Previous: Two critical bugs fixed: **(F-1)** `match_lineup` `resolvesAfter` was set to `kickoff` instead of `kickoff + 91min`, causing every TYPE 1 question to silently fail Stage 3 validator and never insert. **(F-2/F-3)** `manual_review` questions now skipped at generation (before insert) and at resolver (no AI verifier call) — prevents daily quota burn and hourly OpenAI loops since no admin review UI exists. Bounded retry loop (MAX_RW_RETRIES=3) and AI-assisted fallback for `match_lineup` post-deadline remain active (since 2026-04-29).
 
 This document is the authoritative reference for the `REAL_WORLD` question lane. Read it before building, modifying, or debugging any part of the REAL_WORLD pipeline.
 
@@ -61,7 +61,7 @@ REAL_WORLD questions must never:
 
 ### Daily cap — applies to ALL tiers including Elite
 
-**Max 1 REAL_WORLD question per league per day (UTC boundary).** This is an MVP safety rule, not a monetization rule. It prevents flooding and cost overruns. A bug in the pipeline cannot produce more than 1 question per league per day.
+**Max 1 REAL_WORLD question per league per day (UTC boundary).** This is a production safety rule, not a monetization rule. It prevents flooding and cost overruns. A bug in the pipeline cannot produce more than 1 question per league per day.
 
 ### Quota check flow (`checkRealWorldQuota()` in `lib/quota-checker.ts`)
 
@@ -86,6 +86,7 @@ For each ai-enabled football league:
   ⑦ Call 1: generateRealWorldQuestion()   — generate question bound to a target match
   ⑧ Call 2: convertToPredicate()         — convert to structured resolution predicate
   ⑨ Hard binding validation        — predicate.match_id must match a 48h target match; SKIP if not
+  ⑨b blocked — admin UI required  — skip `manual_review` predicate type; continue retry loop (no admin review UI — always auto-voids)
   ⑩ Call 3: generateRealWorldContext()   — curated sources + context snippet
   ⑪ Call 4: scoreRealWorldQuestion()     — quality gate: APPROVE / WEAK / REJECT
   ⑫ validateQuestion()                    — 4-stage validator
@@ -204,8 +205,8 @@ The v2.9 prompt opens with a non-negotiable hard constraint:
 | 1 (highest) | Injury / availability | `match_lineup` | Use whenever player in news as injured/doubtful/suspended + upcoming match exists |
 | 2 | Suspension / yellow card risk | `player_stat` (yellow_cards) | ONLY when news explicitly names player as suspension risk |
 | 3 | Match-driven player form | `player_stat` (goals/assists) | ONLY when form is explicitly stated in news, not implied |
-| 4 | Coach / club status | `manual_review` (coach_status) | FALLBACK ONLY — use only when no TYPE 1/2/3 signal exists; medium/high confidence only |
-| 5 (lowest) | Transfer / announcement | `manual_review` (transfer) | LAST RESORT — prefer SKIP over TYPE 5 |
+| 4 | Coach / club status | `manual_review` (coach_status) | FALLBACK ONLY — **blocked until admin review UI ships** (always auto-voids) |
+| 5 (lowest) | Transfer / announcement | `manual_review` (transfer) | LAST RESORT — **blocked until admin review UI ships** (always auto-voids) |
 
 **Skip conditions:**
 - Model returns `{ skip: true }`, `{ skip_reason: "..." }`, `{ SKIP: true }`, or missing `question_text` → skip
@@ -294,7 +295,7 @@ Five predicate types are supported. Each has different timing, resolver behaviou
 **Timing:**
 - `resolution_deadline` = `kickoff` (overridden from Call 1 output)
 - `answer_closes_at` = `deadline` (kickoff)
-- `resolves_after` = `deadline + 91min` (kickoff + 91min)
+- `resolves_after` = `kickoff + 91min` — **note:** must be `kickoff + 91min`, not `kickoff`. Bug existed pre-2026-05-05 (set to bare `kickoff`), causing every `match_lineup` question to fail Stage 3 `checkTemporal` silently. Fixed in `generate-questions/index.ts`.
 - Auto-void fires at: `kickoff + 1h`
 - Near-kickoff guard: skipped if < 60 min to kickoff
 
@@ -373,7 +374,11 @@ Five predicate types are supported. Each has different timing, resolver behaviou
 - `resolves_after` = `deadline + 91min`
 - Auto-void fires at: `deadline + 1h`
 
-**Resolver:** always skips (logged as `[resolve] skipping manual_review question X (pending admin action)`). If deadline passes without admin resolution, auto-void fires at `deadline + 1h` and voids the question. No admin UI exists yet — manual_review questions always auto-void at MVP.
+**Generation guard:** After Call 2 and hard binding validation, any `manual_review` result is skipped with log key `real_world_attempt_skip_manual_review` and the retry loop continues. This prevents the daily quota from being consumed by a question that will always auto-void, and gives the retry loop a chance to find a TYPE 1–3 question instead.
+
+**Resolver:** skips immediately (logged as `[resolve] skipping manual_review question X (pending admin action, deadline=...)`). No AI verifier call. If deadline passes without admin resolution, auto-void fires at `deadline + 1h`. No admin review UI exists — `manual_review` questions cannot be resolved by any path; they always auto-void.
+
+**Restore path:** Remove the generation guard block and re-add `tryAiVerification` in the resolver when the admin review UI is shipped.
 
 ---
 
@@ -569,24 +574,23 @@ if (q.resolution_deadline && now > new Date(q.resolution_deadline).getTime() + 6
 
 Fires before predicate evaluation. Any REAL_WORLD question past its deadline+1h is voided immediately.
 
-### `manual_review` — AI fallback before skip
+### `manual_review` — blocked until admin review UI ships
 
-For **REAL_WORLD** questions with `manual_review` predicates, the resolver now attempts AI web verification before leaving the question pending:
+`manual_review` questions are blocked at two points:
+
+**Generation guard (before insert):** After Call 2 returns a `manual_review` predicate, a hard skip fires immediately — the retry loop continues searching for TYPE 1–3 questions. Log event: `real_world_attempt_skip_manual_review`.
+
+**Resolver:** logged and skipped — no AI verifier call.
 
 ```typescript
 if (pred.resolution_type === 'manual_review') {
-  if (q.question_type === 'REAL_WORLD' && OPENAI_API_KEY && q.question_text && q.resolution_condition) {
-    const aiResolved = await tryAiVerification(sb, q, pred.resolution_type, runStats);
-    if (aiResolved) continue;
-  }
-  // Non-REAL_WORLD or AI unavailable → skip for admin action as before
-  console.log(`[resolve] skipping manual_review question ${q.id} ...`);
+  console.log(`[resolve] skipping manual_review question ${q.id} (pending admin action, deadline=${q.resolution_deadline ?? 'none'})`);
   runStats.skipped++;
   continue;
 }
 ```
 
-If `OPENAI_API_KEY` is not set, or the AI result is not strong enough (see resolution rules below), the question is still left pending for admin action — auto-void at `deadline + 1h` fires as before.
+If a `manual_review` question exists in the DB (created before 2026-05-05), it stays `pending` until `deadline + 1h`, then auto-voids. No AI verifier is called.
 
 ### `match_lineup` — AI fallback after deadline passes
 
@@ -640,8 +644,8 @@ Uses the OpenAI **Responses API** (`POST /v1/responses`) — not Chat Completion
 **Resolution priority order (complete):**
 
 1. Standard predicate evaluation (official API data)
-2. Retry cycles (lineups: skip until cache populated; manual_review: skip for admin)
-3. AI web verification — last resort, REAL_WORLD + manual_review/match_lineup post-deadline only
+2. Retry cycles (lineups: skip until cache populated; manual_review: skip — no admin review UI)
+3. AI web verification — last resort, REAL_WORLD + **`match_lineup` post-deadline only** (`manual_review` bypassed — no admin review UI)
 4. Auto-void (`resolution_deadline + 1h` grace)
 
 ---
@@ -794,13 +798,13 @@ ORDER BY created_at DESC LIMIT 10;
 
 ---
 
-## 14. Known Limitations (MVP)
+## 14. Known Limitations
 
 | Limitation | Impact | Fix |
 |---|---|---|
-| `manual_review` AI fallback active | Coach/transfer questions now attempt AI web verification before auto-void. High/medium+2src → resolved. Weak result → auto-void still fires at deadline+1h. Admin resolution UI would improve this further post-launch. | — |
+| `manual_review` blocked until admin UI ships | Generator skips `manual_review` before insert (no daily quota burn); resolver skips without AI call. Questions always auto-void at `deadline+1h`. No admin review UI exists. | Remove generation guard and restore AI verifier in resolver when admin UI ships |
 | Bounded retry loop active | System attempts up to 3 ranked news batches per league per run. REJECT questions are never published. Best WEAK published only if no APPROVE was found and `rwLeagueApproved === 0`. Items sorted by news quality score so attempt 1 has the strongest signals. | — |
-| `rw_quality_breakdown` not shown in feed | Users see confidence badge but not why the question was scored | Surface breakdown in feed or admin view post-launch |
+| `rw_quality_breakdown` not shown in feed | Users see confidence badge but not why the question was scored | Surface breakdown in feed or admin view |
 | Player DB cold-start | Fresh deployment has no `team_players` data — no PLAYER BOOST until poller runs for a live match | Expected — populate naturally from first live match |
-| Football only | `sport !== 'football'` guard skips all non-football leagues | By design for MVP |
-| `match_lineup.check` defaults to `'squad'` | If Call 2 omits the field, question resolves as `correct` if player is anywhere in squad, not just starting XI | Acceptable for MVP — starting XI questions use correct value |
+| Football only | `sport !== 'football'` guard skips all non-football leagues | By design until sport adapters are verified end-to-end |
+| `match_lineup.check` defaults to `'squad'` | If Call 2 omits the field, question resolves as `correct` if player is anywhere in squad, not just starting XI | Starting XI questions use correct value; acceptable until adapter tuned |

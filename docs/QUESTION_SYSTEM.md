@@ -210,9 +210,9 @@ For full quality filter analytics and monitoring queries, see [docs/PREMATCH_QUA
 
 **Match Night, Season-Long, Custom** all flow through the same `fetchSportsContext` path. No special branching. Match Night attaches CORE_MATCH_PREMATCH against `league_id` (no `arena_session_id` path — Arena is a separate pillar).
 
-### MVP lane status
+### Lane status
 
-| Lane | MVP status | Key constraints |
+| Lane | Status | Key constraints |
 |---|---|---|
 | `CORE_MATCH_LIVE` | ✅ Primary focus | Max 3 active total, goals/cards, budget `live_questions_per_match` (1–10, default 6), slot-paced (floor(N/2) pre-HT, ceil(N/2) post-HT), 3-min rate limit (time-driven), event-driven bypasses slot + rate limit |
 | `CORE_MATCH_PREMATCH` | ✅ Supported | Generated pre-kickoff, resolved post-match |
