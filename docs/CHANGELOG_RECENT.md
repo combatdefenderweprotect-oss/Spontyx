@@ -12,6 +12,106 @@ For canonical specs, see the domain docs in this folder. This file is history on
 
 ## Recent updates (top-of-CLAUDE.md history)
 
+### 2026-05-05 — `live_questions_per_match`: user-controlled per-match live question count + slot-paced generation (migration 054)
+
+Migration 054 adds `live_questions_per_match` (INT, default 6, check 1–10) to `leagues`. `live_question_budget` kept as legacy fallback. Read order: `live_questions_per_match ?? live_question_budget ?? 6`. Soccer-specific — not for use with other sports until those have their own slot logic.
+
+**UI** — Live QPM range slider (1–10, default 6) added to Step 3 of create-league flow, shown only when AI questions are enabled. Wired into review step and launch payload (`live_questions_per_match` field).
+
+**Generation** — replaced the old rate-limit-only guard with full budget + quota + slot enforcement. New `computePlannedSlots(budget)` helper computes soccer-specific planned minute slots: `floor(N/2)` pre-HT slots distributed evenly across minutes 10–40, `ceil(N/2)` post-HT slots across minutes 55–85. Enforcement runs in four ordered checks:
+
+1. **Budget check** (all triggers) — skip `live_budget_reached` when `generatedMinutes.length >= liveBudget`. Single DB query for all `match_minute_at_generation` values for this match.
+2. **Pre-HT quota** (all triggers) — skip `pre_ht_quota_full` when in first half and `preHtGenerated >= floor(budget/2)`.
+3. **Slot eligibility** (time-driven only) — skip `no_slot_due` when no planned slot is within ±2 min of current match minute. Slot coverage window is ±5 min — an event question at minute 38 naturally covers the slot at 40 without extra logic.
+4. **Rate limit** (time-driven only) — 3-min rate limit preserved as final safety net.
+
+Event-driven bypasses checks 3 and 4. Budget and pre-HT quota apply to all triggers.
+
+**Deploy steps (completed):** migration 054 applied; `generate-questions` redeployed; `create-league.html` deployed.
+
+---
+
+### 2026-05-05 — `checkTemporal` live-aware timing fix + `event_driven` debounce
+
+Two critical CORE_MATCH_LIVE generation bugs fixed and deployed together.
+
+**Bug 1 — `checkTemporal` rejecting all `match_stat_window` questions:**
+The predicate validator's `checkTemporal` function applied prematch rules (30-min deadline floor, ≥90-min `resolves_after` gap) to live questions. Both rules are incompatible with live timing: live questions have deadlines ~3 min out and `resolves_after` only minutes after `deadline`. Result: every `match_stat_window` question was silently rejected with a misleading error.
+
+**Fix:** `checkTemporal` now branches on `isLive = raw.match_minute_at_generation != null`. Live branch: deadline only needs to be in the future (no floor); `resolvesAfter` only needs to be `> deadline + 60s` (not 90 min). Prematch branch: unchanged (30-min floor, 90-min gap).
+
+**Bug 2 — `event_driven` trigger firing on every cycle after a single event:**
+`buildLiveContext()` set `generationTrigger = 'event_driven'` whenever `lastEventType !== 'none'`, which was true after any goal/card indefinitely. This bypassed the 3-min rate limit on every subsequent cycle until the next successful generation.
+
+**Fix:** Added `lastEventMinute > lastGenerationMinute` guard. Event-driven now fires only on cycles where the last event minute is strictly newer than the last generation minute.
+
+**Scope:** CORE_MATCH_LIVE predicate validation and context building only. Prematch, Arena, BR, Trivia unaffected.
+
+---
+
+### 2026-05-05 — Fixed-window enforcement: extended relative patterns + `time_phrasing_requires_window_predicate`
+
+Two additions to `predicate-validator.ts` (`checkLiveTiming`) to close gaps in the relative-time phrasing ban.
+
+**Extended `RELATIVE_PATTERNS`:** added `/\bsoon\b/i`, `/\bnext \d+ minutes?\b/i`, `/\bwithin \d+ minutes?\b/i` to the banned relative-phrase list. Previously only "coming minutes", "over the next X minutes", and a few others were caught.
+
+**New `time_phrasing_requires_window_predicate` check:** inserted between the relative-phrase check and the existing `match_stat_window` guard. If question text matches an anchored-window pattern (e.g. "between the 60th", "before the 75th minute", "before full-time") but the predicate is `match_stat` (full-match totals), reject with `time_phrasing_requires_window_predicate` — these questions require a `match_stat_window` predicate, not a full-match total. Anchored patterns checked: `/between the \d+/i`, `/before the \d+(?:st|nd|rd|th)? minute/i`, `/before (?:full.?time|half.?time|the final whistle)/i`.
+
+**Scope:** CORE_MATCH_LIVE predicate validator only.
+
+---
+
+### 2026-05-05 — Per-match `prematchBatchCtx` and `lineupCtx` (multi-match batch correctness fix)
+
+Deployed `generate-questions` v61. Pure logic fix; no DB migration; no filter or pipeline changes.
+
+**Problem**: `prematchBatchCtx` and `lineupCtx` were built once from `firstMatchForQuality` and reused for every question in the batch. In multi-match batches (cron-path leagues with >1 uncovered fixture), `deriveMarketType`, the heavy-favourite reject, and lineup gating all used fixture #1's teams / standing gap / lineup state to judge questions about fixtures #2..#N. Symptoms: `home_win` / `away_win` market keys collapsed to generic `match_outcome` for non-first matches (breaking market uniqueness), and player questions could be over- or under-blocked.
+
+**Fix** (`generate-questions/index.ts`):
+- New `buildPerMatchCtx(matchId)` and `buildPerMatchLineupCtx(matchId)` helpers, called inside the per-question loop using `raw.match_id`.
+- Per-match `lineupCtx` filters `playerAvailability` by `fixtureId === matchId`, so `lineupAvailable`, `confirmedPlayerIds`, and `minutesToKickoff` are all match-correct.
+- `filterPrematchPostPredicate` now receives the per-match ctx pair instead of the shared first-match ctx.
+
+**Unchanged**:
+- `filterPrematchBatch` (pre-predicate) still uses the shared first-match ctx — operates on coarse text/category signals where first-match approximation is acceptable.
+- All filter logic, pipeline order, and signatures untouched.
+- Single-match ensure-prematch path: behaviourally identical (per-match ctx == first-match ctx when batch size = 1).
+
+**Scope**: CORE_MATCH_PREMATCH cron path. ensure-prematch, LIVE, REAL_WORLD, Arena, BR, Trivia unaffected.
+
+---
+
+### 2026-05-05 — Pre-match question quality upgrade: market dedup, intent-based filtering, market-aware fallbacks
+
+Deployed `generate-questions` v60. Logic-level upgrade to the CORE_MATCH_PREMATCH generation pipeline. No DB migration required.
+
+**New: post-predicate strict filter** (`filterPrematchPostPredicate` in `prematch-quality-filter.ts`)
+- Runs after `convertToPredicate` (Call 2), before `validateQuestion`
+- Market-type uniqueness: one question per market per (league, match). Markets derived from predicate structure, not text.
+- Predicate fingerprint dedup: catches exact logical duplicates even if question text differs.
+- Text similarity dedup: Jaccard ≥ 0.65 against all DB questions for same (league, match).
+- Heavy-favourite hard reject: `home_win` / `away_win` blocked when `standingGap ≥ 5`. Alternatives (btts, clean sheet, goals, cards, corners) unaffected.
+- Lineup-aware player gating: player questions blocked >60 min before kickoff unless strongly confirmed from lineup source. Blocked ≤60 min if no lineup data. Non-player questions always pass through.
+- Team balance: single team cannot exceed 70% of questions (enforced when ≥3 accepted).
+
+**Updated: fallback template system** (Phase D in `index.ts`)
+- Extended from 5 → 11 distinct markets: btts, over_goals:1.5/2.5/3.5, clean_sheet_home, clean_sheet_away, cards_total, corners_total, home_win, away_win, draw.
+- Market-aware: reads fresh DB state before selecting templates, skips any market already covered by AI questions.
+- Respects heavy-favourite rule: home_win/away_win skipped when standingGap ≥ 5.
+- Logs `target_unmet` (console.warn only) when target cannot be reached without violating quality rules — does NOT insert filler.
+
+**Per-match market state**: pre-fetched per (league, match) before generation. Mutated as AI questions are accepted. Guarantees cross-run dedup (idempotent re-runs produce no market duplicates).
+
+**New stage**: `'prematch_quality_post'` added to `RejectionLogEntry.stage` union.
+
+**New rejection reason codes** (analytics-mapped): `duplicate_market`, `heavy_favourite_winner`, `duplicate_predicate`, `duplicate_question_text`, `player_question_too_early`, `player_question_no_lineup`, `player_not_in_lineup`, `player_cap_exceeded`, `team_imbalance`.
+
+**Post-deploy TODO (resolved 2026-05-05, v61)**: Per-match `prematchBatchCtx` + `lineupCtx` now built inside the question loop. See entry above.
+
+**Scope**: CORE_MATCH_PREMATCH only. LIVE, REAL_WORLD, Arena, BR, Trivia unaffected.
+
+---
+
 ### 2026-05-05 — `prematch_questions_per_match`: user-controlled per-match question count
 
 Migration 053 adds `prematch_questions_per_match` (INT, default 5, check 1–10) to `leagues`. `prematch_question_budget` kept as legacy fallback for rows created before this migration.

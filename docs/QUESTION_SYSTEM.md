@@ -175,12 +175,36 @@ Pre-match generation is **demand-driven**, not cron-primary. Two client-side hoo
 
 **Per-match question count** — `prematch_questions_per_match` (migration 053, INT 1–10, default 5) is the user-chosen target set at league creation. The pipeline reads `prematch_questions_per_match ?? prematch_question_budget ?? 5`. `prematch_question_budget` is kept as a legacy fallback for rows created before migration 053.
 
+The CORE_MATCH_LIVE lane has an equivalent: `live_questions_per_match` (migration 054, INT 1–10, default 6). Read order: `live_questions_per_match ?? live_question_budget ?? 6`. See [docs/LIVE_QUESTION_SYSTEM.md](LIVE_QUESTION_SYSTEM.md) for full slot logic.
+
 **Idempotency** — per-(league, match_id) existing-count check runs before Phase A. If existing `CORE_MATCH_PREMATCH` rows (non-voided) already meet the target → match is skipped immediately. If partial → only the shortfall is generated. Additionally:
 - Pool fingerprint dedup in `lib/pool-manager.ts`
-- Jaccard near-duplicate filter in `lib/prematch-quality-filter.ts`
+- Two-pass quality filter in `lib/prematch-quality-filter.ts` (see below)
 - No new lock table
 
-**Fallback templates (Phase D)** — after normal AI generation + 3-retry loop, any per-match shortfall is filled by five deterministic templates: match winner, over 2.5 goals, BTTS, home clean sheet, away winner. Inserted as `source='fallback_template'` — no OpenAI call, no AI quota consumed. Text-deduped on re-run. Predicates use existing resolver types (`match_outcome`, `match_stat`, `btts`).
+**Two-pass quality filter** — `lib/prematch-quality-filter.ts` runs two independent passes:
+
+*Pass 1 — pre-predicate (`filterPrematchBatch`):* runs after Call 1 (question generation) and before Call 2 (predicate conversion). Scores candidates 0–100 on text quality, category diversity, player cap, and team balance. Hard-rejects below 60. Saves token cost by discarding poor candidates before OpenAI predicate conversion.
+
+*Pass 2 — post-predicate (`filterPrematchPostPredicate`):* runs after Call 2 (predicate conversion) and before schema validation. Operates on the resolved predicate — not text. Hard-rejects on:
+- **Market uniqueness**: one question per `market_type` per (league, match). Market types are derived from predicate structure (e.g. `home_win`, `over_goals:2.5`, `btts`, `clean_sheet_home`, `player_goal:PID`).
+- **Predicate fingerprint dedup**: exact logical duplicate detection across DB + current batch.
+- **DB text dedup**: Jaccard similarity ≥ 0.65 vs all existing questions for same (league, match).
+- **Heavy-favourite winner**: `home_win` / `away_win` hard-rejected when `standingGap ≥ 5`. Alternatives (btts, clean sheet, goals, corners, cards) are unaffected.
+- **Lineup-aware player rules**: player questions blocked when kickoff > 60 min unless player is confirmed in lineup data; blocked when kickoff ≤ 60 min if no lineup data is available.
+- **Team balance**: single team may not exceed 70% of questions (enforced at ≥ 3 questions).
+
+`MatchMarketState` is pre-fetched from DB per (league, match) before generation begins and mutated as questions are accepted — correct across retry rounds and concurrent calls.
+
+The post-predicate filter is called with a **per-match** `prematchBatchCtx` and `lineupCtx`, rebuilt inside the per-question loop using `raw.match_id`. This keeps `deriveMarketType`, the heavy-favourite reject, and lineup gating aligned with the question's actual fixture even when a batch covers multiple matches. The pre-predicate filter (`filterPrematchBatch`) intentionally uses a shared first-match ctx since it only runs coarse text/category heuristics.
+
+**Fallback templates (Phase D)** — after AI generation + 3-retry loop, any per-match shortfall is filled by deterministic templates. Phase D is **market-aware**: it reads a fresh DB fetch of all questions for the match, skips any template whose market is already present, and stops cleanly when all valid markets are exhausted. No filler is inserted if the target cannot be reached without violating market uniqueness or quality rules — logs `target_unmet` (console.warn) instead.
+
+11 available fallback markets (diversity-priority order): `btts`, `over_goals:2.5`, `over_goals:1.5`, `over_goals:3.5`, `clean_sheet_home`, `clean_sheet_away`, `cards_total`, `corners_total`, `home_win`, `away_win`, `draw`. `home_win` / `away_win` are skipped in heavy-favourite matches.
+
+Inserted as `source='fallback_template'` — no OpenAI call, no AI quota consumed. Predicates use existing resolver types (`match_outcome`, `match_stat`, `btts`).
+
+For full quality filter analytics and monitoring queries, see [docs/PREMATCH_QUALITY_ANALYTICS.md](PREMATCH_QUALITY_ANALYTICS.md).
 
 **Fixture window** — `isMatchEligibleForPrematch()` enforces: automatic mode = kickoff in 24–48h (with late-creation fallback to <24h); manual mode = `now ≥ kickoff − offset_hours`; never generate after kickoff. This is unchanged from the cron-only era.
 
@@ -190,7 +214,7 @@ Pre-match generation is **demand-driven**, not cron-primary. Two client-side hoo
 
 | Lane | MVP status | Key constraints |
 |---|---|---|
-| `CORE_MATCH_LIVE` | ✅ Primary focus | Max 3 active total, goals/penalties/red cards/yellow cards, 3-min rate limit |
+| `CORE_MATCH_LIVE` | ✅ Primary focus | Max 3 active total, goals/cards, budget `live_questions_per_match` (1–10, default 6), slot-paced (floor(N/2) pre-HT, ceil(N/2) post-HT), 3-min rate limit (time-driven), event-driven bypasses slot + rate limit |
 | `CORE_MATCH_PREMATCH` | ✅ Supported | Generated pre-kickoff, resolved post-match |
 | `REAL_WORLD` | ⚠️ Limited | Max 1 per league per day, skip if signal weak, tier-gated |
 

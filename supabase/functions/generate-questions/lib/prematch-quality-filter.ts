@@ -366,3 +366,369 @@ function isSingleTeamFocused(
   const mentionsOther    = otherName.length > 2 && (text.includes(otherName) || hint.includes(otherName));
   return mentionsDominant && !mentionsOther;
 }
+
+// ═════════════════════════════════════════════════════════════════════
+// PART 2 — Post-predicate strict filter
+//
+// Runs AFTER convertToPredicate (Call 2), before validateQuestion.
+// This is the authoritative dedup layer: it operates on structured
+// predicate objects, not text heuristics.
+//
+// Responsibilities:
+//   • Market-type uniqueness (one question per market per match)
+//   • Predicate fingerprint dedup (exact logical duplicates)
+//   • Text similarity dedup against DB questions
+//   • Heavy-favourite winner hard reject
+//   • Lineup-aware player question gating
+//   • Team balance enforcement (≤70% per team)
+//
+// MatchMarketState is initialised from existing DB rows and mutated
+// on each accept — callers must pass the same object across all
+// questions for a given (league, match).
+// ═════════════════════════════════════════════════════════════════════
+
+// ── Per-match dedup state ─────────────────────────────────────────────
+
+export interface MatchMarketState {
+  markets:      Set<string>;   // canonical market_type keys
+  fingerprints: Set<string>;   // predicate fingerprints
+  texts:        string[];      // question_text of accepted/existing questions
+  playerIds:    Set<string>;   // player_ids of player-specific questions
+  playerCount:  number;        // total player-specific questions (for cap)
+}
+
+// ── Lineup context ────────────────────────────────────────────────────
+
+export interface LineupContext {
+  minutesToKickoff:   number;       // minutes from now to kickoff
+  lineupAvailable:    boolean;      // any playerAvailability with source='lineup'
+  confirmedPlayerIds: Set<string>;  // player_ids confirmed as starting_xi or substitute
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Derive a canonical market_type string from a resolved predicate.
+// Returns null for predicates that cannot be classified (novel/unknown types).
+// ─────────────────────────────────────────────────────────────────────
+
+export function deriveMarketType(
+  predicate: unknown,
+  homeTeamId: string,
+  awayTeamId: string,
+): string | null {
+  const p = predicate as any;
+  if (!p || typeof p !== 'object') return null;
+  const type = p.resolution_type as string;
+  const bc   = p.binary_condition as any;
+
+  switch (type) {
+    case 'match_outcome': {
+      if (!bc) return 'match_outcome';
+      if (bc.field === 'winner_team_id') {
+        if (String(bc.value) === String(homeTeamId)) return 'home_win';
+        if (String(bc.value) === String(awayTeamId)) return 'away_win';
+        return 'match_outcome';
+      }
+      if (bc.field === 'draw') return 'draw';
+      return 'match_outcome';
+    }
+
+    case 'match_stat': {
+      if (!bc) return 'match_stat';
+      const field = bc.field as string;
+      const op    = bc.operator as string;
+      const val   = bc.value;
+      if (field === 'total_goals') {
+        // Normalise threshold to a .5 boundary so "> 2" and ">= 3" share a market key.
+        const norm = (op === 'gt' || op === 'lte')
+          ? Number(val) + 0.5
+          : Number(val) - 0.5;
+        const dir = (op === 'lt' || op === 'lte') ? 'under' : 'over';
+        return `${dir}_goals:${norm}`;
+      }
+      if (field === 'total_cards')   return 'cards_total';
+      if (field === 'total_corners') return 'corners_total';
+      if (field === 'shots_total')   return 'shots_total';
+      // home_score=0 means the home team scored 0 → away team kept a clean sheet
+      if (field === 'home_score' && op === 'eq' && val === 0) return 'clean_sheet_away';
+      // away_score=0 means the away team scored 0 → home team kept a clean sheet
+      if (field === 'away_score' && op === 'eq' && val === 0) return 'clean_sheet_home';
+      if (field === 'home_score') return `home_score:${op}:${val}`;
+      if (field === 'away_score') return `away_score:${op}:${val}`;
+      return `match_stat:${field}`;
+    }
+
+    case 'btts': return 'btts';
+
+    case 'match_stat_window': {
+      const field = p.field as string;
+      return `${field}_window:${p.window_start_minute}-${p.window_end_minute}`;
+    }
+
+    case 'player_stat': {
+      const field = bc?.field as string;
+      const pid   = String(p.player_id ?? '');
+      if (!pid) return 'player_stat';
+      if (field === 'goals')                                return `player_goal:${pid}`;
+      if (field === 'assists')                              return `player_assist:${pid}`;
+      if (field === 'shots')                                return `player_shots:${pid}`;
+      if (field === 'cards' || field === 'yellow_cards')    return `player_card:${pid}`;
+      if (field === 'clean_sheet')                          return `player_clean_sheet:${pid}`;
+      if (field === 'passes_total' || field === 'passes_key') return `player_passes:${pid}`;
+      return `player_stat:${pid}:${field}`;
+    }
+
+    case 'player_status':
+      return `player_status:${String(p.player_id ?? '')}`;
+
+    case 'match_lineup':
+      return `player_lineup:${String(p.player_id ?? '')}`;
+
+    case 'multiple_choice_map':
+      return `mc:${p.source}:${p.field}`;
+
+    case 'manual_review':
+      return `manual_review:${p.category ?? ''}`;
+
+    default:
+      return null;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Stable fingerprint of a predicate's logical identity.
+// Two predicates that resolve to the same outcome produce the same key.
+// ─────────────────────────────────────────────────────────────────────
+
+export function predicateFingerprint(predicate: unknown): string {
+  const p = predicate as any;
+  if (!p || typeof p !== 'object') return '';
+  const type = p.resolution_type as string;
+  const bc   = p.binary_condition;
+
+  const key = (parts: Record<string, unknown>) =>
+    JSON.stringify(parts, Object.keys(parts).sort());
+
+  switch (type) {
+    case 'match_outcome':
+    case 'match_stat':
+      return key({ t: type, mid: p.match_id, field: bc?.field, op: bc?.operator, val: bc?.value });
+
+    case 'match_stat_window':
+      return key({ t: type, mid: p.match_id, field: p.field, op: p.operator, val: p.value,
+                   ws: p.window_start_minute, we: p.window_end_minute });
+
+    case 'btts':
+      return key({ t: type, mid: p.match_id });
+
+    case 'player_stat':
+      return key({ t: type, mid: p.match_id, pid: p.player_id,
+                   field: bc?.field, op: bc?.operator, val: bc?.value });
+
+    case 'player_status':
+      return key({ t: type, pid: p.player_id, field: bc?.field });
+
+    case 'match_lineup':
+      return key({ t: type, mid: p.match_id, pid: p.player_id, check: p.check });
+
+    case 'multiple_choice_map': {
+      const sortedOpts = [...(p.options ?? [])].sort((a: any, b: any) =>
+        String(a.id).localeCompare(String(b.id)),
+      );
+      return key({ t: type, mid: p.match_id, source: p.source, field: p.field, opts: sortedOpts });
+    }
+
+    case 'manual_review':
+      return key({ t: type, cat: p.category, desc: p.description });
+
+    default:
+      return JSON.stringify(p);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Build initial MatchMarketState from existing DB rows.
+// Call once per (league, match) before generation; pass the same
+// object to filterPrematchPostPredicate for the entire generation run.
+// ─────────────────────────────────────────────────────────────────────
+
+export function buildMatchMarketState(
+  existingQuestions: Array<{
+    question_text: string;
+    resolution_predicate: unknown;
+    player_ids?: string[] | null;
+  }>,
+  homeTeamId: string,
+  awayTeamId: string,
+): MatchMarketState {
+  const state: MatchMarketState = {
+    markets:      new Set(),
+    fingerprints: new Set(),
+    texts:        [],
+    playerIds:    new Set(),
+    playerCount:  0,
+  };
+  for (const q of existingQuestions) {
+    const mt = deriveMarketType(q.resolution_predicate, homeTeamId, awayTeamId);
+    if (mt) state.markets.add(mt);
+    const fp = predicateFingerprint(q.resolution_predicate);
+    if (fp) state.fingerprints.add(fp);
+    if (q.question_text) state.texts.push(q.question_text);
+    const isPlayer = isPlayerPredicate(q.resolution_predicate);
+    if (isPlayer) {
+      const pid = extractPlayerIdFromPredicate(q.resolution_predicate);
+      if (pid) state.playerIds.add(pid);
+      state.playerCount++;
+    }
+  }
+  return state;
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// Post-predicate strict filter — the authoritative gate.
+//
+// Returns { accept: true } or { accept: false, reason: string }.
+// On accept, mutates matchState so subsequent questions see the update.
+// ─────────────────────────────────────────────────────────────────────
+
+export function filterPrematchPostPredicate(
+  raw: RawGeneratedQuestion,
+  predicate: unknown,
+  matchState: MatchMarketState,
+  ctx: PrematchBatchContext,
+  lineup: LineupContext,
+  batchTarget: number,
+): { accept: boolean; reason?: string } {
+  if (raw.generation_trigger !== 'prematch_only') return { accept: true };
+
+  const p          = predicate as any;
+  const isPlayer   = isPlayerPredicate(predicate);
+  const pid        = isPlayer ? extractPlayerIdFromPredicate(predicate) : null;
+
+  // ── 1. Player question gating (lineup-aware) ──────────────────────
+  if (isPlayer) {
+    if (lineup.minutesToKickoff > 60) {
+      // Far from kickoff: only allow if player is confirmed in lineup data.
+      // "Strongly confirmed" = source=lineup AND status=starting|substitute.
+      if (!pid || !lineup.confirmedPlayerIds.has(pid)) {
+        return { accept: false, reason: 'player_question_too_early' };
+      }
+    } else {
+      // ≤60 min: require lineup data to exist
+      if (!lineup.lineupAvailable) {
+        return { accept: false, reason: 'player_question_no_lineup' };
+      }
+      // Lineup present → player must be in confirmed set
+      if (pid && !lineup.confirmedPlayerIds.has(pid)) {
+        return { accept: false, reason: 'player_not_in_lineup' };
+      }
+    }
+
+    // Player uniqueness across DB + current batch
+    if (pid && matchState.playerIds.has(pid)) {
+      return { accept: false, reason: 'duplicate_player_post' };
+    }
+
+    // Player cap: ≤5 target → max 1 player question; >5 → max 2
+    const playerCap = batchTarget <= 5 ? 1 : 2;
+    if (matchState.playerCount >= playerCap) {
+      return { accept: false, reason: 'player_cap_exceeded' };
+    }
+  }
+
+  // ── 2. Market-type uniqueness ─────────────────────────────────────
+  const marketType = deriveMarketType(predicate, ctx.homeTeamId, ctx.awayTeamId);
+  if (marketType && matchState.markets.has(marketType)) {
+    return { accept: false, reason: 'duplicate_market' };
+  }
+
+  // ── 3. Heavy-favourite winner hard reject ─────────────────────────
+  if (
+    marketType &&
+    (marketType === 'home_win' || marketType === 'away_win') &&
+    ctx.standingGap !== null &&
+    ctx.standingGap >= 5
+  ) {
+    return { accept: false, reason: 'heavy_favourite_winner' };
+  }
+
+  // ── 4. Predicate fingerprint dedup ────────────────────────────────
+  const fp = predicateFingerprint(predicate);
+  if (fp && matchState.fingerprints.has(fp)) {
+    return { accept: false, reason: 'duplicate_predicate' };
+  }
+
+  // ── 5. Text similarity dedup (vs DB + current batch) ─────────────
+  for (const existing of matchState.texts) {
+    if (textSimilarity(raw.question_text, existing) >= 0.65) {
+      return { accept: false, reason: 'duplicate_question_text' };
+    }
+  }
+
+  // ── 6. Team balance: single team must not exceed 70% ─────────────
+  // Only enforced once we have ≥3 questions (small batches are exempt).
+  if (matchState.texts.length >= 2) {
+    let homeCount = 0;
+    let awayCount = 0;
+    const homeL = ctx.homeTeamName.toLowerCase();
+    const awayL = ctx.awayTeamName.toLowerCase();
+    for (const t of matchState.texts) {
+      const tl = t.toLowerCase();
+      if (homeL.length > 2 && tl.includes(homeL)) homeCount++;
+      if (awayL.length > 2 && tl.includes(awayL)) awayCount++;
+    }
+    // Count this candidate too
+    const nl = (raw.question_text ?? '').toLowerCase();
+    if (homeL.length > 2 && nl.includes(homeL)) homeCount++;
+    if (awayL.length > 2 && nl.includes(awayL)) awayCount++;
+
+    const total = matchState.texts.length + 1;
+    if (homeCount / total > 0.70 || awayCount / total > 0.70) {
+      return { accept: false, reason: 'team_imbalance' };
+    }
+  }
+
+  // ── Accept: mutate state ──────────────────────────────────────────
+  if (marketType) matchState.markets.add(marketType);
+  if (fp)         matchState.fingerprints.add(fp);
+  matchState.texts.push(raw.question_text ?? '');
+  if (isPlayer) {
+    if (pid) matchState.playerIds.add(pid);
+    matchState.playerCount++;
+  }
+
+  return { accept: true };
+}
+
+// ── Reason normalization for post-filter ──────────────────────────────
+// Maps post-filter reject codes → canonical analytics reason names
+// (same canonical vocabulary as the pre-filter REASON_MAP above).
+
+const POST_REASON_MAP: Record<string, string> = {
+  player_question_too_early:  'too_many_player_specific',
+  player_question_no_lineup:  'too_many_player_specific',
+  player_not_in_lineup:       'too_many_player_specific',
+  duplicate_player_post:      'duplicate_question',
+  player_cap_exceeded:        'too_many_player_specific',
+  duplicate_market:           'duplicate_question',
+  heavy_favourite_winner:     'too_obvious',
+  duplicate_predicate:        'duplicate_question',
+  duplicate_question_text:    'duplicate_question',
+  team_imbalance:             'poor_team_balance',
+};
+
+export function normalizePostFilterReason(reason: string): string {
+  return POST_REASON_MAP[reason] ?? 'low_quality_score';
+}
+
+// ── Private helpers (post-filter) ─────────────────────────────────────
+
+function isPlayerPredicate(predicate: unknown): boolean {
+  const type = (predicate as any)?.resolution_type;
+  return type === 'player_stat' || type === 'player_status' || type === 'match_lineup';
+}
+
+function extractPlayerIdFromPredicate(predicate: unknown): string | null {
+  const p = predicate as any;
+  if (!p) return null;
+  return p.player_id ? String(p.player_id) : null;
+}

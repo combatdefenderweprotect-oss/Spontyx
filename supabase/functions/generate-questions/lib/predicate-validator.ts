@@ -317,9 +317,17 @@ function checkTemporal(raw: RawGeneratedQuestion): ValidationResult {
     return { valid: false, stage, error: `opens_at is too far in the future: ${raw.opens_at}` };
   }
 
-  // Deadline must be at least 30 minutes from now
-  if (deadline < now + 30 * 60 * 1000) {
-    return { valid: false, stage, error: `deadline is too soon or in the past: ${raw.deadline}` };
+  // Live questions have deadlines minutes from now (answer_closes_at = window_start real time).
+  // Prematch questions have deadlines at least 30 minutes away (kickoff is the hard close).
+  const isLive = raw.match_minute_at_generation != null;
+  if (isLive) {
+    if (deadline < now) {
+      return { valid: false, stage, error: `deadline is in the past: ${raw.deadline}` };
+    }
+  } else {
+    if (deadline < now + 30 * 60 * 1000) {
+      return { valid: false, stage, error: `deadline is too soon or in the past: ${raw.deadline}` };
+    }
   }
 
   // Ordering: opens_at <= deadline < resolves_after
@@ -330,9 +338,16 @@ function checkTemporal(raw: RawGeneratedQuestion): ValidationResult {
     return { valid: false, stage, error: 'deadline must be before resolves_after' };
   }
 
-  // resolves_after must be at least 90 minutes after deadline
-  if (resolvesAfter < deadline + 90 * 60 * 1000) {
-    return { valid: false, stage, error: 'resolves_after is too close to deadline (need at least 90 min gap)' };
+  // Live questions resolve minutes after the answer window closes (window_end + settle buffer).
+  // Prematch questions resolve after the full match ends — always 90+ minutes after deadline.
+  if (isLive) {
+    if (resolvesAfter < deadline + 60 * 1000) {
+      return { valid: false, stage, error: 'resolves_after is too close to deadline for live question (need at least 60s gap)' };
+    }
+  } else {
+    if (resolvesAfter < deadline + 90 * 60 * 1000) {
+      return { valid: false, stage, error: 'resolves_after is too close to deadline (need at least 90 min gap)' };
+    }
   }
 
   return { valid: true };
@@ -460,6 +475,9 @@ function checkLiveTiming(pred: ResolutionPredicate, raw: RawGeneratedQuestion): 
     /\bin the coming\b/i,
     /\bover the next\b/i,
     /\bwithin the next\b/i,
+    /\bsoon\b/i,                    // "a goal soon" — relative, unfair across feed delays
+    /\bnext \d+ minutes?\b/i,       // "next 5 minutes" — bare form not caught by "in the next"
+    /\bwithin \d+ minutes?\b/i,     // "within 5 minutes" — not caught by "within the next"
   ];
   const questionText = raw.question_text ?? '';
   for (const pattern of RELATIVE_PATTERNS) {
@@ -472,8 +490,29 @@ function checkLiveTiming(pred: ResolutionPredicate, raw: RawGeneratedQuestion): 
     }
   }
 
-  // Remaining checks only apply to match_stat_window predicates
+  // ── time_phrasing_requires_window_predicate ────────────────────────────
+  // If the question text references an anchored match-minute range, the predicate
+  // MUST be match_stat_window. match_stat evaluates full-match totals — it cannot
+  // correctly resolve a question scoped to a specific time window (e.g. "between
+  // the 60th and 65th minute" resolved against total_goals is always wrong).
+  // player_stat predicates are exempt: no windowed player-stat shape exists in the
+  // predicate schema, so player questions with time phrasing cannot use match_stat_window.
+  const ANCHORED_WINDOW_PATTERNS = [
+    /between the \d+/i,
+    /before the \d+(?:st|nd|rd|th)? minute/i,
+    /before (?:full.?time|half.?time|the final whistle)/i,
+  ];
   const p = pred as any;
+  const hasAnchoredWindow = ANCHORED_WINDOW_PATTERNS.some((pat) => pat.test(questionText));
+  if (hasAnchoredWindow && p.resolution_type === 'match_stat') {
+    return {
+      valid: false,
+      stage,
+      error: `time_phrasing_requires_window_predicate: question references an anchored time window but predicate is "match_stat" (full-match totals) — use match_stat_window instead. Question: "${questionText.slice(0, 80)}"`,
+    };
+  }
+
+  // Remaining checks only apply to match_stat_window predicates
   if (p.resolution_type !== 'match_stat_window') return { valid: true };
 
   // ── invalid_live_window ────────────────────────────────────────────────

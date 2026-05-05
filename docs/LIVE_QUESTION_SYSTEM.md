@@ -1,7 +1,7 @@
 # LIVE Question System
 
 **Status: UI ✅ | Resolver ✅ | Generation ✅ Complete**  
-Last updated: 2026-04-28 — Full LIVE generation pipeline deployed: `buildLiveContext()` reads `live_match_stats`, detects in-progress fixtures via `fetchInProgressFixturesFromCache()` (queries `live_match_stats` not `api_football_fixtures`), generates with all safety rules enforced (HT skip, ≥89 hard reject, 2-question active cap, 3-min rate limit for time-driven, event-driven bypass). Migration 021 (live generation_mode values) + migration 022 (drop skip_reason constraint) + migration 023 (live analytics views) all deployed. `yellow_cards` field support added to predicate-validator and resolver. `MATCH_REQUIRED_TYPES` guard prevents match_stat/btts/player_stat/match_lineup predicates inserting with null match_id. Scoring formula: all 6 multipliers now fully active (MVP bypasses removed).
+Last updated: 2026-05-05 — Migration 054 deployed: `live_questions_per_match` column (INT 1–10, default 6) added to `leagues`. Generation loop replaced with full budget + pre-HT quota + slot enforcement (`computePlannedSlots()`). Live QPM slider added to create-league UI. `checkTemporal` live-aware timing fix deployed (live branch no longer applies prematch 30-min/90-min rules). `event_driven` debounce deployed (fires only when `lastEventMinute > lastGenerationMinute`). Fixed-window enforcement deployed (extended `RELATIVE_PATTERNS` + `time_phrasing_requires_window_predicate` check). All migrations 021–054 applied; `generate-questions` redeployed.
 
 This document is the authoritative reference for the `CORE_MATCH_LIVE` question lane. Read it before building, modifying, or debugging any part of the live question system.
 
@@ -85,14 +85,20 @@ pg_cron (every 6h) → generate-questions Edge Function
       ③ buildLiveContext() — reads live_match_stats; null return → skip with 'no_live_stats_available'
       ④ ≥89 hard reject — match_minute ≥ 89 → skip with 'match_minute_too_late'
       ⑤ active cap check — activeQuestionCount ≥ 2 → skip with 'active_question_cap_reached'
-      ⑥ rate limit check (time-driven only) — CORE_MATCH_LIVE generated in last 3 min → skip
-         (event-driven bypasses this check)
-      ⑦ buildContextPacket() — live fields populated from LiveMatchContext
+      ⑥ budget check (ALL triggers) — generatedMinutes.length >= liveBudget → skip with 'live_budget_reached'
+         liveBudget = live_questions_per_match ?? live_question_budget ?? 6
+      ⑦ pre-HT quota (ALL triggers) — matchMinute < 45 && preHtGenerated >= floor(budget/2) → skip with 'pre_ht_quota_full'
+      ⑧ slot eligibility (time-driven only) — no planned slot within ±2 min of current minute → skip with 'no_slot_due'
+         planned slots from computePlannedSlots(budget): floor(N/2) pre-HT in [10–40], ceil(N/2) post-HT in [55–85]
+         slot coverage window ±5 min; event questions naturally suppress nearby slots
+      ⑨ rate limit check (time-driven only) — CORE_MATCH_LIVE generated in last 3 min → skip
+         (event-driven bypasses checks ⑧ and ⑨)
+      ⑩ buildContextPacket() — live fields populated from LiveMatchContext
       ⑧ generateQuestions() — Call 1 (gpt-4o-mini), generates exactly 1 question
       ⑨ convertToPredicate() — Call 2
-      ⑩ validateQuestion() — 5-stage validator (includes live_timing_validation)
-      ⑪ timing: answer_closes_at = minuteToTimestamp(kickoff, window_start_minute) for match_stat_window
-      ⑫ insert into questions with question_type = 'CORE_MATCH_LIVE', pool bypassed
+      ⑪ validateQuestion() — 5-stage validator (includes live_timing_validation)
+      ⑫ timing: answer_closes_at = minuteToTimestamp(kickoff, window_start_minute) for match_stat_window
+      ⑬ insert into questions with question_type = 'CORE_MATCH_LIVE', pool bypassed
 ```
 
 Note: live questions do NOT use the pool system. Live state is unique to each moment — there is nothing to reuse.
@@ -454,11 +460,35 @@ Enforced via:
 
 The `CLAUDE.md` system rules state max 3 active questions. Both the safety check (≥ 2 triggers skip) and the context packet (max = 3) are consistent with this cap.
 
-### Rate limiting
+### Budget and slot enforcement
 
-- **Time-driven**: max 1 new CORE_MATCH_LIVE question per 3 minutes per league. Check: `questions WHERE league_id = ? AND question_type = 'CORE_MATCH_LIVE' AND created_at > now() - 3 minutes`.
-- **Event-driven**: bypasses rate limit. Event detection fires immediately on goal or red card; question publication is delayed by 45–60 seconds to absorb broadcast and API latency differences (see Section 4 timing model). The EVENT WINDOW SAFETY RULE still applies regardless of rate limit bypass.
-- If rate limit is hit and no event: skip generation. Show holding card.
+Generation for a given match is governed by four ordered checks. All use a single DB query for `match_minute_at_generation` values per (league, match) at the start of the cycle.
+
+**1. Budget check (all triggers)**  
+`liveBudget = live_questions_per_match ?? live_question_budget ?? 6` (read order; soccer-specific column, migration 054).  
+If `generatedMinutes.length >= liveBudget` → skip `live_budget_reached`.  
+User sets budget via the Live QPM slider (1–10, default 6) in create-league Step 3.
+
+**2. Pre-HT quota (all triggers)**  
+`preHtMax = floor(liveBudget / 2)`.  
+If `matchMinute < 45 && preHtGenerated >= preHtMax` → skip `pre_ht_quota_full`.  
+Prevents the first half from consuming the full budget, leaving the second half empty.
+
+**3. Slot eligibility (time-driven only)**  
+`computePlannedSlots(budget)` returns soccer-specific planned minute targets:  
+- Pre-HT: `floor(N/2)` slots distributed evenly across minutes 10–40  
+- Post-HT: `ceil(N/2)` slots distributed evenly across minutes 55–85  
+
+A slot is "covered" if any generated question's minute is within ±5 min. A slot is "due" if it's uncovered and within ±2 min of the current match minute. If no due slot exists → skip `no_slot_due`.  
+The ±5 min coverage window naturally suppresses nearby slots — an event question at minute 38 covers the slot at 40 without extra logic.
+
+**4. Rate limit (time-driven only, safety net)**  
+Max 1 new CORE_MATCH_LIVE question per 3 minutes per league. Preserved as a final backstop.  
+Check: `questions WHERE league_id = ? AND question_type = 'CORE_MATCH_LIVE' AND created_at > now() - 3 minutes`.
+
+**Event-driven** bypasses checks 3 and 4 (slot eligibility + rate limit). Budget and pre-HT quota apply to all triggers.
+
+If no valid question can be generated in a cycle: skip. Show holding card.
 
 ### NO OVERLAPPING WINDOWS — HARD RULE
 
@@ -524,9 +554,26 @@ Runs for all live questions (skips prematch). Catches timing violations that the
 
 | Rejection code | Condition | Fix |
 |---|---|---|
-| `relative_time_window_rejected` | `question_text` contains banned phrases ("next X minutes", "coming minutes", "shortly", etc.) | Use anchored phrasing: "between the Xth and Yth minute" / "before the Yth minute" / "before full-time" |
+| `relative_time_window_rejected` | `question_text` contains banned relative phrases: "next X minutes", "within X minutes", "coming minutes", "shortly", "soon", "over the next X minutes" | Use anchored phrasing: "between the Xth and Yth minute" / "before the Yth minute" / "before full-time" |
+| `time_phrasing_requires_window_predicate` | Question text references an anchored time window (e.g. "between the 60th", "before the 75th minute", "before full-time") but predicate is `match_stat` (full-match totals) | Use `match_stat_window` predicate for questions that reference a specific minute range |
 | `invalid_live_window` | `window_start_minute ≤ match_minute_at_generation` | Window must start strictly after the current match minute |
 | `answer_window_overlap` | `window_start_minute − match_minute_at_generation < 3` (or < 1 when match_minute ≥ 87) | Need at least 3 minutes between current play and window start to guarantee a valid 90-second answer window with delivery lag accounted for |
+
+#### Skip reason codes (generation loop — logged to `liveResult.skipReason`)
+
+These are set in `index.ts` before the AI call, not in the predicate validator.
+
+| Skip code | Condition |
+|---|---|
+| `halftime_pause` | Match status is 'HT' |
+| `no_live_stats_available` | `buildLiveContext()` returned null |
+| `match_minute_too_late` | `matchMinute ≥ 89` |
+| `active_question_cap_reached` | `activeQuestionCount ≥ 2` |
+| `live_budget_reached` | `generatedMinutes.length >= liveBudget` |
+| `pre_ht_quota_full` | First half and pre-HT generated count ≥ `floor(budget/2)` |
+| `no_slot_due` | Time-driven; no planned slot within ±2 min of current match minute |
+| `rate_limit_live` | Time-driven; CORE_MATCH_LIVE generated within last 3 min |
+| `sport_not_supported_mvp` | League sport is not football |
 
 These use `stage: 'live_timing_validation'` in the rejection log entry. No `reason`/`score` structured fields — just the `error` string.
 
@@ -607,7 +654,11 @@ Note: `analytics_live_quality_summary` and `analytics_live_score_distribution` f
 - [ ] Generation skips when match is finished (`status = 'FT'`)
 - [ ] Generation skips when `match_minute ≥ 89` — no question is generated in the final minute
 - [ ] At `match_minute ≥ 87`: only MATCH PHASE questions attempted; if 90s window cannot fit → skip entirely, no retries, no fallback
-- [ ] `live_question_budget` is respected: generation stops when budget is reached for the match
+- [ ] `live_questions_per_match` is respected: generation stops when budget is reached for the match (skip reason `live_budget_reached`)
+- [ ] Pre-HT quota enforced: first half generates at most `floor(budget/2)` questions (skip reason `pre_ht_quota_full`)
+- [ ] Time-driven slot pacing: questions land near planned slots; two consecutive time-driven questions are not within 5 minutes of each other
+- [ ] Event-driven bypasses slot check and rate limit; does NOT bypass budget or pre-HT quota
+- [ ] Live QPM slider (1–10) in create-league Step 3 saves correctly to `live_questions_per_match` column
 
 ### 2. Timing and anchored windows
 

@@ -16,7 +16,10 @@ import {
 } from './lib/pool-manager.ts';
 import {
   filterPrematchBatch, computeStandingGap,
+  filterPrematchPostPredicate, deriveMarketType, buildMatchMarketState,
+  normalizePostFilterReason,
   type PrematchBatchContext, type PriorQuestionInfo,
+  type MatchMarketState, type LineupContext,
 } from './lib/prematch-quality-filter.ts';
 
 const MAX_RETRIES = 3;
@@ -174,7 +177,7 @@ Deno.serve(async (req: Request) => {
         creation_path, api_sports_league_ids,
         ai_weekly_quota, ai_total_quota,
         league_start_date, league_end_date, owner_id,
-        prematch_question_budget, prematch_questions_per_match, live_question_budget,
+        prematch_question_budget, prematch_questions_per_match, live_question_budget, live_questions_per_match,
         prematch_generation_mode, prematch_publish_offset_hours,
         created_at
       `)
@@ -450,6 +453,27 @@ Deno.serve(async (req: Request) => {
         }
       }
 
+      // ── Pre-fetch existing questions for market/predicate dedup ──────
+      // Fetches full question data (not just count) for matches that still
+      // need questions. Used to initialise MatchMarketState for the
+      // post-predicate strict filter and for the market-aware fallback.
+      // Only fetches matches with shortfall > 0 to minimise DB calls.
+      const existingQsByMatch = new Map<string, MatchMarketState>();
+      for (const m of filteredSportsCtxBySchedule.upcomingMatches) {
+        if (!m.id || (matchShortfalls.get(String(m.id)) ?? 0) <= 0) continue;
+        const { data: existingQs } = await sb
+          .from('questions')
+          .select('question_text, resolution_predicate, player_ids')
+          .eq('league_id', league.id)
+          .eq('match_id', String(m.id))
+          .eq('question_type', 'CORE_MATCH_PREMATCH')
+          .neq('resolution_status', 'voided');
+        existingQsByMatch.set(
+          String(m.id),
+          buildMatchMarketState(existingQs ?? [], m.homeTeam.id, m.awayTeam.id),
+        );
+      }
+
       // Total AI-generated questions needed this run (across all eligible matches).
       // Capped by weekly/total quota — fallback templates cover any remaining shortfall
       // without consuming AI quota.
@@ -527,8 +551,10 @@ Deno.serve(async (req: Request) => {
           };
 
           // Build prematch quality batch context from the first match.
-          // Used by the post-generation quality filter (filterPrematchBatch).
-          // null = no match available, filter will pass all questions through.
+          // Used ONLY by the pre-predicate batch filter (filterPrematchBatch),
+          // which operates on coarse text/category signals where first-match
+          // approximation is acceptable. The strict post-predicate filter
+          // uses a per-match ctx built inside the per-question loop below.
           const firstMatchForQuality = filteredCtx.upcomingMatches[0];
           const prematchBatchCtx: PrematchBatchContext | null = firstMatchForQuality ? {
             homeTeamId:    firstMatchForQuality.homeTeam.id,
@@ -539,6 +565,43 @@ Deno.serve(async (req: Request) => {
             scopedTeamId:  league.scoped_team_id ?? null,
             scopedTeamName: league.scoped_team_name ?? null,
           } : null;
+
+          // ── Per-match context builders (used in the per-question loop) ─
+          // standingGap, market-type team IDs, and lineup state must reflect
+          // the question's own match — not the first match in the batch.
+          const buildPerMatchCtx = (matchId: string): PrematchBatchContext | null => {
+            const m = filteredCtx.upcomingMatches.find((x) => x.id === matchId);
+            if (!m) return null;
+            return {
+              homeTeamId:     m.homeTeam.id,
+              homeTeamName:   m.homeTeam.name,
+              awayTeamId:     m.awayTeam.id,
+              awayTeamName:   m.awayTeam.name,
+              standingGap:    computeStandingGap(sportsCtx.standings, m),
+              scopedTeamId:   league.scoped_team_id ?? null,
+              scopedTeamName: league.scoped_team_name ?? null,
+            };
+          };
+          const buildPerMatchLineupCtx = (matchId: string): LineupContext => {
+            const m = filteredCtx.upcomingMatches.find((x) => x.id === matchId);
+            const kMs = m ? new Date(m.kickoff).getTime() : Infinity;
+            const minutesToKickoff = kMs === Infinity
+              ? Infinity
+              : Math.max(0, (kMs - Date.now()) / 60_000);
+            const matchAvailability = (filteredCtx.playerAvailability ?? [])
+              .filter((a) => a.fixtureId === matchId);
+            const confirmedPlayerIds = new Set<string>(
+              matchAvailability
+                .filter((a) => a.source === 'lineup' &&
+                               (a.status === 'starting' || a.status === 'substitute'))
+                .map((a) => a.playerId),
+            );
+            return {
+              minutesToKickoff,
+              lineupAvailable: matchAvailability.some((a) => a.source === 'lineup'),
+              confirmedPlayerIds,
+            };
+          };
 
           // ── Pool generation target (Fix 2 — corrected patch) ──────────
           // The pool must be large enough to satisfy ANY league that shares the
@@ -698,6 +761,39 @@ Deno.serve(async (req: Request) => {
                 ? computeResolvesAfter(primaryMatch.kickoff, league.sport)
                 : computeResolvesAfter(raw.deadline, league.sport);
 
+              // ── Post-predicate strict filter ───────────────────────────
+              // Market dedup, predicate fingerprint dedup, text dedup,
+              // heavy-favourite hard reject, lineup-aware player gating,
+              // and team balance — all operating on the resolved predicate.
+              // This runs before validateQuestion so schema errors in
+              // already-filtered questions are never wasted on token cost.
+              if (raw.generation_trigger === 'prematch_only' && raw.match_id) {
+                const matchState = existingQsByMatch.get(raw.match_id);
+                const perMatchCtx = buildPerMatchCtx(raw.match_id);
+                if (matchState && perMatchCtx) {
+                  const perMatchLineupCtx = buildPerMatchLineupCtx(raw.match_id);
+                  const postResult = filterPrematchPostPredicate(
+                    raw, predicate, matchState, perMatchCtx, perMatchLineupCtx, perMatchTarget,
+                  );
+                  if (!postResult.accept) {
+                    const reason = postResult.reason ?? 'post_predicate_reject';
+                    console.log(
+                      `[prematch_post] rejected "${(raw.question_text ?? '').slice(0, 70)}" — ${reason}`,
+                    );
+                    result.rejectionLog.push({
+                      attempt,
+                      stage:         'prematch_quality_post',
+                      question_text: raw.question_text,
+                      error:         reason,
+                      reason:        normalizePostFilterReason(reason),
+                      score:         0,
+                    });
+                    result.questionsRejected++;
+                    continue;
+                  }
+                }
+              }
+
               const rejection = validateQuestion(raw, predicate, filteredCtx, league, attempt);
               if (rejection) {
                 result.rejectionLog.push(rejection);
@@ -796,15 +892,18 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      // ── Phase D: Fallback template fill ──────────────────────────────
-      // After normal generation + retry (Phases A–C), if any match is still
-      // short of its per-match target, fill the gap with hardcoded templates.
+      // ── Phase D: Market-aware fallback template fill ─────────────────
       //
-      // Fallback questions:
-      //   source = 'fallback_template'  → NOT counted against AI quota
-      //   Predicates are deterministic — resolver handles all types used here.
-      //   Text dedup guard: a template is skipped if an identical text already
-      //   exists for this (league, match) — covers idempotent re-runs.
+      // After Phases A–C, any match still short of its per-match target
+      // is filled with deterministic hardcoded templates.
+      //
+      // Rules:
+      //   • source = 'fallback_template' — NOT counted against AI quota
+      //   • Respects market_type uniqueness — skips any template whose
+      //     market is already present in existing questions for the match
+      //   • Skips home_win / away_win when standingGap >= 5 (heavy favourite)
+      //   • Stops as soon as target is reached OR no valid templates remain
+      //   • Logs target_unmet if target cannot be reached without violating rules
       //
       // Only fires for CORE_MATCH_PREMATCH. Live / REAL_WORLD unaffected.
       let fallbackAttached = 0;
@@ -816,49 +915,57 @@ Deno.serve(async (req: Request) => {
         const homeTeam = m.homeTeam?.name ?? 'Home';
         const awayTeam = m.awayTeam?.name ?? 'Away';
         const homeId   = String(m.homeTeam?.id ?? '');
+        const awayId   = String(m.awayTeam?.id ?? '');
         const kickoff  = m.kickoff ?? new Date().toISOString();
+        const matchGap = computeStandingGap(sportsCtx.standings, m);
 
-        const TEMPLATES = [
-          {
-            text:      `Will ${homeTeam} win the match?`,
-            predicate: { resolution_type: 'match_outcome', match_id: String(m.id), binary_condition: { field: 'winner_team_id', operator: 'eq', value: homeId } },
-          },
-          {
-            text:      'Will there be over 2.5 goals?',
-            predicate: { resolution_type: 'match_stat', match_id: String(m.id), binary_condition: { field: 'total_goals', operator: 'gt', value: 2 } },
-          },
-          {
-            text:      'Will both teams score?',
-            predicate: { resolution_type: 'btts', match_id: String(m.id) },
-          },
-          {
-            text:      `Will ${homeTeam} keep a clean sheet?`,
-            predicate: { resolution_type: 'match_stat', match_id: String(m.id), binary_condition: { field: 'away_score', operator: 'eq', value: 0 } },
-          },
-          {
-            text:      `Will ${awayTeam} win the match?`,
-            predicate: { resolution_type: 'match_outcome', match_id: String(m.id), binary_condition: { field: 'winner_team_id', operator: 'eq', value: String(m.awayTeam?.id ?? '') } },
-          },
+        // 11 distinct markets ordered by diversity value.
+        // Markets are paired with their predicate for resolver compatibility.
+        const ALL_FALLBACK_TEMPLATES = [
+          { market: 'btts',           text: 'Will both teams score?',                          predicate: { resolution_type: 'btts',         match_id: String(m.id) } },
+          { market: 'over_goals:2.5', text: 'Will there be over 2.5 goals in this match?',     predicate: { resolution_type: 'match_stat',    match_id: String(m.id), binary_condition: { field: 'total_goals', operator: 'gt',  value: 2 } } },
+          { market: 'over_goals:1.5', text: 'Will there be at least 2 goals scored?',          predicate: { resolution_type: 'match_stat',    match_id: String(m.id), binary_condition: { field: 'total_goals', operator: 'gt',  value: 1 } } },
+          { market: 'over_goals:3.5', text: 'Will there be more than 3 goals in the match?',   predicate: { resolution_type: 'match_stat',    match_id: String(m.id), binary_condition: { field: 'total_goals', operator: 'gt',  value: 3 } } },
+          { market: 'clean_sheet_home', text: `Will ${homeTeam} keep a clean sheet?`,          predicate: { resolution_type: 'match_stat',    match_id: String(m.id), binary_condition: { field: 'away_score',  operator: 'eq',  value: 0 } } },
+          { market: 'clean_sheet_away', text: `Will ${awayTeam} keep a clean sheet?`,          predicate: { resolution_type: 'match_stat',    match_id: String(m.id), binary_condition: { field: 'home_score',  operator: 'eq',  value: 0 } } },
+          { market: 'cards_total',    text: 'Will there be more than 3 yellow cards?',         predicate: { resolution_type: 'match_stat',    match_id: String(m.id), binary_condition: { field: 'total_cards', operator: 'gt',  value: 3 } } },
+          { market: 'corners_total',  text: 'Will there be more than 8 corners in total?',     predicate: { resolution_type: 'match_stat',    match_id: String(m.id), binary_condition: { field: 'total_corners', operator: 'gt', value: 8 } } },
+          { market: 'home_win',       text: `Will ${homeTeam} win the match?`,                 predicate: { resolution_type: 'match_outcome', match_id: String(m.id), binary_condition: { field: 'winner_team_id', operator: 'eq', value: homeId } } },
+          { market: 'away_win',       text: `Will ${awayTeam} win the match?`,                 predicate: { resolution_type: 'match_outcome', match_id: String(m.id), binary_condition: { field: 'winner_team_id', operator: 'eq', value: awayId } } },
+          { market: 'draw',           text: 'Will the match end in a draw?',                   predicate: { resolution_type: 'match_outcome', match_id: String(m.id), binary_condition: { field: 'draw', operator: 'eq', value: true } } },
         ];
 
-        const now = new Date().toISOString();
-        const computedVisibleFrom = computeVisibleFrom(league, kickoff);
-
-        // Fetch existing fallback texts to skip duplicates on re-run
-        const { data: existingFallbacks } = await sb
+        // Fresh fetch of all existing questions for this match (Phase A + B included).
+        // Rebuilds market state so we don't duplicate markets introduced by AI generation.
+        const { data: allExistingQs } = await sb
           .from('questions')
-          .select('question_text')
+          .select('question_text, resolution_predicate, player_ids')
           .eq('league_id', league.id)
           .eq('match_id', String(m.id))
-          .eq('source', 'fallback_template');
-        const existingFallbackTexts = new Set(
-          (existingFallbacks ?? []).map((r: { question_text: string }) => r.question_text.toLowerCase().trim())
-        );
+          .eq('question_type', 'CORE_MATCH_PREMATCH')
+          .neq('resolution_status', 'voided');
+        const fallbackState = buildMatchMarketState(allExistingQs ?? [], homeId, awayId);
+
+        const computedVisibleFrom = computeVisibleFrom(league, kickoff);
 
         const toInsert = [];
-        for (const tpl of TEMPLATES) {
+        for (const tpl of ALL_FALLBACK_TEMPLATES) {
           if (toInsert.length >= remaining) break;
-          if (existingFallbackTexts.has(tpl.text.toLowerCase().trim())) continue;
+
+          // Skip if market already used (by AI questions or prior fallback runs)
+          if (fallbackState.markets.has(tpl.market)) continue;
+
+          // Skip winner markets in heavy-favourite matches
+          if (
+            matchGap !== null && matchGap >= 5 &&
+            (tpl.market === 'home_win' || tpl.market === 'away_win')
+          ) continue;
+
+          // Skip exact text duplicates (idempotent re-run safety)
+          if (fallbackState.texts.some(
+            (t) => t.toLowerCase().trim() === tpl.text.toLowerCase().trim(),
+          )) continue;
+
           toInsert.push({
             league_id:             league.id,
             source:                'fallback_template',
@@ -868,7 +975,7 @@ Deno.serve(async (req: Request) => {
             options:               [{ id: 'yes', label: 'Yes' }, { id: 'no', label: 'No' }],
             sport:                 league.sport,
             match_id:              String(m.id),
-            team_ids:              [homeId, String(m.awayTeam?.id ?? '')].filter(Boolean),
+            team_ids:              [homeId, awayId].filter(Boolean),
             question_type:         'CORE_MATCH_PREMATCH',
             source_badge:          'PRE-MATCH',
             resolution_predicate:  tpl.predicate,
@@ -882,6 +989,8 @@ Deno.serve(async (req: Request) => {
             base_value:            10,
             difficulty_multiplier: 1.0,
           });
+          // Mark market used so subsequent templates in this loop don't collide
+          fallbackState.markets.add(tpl.market);
         }
 
         if (toInsert.length > 0) {
@@ -890,8 +999,19 @@ Deno.serve(async (req: Request) => {
             console.warn(`[fallback] insert failed for league ${league.id} match ${m.id}:`, fbErr.message);
           } else {
             fallbackAttached += toInsert.length;
+            matchShortfalls.set(String(m.id), Math.max(0, remaining - toInsert.length));
             console.log(`[fallback] inserted ${toInsert.length} template question(s) for league ${league.id} match ${m.id}`);
           }
+        }
+
+        // Log target_unmet if we could not reach the target without violating rules.
+        // This is acceptable — quality takes precedence over count.
+        const finalShortfall = matchShortfalls.get(String(m.id)) ?? 0;
+        if (finalShortfall > 0) {
+          const totalInserted = perMatchTarget - finalShortfall;
+          console.warn(
+            `[prematch] target_unmet league=${league.id} match=${m.id} inserted=${totalInserted} target=${perMatchTarget}`,
+          );
         }
       }
 
@@ -904,6 +1024,36 @@ Deno.serve(async (req: Request) => {
     }
 
     // ── Live generation pass ──────────────────────────────────────────
+    // ── Soccer-only live question slot planner ──────────────────────────
+    // Distributes N planned match-minute positions across a soccer match arc.
+    // floor(N/2) slots pre-HT (minutes 10–40), ceil(N/2) post-HT (minutes 55–85).
+    //
+    // SOCCER-SPECIFIC: assumes a 90-min match with two halves and a halftime break.
+    // Do NOT reuse for other sports — they require separate slot logic.
+    //
+    // Examples:
+    //   budget 1  → [70]
+    //   budget 6  → [10, 25, 40, 55, 70, 85]
+    //   budget 10 → [10, 18, 25, 33, 40, 55, 63, 70, 78, 85]
+    function computePlannedSlots(budget: number): number[] {
+      const n = Math.max(1, Math.min(10, budget));
+      const preCount  = Math.floor(n / 2);
+      const postCount = Math.ceil(n / 2);
+
+      function distributeEvenly(count: number, from: number, to: number): number[] {
+        if (count === 0) return [];
+        if (count === 1) return [Math.round((from + to) / 2)];
+        return Array.from({ length: count }, (_, i) =>
+          Math.round(from + i * (to - from) / (count - 1))
+        );
+      }
+
+      return [
+        ...distributeEvenly(preCount,  10, 40),
+        ...distributeEvenly(postCount, 55, 85),
+      ];
+    }
+
     // Detect in_progress football matches and generate exactly 1 CORE_MATCH_LIVE
     // question per eligible league per match. Runs after the prematch loop.
     //
@@ -1006,8 +1156,71 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
+        // ── Budget + slot enforcement (soccer live pacing) ───────────────
+        // Fetch all CORE_MATCH_LIVE questions already generated for this
+        // league+match in one query — used for budget, pre-HT quota, and slot
+        // coverage checks below.
+        const { data: generatedRows } = await sb
+          .from('questions')
+          .select('match_minute_at_generation')
+          .eq('league_id', league.id)
+          .eq('match_id', matchId)
+          .eq('question_type', 'CORE_MATCH_LIVE');
+
+        const generatedMinutes: number[] = (generatedRows ?? [])
+          .map((r: any) => r.match_minute_at_generation as number | null)
+          .filter((m): m is number => m != null);
+
+        // Budget: live_questions_per_match (user-chosen) → legacy live_question_budget → 6
+        const liveBudget = league.live_questions_per_match ?? league.live_question_budget ?? 6;
+
+        if (generatedMinutes.length >= liveBudget) {
+          liveResult.skipped    = true;
+          liveResult.skipReason = 'live_budget_reached';
+          runStats.leaguesSkipped++;
+          await writeLeagueResult(sb, runId, liveResult);
+          continue;
+        }
+
+        // First-half quota: protect second-half pacing by capping pre-HT questions.
+        // Events in the first half cannot consume more than floor(budget/2) slots.
+        const preHtMax       = Math.floor(liveBudget / 2);
+        const preHtGenerated = generatedMinutes.filter((m) => m < 45).length;
+        if (liveCtx.matchMinute < 45 && preHtGenerated >= preHtMax) {
+          liveResult.skipped    = true;
+          liveResult.skipReason = 'pre_ht_quota_full';
+          runStats.leaguesSkipped++;
+          await writeLeagueResult(sb, runId, liveResult);
+          continue;
+        }
+
+        // Slot eligibility (time-driven only): only generate near a planned slot.
+        // Event-driven questions bypass slot timing — they fire on new match events.
+        // A slot is "covered" if a question was generated within ±5 min of it.
+        // This also provides natural slot suppression after event questions:
+        // an event at minute 38 covers the slot at minute 40 (|38-40|=2 ≤ 5).
+        if (liveCtx.generationTrigger === 'time_driven') {
+          const slots       = computePlannedSlots(liveBudget);
+          const curMin      = liveCtx.matchMinute;
+          const isCovered   = (slot: number) =>
+            generatedMinutes.some((m) => Math.abs(m - slot) <= 5);
+          const dueSlots    = slots.filter(
+            (s) => !isCovered(s) && s >= curMin - 5,
+          );
+
+          const nextSlot = dueSlots[0] ?? null;
+          if (nextSlot === null || Math.abs(curMin - nextSlot) > 2) {
+            liveResult.skipped    = true;
+            liveResult.skipReason = 'no_slot_due';
+            runStats.leaguesSkipped++;
+            await writeLeagueResult(sb, runId, liveResult);
+            continue;
+          }
+        }
+
         // Rate limit: max 1 CORE_MATCH_LIVE per 3 min per league (time-driven only).
         // Event-driven questions bypass this limit.
+        // Kept as a final safety net against double-firing within a slot window.
         if (liveCtx.generationTrigger === 'time_driven') {
           const rateLimitCutoff = new Date(Date.now() - 3 * 60 * 1000).toISOString();
           const { data: recentLiveQ } = await sb

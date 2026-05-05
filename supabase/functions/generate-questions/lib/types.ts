@@ -178,6 +178,10 @@ export interface LeagueWithConfig {
   // ── User-chosen prematch count per fixture (migration 053) ────────────
   // Takes priority over prematch_question_budget when set. Range 1–10, default 5.
   prematch_questions_per_match: number | null;
+  // ── User-chosen live question count per soccer match (migration 054) ──
+  // Takes priority over live_question_budget when set. Range 1–10, default 6.
+  // Soccer-specific: slot positions assume 90-min match with halftime.
+  live_questions_per_match: number | null;
   // ── Pre-match scheduling (migration 018) ─────────────────────────────
   // Controls when prematch questions become visible relative to kickoff.
   // null/undefined means the league was created before migration 018 → treat as 'automatic'.
@@ -441,7 +445,7 @@ export interface RwQualityResult {
 
 export interface RejectionLogEntry {
   attempt: number;
-  stage: 'question_generation' | 'predicate_parse' | 'schema_validation' | 'entity_validation' | 'temporal_validation' | 'logic_validation' | 'availability_validation' | 'prematch_quality' | 'live_timing_validation' | 'real_world_generation' | 'rw_quality_score';
+  stage: 'question_generation' | 'predicate_parse' | 'schema_validation' | 'entity_validation' | 'temporal_validation' | 'logic_validation' | 'availability_validation' | 'prematch_quality' | 'prematch_quality_post' | 'live_timing_validation' | 'real_world_generation' | 'rw_quality_score';
   question_text?: string;
   error: string;
   // ── Structured fields for prematch_quality stage (used by analytics views) ──

@@ -1340,6 +1340,21 @@
       <div class="form-hint" style="margin-top:4px;">Questions lock at kickoff. More questions = richer pre-match experience.</div>
     </div>
 
+    <!-- ── Live Questions Per Match ── -->
+    <div class="form-group" style="margin-top:20px;">
+      <label class="form-label" style="display:flex;align-items:center;gap:6px;">
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        Live questions per match
+      </label>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
+        <input type="range" id="live-qpm-slider" min="1" max="10" value="6"
+               style="flex:1;accent-color:var(--teal);"
+               oninput="document.getElementById('live-qpm-display').textContent=this.value" />
+        <span id="live-qpm-display" style="font-size:0.9rem;font-weight:700;color:var(--teal);min-width:18px;text-align:right;">6</span>
+      </div>
+      <div class="form-hint" style="margin-top:4px;">Questions appear at planned moments during the match. More = higher intensity.</div>
+    </div>
+
     <!-- ── Pre-Match Question Timing ── -->
     <div class="form-group" id="prematch-timing-section" style="margin-top:20px;display:none;">
       <div style="font-size:0.8rem;font-weight:700;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
@@ -1528,6 +1543,7 @@
       <div class="review-row"><span class="review-label">Confidence Scoring</span><span class="review-value" id="review-confidence">Off</span></div>
       <div class="review-row"><span class="review-label">AI Questions</span><span class="review-value" id="review-ai-questions" style="color:var(--grey);">Off</span></div>
       <div class="review-row" id="review-qpm-row"><span class="review-label">Pre-match questions</span><span class="review-value" id="review-qpm" style="color:var(--lime);">5 per match</span></div>
+      <div class="review-row" id="review-live-qpm-row"><span class="review-label">Live questions</span><span class="review-value" id="review-live-qpm" style="color:var(--teal);">6 per match</span></div>
       <div class="review-row" id="review-trophy-row"><span class="review-label">Winner's Trophy</span><span class="review-value" id="review-trophy" style="color:#FFD700;">League Champion</span></div>
     </div>
 
@@ -3284,6 +3300,13 @@ function populateReview() {
   if (qpmEl) qpmEl.textContent = qpmVal + ' per match';
   if (qpmRow) qpmRow.style.display = aiQuestionsEnabled ? '' : 'none';
 
+  // Live questions per match
+  var liveQpmVal = parseInt(document.getElementById('live-qpm-slider').value, 10) || 6;
+  var liveQpmEl  = document.getElementById('review-live-qpm');
+  var liveQpmRow = document.getElementById('review-live-qpm-row');
+  if (liveQpmEl) liveQpmEl.textContent = liveQpmVal + ' per match';
+  if (liveQpmRow) liveQpmRow.style.display = aiQuestionsEnabled ? '' : 'none';
+
   // AI Questions
   const aiEl = document.getElementById('review-ai-questions');
   if (aiQuestionsEnabled && selectedCompetition) {
@@ -3501,6 +3524,8 @@ async function launchLeague() {
     live_question_budget:      intensity.live,
     // User-chosen prematch count (migration 053) — the primary control going forward.
     prematch_questions_per_match: parseInt(document.getElementById('prematch-qpm-slider').value, 10) || 5,
+    // User-chosen live count (migration 054) — soccer slot-paced generation.
+    live_questions_per_match: parseInt(document.getElementById('live-qpm-slider').value, 10) || 6,
   };
 
   var newLeagueId = null;

@@ -603,8 +603,16 @@ export async function buildLiveContext(
     lastEventMinute = latest.time;
   }
 
+  // event_driven only when the significant event is genuinely new — i.e. it occurred after
+  // the last successful live generation. Without this guard, a single goal keeps classifying
+  // every subsequent cycle as event_driven (bypassing the 3-min rate limit) until the next
+  // question is successfully inserted.
   const generationTrigger: LiveMatchContext['generationTrigger'] =
-    lastEventType !== 'none' ? 'event_driven' : 'time_driven';
+    (lastEventType !== 'none' &&
+     lastEventMinute != null &&
+     (lastGenerationMinute == null || lastEventMinute > lastGenerationMinute))
+      ? 'event_driven'
+      : 'time_driven';
 
   // ── 5. Active prediction windows from pending LIVE questions ─────────
   const { data: activeQRows } = await sb
