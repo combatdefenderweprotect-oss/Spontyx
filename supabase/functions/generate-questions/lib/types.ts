@@ -173,8 +173,11 @@ export interface LeagueWithConfig {
   // ── Intensity budget (migration 017) ──────────────────────────────────
   // Target question counts per match — set from INTENSITY_PRESETS at creation.
   // null/undefined means the league was created before migration 017 → use defaults.
-  prematch_question_budget: number | null;   // default 4 (STANDARD)
+  prematch_question_budget: number | null;   // default 4 (STANDARD) — legacy fallback
   live_question_budget: number | null;       // default 8 (STANDARD)
+  // ── User-chosen prematch count per fixture (migration 053) ────────────
+  // Takes priority over prematch_question_budget when set. Range 1–10, default 5.
+  prematch_questions_per_match: number | null;
   // ── Pre-match scheduling (migration 018) ─────────────────────────────
   // Controls when prematch questions become visible relative to kickoff.
   // null/undefined means the league was created before migration 018 → treat as 'automatic'.

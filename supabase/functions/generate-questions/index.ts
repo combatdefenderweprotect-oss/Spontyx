@@ -174,7 +174,7 @@ Deno.serve(async (req: Request) => {
         creation_path, api_sports_league_ids,
         ai_weekly_quota, ai_total_quota,
         league_start_date, league_end_date, owner_id,
-        prematch_question_budget, live_question_budget,
+        prematch_question_budget, prematch_questions_per_match, live_question_budget,
         prematch_generation_mode, prematch_publish_offset_hours,
         created_at
       `)
@@ -417,11 +417,53 @@ Deno.serve(async (req: Request) => {
 
       const upcomingMatchIds = filteredSportsCtxBySchedule.upcomingMatches.map((m) => m.id).filter(Boolean);
 
-      // Per-league prematch budget: use the DB value, fall back to STANDARD (4)
-      const leaguePrematchBudget = league.prematch_question_budget ?? 4;
+      // ── Per-match target (migration 053) ──────────────────────────────
+      // prematch_questions_per_match is the user-chosen count (1–10, default 5).
+      // Falls back to prematch_question_budget (intensity preset, legacy) then 5.
+      const perMatchTarget: number =
+        league.prematch_questions_per_match ?? league.prematch_question_budget ?? 5;
 
-      // Effective per-league cap: respect both the weekly quota and the intensity budget
-      const leagueQuotaCap = Math.min(quota.questionsToGenerate, leaguePrematchBudget);
+      // ── Per-(league, match_id) existing count — idempotency guard ─────
+      // Count actual CORE_MATCH_PREMATCH rows already in the questions table for
+      // each eligible match. Skip the match entirely if already at target.
+      // This prevents double-generation on cron+demand-driven concurrent runs and
+      // on repeated ensure-prematch calls (tab refresh, league re-opens, etc.).
+      const matchShortfalls = new Map<string, number>(); // matchId → questions still needed
+      for (const m of filteredSportsCtxBySchedule.upcomingMatches) {
+        if (!m.id) continue;
+        const { count: existing, error: cntErr } = await sb
+          .from('questions')
+          .select('id', { count: 'exact', head: true })
+          .eq('league_id', league.id)
+          .eq('match_id', String(m.id))
+          .eq('question_type', 'CORE_MATCH_PREMATCH')
+          .neq('resolution_status', 'voided');
+        if (cntErr) {
+          console.warn(`[prematch-count] count query failed for match ${m.id}:`, cntErr.message);
+          matchShortfalls.set(String(m.id), perMatchTarget); // assume full shortfall on error
+        } else {
+          const shortfall = Math.max(0, perMatchTarget - (existing ?? 0));
+          matchShortfalls.set(String(m.id), shortfall);
+          if (shortfall === 0) {
+            console.log(`[prematch-count] league ${league.id} match ${m.id} already at target (${existing}/${perMatchTarget}), skipping`);
+          }
+        }
+      }
+
+      // Total AI-generated questions needed this run (across all eligible matches).
+      // Capped by weekly/total quota — fallback templates cover any remaining shortfall
+      // without consuming AI quota.
+      const totalShortfall = Array.from(matchShortfalls.values()).reduce((s, n) => s + n, 0);
+      if (totalShortfall === 0) {
+        result.skipped    = true;
+        result.skipReason = 'prematch_target_already_met';
+        runStats.leaguesSkipped++;
+        await writeLeagueResult(sb, runId, result);
+        continue;
+      }
+
+      // AI quota cap applies only to AI-generated questions; fallback templates are zero-cost.
+      const leagueQuotaCap = Math.min(quota.questionsToGenerate, totalShortfall);
 
       const baseKey = {
         sport:         league.sport,
@@ -434,11 +476,16 @@ Deno.serve(async (req: Request) => {
       };
 
       // Phase A: reuse existing ready pools (operating on schedule-filtered matches)
-      const existingPools = await findReadyPools(sb, upcomingMatchIds, baseKey);
+      // Only query pools for matches that still have a shortfall.
+      const matchIdsWithShortfall = upcomingMatchIds.filter((id) => (matchShortfalls.get(id) ?? 0) > 0);
+      const existingPools = await findReadyPools(sb, matchIdsWithShortfall, baseKey);
       let totalAttached = 0;
 
       for (const [matchId, pool] of existingPools) {
         if (totalAttached >= leagueQuotaCap) break;
+        // Respect per-match shortfall: don't attach more than the match still needs.
+        const matchCap = Math.min(matchShortfalls.get(matchId) ?? 0, leagueQuotaCap - totalAttached);
+        if (matchCap <= 0) continue;
         // Note: no REAL_WORLD filter needed here — prematch pool questions are always
         // CORE_MATCH_PREMATCH (computeLane returns REAL_WORLD only when matchId is null
         // AND no matchMinute, which never applies to pool questions). The previous
@@ -447,18 +494,19 @@ Deno.serve(async (req: Request) => {
         const poolQs = await getPoolQuestions(sb, pool.id, baseKey.mode);
         const attached = await attachPoolQuestionsToLeague(
           sb, poolQs, league, runId, PROMPT_VERSION,
-          recentQuestions, totalAttached, leagueQuotaCap,
+          recentQuestions, totalAttached, totalAttached + matchCap,
         );
         if (attached > 0) {
           console.log(`[pool] reused ${attached} questions for league ${league.id} from match ${matchId}`);
           totalAttached += attached;
+          matchShortfalls.set(matchId, Math.max(0, (matchShortfalls.get(matchId) ?? 0) - attached));
         }
       }
 
       // Phase B: generate for uncovered matches (only schedule-eligible matches)
       const coveredIds = new Set(existingPools.keys());
       const uncoveredMatches = filteredSportsCtxBySchedule.upcomingMatches.filter(
-        (m) => m.id && !coveredIds.has(m.id),
+        (m) => m.id && !coveredIds.has(m.id) && (matchShortfalls.get(String(m.id)) ?? 0) > 0,
       );
 
       if (uncoveredMatches.length > 0 && totalAttached < leagueQuotaCap) {
@@ -722,13 +770,20 @@ Deno.serve(async (req: Request) => {
             if (stored.length > 0) {
               await markPoolReady(sb, pool.id, stored.length);
               // Attach from pool to this league with per-league constraint checks.
-              // Cap = leagueQuotaCap (respects both intensity budget and weekly quota).
+              // Cap respects both the per-match shortfall and the AI quota ceiling.
+              const phaseB_matchCap = Math.min(
+                matchShortfalls.get(matchId) ?? 0,
+                leagueQuotaCap - totalAttached,
+              );
               const poolQs = await getPoolQuestions(sb, pool.id, baseKey.mode);
               const attached = await attachPoolQuestionsToLeague(
                 sb, poolQs, league, runId, PROMPT_VERSION,
-                recentQuestions, totalAttached, leagueQuotaCap,
+                recentQuestions, totalAttached, totalAttached + phaseB_matchCap,
               );
               totalAttached += attached;
+              if (attached > 0) {
+                matchShortfalls.set(matchId, Math.max(0, (matchShortfalls.get(matchId) ?? 0) - attached));
+              }
             } else {
               await markPoolFailed(sb, pool.id);
             }
@@ -741,8 +796,107 @@ Deno.serve(async (req: Request) => {
         }
       }
 
-      result.questionsGenerated = totalAttached;
-      runStats.generated       += totalAttached;
+      // ── Phase D: Fallback template fill ──────────────────────────────
+      // After normal generation + retry (Phases A–C), if any match is still
+      // short of its per-match target, fill the gap with hardcoded templates.
+      //
+      // Fallback questions:
+      //   source = 'fallback_template'  → NOT counted against AI quota
+      //   Predicates are deterministic — resolver handles all types used here.
+      //   Text dedup guard: a template is skipped if an identical text already
+      //   exists for this (league, match) — covers idempotent re-runs.
+      //
+      // Only fires for CORE_MATCH_PREMATCH. Live / REAL_WORLD unaffected.
+      let fallbackAttached = 0;
+      for (const m of filteredSportsCtxBySchedule.upcomingMatches) {
+        if (!m.id) continue;
+        const remaining = matchShortfalls.get(String(m.id)) ?? 0;
+        if (remaining <= 0) continue;
+
+        const homeTeam = m.homeTeam?.name ?? 'Home';
+        const awayTeam = m.awayTeam?.name ?? 'Away';
+        const homeId   = String(m.homeTeam?.id ?? '');
+        const kickoff  = m.kickoff ?? new Date().toISOString();
+
+        const TEMPLATES = [
+          {
+            text:      `Will ${homeTeam} win the match?`,
+            predicate: { resolution_type: 'match_outcome', match_id: String(m.id), binary_condition: { field: 'winner_team_id', operator: 'eq', value: homeId } },
+          },
+          {
+            text:      'Will there be over 2.5 goals?',
+            predicate: { resolution_type: 'match_stat', match_id: String(m.id), binary_condition: { field: 'total_goals', operator: 'gt', value: 2 } },
+          },
+          {
+            text:      'Will both teams score?',
+            predicate: { resolution_type: 'btts', match_id: String(m.id) },
+          },
+          {
+            text:      `Will ${homeTeam} keep a clean sheet?`,
+            predicate: { resolution_type: 'match_stat', match_id: String(m.id), binary_condition: { field: 'away_score', operator: 'eq', value: 0 } },
+          },
+          {
+            text:      `Will ${awayTeam} win the match?`,
+            predicate: { resolution_type: 'match_outcome', match_id: String(m.id), binary_condition: { field: 'winner_team_id', operator: 'eq', value: String(m.awayTeam?.id ?? '') } },
+          },
+        ];
+
+        const now = new Date().toISOString();
+        const computedVisibleFrom = computeVisibleFrom(league, kickoff);
+
+        // Fetch existing fallback texts to skip duplicates on re-run
+        const { data: existingFallbacks } = await sb
+          .from('questions')
+          .select('question_text')
+          .eq('league_id', league.id)
+          .eq('match_id', String(m.id))
+          .eq('source', 'fallback_template');
+        const existingFallbackTexts = new Set(
+          (existingFallbacks ?? []).map((r: { question_text: string }) => r.question_text.toLowerCase().trim())
+        );
+
+        const toInsert = [];
+        for (const tpl of TEMPLATES) {
+          if (toInsert.length >= remaining) break;
+          if (existingFallbackTexts.has(tpl.text.toLowerCase().trim())) continue;
+          toInsert.push({
+            league_id:             league.id,
+            source:                'fallback_template',
+            generation_run_id:     runId,
+            question_text:         tpl.text,
+            type:                  'binary',
+            options:               [{ id: 'yes', label: 'Yes' }, { id: 'no', label: 'No' }],
+            sport:                 league.sport,
+            match_id:              String(m.id),
+            team_ids:              [homeId, String(m.awayTeam?.id ?? '')].filter(Boolean),
+            question_type:         'CORE_MATCH_PREMATCH',
+            source_badge:          'PRE-MATCH',
+            resolution_predicate:  tpl.predicate,
+            resolution_status:     'pending',
+            visible_from:          computedVisibleFrom,
+            opens_at:              computedVisibleFrom,
+            answer_closes_at:      kickoff,
+            deadline:              kickoff,
+            resolves_after:        kickoff,
+            ai_prompt_version:     PROMPT_VERSION,
+            base_value:            10,
+            difficulty_multiplier: 1.0,
+          });
+        }
+
+        if (toInsert.length > 0) {
+          const { error: fbErr } = await sb.from('questions').insert(toInsert);
+          if (fbErr) {
+            console.warn(`[fallback] insert failed for league ${league.id} match ${m.id}:`, fbErr.message);
+          } else {
+            fallbackAttached += toInsert.length;
+            console.log(`[fallback] inserted ${toInsert.length} template question(s) for league ${league.id} match ${m.id}`);
+          }
+        }
+      }
+
+      result.questionsGenerated = totalAttached + fallbackAttached;
+      runStats.generated       += totalAttached + fallbackAttached;
       runStats.rejected        += result.questionsRejected;
 
       result.durationMs = Date.now() - leagueStart;
@@ -2433,7 +2587,8 @@ function computePoolGenerationTarget(
       // (league is included; exact matchId is fixed per pool claim so this is sufficient)
       return true;
     })
-    .map((l) => l.prematch_question_budget ?? FALLBACK)
+    // prematch_questions_per_match (migration 053) takes priority over prematch_question_budget.
+    .map((l) => l.prematch_questions_per_match ?? l.prematch_question_budget ?? FALLBACK)
     .filter((b) => b > 0);
 
   return coProfileBudgets.length ? Math.max(...coProfileBudgets) : FALLBACK;

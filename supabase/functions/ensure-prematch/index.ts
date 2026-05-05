@@ -75,13 +75,17 @@ Deno.serve(async (req: Request) => {
 
   const { data: leagueRow, error: leagueErr } = await userClient
     .from('leagues')
-    .select('id, ai_questions_enabled, prematch_question_budget')
+    .select('id, ai_questions_enabled, prematch_question_budget, prematch_questions_per_match')
     .eq('id', leagueId)
     .maybeSingle();
 
   if (leagueErr) return json(500, { ok: false, error: 'league_lookup_failed', detail: leagueErr.message });
   if (!leagueRow) return json(403, { ok: false, error: 'league_not_accessible' });
   if (!leagueRow.ai_questions_enabled) return json(200, { ok: true, status: 'ai_disabled' });
+
+  // Per-match target: prematch_questions_per_match (migration 053) takes priority.
+  const perMatchTarget: number =
+    leagueRow.prematch_questions_per_match ?? leagueRow.prematch_question_budget ?? 5;
 
   // ── 4. Debounce — skip if generation ran very recently for this league ─
   // Service-role client for the dedup check (we want raw counts, not RLS).
@@ -98,8 +102,9 @@ Deno.serve(async (req: Request) => {
   if (recentErr) {
     // Non-fatal — fall through and let generate-questions decide.
     console.warn('[ensure-prematch] debounce check failed:', recentErr.message);
-  } else if ((recentCount ?? 0) > 0) {
-    return json(200, { ok: true, status: 'recent', recent_count: recentCount });
+  } else if ((recentCount ?? 0) >= perMatchTarget) {
+    // At or above target already — skip invocation entirely.
+    return json(200, { ok: true, status: 'recent', recent_count: recentCount, target: perMatchTarget });
   }
 
   // ── 5. Forward to generate-questions ────────────────────────────────
