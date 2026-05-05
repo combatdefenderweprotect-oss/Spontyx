@@ -1250,6 +1250,17 @@ async function hydrateLeaguePage() {
 
   currentLeague = league;
 
+  // Demand-driven pre-match generation — fire-and-forget. Edge function
+  // debounces (5 min) and delegates idempotency to generate-questions.
+  // Cron remains the backstop. Spec: docs/QUESTION_SYSTEM.md.
+  if (typeof window.sb !== 'undefined' && window.sb.functions) {
+    try {
+      window.sb.functions.invoke('ensure-prematch', { body: { league_id: leagueId } })
+        .then(function(res) { console.log('[ensure-prematch:open]', res); })
+        .catch(function(err) { console.warn('[ensure-prematch:open] failed:', err); });
+    } catch (e) { console.warn('[ensure-prematch:open] invoke threw:', e); }
+  }
+
   try {
     var sess = await window.sb.auth.getSession();
     currentUserId = sess.data.session?.user?.id ?? null;

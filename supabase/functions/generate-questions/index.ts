@@ -130,6 +130,22 @@ Deno.serve(async (req: Request) => {
   const url      = new URL(req.url);
   const liveOnly = url.searchParams.get('live_only') === '1';
 
+  // Optional POST body — used by ensure-prematch wrapper for demand-driven prematch
+  // generation. When `league_id` is set, restricts the league fetch to that single
+  // league. When `match_id` is also set, downstream eligibleMatches are filtered
+  // to that single fixture. Cron path (no body) preserves the original behaviour.
+  let targetLeagueId: string | null = null;
+  let targetMatchId:  string | null = null;
+  if (req.method === 'POST') {
+    try {
+      const body = await req.clone().json().catch(() => null);
+      if (body && typeof body === 'object') {
+        if (typeof body.league_id === 'string' && body.league_id.length > 0) targetLeagueId = body.league_id;
+        if (typeof body.match_id  === 'string' && body.match_id.length  > 0) targetMatchId  = body.match_id;
+      }
+    } catch (_) { /* ignore — empty body is allowed */ }
+  }
+
   // ── Create run record ───────────────────────────────────────────────
   const { data: runData, error: runErr } = await sb
     .from('generation_runs')
@@ -149,7 +165,7 @@ Deno.serve(async (req: Request) => {
     // ── Fetch all AI-enabled leagues ──────────────────────────────────
     // Migration 051 added creation_path + api_sports_league_ids[] to support
     // Season-Long Path A multi-competition leagues. Spec: docs/LEAGUE_CREATION_FLOW.md.
-    const { data: leagueRows, error: leagueErr } = await sb
+    let leagueQuery = sb
       .from('leagues')
       .select(`
         id, name, sport, scope, session_type,
@@ -165,6 +181,11 @@ Deno.serve(async (req: Request) => {
       .eq('ai_questions_enabled', true)
       // Accept either the legacy singular or the new array column.
       .or('api_sports_league_id.not.is.null,api_sports_league_ids.not.is.null');
+
+    // Demand-driven path (ensure-prematch wrapper): narrow to a single league.
+    if (targetLeagueId) leagueQuery = leagueQuery.eq('id', targetLeagueId);
+
+    const { data: leagueRows, error: leagueErr } = await leagueQuery;
 
     if (leagueErr) throw new Error(`league fetch failed: ${leagueErr.message}`);
     if (!leagueRows || !leagueRows.length) {
@@ -367,9 +388,9 @@ Deno.serve(async (req: Request) => {
       // automatic: within 48h of kickoff; manual: now >= kickoff − offset_hours.
       // Never generate after kickoff (handled inside isMatchEligibleForPrematch).
       const nowMs = Date.now();
-      const eligibleMatches = sportsCtx.upcomingMatches.filter(
-        (m) => isMatchEligibleForPrematch(m.kickoff, league, nowMs),
-      );
+      const eligibleMatches = sportsCtx.upcomingMatches
+        .filter((m) => !targetMatchId || String(m.id) === String(targetMatchId))
+        .filter((m) => isMatchEligibleForPrematch(m.kickoff, league, nowMs));
 
       if (!eligibleMatches.length) {
         result.skipped    = true;

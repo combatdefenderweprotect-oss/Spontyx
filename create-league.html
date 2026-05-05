@@ -3494,6 +3494,16 @@ async function launchLeague() {
     newLeagueId = local.id;
   }
 
+  // Demand-driven pre-match generation — fire-and-forget. Cron remains as
+  // backstop. Spec: docs/QUESTION_SYSTEM.md, docs/LEAGUE_CREATION_FLOW.md.
+  if (newLeagueId && typeof window.sb !== 'undefined' && window.sb.functions) {
+    try {
+      window.sb.functions.invoke('ensure-prematch', { body: { league_id: newLeagueId } })
+        .then(function(res) { console.log('[ensure-prematch:create]', res); })
+        .catch(function(err) { console.warn('[ensure-prematch:create] failed:', err); });
+    } catch (e) { console.warn('[ensure-prematch:create] invoke threw:', e); }
+  }
+
   showToast('League launched! Redirecting...');
   var dest = newLeagueId ? 'league.html?id=' + newLeagueId : 'league.html';
   setTimeout(() => { window.location.href = dest; }, 1500);
