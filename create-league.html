@@ -1893,7 +1893,7 @@ function restoreStepState(step) {
       c.classList.toggle('selected', onclick.includes("'" + leagueType + "'"));
     });
     document.getElementById('btn-next-0').disabled = false;
-    document.getElementById('season-nudge').style.display = leagueType === 'season' ? 'flex' : 'none';
+    document.getElementById('season-nudge').style.display = shouldShowSeasonNudge(leagueType) ? 'flex' : 'none';
     document.getElementById('custom-duration').classList.toggle('show', leagueType === 'custom');
   }
   if (step === 1) {
@@ -1925,14 +1925,24 @@ function restoreStepState(step) {
 }
 
 // ── Step 1: Type Selection ──
+// Banner is hidden for Elite users (already have access). Shown for Free/Starter/Pro
+// only when the Season-Long type is selected.
+function shouldShowSeasonNudge(type) {
+  if (type !== 'season') return false;
+  try {
+    var p = (typeof SpontixStore !== 'undefined') ? SpontixStore.getPlayer() : null;
+    var t = p ? (p.tier || 'starter') : 'starter';
+    return t !== 'elite';
+  } catch (e) { return true; }
+}
 function selectType(card, type) {
   document.querySelectorAll('.type-card').forEach(c => c.classList.remove('selected'));
   card.classList.add('selected');
   leagueType = type;
   document.getElementById('btn-next-0').disabled = false;
 
-  // Show season upgrade nudge
-  document.getElementById('season-nudge').style.display = type === 'season' ? 'flex' : 'none';
+  // Show season upgrade nudge (hidden for Elite)
+  document.getElementById('season-nudge').style.display = shouldShowSeasonNudge(type) ? 'flex' : 'none';
   // Show custom duration picker
   document.getElementById('custom-duration').classList.toggle('show', type === 'custom');
 }
