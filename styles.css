@@ -445,6 +445,7 @@ body.br-mode .sidebar-profile-block {
 .help-a em.placeholder {
   font-style: italic; color: var(--grey-dark); opacity: 0.7;
 }
+.help-item:has(em.placeholder) { display: none; }
 .help-a p { margin: 0 0 8px; }
 .help-a p:last-child { margin: 0; }
 

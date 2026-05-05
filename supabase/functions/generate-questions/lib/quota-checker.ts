@@ -115,7 +115,7 @@ export async function checkQuota(
     };
   }
 
-  // Rate limit: max 1 CORE_MATCH_LIVE question per 3 minutes per league (MVP safety rule).
+  // Rate limit: max 1 CORE_MATCH_LIVE question per 3 minutes per league (production pacing rule).
   // This rule applies ONLY to CORE_MATCH_LIVE. CORE_MATCH_PREMATCH and REAL_WORLD are
   // NOT governed by this limit (REAL_WORLD has its own separate daily cap).
   // Scoped to CORE_MATCH_LIVE via match_minute_at_generation IS NOT NULL
@@ -239,21 +239,22 @@ export async function checkRealWorldQuota(
   leagueId: string,
   ownerTier: string,
 ): Promise<{ allowed: boolean; skipReason?: string }> {
-  // Step 1: Daily cap — MVP safety rule, applies to ALL tiers including elite.
-  // Max 1 REAL_WORLD question per league per day.
+  // Step 1: Weekly cap — max 3 REAL_WORLD questions per league per ISO week (Mon–Sun UTC).
+  // Per-match cap (max 1 per match) is enforced separately in the generation pass after
+  // match binding, since match_id is not known at quota-check time.
+  // Fail-safe: DB error → fail-closed rather than silently allowing over-quota generation.
+  const RW_WEEKLY_CAP = 3;
   const now = new Date();
-  const todayStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())).toISOString();
-  const { count: dailyCount, error: dailyErr } = await sb
+  const weekStart = getMondayUTC(now).toISOString();
+  const { count: weeklyCount, error: weeklyErr } = await sb
     .from('questions')
     .select('id', { count: 'exact', head: true })
     .eq('league_id', leagueId)
     .eq('question_type', 'REAL_WORLD')
-    .gte('created_at', todayStart);
-  // Fail-safe: if the DB query errors, block generation rather than silently
-  // allowing a second REAL_WORLD question (fail-closed on quota check errors).
-  if (dailyErr) return { allowed: false, skipReason: 'real_world_quota_check_failed' };
-  if ((dailyCount ?? 0) >= 1) {
-    return { allowed: false, skipReason: 'real_world_daily_cap' };
+    .gte('created_at', weekStart);
+  if (weeklyErr) return { allowed: false, skipReason: 'real_world_quota_check_failed' };
+  if ((weeklyCount ?? 0) >= RW_WEEKLY_CAP) {
+    return { allowed: false, skipReason: 'real_world_weekly_cap' };
   }
 
   // Step 2: Tier rule

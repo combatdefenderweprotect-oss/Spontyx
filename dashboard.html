@@ -751,32 +751,12 @@
     <div class="plan-panel">
       <div class="plan-head">
         <div class="plan-title">Your Plan</div>
-        <span class="plan-tier-pill">Pro (Trial)</span>
-        <span class="plan-resets">Resets in 7h 23m</span>
+        <span class="plan-tier-pill" id="plan-tier-pill">—</span>
+        <span class="plan-resets" id="plan-resets"></span>
       </div>
-      <div class="plan-rows">
-        <div class="plan-row">
-          <span class="plan-row-label">Live answers per match</span>
-          <span class="plan-row-usage"><span class="used">2</span> / 5</span>
-          <div class="plan-row-bar"><div class="plan-row-fill" style="width:40%"></div></div>
-        </div>
-        <div class="plan-row">
-          <span class="plan-row-label">Battle Royale games today</span>
-          <span class="plan-row-usage"><span class="used">3</span> / 5</span>
-          <div class="plan-row-bar"><div class="plan-row-fill warn" style="width:60%"></div></div>
-        </div>
-        <div class="plan-row">
-          <span class="plan-row-label">Daily trivia</span>
-          <span class="plan-row-usage"><span class="used">5</span> / 15</span>
-          <div class="plan-row-bar"><div class="plan-row-fill" style="width:33%"></div></div>
-        </div>
-        <div class="plan-row">
-          <span class="plan-row-label">Real-world questions</span>
-          <span class="plan-row-usage">Pro · unlimited</span>
-          <div class="plan-row-bar"><div class="plan-row-fill" style="width:100%"></div></div>
-        </div>
+      <div class="plan-rows" id="plan-rows">
+        <!-- populated by loadAndRenderPlanPanel() -->
       </div>
-      <div class="plan-placeholder-note">UI placeholder · live usage data wires up in a later sprint.</div>
     </div>
 
     <!-- Quick Nav Links -->
@@ -916,6 +896,133 @@
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 
+  // ── Plan panel helpers ────────────────────────────────────────────────────
+
+  function renderPlanBar(label, used, cap) {
+    // cap: -1 = unlimited, 0 = no quota configured, >0 = real limit
+    if (cap < 0) {
+      return '<div class="plan-row">' +
+        '<span class="plan-row-label">' + label + '</span>' +
+        '<span class="plan-row-usage"><span class="used">' + used + '</span> &nbsp;·&nbsp; unlimited</span>' +
+        '<div class="plan-row-bar"><div class="plan-row-fill" style="width:100%"></div></div>' +
+        '</div>';
+    }
+    var pct = cap > 0 ? Math.min(100, Math.round((used / cap) * 100)) : 0;
+    var fillCls = pct >= 100 ? ' full' : pct >= 75 ? ' warn' : '';
+    return '<div class="plan-row">' +
+      '<span class="plan-row-label">' + label + '</span>' +
+      '<span class="plan-row-usage"><span class="used">' + used + '</span> / ' + cap + '</span>' +
+      '<div class="plan-row-bar"><div class="plan-row-fill' + fillCls + '" style="width:' + pct + '%"></div></div>' +
+      '</div>';
+  }
+
+  function renderPlanPanel(tier, leagueCount, leagueMax, weeklyQCount, weeklyQCap, rwEnabled, rwMonthCount, rwMonthCap) {
+    // Tier pill
+    var pillEl = document.getElementById('plan-tier-pill');
+    if (pillEl) pillEl.textContent = (typeof SpontixStore !== 'undefined' && SpontixStore.getTierLabel)
+      ? SpontixStore.getTierLabel(tier) : tier;
+
+    // Resets label — questions quota is per ISO week (Mon–Sun UTC)
+    var resetsEl = document.getElementById('plan-resets');
+    if (resetsEl) {
+      var now = new Date();
+      // Days until next Monday (UTC); if today is Monday treat it as 7 days (next cycle)
+      var daysToMonday = (1 - now.getUTCDay() + 7) % 7 || 7;
+      var nextMonday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + daysToMonday));
+      var diffMs = nextMonday.getTime() - now.getTime();
+      var diffDays  = Math.floor(diffMs / 86400000);
+      var diffHours = Math.floor((diffMs % 86400000) / 3600000);
+      var diffMins  = Math.floor((diffMs % 3600000) / 60000);
+      var resetsText = diffDays >= 2
+        ? 'Resets in ' + diffDays + 'd'
+        : diffDays === 1
+          ? 'Resets in 1d ' + diffHours + 'h'
+          : 'Resets in ' + diffHours + 'h ' + diffMins + 'm';
+      resetsEl.textContent = resetsText;
+    }
+
+    // Rows
+    var rowsEl = document.getElementById('plan-rows');
+    if (!rowsEl) return;
+    var html = '';
+
+    // My Leagues — leagueMax: -1 = unlimited (Elite)
+    html += renderPlanBar('My Leagues', leagueCount, leagueMax);
+
+    // Questions this week — cap is sum of per-league weekly budgets
+    if (weeklyQCap > 0 || weeklyQCount > 0) {
+      html += renderPlanBar('Questions this week', weeklyQCount, weeklyQCap > 0 ? weeklyQCap : -1);
+    }
+
+    // Real-world questions this month — Pro/Elite only
+    if (rwEnabled) {
+      var rwLabel = 'Real-world / month';
+      if (rwMonthCap < 0) {
+        html += renderPlanBar(rwLabel, rwMonthCount, -1);
+      } else if (rwMonthCap > 0) {
+        html += renderPlanBar(rwLabel, rwMonthCount, rwMonthCap);
+      }
+    }
+
+    rowsEl.innerHTML = html;
+  }
+
+  async function loadAndRenderPlanPanel(sb, userId, leagueIds) {
+    try {
+      var tier = (typeof SpontixStore !== 'undefined') ? (SpontixStore.getPlayer().tier || 'starter') : 'starter';
+      var limits = (typeof SpontixStore !== 'undefined' && SpontixStore.getTierLimits)
+        ? SpontixStore.getTierLimits(tier) : {};
+
+      var leagueCount = leagueIds.length;
+      var leagueMax   = (limits.leaguesJoinMax != null) ? limits.leaguesJoinMax : -1;
+
+      // ISO week start = most recent Monday 00:00 UTC
+      var now = new Date();
+      var daysFromMonday = (now.getUTCDay() + 6) % 7; // Mon=0 … Sun=6
+      var weekStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysFromMonday)).toISOString();
+
+      var weeklyQCount = 0;
+      var rwMonthCount = 0;
+
+      if (leagueIds.length > 0) {
+        // Questions generated this ISO week across all user leagues
+        var wqRes = await sb
+          .from('questions')
+          .select('id', { count: 'exact', head: true })
+          .in('league_id', leagueIds)
+          .gte('created_at', weekStart);
+        weeklyQCount = wqRes.count || 0;
+
+        // Real-world questions this calendar month (Pro/Elite only)
+        if (limits.realWorldQuestionsEnabled) {
+          var monthStart = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+          var rwRes = await sb
+            .from('questions')
+            .select('id', { count: 'exact', head: true })
+            .in('league_id', leagueIds)
+            .eq('question_type', 'REAL_WORLD')
+            .gte('created_at', monthStart);
+          rwMonthCount = rwRes.count || 0;
+        }
+      }
+
+      // Weekly cap = per-league budget × number of leagues
+      var aiWeeklyQuota = limits.aiWeeklyQuota || 0;
+      var weeklyQCap = leagueCount > 0 ? leagueCount * aiWeeklyQuota : 0;
+
+      // Real-world monthly cap: per-league limit × leagues (-1 stays -1)
+      var rwPerLeague = limits.realWorldQuestionsPerMonth || 0;
+      var rwMonthCap  = rwPerLeague < 0 ? -1 : leagueCount * rwPerLeague;
+      var rwEnabled   = !!limits.realWorldQuestionsEnabled;
+
+      renderPlanPanel(tier, leagueCount, leagueMax, weeklyQCount, weeklyQCap, rwEnabled, rwMonthCount, rwMonthCap);
+    } catch (e) {
+      // Fail silently — leave the panel empty rather than show stale data
+      var rowsEl = document.getElementById('plan-rows');
+      if (rowsEl) rowsEl.innerHTML = '';
+    }
+  }
+
   function renderActivityAlert(count, leagueText) {
     const noun = count === 1 ? 'question' : 'questions';
     document.getElementById('activity-alert').innerHTML = `
@@ -958,6 +1065,10 @@
       .eq('user_id', user.id);
 
     const leagueIds = (memberships || []).map(m => m.league_id);
+
+    // Render plan panel as soon as we have the league list — independent of activity state
+    loadAndRenderPlanPanel(sb, user.id, leagueIds).catch(function() {});
+
     if (!leagueIds.length) {
       renderAllClear();
       updateNavCards(sb, user.id, 0, 0, now);

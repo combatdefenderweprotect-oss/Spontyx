@@ -7,6 +7,7 @@ import { fetchNewsContext }   from './lib/news-adapter/index.ts';
 import { buildContextPacket, buildPredicatePrompt, computeResolvesAfter, buildLiveContext, minuteToTimestamp } from './lib/context-builder.ts';
 import { generateQuestions, convertToPredicate, generateRealWorldQuestion, generateRealWorldContext, scoreRealWorldQuestion, PROMPT_VERSION } from './lib/openai-client.ts';
 import { validateQuestion } from './lib/predicate-validator.ts';
+import { checkLiveQuality, deriveLiveMarketKey } from './lib/live-quality-filter.ts';
 import {
   buildCacheKey, getLeagueType, getPhaseScope, getMode,
   findReadyPools, getOrClaimPool, getPoolQuestions,
@@ -274,13 +275,12 @@ Deno.serve(async (req: Request) => {
         durationMs:            0,
       };
 
-      // MVP: football only — hockey/tennis adapters not ready for live launch.
-      // Leave this guard in place until each sport is verified end-to-end.
-      // To enable a sport post-MVP: remove it from this list.
-      const MVP_UNSUPPORTED_SPORTS = ['hockey', 'tennis', 'other'];
-      if (MVP_UNSUPPORTED_SPORTS.includes(league.sport)) {
+      // Football only — hockey/tennis adapters not yet verified for production.
+      // Leave this guard in place until each sport adapter is verified end-to-end.
+      const UNSUPPORTED_SPORTS = ['hockey', 'tennis', 'other'];
+      if (UNSUPPORTED_SPORTS.includes(league.sport)) {
         result.skipped    = true;
-        result.skipReason = 'sport_not_supported_mvp';
+        result.skipReason = 'sport_not_supported';
         runStats.leaguesSkipped++;
         await writeLeagueResult(sb, runId, result);
         continue;
@@ -1065,10 +1065,10 @@ Deno.serve(async (req: Request) => {
     //   - Are skipped at ≥89 min or during HT
     //
     // Max active questions per league — matches maxActiveQuestions in context-builder.ts.
-    const MVP_MAX_ACTIVE_LIVE = 3;
+    const MAX_ACTIVE_LIVE_QUESTIONS = 3;
 
     for (const league of (leagues as LeagueWithConfig[])) {
-      // MVP: football only
+      // Football only — non-football adapters not yet verified for production.
       if (league.sport !== 'football') continue;
 
       // Fetch in_progress fixtures for this league from cache
@@ -1147,8 +1147,8 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
-        // Active question cap — enforce MVP max 2 per league
-        if (liveCtx.activeQuestionCount >= MVP_MAX_ACTIVE_LIVE) {
+        // Active question cap — max 3 concurrent live questions per league
+        if (liveCtx.activeQuestionCount >= MAX_ACTIVE_LIVE_QUESTIONS) {
           liveResult.skipped    = true;
           liveResult.skipReason = 'active_question_cap_reached';
           runStats.leaguesSkipped++;
@@ -1273,6 +1273,14 @@ Deno.serve(async (req: Request) => {
 
         const recentQuestions = await getRecentQuestionTexts(sb, league.id, 5);
 
+        // Derive market keys from prior questions in this match for OpenAI diversity guidance.
+        // Uses last 5 non-voided questions (oldest-to-newest order from matchQuestions).
+        const recentLiveMarketKeys = liveCtx.matchQuestions
+          .filter((q) => q.resolution_status !== 'voided')
+          .slice(-5)
+          .map((q) => deriveLiveMarketKey(q.resolution_predicate))
+          .filter((k) => k !== 'other');
+
         // Summarise active windows for context
         const activeWindowsStr = liveCtx.activeWindows.length > 0
           ? liveCtx.activeWindows.map((w) => `${w.start}–${w.end}`).join(', ')
@@ -1287,12 +1295,12 @@ Deno.serve(async (req: Request) => {
           recentQuestions,
           questionsToGenerate: 1,
           existingQuestionCount: liveCtx.activeQuestionCount,
-          recentCategories:    [],
+          recentCategories:    recentLiveMarketKeys,
           recentStatFocus:     [],
           matchPhase:          liveCtx.matchPhase,
           lastEventType:       liveCtx.lastEventType,
           activeQuestionCount: liveCtx.activeQuestionCount,
-          maxActiveQuestions:  MVP_MAX_ACTIVE_LIVE,
+          maxActiveQuestions:  MAX_ACTIVE_LIVE_QUESTIONS,
           matchMinute:         liveCtx.matchMinute,
         });
 
@@ -1419,6 +1427,84 @@ Deno.serve(async (req: Request) => {
           continue;
         }
 
+        // ── Window overlap guard (soccer CORE_MATCH_LIVE, match_stat_window only) ──
+        // Rejects candidates whose minute window overlaps any existing pending
+        // match_stat_window question for the same league + match.
+        // Overlap rule: newStart < existingEnd AND newEnd > existingStart.
+        // Resolved/voided questions are ignored (only 'pending' is enforced).
+        if (
+          predAny.resolution_type === 'match_stat_window' &&
+          predAny.window_start_minute != null &&
+          predAny.window_end_minute   != null
+        ) {
+          const { data: existingWindows } = await sb
+            .from('questions')
+            .select('resolution_predicate')
+            .eq('league_id', league.id)
+            .eq('match_id', matchId)
+            .eq('question_type', 'CORE_MATCH_LIVE')
+            .eq('resolution_status', 'pending');
+
+          const newStart = predAny.window_start_minute as number;
+          const newEnd   = predAny.window_end_minute   as number;
+          let overlapWith: string | null = null;
+
+          for (const row of (existingWindows ?? [])) {
+            const ep = (row as any).resolution_predicate as any;
+            if (ep?.resolution_type !== 'match_stat_window') continue;
+            const exStart = ep.window_start_minute as number | undefined;
+            const exEnd   = ep.window_end_minute   as number | undefined;
+            if (exStart == null || exEnd == null) continue;
+            if (newStart < exEnd && newEnd > exStart) {
+              overlapWith = `[${exStart}–${exEnd}]`;
+              break;
+            }
+          }
+
+          if (overlapWith !== null) {
+            console.log(
+              `[live-gen] live_window_overlap rejected for league ${league.id} ` +
+              `(match ${matchId}, new=[${newStart}–${newEnd}], conflicts with existing=${overlapWith})`,
+            );
+            liveResult.rejectionLog.push({
+              attempt: 1,
+              stage: 'live_timing_validation',
+              question_text: raw.question_text,
+              error: `live_window_overlap: new window [${newStart}–${newEnd}] overlaps with existing pending match_stat_window ${overlapWith} for this league + match`,
+            });
+            liveResult.questionsRejected++;
+            liveResult.durationMs = Date.now() - leagueStart;
+            await writeLeagueResult(sb, runId, liveResult);
+            continue;
+          }
+        }
+
+        // ── Live quality & diversity filter ────────────────────────────
+        // Runs after structural validation. Enforces match-state awareness,
+        // already-resolved detection, blowout adaptation, and consecutive-market
+        // diversity. Only applies to league CORE_MATCH_LIVE (soccer).
+        const qualityResult = checkLiveQuality(predicate, raw, liveCtx);
+        if (qualityResult.reject) {
+          console.log(
+            `[live-gen] live_quality rejected for league ${league.id} ` +
+            `(match ${matchId}, minute=${liveCtx.matchMinute}): ${qualityResult.reason}`,
+          );
+          liveResult.rejectionLog.push({
+            attempt:       1,
+            stage:         'live_quality',
+            question_text: raw.question_text,
+            error:         qualityResult.reason,
+            reason:        qualityResult.reason.split(':')[0],
+            score:         qualityResult.score,
+            fixture_id:    matchId,
+            timestamp:     new Date().toISOString(),
+          });
+          liveResult.questionsRejected++;
+          liveResult.durationMs = Date.now() - leagueStart;
+          await writeLeagueResult(sb, runId, liveResult);
+          continue;
+        }
+
         const baseValue = (raw.base_value && raw.base_value > 0)
           ? raw.base_value
           : (CATEGORY_BASE_VALUE[raw.question_category] ?? 6);
@@ -1524,7 +1610,7 @@ Deno.serve(async (req: Request) => {
 
           if (!sessionLiveCtx) continue;
           if (sessionLiveCtx.matchMinute >= 89) continue;
-          if (sessionLiveCtx.activeQuestionCount >= MVP_MAX_ACTIVE_LIVE) continue;
+          if (sessionLiveCtx.activeQuestionCount >= MAX_ACTIVE_LIVE_QUESTIONS) continue;
           // TODO: enforce arena density per half_scope with session question counters in future sprint
 
           // Rate limit for time-driven (event-driven bypasses)
@@ -1625,7 +1711,7 @@ Deno.serve(async (req: Request) => {
             matchPhase:          sessionLiveCtx.matchPhase,
             lastEventType:       sessionLiveCtx.lastEventType,
             activeQuestionCount: sessionLiveCtx.activeQuestionCount,
-            maxActiveQuestions:  MVP_MAX_ACTIVE_LIVE,
+            maxActiveQuestions:  MAX_ACTIVE_LIVE_QUESTIONS,
             matchMinute:         sessionLiveCtx.matchMinute,
             gameContext:         arenaGameContext,
           });
@@ -1835,7 +1921,7 @@ Deno.serve(async (req: Request) => {
             console.log(`[br-gen] skipping session ${brSession.id}: match_minute_too_late (${brLiveCtx.matchMinute})`);
             continue;
           }
-          if (brLiveCtx.activeQuestionCount >= MVP_MAX_ACTIVE_LIVE) {
+          if (brLiveCtx.activeQuestionCount >= MAX_ACTIVE_LIVE_QUESTIONS) {
             // activeQuestionCount counts arena questions — for BR, count separately
             const { count: brActiveCount } = await sb
               .from('questions')
@@ -1844,7 +1930,7 @@ Deno.serve(async (req: Request) => {
               .eq('resolution_status', 'pending')
               .gt('answer_closes_at', new Date().toISOString());
 
-            if ((brActiveCount ?? 0) >= MVP_MAX_ACTIVE_LIVE) {
+            if ((brActiveCount ?? 0) >= MAX_ACTIVE_LIVE_QUESTIONS) {
               console.log(`[br-gen] skipping session ${brSession.id}: active_question_cap_reached (${brActiveCount})`);
               continue;
             }
@@ -1951,7 +2037,7 @@ Deno.serve(async (req: Request) => {
             matchPhase:          brLiveCtx.matchPhase,
             lastEventType:       brLiveCtx.lastEventType,
             activeQuestionCount: brLiveCtx.activeQuestionCount,
-            maxActiveQuestions:  MVP_MAX_ACTIVE_LIVE,
+            maxActiveQuestions:  MAX_ACTIVE_LIVE_QUESTIONS,
             matchMinute:         brLiveCtx.matchMinute,
             gameContext:         brGameContext,
           });
@@ -2118,7 +2204,7 @@ Deno.serve(async (req: Request) => {
     //   Call 4 (scoreRealWorldQuestion)    — quality gate: APPROVE / WEAK / REJECT
     //
     // Unlike prematch/live, REAL_WORLD:
-    //   - REQUIRES a match_id bound to a 48h target match (hard constraint)
+    //   - REQUIRES a match_id bound to a match within 7 days (hard constraint)
     //   - Uses resolution_deadline (not resolves_after from match) for voiding
     //   - Is never pooled — always league-specific
     //   - Requires confidence_level, entity_focus, rw_context, source_news_urls
@@ -2130,7 +2216,7 @@ Deno.serve(async (req: Request) => {
     const MAX_RW_RETRIES = 3;
 
     if (!liveOnly) for (const league of (leagues as LeagueWithConfig[])) {
-      // Football only (same MVP guard as other passes)
+      // Football only — same sport guard as other passes.
       if (league.sport !== 'football') continue;
 
       // solo_match leagues block REAL_WORLD — it's a personal match session,
@@ -2225,21 +2311,20 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      // ── Select target matches (48h window) ───────────────────────────
+      // ── Select target matches (7-day window) ─────────────────────────
       // REAL_WORLD questions must be hard-bound to a specific upcoming match.
-      // Only matches kicking off within the next 48 hours are eligible targets.
-      // If the news refers to Team X or Player Y, Call 1 must pick the match
-      // whose teams include that entity — the 48h filter prevents binding to
-      // distant fixtures that would produce a misleadingly long answer window.
-      const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
+      // Matches up to 7 days away are eligible — news signals (injuries,
+      // suspensions, form) are often published days before the fixture.
+      // Call 1 is instructed to prefer the soonest match relevant to the signal.
+      const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
       const targetMatches = sportsCtxRW.upcomingMatches.filter((m) => {
         const msUntil = new Date(m.kickoff).getTime() - Date.now();
-        return msUntil > 0 && msUntil <= FORTY_EIGHT_HOURS_MS;
+        return msUntil > 0 && msUntil <= SEVEN_DAYS_MS;
       });
 
       if (targetMatches.length === 0) {
         console.log(
-          `[rw-gen] league ${league.id} — no upcoming match within 48h — skipping REAL_WORLD ` +
+          `[rw-gen] league ${league.id} — no upcoming match within 7 days — skipping REAL_WORLD ` +
           `(next match: ${sportsCtxRW.upcomingMatches[0]?.kickoff ?? 'none'})`,
         );
         continue;
@@ -2258,6 +2343,21 @@ Deno.serve(async (req: Request) => {
       const leagueScopeStr = league.scope === 'team_specific' && league.scoped_team_name
         ? `team_specific:${league.scoped_team_name}`
         : 'full_league';
+
+      // ── Extract strongest signal from top news batch ──────────────────
+      // Identifies the highest-priority signal before the retry loop so Call 1
+      // receives a focused anchor rather than having to discover it from scratch.
+      // Uses the first (strongest) news batch — signal detection runs once per league.
+      const rwSignalContext = extractStrongestSignal(
+        rwNewsItems, mergedKnownPlayers, upcomingMatchStrings,
+      );
+      if (rwSignalContext) {
+        console.log(
+          `[rw-gen] signal detected for league ${league.id}: ` +
+          `type=${rwSignalContext.signal_type} entity="${rwSignalContext.entity_name ?? 'team'}" ` +
+          `source="${rwSignalContext.source}"`,
+        );
+      }
 
       // ── Split news into ranked attempt groups ─────────────────────────
       // News items are already sorted by finalScore DESC from the adapter.
@@ -2313,6 +2413,7 @@ Deno.serve(async (req: Request) => {
             mergedKnownPlayers,
             new Date().toISOString(),
             OPENAI_API_KEY,
+            rwSignalContext ?? undefined,
           );
         } catch (err) {
           console.warn(`[rw-gen] ${attemptLabel} — Call 1 failed:`, err);
@@ -2345,8 +2446,8 @@ Deno.serve(async (req: Request) => {
 
         const rwPredType = (rwPredicate as any).resolution_type;
 
-        // ── Hard match binding: predicate must reference a 48h target match ─
-        // Call 1 was given ONLY the 48h target matches and instructed to embed the
+        // ── Hard match binding: predicate must reference a 7-day target match ─
+        // Call 1 was given ONLY the 7-day target matches and instructed to embed the
         // match_id of the one relevant to the news signal. Call 2 extracts that ID
         // into the predicate. Validate that it maps to one of our target matches.
         // No fallback to [0] — a missing or mismatched match_id means the question
@@ -2359,7 +2460,7 @@ Deno.serve(async (req: Request) => {
         if (!upcomingMatch) {
           const bindReason = !rwPredicateMatchId
             ? 'predicate has no match_id'
-            : `predicate match_id "${rwPredicateMatchId}" not in 48h target matches [${targetMatches.map((m) => m.id).join(', ')}]`;
+            : `predicate match_id "${rwPredicateMatchId}" not in 7-day target matches [${targetMatches.map((m) => m.id).join(', ')}]`;
           console.log(`[rw-gen] real_world_attempt_binding_failed — ${attemptLabel}: ${bindReason}`);
           continue;
         }
@@ -2388,6 +2489,72 @@ Deno.serve(async (req: Request) => {
         // ── manual_review `resolution_deadline` backfill ──────────────
         if (rwPredType === 'manual_review' && !(rwPredicate as any).resolution_deadline) {
           (rwPredicate as any).resolution_deadline = rawRW.resolution_deadline;
+        }
+
+        // ── manual_review: blocked until admin resolution UI is shipped ──
+        // manual_review questions auto-void at deadline+1h with no user value.
+        // Skipping prevents quota burn; retry loop continues with TYPE 1–3
+        // (match_lineup / player_stat / btts) instead.
+        if (rwPredType === 'manual_review') {
+          console.log(`[rw-gen] real_world_attempt_skip_manual_review — ${attemptLabel}: no admin UI`);
+          continue;
+        }
+
+        // ── Per-match dedup + cap check ────────────────────────────────
+        // Runs after binding (upcomingMatch is known) and after manual_review skip,
+        // before the expensive Call 3 / Call 4. One DB query per attempt.
+        //
+        // Three checks in priority order:
+        //   1. Per-match cap (max 1 REAL_WORLD per match per league).
+        //   2. Same resolution_type already exists — would produce near-identical question.
+        //   3. Same player_id already has a REAL_WORLD question for this match.
+        //
+        // All three continue the retry loop — a different attempt might bind to a
+        // different match or produce a different predicate type.
+        const RW_PER_MATCH_CAP = 1;
+        {
+          const { data: existingRwForMatch } = await sb
+            .from('questions')
+            .select('id, player_ids, resolution_predicate')
+            .eq('league_id', league.id)
+            .eq('match_id', String(upcomingMatch.id))
+            .eq('question_type', 'REAL_WORLD')
+            .neq('resolution_status', 'voided');
+
+          const existingRwList = existingRwForMatch ?? [];
+
+          if (existingRwList.length >= RW_PER_MATCH_CAP) {
+            console.log(
+              `[rw-gen] real_world_attempt_skip_dedup — ${attemptLabel}: ` +
+              `per-match cap reached (${existingRwList.length}/${RW_PER_MATCH_CAP}) for match ${upcomingMatch.id}`,
+            );
+            continue;
+          }
+
+          const sameTypeDup = existingRwList.some(
+            (q: any) => (q.resolution_predicate as any)?.resolution_type === rwPredType,
+          );
+          if (sameTypeDup) {
+            console.log(
+              `[rw-gen] real_world_attempt_skip_dedup — ${attemptLabel}: ` +
+              `resolution_type=${rwPredType} already exists for match ${upcomingMatch.id}`,
+            );
+            continue;
+          }
+
+          const predPlayerIdForDedup = String((rwPredicate as any).player_id ?? '');
+          if (predPlayerIdForDedup) {
+            const playerDup = existingRwList.some(
+              (q: any) => Array.isArray(q.player_ids) && q.player_ids.includes(predPlayerIdForDedup),
+            );
+            if (playerDup) {
+              console.log(
+                `[rw-gen] real_world_attempt_skip_dedup — ${attemptLabel}: ` +
+                `player ${predPlayerIdForDedup} already has REAL_WORLD question for match ${upcomingMatch.id}`,
+              );
+              continue;
+            }
+          }
         }
 
         // ── Cross-validate entity_focus against predicate type ─────────
@@ -2486,7 +2653,7 @@ Deno.serve(async (req: Request) => {
         if (rwPredType === 'match_lineup') {
           answerClosesAt = new Date(Math.max(deadlineMs, nowRW.getTime())).toISOString();
           const kickoffForLineup = new Date(upcomingMatch.kickoff).getTime();
-          resolvesAfter = new Date(kickoffForLineup).toISOString();
+          resolvesAfter = new Date(kickoffForLineup + 91 * 60 * 1000).toISOString();
         } else if (rwPredType === 'player_stat' || rwPredType === 'match_stat' || rwPredType === 'btts') {
           const kickoffMs = new Date(upcomingMatch.kickoff).getTime();
           answerClosesAt = new Date(Math.max(kickoffMs, nowRW.getTime())).toISOString();
@@ -2609,6 +2776,79 @@ Deno.serve(async (req: Request) => {
 });
 
 // ── Helpers ───────────────────────────────────────────────────────────
+
+// extractStrongestSignal: scans the top-scored news articles and identifies the
+// highest-priority signal to anchor REAL_WORLD Call 1.
+//
+// Signal priority: injury > suspension > return > form > coach > transfer
+// Entity detection: matches known player names against article headline.
+// Returns null when no recognisable signal type is found.
+function extractStrongestSignal(
+  newsItems: Array<{ headline: string; summary: string; sourceName: string; publishedAt: string; extracted_context?: string }>,
+  knownPlayers: Array<{ id: string; name: string }>,
+  matchStrings: string[],
+): Record<string, string | null> | null {
+  const SIGNAL_KEYWORDS: Record<string, string[]> = {
+    injury:     ['ruled out', 'injury', 'injured', 'fitness doubt', 'misses', 'miss the', 'doubt', 'unavailable', 'training concern'],
+    suspension: ['suspension', 'suspended', 'banned', 'yellow card', 'booking risk', 'one yellow from', 'ban'],
+    return:     ['return', 'back in training', 'fit again', 'recovered', 'recalled', 'back from injury'],
+    form:       ['in form', 'scored in last', 'goals this season', 'assist streak', 'top scorer', 'hat-trick', 'brace', 'on fire'],
+    coach:      ['sacked', 'fired', 'resigned', 'manager under pressure', 'final warning', 'under threat'],
+    transfer:   ['transfer', 'signed', 'deal', 'move to', 'joining', 'new signing'],
+  };
+  const SIGNAL_PRIORITY = ['injury', 'suspension', 'return', 'form', 'coach', 'transfer'] as const;
+
+  for (const item of newsItems) {
+    const searchText = [
+      item.extracted_context ?? '',
+      item.summary ?? '',
+      item.headline,
+    ].join(' ').toLowerCase();
+
+    let detectedType: string | null = null;
+    for (const signalType of SIGNAL_PRIORITY) {
+      if (SIGNAL_KEYWORDS[signalType].some((kw) => searchText.includes(kw))) {
+        detectedType = signalType;
+        break;
+      }
+    }
+    if (!detectedType) continue;
+
+    // Entity detection: scan headline for known player names (case-insensitive)
+    let entityName: string | null = null;
+    let entityType = 'team';
+    const headlineLower = item.headline.toLowerCase();
+    for (const p of knownPlayers) {
+      if (p.name && headlineLower.includes(p.name.toLowerCase())) {
+        entityName = p.name;
+        entityType = 'player';
+        break;
+      }
+    }
+
+    // Prefer the first match string that mentions the entity, else fall back to first match
+    let boundMatch: string | null = null;
+    if (entityName) {
+      boundMatch = matchStrings.find(
+        (ms) => ms.toLowerCase().includes(entityName!.toLowerCase()),
+      ) ?? matchStrings[0] ?? null;
+    } else {
+      boundMatch = matchStrings[0] ?? null;
+    }
+
+    return {
+      signal_type:  detectedType,
+      entity_name:  entityName,
+      entity_type:  entityType,
+      headline:     item.headline,
+      source:       item.sourceName,
+      published_at: item.publishedAt,
+      bound_match:  boundMatch,
+    };
+  }
+
+  return null;
+}
 
 // enrichArticlesWithScraper: deep-reads the top-ranked candidate articles using the
 // spontyx-scraper-service, attaching full article text to each item before Call 1.

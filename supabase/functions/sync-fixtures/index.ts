@@ -20,9 +20,17 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 // ── Constants ─────────────────────────────────────────────────────────────
 
 const BASE            = 'https://v3.football.api-sports.io';
-const MVP_LEAGUES     = [39, 140];  // Premier League, La Liga
-const MVP_SEASON      = 2025;       // Current season (2025/26)
+const ACTIVE_LEAGUES  = [39, 140];  // Premier League, La Liga (config-driven in Sprint 2)
 const LIVE_STATUSES   = new Set(['1H', 'HT', '2H', 'ET', 'BT', 'P']);
+
+// Returns the API-Football season year for the currently active season.
+// API-Football uses the year the season starts: 2025 = 2025/26, 2026 = 2026/27.
+// Rule: if current UTC month >= July (month 6, 0-indexed), season = current year;
+//       otherwise season = current year - 1.
+function getCurrentSeason(): number {
+  const now = new Date();
+  return now.getUTCMonth() >= 6 ? now.getUTCFullYear() : now.getUTCFullYear() - 1;
+}
 const FINISHED_STATUSES = new Set(['FT', 'AET', 'PEN', 'AWD', 'WO']);
 const CANCELLED_STATUSES = new Set(['PST', 'CANC', 'ABD', 'SUSP', 'INT', 'TBD']);
 
@@ -65,7 +73,7 @@ Deno.serve(async (req: Request) => {
 
 // ─────────────────────────────────────────────────────────────────────────
 // MODE: daily
-// Fetches upcoming fixtures (next 14 days) + standings for both MVP leagues.
+// Fetches upcoming fixtures (next 14 days) + standings for all active leagues.
 // ─────────────────────────────────────────────────────────────────────────
 
 async function syncDaily(sb: any, apiKey: string) {
@@ -74,13 +82,13 @@ async function syncDaily(sb: any, apiKey: string) {
   let fixturesSynced = 0;
   const errors: string[] = [];
 
-  for (const leagueId of MVP_LEAGUES) {
+  for (const leagueId of ACTIVE_LEAGUES) {
     // ── Fixtures ──
     try {
       const today = dateStr(new Date());
       const future = dateStr(addDays(new Date(), 14));
       const res = await fetch(
-        `${BASE}/fixtures?league=${leagueId}&season=${MVP_SEASON}&from=${today}&to=${future}`,
+        `${BASE}/fixtures?league=${leagueId}&season=${getCurrentSeason()}&from=${today}&to=${future}`,
         { headers },
       );
       totalRequests++;
@@ -105,7 +113,7 @@ async function syncDaily(sb: any, apiKey: string) {
     // ── Standings ──
     try {
       const res = await fetch(
-        `${BASE}/standings?league=${leagueId}&season=${MVP_SEASON}`,
+        `${BASE}/standings?league=${leagueId}&season=${getCurrentSeason()}`,
         { headers },
       );
       totalRequests++;
@@ -355,7 +363,7 @@ function mapFixture(f: any) {
   return {
     fixture_id:     f.fixture.id,
     league_id:      f.league?.id ?? null,
-    season:         f.league?.season ?? MVP_SEASON,
+    season:         f.league?.season ?? getCurrentSeason(),
     kickoff_at:     f.fixture.date ?? null,
     status_short:   f.fixture.status?.short ?? null,
     status_elapsed: f.fixture.status?.elapsed ?? null,
@@ -450,7 +458,7 @@ function mapStandings(response: any[], leagueId: number): any[] {
     for (const entry of table) {
       rows.push({
         league_id:     leagueId,
-        season:        group.league?.season ?? MVP_SEASON,
+        season:        group.league?.season ?? getCurrentSeason(),
         team_id:       entry.team?.id,
         team_name:     entry.team?.name,
         rank:          entry.rank,
