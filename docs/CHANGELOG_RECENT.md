@@ -12,6 +12,168 @@ For canonical specs, see the domain docs in this folder. This file is history on
 
 ## Recent updates (top-of-CLAUDE.md history)
 
+### 2026-05-05 — Result Moment Layer: LIVE question resolve UX (frontend only, no migration)
+
+New layer in `league.html` that makes the moment a LIVE question resolves feel emotional and game-like. Five sub-features, all additive, all league/LIVE-only. Arena, BR, Trivia, prematch, backend, resolver, and scoring logic unchanged.
+
+**Pre-result tension strip (`.live-tension-strip`, `.live-tension-dot`)**
+Replaces the static grey `"Awaiting match result..."` text for closed LIVE questions (answer window passed, resolver not yet run). Shows a slow 2s coral pulsing dot + italic grey copy. Default copy: `"Result incoming…"`. If `resolves_after` is within 120s of now, copy upgrades to `"This could decide your streak…"`. Prematch and non-LIVE closed questions retain the original plain text.
+
+**Correct result overlay (`.result-moment-overlay.correct`)**
+Injected as an absolutely-positioned child of the card (`position:relative; overflow:hidden` added to `.question-card`) after `feed.innerHTML`. Slides up from card bottom in 220ms. Content:
+- `"Correct"` label (lime, uppercase, 0.7rem, with checkmark SVG)
+- `+X pts` at 1.5rem weight-900 (always the resolver-set `points_earned` from DB — no client-side computation)
+- Streak copy line (`"2 in a row"` / `"3 in a row · keep going"` / `"On fire · N in a row"`) if derived local streak ≥ 2
+
+Holds 1050ms, fades out in 280ms, then removed from DOM. `showLbNotif` staggered 420ms after overlay entrance so both don't compete visually.
+
+**Wrong result overlay (`.result-moment-overlay.wrong`)**
+Same slot, softer. Content: `"Wrong"` label (coral, with × SVG) + one of two copy strings (`"So close…"` / `"Next one's coming."`) chosen by `card.dataset.qid % 2` — consecutive wrongs vary. Holds 800ms, no additional shake, no `showLbNotif`. Existing `shake-wrong` card animation still fires underneath.
+
+**Local streak derivation (`deriveLocalStreak()`)**
+Counts consecutive `is_correct === true` from the end of the already-loaded `myAnswers` object — no extra DB call. Used exclusively for streak copy in the correct overlay. (Authoritative streak for multiplier purposes is computed by `computeCurrentStreak()` at answer submission time — unchanged.)
+
+**Smooth return-to-holding transition (`resultMomentActiveUntil`, `.fade-in-holding`)**
+`showResultMoment` sets `resultMomentActiveUntil = Date.now() + 1800`. After the next `feed.innerHTML = html`, if within that window, the `.holding-card` gets `.fade-in-holding` (opacity + translateY(8px) → 0 over 400ms). Gated so it only applies immediately after a result fires — not on every render.
+
+**Duplicate-animation guard**
+Existing `wasResolved` guard preserved exactly. `prevSnapshot` is captured before `myAnswers` is overwritten each poll cycle. Already-resolved questions have `prev.is_correct` set on the next poll → `wasResolved = true` → early return. Overlays fire exactly once per resolution event.
+
+**`showLbNotif` moved**
+Previously called in the early-detect block (before render). Now called from inside `showResultMoment` only (correct path, 420ms staggered). Behaviour is equivalent — fires once per correct resolution — but timing is slightly deferred so the overlay has entered before the float notif appears.
+
+**CSS additions**
+`.live-tension-strip`, `.live-tension-dot`, `@keyframes pulse-tension`, `.result-moment-overlay` (base + `.correct` / `.wrong` / `.rmo-out`), `.rmo-label`, `.rmo-pts`, `.rmo-sub`, `@keyframes rmo-in`, `@keyframes rmo-out`, `.holding-card.fade-in-holding`, `@keyframes holding-fade-in`.
+
+**Scope:** `league.html` only. No migration, no Supabase function deploy. Commit `f05e61b`, deployed to `spontyx.com` via Vercel.
+
+---
+
+### 2026-05-05 — Moment Feeling Layer: LIVE question arrival animations + context banner (frontend only, no migration)
+
+New layer in `league.html` that makes each LIVE question feel connected to the match moment rather than appearing abruptly. Three sub-features, all additive, all league-only (soccer). Arena, BR, Trivia, and backend unchanged.
+
+**New question detection (`prevLiveActiveIds`)**
+Module-level `Set<string>` snapshot of active LIVE question IDs from the previous render cycle. Initialised as `null` (not empty Set) — first-page-load renders are excluded from animation. Only Realtime-triggered re-renders that introduce a genuinely new ID fire the moment sequence.
+
+**Moment flash (`#moment-flash`, `triggerMomentFlash()`)**
+Fixed-position overlay strip (z-index 200, `pointer-events: none`). Shows for 1.6s then auto-dismisses via CSS `forwards` animation — zero layout impact. Label varies by `event_type`:
+
+| event_type | Label |
+|---|---|
+| `goal` | ⚡ Goal detected |
+| `penalty` | ⚡ Penalty moment |
+| `red_card` | ⚡ Red card |
+| `yellow_card` | ⚡ Card shown |
+| `corner` | ⚡ Corner kick |
+| `equaliser` | ⚡ Equaliser |
+| `clean_sheet` / `next_scorer` / `match_point` | ⚡ Big moment |
+| anything else | ⚡ Live moment |
+
+High-value events (`goal`, `penalty`, `red_card`, `hockey_goal`, `match_point`) get a slightly stronger coral gradient background (`.moment-flash-hv`).
+
+**Entrance animation (`.live-question-enter`)**
+Applied to the `.primary-card` element immediately after `feed.innerHTML` is set. CSS: `opacity 0→1` + `translateY(-6px)→0` over 280ms. Class is removed after 320ms (clean DOM). No layout jump — animation uses `transform` only.
+
+**Live context banner (`.live-context-banner`, `getLiveContextText()`)**
+Small coral uppercase line rendered in `renderQuestionCard` HTML for primary active LIVE questions (`isPrimary && open && lane === 'LIVE'`). Persists statically (not animation-gated). Logic:
+
+| Input | Output |
+|---|---|
+| `event_type = 'goal'` | "After that goal…" |
+| `event_type = 'red_card'` | "Red card changed the game…" |
+| `event_type = 'equaliser'` | "The equaliser changes everything…" |
+| `event_type = 'clean_sheet'` + goalless score | "Still goalless — pressure is building…" |
+| `match_minute_at_generation ≥ 80` | "Late drama incoming…" |
+| `match_minute_at_generation ≥ 45` | "Second half pressure…" |
+| fallback | "Live moment" |
+
+Score-awareness uses `currentMatchStats.home_score / away_score` (extended fetch — see below).
+
+**Analytics hooks (`spontixTrack()`)**
+Fire-and-forget helper. Logs to console; delegates to `window.spontixAnalytics(event, data)` if defined (future provider hook). Events: `live_question_shown`, `live_context_banner_shown`. Budget exhausted also fires `live_budget_exhausted_shown`.
+
+**live_match_stats fetch extended**
+Existing fetch in `loadAndRenderQuestions` extended from `select('status, minute')` to `select('status, minute, home_score, away_score')`. Same query, same row — no extra round-trip. Enables score-aware context copy.
+
+**Scope:** `league.html` only. No migration, no Supabase function deploy.
+
+---
+
+### 2026-05-05 — LIVE holding states: 5-priority contextual holding card system (frontend only, no migration)
+
+Replaces the single generic "Next moment dropping soon" holding card with a priority-ordered system that always explains *why* there is no active question.
+
+**Priority order (enforced by if-return sequence):**
+
+| Priority | Condition | Title | Subtext |
+|---|---|---|---|
+| 1 | `status = 'NS'` | Match hasn't started yet | Live questions will begin when the match goes live. |
+| 2 | `status = 'HT'` | Half-time break | Next question will appear in the second half. |
+| 3 | `minute ≥ 89` + status in `2H/ET/P` | Match almost over | No more questions will be generated. |
+| 4 | LIVE questions generated ≥ budget | All live questions used | You've reached the maximum number of live questions for this match. |
+| 5 | default | Waiting for the next live moment… | Next question coming soon |
+
+**Per-state animations** — all use `.holding-dot` with a named `@keyframes`:
+
+| State | Keyframe | Speed | Color |
+|---|---|---|---|
+| NS | `pulse-ns` | 3.0s (very subtle) | `--grey-dark` |
+| HT | `pulse-ht` + amber glow | 2.8s (calm) | `--gold` |
+| Late | `pulse-late` + coral glow | 1.2s (urgent) | `--coral` |
+| Budget | static checkmark icon | — | `--grey` |
+| Default | existing `pulse` | 1.8s | `--lime` |
+
+**Budget fallback** — `live_questions_per_match ?? live_question_budget ?? 6`. Covers both the new column (migration 054) and legacy leagues with only `live_question_budget`.
+
+**NS state match_id resolution** — when no LIVE questions exist yet (pre-match), the `live_match_stats` fetch falls back from LIVE-question match_ids to any question's match_id (`_allCounts`), so the NS card appears even when only PREMATCH questions have been generated.
+
+**Monetization placeholder (budget state)** — disabled button ("Unlock extra questions") with `cursor: not-allowed` style. `FUTURE:` comment marks the Stripe hook point. No payment logic, no credits, no onclick handler.
+
+**Analytics hooks** — `spontixTrack('holding_state_shown', { state, leagueId })` fires for each priority branch. Budget branch also fires `spontixTrack('live_budget_exhausted_shown', { leagueId, budget })`.
+
+**Scope:** `league.html` only. No migration, no Supabase function deploy.
+
+---
+
+### 2026-05-05 — Live quality & diversity filter deployed (v66, no migration)
+
+New `lib/live-quality-filter.ts` — code-enforced quality and diversity rules for league `CORE_MATCH_LIVE` (soccer only). Runs after `validateQuestion()` and the window overlap guard, before DB insert. Arena, BR, Trivia, prematch, and resolver are unaffected.
+
+**`checkLiveQuality(predicate, raw, liveCtx)`** — 5 hard-reject rules + soft scoring infrastructure:
+
+| Code | Rule |
+|---|---|
+| `already_resolved_clean_sheet` | Clean sheet predicate when the relevant team has already conceded |
+| `already_resolved_btts` | BTTS predicate when both teams have already scored |
+| `blowout_outcome_reject` | Winner (`match_outcome_winner`) predicate when score diff ≥ 3 |
+| `equaliser_blowout_reject` | Question text contains equaliser/comeback phrasing when score diff ≥ 2 |
+| `consecutive_same_market` | Same market key as the last non-voided question for this match — time-driven only |
+
+Event-driven questions are exempt from `consecutive_same_market` hard reject; they receive a −30 soft penalty instead (score stays at 70, above the 50 rejection threshold — no soft rejections in v1).
+
+**`deriveLiveMarketKey(predicate)`** — canonical market key for live predicates (`goals_window`, `cards_window`, `match_outcome_winner`, `clean_sheet_home/away`, `btts`, `total_goals`, `player_goal`, `player_card`).
+
+**`matchQuestions`** added to `LiveMatchContext` — step 6 in `buildLiveContext()` fetches all CORE_MATCH_LIVE questions for the league+match (oldest-first, all statuses). Used by the quality filter for consecutive-market checks; voided questions excluded by the filter at runtime.
+
+**`recentCategories`** in `buildContextPacket()` now populated from `matchQuestions` market keys (last 5 non-voided) — gives OpenAI diversity guidance for the first time.
+
+**`'live_quality'` stage** added to `RejectionLogEntry['stage']` union — rejection entries include `reason`, `score`, `fixture_id`, `timestamp` and are immediately visible in `analytics_live_rejection_reasons`.
+
+**Scope:** `lib/live-quality-filter.ts` (new), `lib/types.ts`, `lib/context-builder.ts`, `index.ts`. No migration.
+
+---
+
+### 2026-05-05 — Window overlap guard deployed (v65, no migration)
+
+Hard rejects any `CORE_MATCH_LIVE match_stat_window` candidate whose `[window_start_minute, window_end_minute]` range overlaps an existing pending `match_stat_window` question for the same league+match.
+
+Overlap rule: `newStart < existingEnd AND newEnd > existingStart`. Only `resolution_status = 'pending'` questions are checked (resolved/voided are ignored). Runs after `validateQuestion()`, before DB insert. Rejection stage: `live_timing_validation`, code: `live_window_overlap`.
+
+**Scope:** `index.ts` only (51 lines added after the existing validateQuestion rejection block). No migration, no type changes.
+
+---
+
 ### 2026-05-05 — `live_questions_per_match`: user-controlled per-match live question count + slot-paced generation (migration 054)
 
 Migration 054 adds `live_questions_per_match` (INT, default 6, check 1–10) to `leagues`. `live_question_budget` kept as legacy fallback. Read order: `live_questions_per_match ?? live_question_budget ?? 6`. Soccer-specific — not for use with other sports until those have their own slot logic.
