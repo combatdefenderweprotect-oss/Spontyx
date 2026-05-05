@@ -864,7 +864,6 @@
         <input type="date" class="form-input" id="league-end-date" />
       </div>
     </div>
-    <div class="form-hint" style="margin-top:-8px;margin-bottom:8px;">Used to calculate your AI question quota for the league duration.</div>
 
     <!-- ============================================================
          SEASON-LONG FORK — Path A (team) / Path B (competition)
@@ -1233,7 +1232,7 @@
           <div class="trophy-option-name">League Champion</div>
           <div class="trophy-option-rarity" style="color:#FFD700;">Legendary</div>
         </div>
-        <div class="trophy-option" data-trophy="league_podium" onclick="selectTrophy(this)" data-min-tier="pro">
+        <div class="trophy-option" data-trophy="league_podium" onclick="selectTrophy(this)" data-min-tier="pro" style="display:none;">
           <span class="lock-badge">Pro</span>
           <div class="trophy-option-icon" style="background:rgba(78,205,196,0.1); border-color:#4ECDC4;">
             <svg viewBox="0 0 24 24" stroke="#4ECDC4" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="13" width="6" height="7"/><rect x="9" y="8" width="6" height="12"/><rect x="16" y="15" width="6" height="5"/></svg>
@@ -1241,7 +1240,7 @@
           <div class="trophy-option-name">Podium Finisher</div>
           <div class="trophy-option-rarity" style="color:#4ECDC4;">Rare</div>
         </div>
-        <div class="trophy-option" data-trophy="undefeated_season" onclick="selectTrophy(this)" data-min-tier="pro">
+        <div class="trophy-option" data-trophy="undefeated_season" onclick="selectTrophy(this)" data-min-tier="pro" style="display:none;">
           <span class="lock-badge">Pro</span>
           <div class="trophy-option-icon" style="background:rgba(124,92,252,0.1); border-color:#7C5CFC;">
             <svg viewBox="0 0 24 24" stroke="#7C5CFC" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L3 7v6c0 5 3.5 9.5 9 11 5.5-1.5 9-6 9-11V7l-9-5z"/><polyline points="9 12 11 14 15 10"/></svg>
@@ -1249,7 +1248,7 @@
           <div class="trophy-option-name">Undefeated</div>
           <div class="trophy-option-rarity" style="color:#7C5CFC;">Epic</div>
         </div>
-        <div class="trophy-option" data-trophy="season_champion" onclick="selectTrophy(this)" data-min-tier="pro">
+        <div class="trophy-option" data-trophy="season_champion" onclick="selectTrophy(this)" data-min-tier="pro" style="display:none;">
           <span class="lock-badge">Pro</span>
           <div class="trophy-option-icon" style="background:rgba(255,215,0,0.1); border-color:#FFD700;">
             <svg viewBox="0 0 24 24" stroke="#FFD700" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="6"/><polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/></svg>
