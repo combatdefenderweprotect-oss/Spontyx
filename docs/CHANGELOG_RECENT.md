@@ -12,6 +12,20 @@ For canonical specs, see the domain docs in this folder. This file is history on
 
 ## Recent updates (top-of-CLAUDE.md history)
 
+### 2026-05-05 — `prematch_questions_per_match`: user-controlled per-match question count
+
+Migration 053 adds `prematch_questions_per_match` (INT, default 5, check 1–10) to `leagues`. `prematch_question_budget` kept as legacy fallback for rows created before this migration.
+
+- **UI** — range slider (1–10, default 5) added to Step 3 of create-league flow. Wired into review step and launch payload.
+- **Generation** — `perMatchTarget = prematch_questions_per_match ?? prematch_question_budget ?? 5`. Budget is now user-chosen, not derived from intensity preset (intensity still sets `live_question_budget` and the legacy `prematch_question_budget`).
+- **Per-(league, match_id) idempotency check** — before Phase A, existing CORE_MATCH_PREMATCH rows are counted per (league_id, match_id). If already at target → skip immediately. If partial → generates only the shortfall. Prevents duplicate generation on concurrent cron + demand-driven runs.
+- **Phase D fallback templates** — after normal AI generation + 3-retry loop, any remaining shortfall is filled by 5 deterministic templates (match winner, over 2.5 goals, BTTS, clean sheet, away winner). Inserted as `source='fallback_template'` — zero OpenAI calls, zero AI quota consumed. Text-deduped so re-runs don't re-insert.
+- **`ensure-prematch`** debounce now compares `recentCount >= perMatchTarget` (not a fixed threshold), so a league with target=10 is not incorrectly skipped at 6 recent questions.
+- **`computePoolGenerationTarget`** updated to read `prematch_questions_per_match ?? prematch_question_budget` when sizing the shared pool.
+- Resolver, Arena, BR, Trivia: untouched.
+
+**Deploy steps (completed):** migration 053 applied; `generate-questions` and `ensure-prematch` redeployed.
+
 ### 2026-05-05 — Demand-driven pre-match generation (`ensure-prematch`)
 
 Pre-match question generation is now event-based as the primary UX path. Cron job `generate-questions-every-6h` is preserved unchanged as a backstop.

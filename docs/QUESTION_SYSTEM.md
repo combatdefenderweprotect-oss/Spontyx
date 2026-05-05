@@ -167,16 +167,20 @@ Pre-match generation is **demand-driven**, not cron-primary. Two client-side hoo
 1. **On league creation** — `create-league.html` fires `ensure-prematch` immediately after the league row is inserted (fire-and-forget, before redirect).
 2. **On league page open** — `league.html` fires `ensure-prematch` after league hydration on every load (fire-and-forget).
 
-`ensure-prematch` is a thin orchestrator: JWT-auth → RLS access check on the league row → 5-minute recent-generation debounce (counts CORE_MATCH_PREMATCH rows for the league created within the last 5 min) → forwards to `generate-questions` with `{ league_id, [match_id] }` using the `CRON_SECRET` bearer.
+`ensure-prematch` is a thin orchestrator: JWT-auth → RLS access check on the league row → debounce (counts CORE_MATCH_PREMATCH rows created in last 5 min; skips if `recentCount >= perMatchTarget`) → forwards to `generate-questions` with `{ league_id, [match_id] }` using the `CRON_SECRET` bearer.
 
 `generate-questions` accepts an optional POST body. With `league_id`, the league fetch is narrowed to that single row. With `match_id`, eligible-matches are filtered to that single fixture. The no-body cron path is unchanged.
 
 **Cron backstop** — `generate-questions-every-6h` (Job 2) remains in place unchanged. It catches leagues created without a UI session and any fixtures that drift into the 48h window between user opens.
 
-**Idempotency** — there is no new lock table. The pipeline already guarantees uniqueness via:
-- `prematch_question_budget` cap per league (default 4)
-- pool fingerprint dedup in `lib/pool-manager.ts`
+**Per-match question count** — `prematch_questions_per_match` (migration 053, INT 1–10, default 5) is the user-chosen target set at league creation. The pipeline reads `prematch_questions_per_match ?? prematch_question_budget ?? 5`. `prematch_question_budget` is kept as a legacy fallback for rows created before migration 053.
+
+**Idempotency** — per-(league, match_id) existing-count check runs before Phase A. If existing `CORE_MATCH_PREMATCH` rows (non-voided) already meet the target → match is skipped immediately. If partial → only the shortfall is generated. Additionally:
+- Pool fingerprint dedup in `lib/pool-manager.ts`
 - Jaccard near-duplicate filter in `lib/prematch-quality-filter.ts`
+- No new lock table
+
+**Fallback templates (Phase D)** — after normal AI generation + 3-retry loop, any per-match shortfall is filled by five deterministic templates: match winner, over 2.5 goals, BTTS, home clean sheet, away winner. Inserted as `source='fallback_template'` — no OpenAI call, no AI quota consumed. Text-deduped on re-run. Predicates use existing resolver types (`match_outcome`, `match_stat`, `btts`).
 
 **Fixture window** — `isMatchEligibleForPrematch()` enforces: automatic mode = kickoff in 24–48h (with late-creation fallback to <24h); manual mode = `now ≥ kickoff − offset_hours`; never generate after kickoff. This is unchanged from the cron-only era.
 
