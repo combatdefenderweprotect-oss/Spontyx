@@ -710,9 +710,9 @@
 
 /* Clickable top zone */
 .bf-card-clickable {
+  display: block;
   padding: 16px 18px 14px;
   cursor: pointer;
-  display: flex; flex-direction: column; gap: 10px;
 }
 .bf-card.too-late .bf-card-clickable { cursor: not-allowed; }
 .bf-card.active .bf-card-clickable { cursor: default; }
@@ -721,6 +721,7 @@
 .bf-card-meta {
   display: flex; align-items: center; justify-content: space-between;
   font-size: 0.65rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
+  margin-bottom: 10px;
 }
 .bf-card-league { color: rgba(255,255,255,0.38); }
 .bf-live-badge {
@@ -741,6 +742,7 @@
 .bf-card-matchup {
   display: grid; grid-template-columns: 1fr auto 1fr;
   align-items: center; gap: 6px;
+  margin-bottom: 10px;
 }
 .bf-card-team {
   font-size: clamp(0.95rem, 2.2vw, 1.2rem);
