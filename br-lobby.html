@@ -2164,7 +2164,16 @@ async function leaveLobby() {
   var pickBtn = document.getElementById('btn-pick-battlefield');
   if (dropBtn) { dropBtn.disabled = false; dropBtn.textContent = '🔥 Instant Drop In'; }
   if (pickBtn) pickBtn.disabled = false;
-  document.querySelectorAll('.match-row').forEach(function(r) { r.style.pointerEvents = ''; });
+  document.querySelectorAll('.match-row').forEach(function(r) {
+    r.style.pointerEvents = '';
+    r.classList.remove('selected');
+  });
+
+  // Hide segment picker and reset match selection so the list is fresh
+  var picker = document.getElementById('segment-picker');
+  if (picker) picker.style.display = 'none';
+  selectedMatch = null;
+  selectedHalf  = 'first_half';
 }
 
 // Clean up player row when the user navigates away or closes the tab.
