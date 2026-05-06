@@ -534,7 +534,10 @@
 
 <!-- Topbar -->
 <div id="br-topbar">
-  <a href="br-lobby.html" class="br-logo">⚔️ <span>BR</span></a>
+  <button class="app-back-btn" onclick="goBackOrFallback('br-lobby.html')">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    Back
+  </button>
   <div id="br-round-pill" class="br-round-pill">Waiting…</div>
   <div id="br-mode-label" class="br-mode-label"></div>
 </div>
@@ -583,6 +586,10 @@
 <script src="spontix-store.js"></script>
 
 <script>
+function goBackOrFallback(fallback) {
+  try { if (document.referrer && new URL(document.referrer).origin === location.origin) { history.back(); return; } } catch (_) {}
+  location.href = fallback;
+}
 (function() {
   /* ── State ─────────────────────────────────────────────── */
   var sessionId      = null;

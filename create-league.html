@@ -48,13 +48,6 @@
       border-bottom: 1px solid rgba(255,255,255,0.06); background: var(--navy);
       position: sticky; top: 0; z-index: 100;
     }
-    .topbar-back {
-      display: flex; align-items: center; gap: 6px; color: var(--grey); font-size: 0.8rem;
-      font-weight: 600; text-decoration: none; padding: 6px 12px 6px 8px;
-      border-radius: var(--radius-pill); transition: all 0.15s;
-    }
-    .topbar-back:hover { background: rgba(255,255,255,0.05); color: var(--off-white); }
-    .topbar-back svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
     .topbar-logo {
       flex: 1; text-align: center; font-size: 1.1rem; font-weight: 900;
       letter-spacing: -0.5px; display: flex; align-items: baseline; justify-content: center; gap: 2px;
@@ -664,10 +657,10 @@
 
 <!-- Top Bar -->
 <header class="topbar">
-  <a href="dashboard.html" class="topbar-back">
-    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+  <button class="app-back-btn" onclick="goBackOrFallback('dashboard.html')">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
     Back
-  </a>
+  </button>
   <div class="topbar-logo">Spontyx<span class="dot"></span></div>
   <div class="topbar-spacer"></div>
 </header>
@@ -1503,6 +1496,10 @@
 <script src="spontix-store.js"></script>
 <script src="sidebar.js"></script>
 <script>
+function goBackOrFallback(fallback) {
+  try { if (document.referrer && new URL(document.referrer).origin === location.origin) { history.back(); return; } } catch (_) {}
+  location.href = fallback;
+}
 // ═══════════════════════════════
 //  WIZARD STATE
 // ═══════════════════════════════

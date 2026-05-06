@@ -45,14 +45,6 @@
       position: sticky; top: 0; z-index: 50;
       backdrop-filter: blur(12px);
     }
-    .as-back {
-      display: flex; align-items: center; gap: 6px;
-      background: none; border: none; cursor: pointer;
-      color: rgba(255,255,255,0.5); font-size: 0.78rem; font-weight: 600;
-      font-family: inherit; padding: 6px 10px; border-radius: 20px; transition: all 0.15s;
-    }
-    .as-back:hover { background: rgba(255,255,255,0.06); color: #fff; }
-    .as-back svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2.5; fill: none; }
 
     .as-match-badge {
       flex: 1; display: flex; align-items: center; gap: 8px; font-size: 0.82rem; font-weight: 700;
@@ -649,7 +641,7 @@
 
 <!-- TOPBAR -->
 <div class="as-topbar" id="as-topbar">
-  <button class="as-back" onclick="window.location.href='multiplayer.html'">
+  <button class="app-back-btn" onclick="goBackOrFallback('multiplayer.html')">
     <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
     Back
   </button>
@@ -755,6 +747,10 @@
 <script src="supabase-client.js"></script>
 <script src="spontix-store.js"></script>
 <script>
+function goBackOrFallback(fallback) {
+  try { if (document.referrer && new URL(document.referrer).origin === location.origin) { history.back(); return; } } catch (_) {}
+  location.href = fallback;
+}
 // ── State ─────────────────────────────────────────────────────────────────
 var currentSessionId  = null;
 var currentUserId     = null;

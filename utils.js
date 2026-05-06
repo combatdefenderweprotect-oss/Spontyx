@@ -116,3 +116,16 @@ window.addEventListener('spontix-trophy-earned', function(e) {
     el.style.transform = 'translateX(-50%) translateY(-160px)';
   }, 4000);
 });
+
+
+// ── Back Navigation ──
+// Navigates back if same-origin referrer exists; otherwise falls back to a safe route.
+function goBackOrFallback(fallback) {
+  try {
+    if (document.referrer && new URL(document.referrer).origin === location.origin) {
+      history.back();
+      return;
+    }
+  } catch (_) {}
+  location.href = fallback;
+}

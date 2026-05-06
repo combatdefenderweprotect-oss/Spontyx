@@ -1193,6 +1193,10 @@
     <div class="mode-header">
       <div class="mode-header-content">
         <div class="mode-header-left">
+          <button class="app-back-btn" onclick="goBackOrFallback('dashboard.html')">
+            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+            Back
+          </button>
           <div class="mode-icon icon-br">
             <svg viewBox="0 0 24 24"><circle cx="12" cy="10" r="8"/><path d="M12 18v4"/><path d="M8 22h8"/><circle cx="9" cy="9" r="1.4" fill="currentColor" stroke="none"/><circle cx="15" cy="9" r="1.4" fill="currentColor" stroke="none"/></svg>
           </div>
@@ -1383,6 +1387,11 @@
 <script src="sidebar.js"></script>
 <script>
 'use strict';
+
+function goBackOrFallback(fallback) {
+  try { if (document.referrer && new URL(document.referrer).origin === location.origin) { history.back(); return; } } catch (_) {}
+  location.href = fallback;
+}
 
 // ── Lobby sizing constants ────────────────────────────────────────────────────
 // UI-only enforcement. Server-side validation pending — see docs/BR_SESSION_SYSTEM.md

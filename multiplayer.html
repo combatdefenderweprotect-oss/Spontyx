@@ -64,17 +64,6 @@
       padding: 16px 24px 0;
       flex-shrink: 0;
     }
-    .mp-back {
-      background: none; border: none;
-      color: rgba(255,255,255,0.45);
-      cursor: pointer; padding: 7px;
-      display: flex; align-items: center;
-      border-radius: 8px;
-      transition: color 0.15s, background 0.15s;
-      flex-shrink: 0;
-    }
-    .mp-back:hover { color: #fff; background: rgba(255,255,255,0.07); }
-    .mp-back svg { width: 18px; height: 18px; }
     #mp-page-title {
       font-size: 0.88rem; font-weight: 700;
       color: rgba(255,255,255,0.5);
@@ -1051,10 +1040,9 @@
     <div class="mode-header">
       <div class="mode-header-content">
         <div class="mode-header-left">
-          <button class="mp-back" onclick="handleBack()" title="Back" aria-label="Back" style="margin-right:4px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="15 18 9 12 15 6"/>
-            </svg>
+          <button class="app-back-btn" onclick="handleBack()">
+            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+            Back
           </button>
           <div class="mode-icon icon-arena">
             <svg viewBox="0 0 24 24"><path d="M14.5 17.5 3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/><path d="M9.5 17.5 21 6V3h-3L6.5 14.5"/><path d="M11 19l-6-6"/><path d="M8 16l-4 4"/><path d="M5 21l-2-2"/></svg>

@@ -275,6 +275,49 @@ a { text-decoration: none; color: inherit; }
 .mode-icon.icon-help       { background: rgba(78,205,196,0.12);   border-color: rgba(78,205,196,0.28);  color: var(--teal); }
 
 /* ══════════════════════════════════════════════
+   APP BACK BUTTON — universal pill back navigation.
+   Used across all page header types (mode-header, topbar, custom topbars).
+   ══════════════════════════════════════════════ */
+.app-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 40px;
+  padding: 0 16px 0 11px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+  color: rgba(245,245,255,0.68);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.025em;
+  cursor: pointer;
+  text-decoration: none;
+  font-family: inherit;
+  transition: color 0.15s, border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+  flex-shrink: 0;
+  white-space: nowrap;
+  line-height: 1;
+}
+.app-back-btn:hover {
+  color: rgba(245,245,255,1);
+  border-color: rgba(170,255,0,0.45);
+  box-shadow: 0 0 14px rgba(170,255,0,0.12);
+}
+.app-back-btn:active { transform: scale(0.95); }
+.app-back-btn svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  fill: none;
+  flex-shrink: 0;
+}
+@media (max-width: 480px) {
+  .app-back-btn { height: 44px; padding: 0 14px 0 10px; font-size: 0.75rem; }
+}
+
+/* ══════════════════════════════════════════════
    BR-MODE — sidebar adapts to survival aesthetic.
    Activated by body.br-mode (set on Battle Royale pages only).
    All rules scoped under .br-mode so non-BR pages are 100% unaffected.

@@ -41,28 +41,6 @@
     }
 
     /* ══ TOP BAR ══ */
-    .topbar {
-      display: flex; align-items: center; padding: 12px 24px;
-      background: var(--navy-light); border-bottom: 1px solid rgba(255,255,255,0.06);
-      position: sticky; top: 0; z-index: 100;
-    }
-    .topbar-back {
-      display: flex; align-items: center; gap: 6px; color: var(--grey); font-size: 0.8rem;
-      font-weight: 600; text-decoration: none; padding: 6px 12px 6px 8px;
-      border-radius: var(--radius-pill); transition: all 0.15s;
-    }
-    .topbar-back:hover { background: rgba(255,255,255,0.05); color: var(--off-white); }
-    .topbar-back svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
-    .topbar-center { flex: 1; text-align: center; }
-    .topbar-match { font-size: 0.65rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
-    .topbar-title { font-size: 1rem; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px; }
-    .topbar-title .trivia-badge {
-      background: linear-gradient(135deg, var(--teal), #3BA89F); color: #fff;
-      padding: 3px 10px; border-radius: var(--radius-pill); font-size: 0.6rem;
-      font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
-    }
-    .topbar-spacer { width: 70px; }
-
     /* ══ SCREENS ══ */
     /* Height envelope = viewport minus the unified .mode-header (~76px) */
     .screen { display: none; min-height: calc(100vh - var(--mode-header-h, 76px)); }
@@ -695,6 +673,10 @@
 <div class="mode-header">
   <div class="mode-header-content">
     <div class="mode-header-left">
+      <button class="app-back-btn" onclick="goBackOrFallback('dashboard.html')">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </button>
       <div class="mode-icon icon-trivia">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
       </div>
@@ -1318,6 +1300,10 @@
 <div class="toast" id="toast"></div>
 
 <script>
+function goBackOrFallback(fallback) {
+  try { if (document.referrer && new URL(document.referrer).origin === location.origin) { history.back(); return; } } catch (_) {}
+  location.href = fallback;
+}
 /* ═══ STATE ═══ */
 let currentMode = 'solo';
 let selectedTopic = 'Football';

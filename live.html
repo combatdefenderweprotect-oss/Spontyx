@@ -41,13 +41,6 @@
       background: var(--navy-light); border-bottom: 1px solid rgba(255,255,255,0.06);
       position: sticky; top: 0; z-index: 100;
     }
-    .game-topbar-back {
-      display: flex; align-items: center; gap: 6px; color: var(--grey); font-size: 0.8rem;
-      font-weight: 600; text-decoration: none; padding: 6px 12px 6px 8px;
-      border-radius: var(--radius-pill); transition: all 0.15s;
-    }
-    .game-topbar-back:hover { background: rgba(255,255,255,0.05); color: var(--off-white); }
-    .game-topbar-back svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 2; fill: none; }
     .game-topbar-center { flex: 1; text-align: center; }
     .game-topbar-league { font-size: 0.65rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; }
     .game-topbar-match { font-size: 0.9rem; font-weight: 700; }
@@ -436,10 +429,10 @@
 
 <!-- Top Bar -->
 <header class="game-topbar">
-  <a href="league.html" class="game-topbar-back">
-    <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-    League
-  </a>
+  <button class="app-back-btn" onclick="goBackOrFallback('league.html')">
+    <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+    Back
+  </button>
   <div class="game-topbar-center">
     <div class="game-topbar-league">LaLiga Legends 24/25 · Matchday 32</div>
     <div class="game-topbar-match">Barcelona vs Real Madrid</div>
@@ -691,6 +684,10 @@
 <script src="supabase-client.js"></script>
 <script src="spontix-store.js"></script>
 <script>
+function goBackOrFallback(fallback) {
+  try { if (document.referrer && new URL(document.referrer).origin === location.origin) { history.back(); return; } } catch (_) {}
+  location.href = fallback;
+}
 // ══════════════════════════════════════════
 // SPONTIX BRIDGE — Player Side
 // ══════════════════════════════════════════
