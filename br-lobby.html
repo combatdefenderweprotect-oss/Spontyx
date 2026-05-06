@@ -2154,10 +2154,17 @@ async function leaveLobby() {
     await window.sb.rpc('leave_br_session', { p_session_id: currentSessionId });
   }
   document.getElementById('wr-overlay').classList.remove('show');
-  currentSessionId = null;
+  currentSessionId     = null;
   fillTimerStart       = null;
   targetCountdownStart = null;
   instantiateInFlight  = false;
+
+  // Restore buttons and interactivity disabled by enterLobby()
+  var dropBtn = document.getElementById('btn-instant-drop');
+  var pickBtn = document.getElementById('btn-pick-battlefield');
+  if (dropBtn) { dropBtn.disabled = false; dropBtn.textContent = '🔥 Instant Drop In'; }
+  if (pickBtn) pickBtn.disabled = false;
+  document.querySelectorAll('.match-row').forEach(function(r) { r.style.pointerEvents = ''; });
 }
 
 // Clean up player row when the user navigates away or closes the tab.
