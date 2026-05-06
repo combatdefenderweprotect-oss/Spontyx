@@ -1,8 +1,8 @@
 # Arena Session System
 
 **Status:** Production ✅  
-**Migrations:** 033, 034, 035, 036, 037, 038, 039 — all applied  
-**Edge Functions:** `resolve-questions`, `generate-questions`, `live-stats-poller` — all deployed  
+**Migrations:** 033, 034, 035, 036, 037, 038, 039, 068 — all applied  
+**Edge Functions:** `resolve-questions`, `generate-questions`, `live-stats-poller`, `join-arena-queue` — all deployed  
 
 ---
 
@@ -14,7 +14,88 @@ Arena Sessions are short-lived competitive multiplayer game sessions (1v1 or 2v2
 
 ---
 
-## 2. Tables
+## 2. Arena v1 Queue Matchmaking
+
+Arena v1 replaces the old client-side lobby with a server-authoritative queue. Players join a queue for a specific fixture + phase; when two players match, the session is created atomically by an RPC — never by the browser.
+
+### Phase windows
+
+| Phase | Status required | Minute range |
+|---|---|---|
+| H1 | `1H` | 0–25 |
+| H2 | `2H` | 45–65 |
+
+The 5-minute queue entry expiry and minimum viable question estimate (≥4 at 1 per 3 min) act as safety guards.
+
+### `arena_queue` table
+
+| Column | Type | Notes |
+|---|---|---|
+| `id` | UUID PK | |
+| `user_id` | UUID → auth.users | CASCADE on delete |
+| `fixture_id` | BIGINT | |
+| `sport` | TEXT | default `'football'` |
+| `phase` | TEXT | `'H1'` or `'H2'` |
+| `mode` | TEXT | `'ranked'` or `'casual'` |
+| `status` | TEXT | `waiting → matched / cancelled / expired` |
+| `session_id` | UUID → arena_sessions | SET NULL on delete |
+| `joined_at` | TIMESTAMPTZ | |
+| `matched_at` | TIMESTAMPTZ | |
+| `expires_at` | TIMESTAMPTZ | joined_at + 5 min |
+
+**Constraint:** unique partial index on `(user_id) WHERE status='waiting'` — one active queue entry per user enforced at DB level.
+
+**RLS:** users read own rows only; all writes are via SECURITY DEFINER RPCs (service-role bypass).
+
+**Realtime:** `arena_queue` is published to `supabase_realtime` so the client can subscribe to its own row status change (`waiting → matched`).
+
+### `arena_sessions` v1 additions (migration 068)
+
+| Column | Type | Notes |
+|---|---|---|
+| `session_start_minute` | INTEGER | Match minute when session was created |
+| `arena_mode` | TEXT | `'ranked'` or `'casual'`; distinct from legacy `mode` column (`'1v1'`/`'2v2'`) |
+
+### `pair_arena_queue()` RPC (SECURITY DEFINER, migration 068)
+
+Called by the `join-arena-queue` Edge Function after auth + phase-window validation.
+
+1. Rejects if caller already has `status='waiting'` → returns `{ status: 'error', reason: 'already_in_queue' }`.
+2. Claims the oldest non-expired waiting opponent (`FOR UPDATE SKIP LOCKED`) — concurrent-safe.
+3. **Pairing path:** creates `arena_session` (`mode='1v1'`, `arena_mode`, `session_start_minute`), inserts both players into `arena_session_players`, marks opponent's queue row `matched`, records caller's queue row as `matched`.
+4. **Waiting path:** inserts caller into queue, returns `{ status: 'waiting', queue_id }`.
+
+Returns `JSONB`: `{ status: 'matched', session_id }` | `{ status: 'waiting', queue_id }` | `{ status: 'error', reason }`.
+
+### `cancel_arena_queue()` RPC (SECURITY DEFINER, migration 068)
+
+Sets the caller's `waiting` entry to `cancelled`. `p_queue_id` is optional — if NULL, cancels any waiting entry. Returns `{ cancelled: true }` or `{ cancelled: false, reason: 'no_waiting_entry' }`.
+
+### `join-arena-queue` Edge Function
+
+Entry point for Arena v1 matchmaking. POST with JWT.
+
+| Action (`body.action`) | Description |
+|---|---|
+| `join` | Validate auth + fields; check `live_match_stats` for liveness + minute; enforce phase window; estimate question count; call `pair_arena_queue` |
+| `cancel_queue` | Call `cancel_arena_queue` for the caller |
+
+Error codes: `unauthorized | missing_action | unknown_action | invalid_json | missing_fixture_id | invalid_fixture_id | invalid_phase | invalid_arena_mode | fixture_not_live | outside_join_window | insufficient_questions | already_in_queue | queue_error | cancel_failed`.
+
+Deploy: `supabase functions deploy join-arena-queue --no-verify-jwt`.
+
+### `multiplayer.html` — Arena entry UI
+
+The old 1v1/2v2 format-card lobby is replaced by:
+
+- **Match browser:** 7-day schedule (-4h to +7d), terminal statuses filtered, date section headers, real-time countdown strings, arena state labels per card.
+- **Filters:** sport dropdown (from `sports_competitions`), competition dropdown (by `compId`; fallback label `'League {id}'` for unrecognised leagues), team name search, By Time / Most Active sort.
+- **Right panel — per-phase sections:** H1 and H2 shown independently. Each can be: Available (Join Ranked + Join Casual buttons), Upcoming (Notify Me toggle, `localStorage`-backed), or Closed.
+- **`joinDirect(phase, mode)`:** posts to `join-arena-queue`; on `matched` → redirects to `arena-session.html`; on `waiting` → subscribes to `arena_queue` Realtime row, shows "Finding opponent…" overlay with cancel button.
+
+---
+
+## 3. Tables
 
 ### `arena_sessions`
 One row per lobby game.
@@ -226,6 +307,8 @@ Idempotent via `source_id = sessionId`. Spectators skip XP.
 
 | RPC | Migration | Purpose |
 |---|---|---|
+| `pair_arena_queue(...)` | 068 | Atomic opponent claim + session creation |
+| `cancel_arena_queue(p_user_id, p_queue_id?)` | 068 | Cancel caller's waiting queue entry |
 | `complete_arena_session(p_session_id)` | 039 | Mark session completed, determine winner |
 | `increment_arena_player_score(session_id, user_id, points)` | 037 | Atomic scoreboard update |
 | `update_arena_ratings(p_session_id)` | 036 | ELO recalculation post-session |
@@ -250,11 +333,13 @@ All RPCs: `GRANT EXECUTE TO authenticated, service_role`.
 | File | Purpose |
 |---|---|
 | `arena-session.html` | Live gameplay page — questions, answers, scoreboard, completion overlay, history drawer |
-| `multiplayer.html` | Matchmaking lobby → `createArenaSession()` |
+| `multiplayer.html` | Arena v1 entry — 7-day schedule browser, per-phase join controls, `joinDirect()` |
+| `supabase/functions/join-arena-queue/index.ts` | Arena v1 matchmaking Edge Function — auth, phase window, `pair_arena_queue` |
 | `supabase/functions/resolve-questions/index.ts` | Resolver — `maybeCompleteArenaSession()` hook on all void paths |
 | `supabase/functions/generate-questions/index.ts` | Arena live generation loop (`?live_only=1`) |
+| `backend/migrations/068_arena_queue.sql` | `arena_queue` table, `pair_arena_queue()`, `cancel_arena_queue()` RPCs |
 | `backend/migrations/033_arena_sessions.sql` | Core tables: `arena_sessions`, `arena_session_players` |
-| `backend/migrations/034_match_lobbies_arena_session_id.sql` | FK from lobby → session |
+| `backend/migrations/034_match_lobbies_arena_session_id.sql` | FK from lobby → session (legacy lobby system) |
 | `backend/migrations/035_xp_system.sql` | `award_xp()` RPC |
 | `backend/migrations/036_arena_elo.sql` | `update_arena_ratings()` RPC |
 | `backend/migrations/037_arena_score_increment.sql` | `increment_arena_player_score()` RPC |

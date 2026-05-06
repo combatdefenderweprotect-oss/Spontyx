@@ -12,6 +12,103 @@ For canonical specs, see the domain docs in this folder. This file is history on
 
 ## Recent updates (top-of-CLAUDE.md history)
 
+### 2026-05-06 — Arena multiplayer.html UI overhaul: schedule, filters, phase sections
+
+Full rebuild of `multiplayer.html` Arena entry experience. The old 1v1/2v2 format-card lobby is replaced by a live schedule browser with per-phase join controls.
+
+**Match list:**
+- Loads fixtures from -4h to +7d (`api_football_fixtures`); `live_match_stats` overlays authoritative status/minute for live matches.
+- Terminal statuses (`FT`, `AET`, `PEN`, `CANC`, `ABD`, `AWD`, `WO`) filtered client-side.
+- Date section headers: "Today", "Tomorrow", then weekday + date.
+- Real-time countdown string per card: `LIVE · 34'`, `HT`, `Postponed`, `2h 15m`, etc. — refreshed every 30s by a client interval.
+
+**Filters (sport / competition / search / sort):**
+- Sport dropdown populated from `sports_competitions.sport` per fixture's `league_id`; defaults all to `'football'`.
+- Competition dropdown populated by `compId` (league_id) → name from `sports_competitions`. Competition filter compares by numeric `compId`, not by label.
+- Fallback for leagues not in `sports_competitions`: name `'League {id}'` (not `'Football'`) so every competition is distinguishable and the filter visibly works.
+- Search box filters by team name substring.
+- Sort: By Time (live first, then chronological) / Most Active (live sorted by minute descending).
+
+**Arena state labels per card:**
+- `Arena opens at kickoff` — pre-match
+- `H1 available now` / `H2 available now` — within join window
+- `H1 closed` / `H2 closed` — window passed
+- `Half time — H2 opens at 45'` — HT
+- `Arena coming soon` — PST
+
+**Right panel — per-phase sections (H1 + H2 independently):**
+- Each phase shows: window (`0'–25'` / `45'–65'`), availability state, and action buttons.
+- **Available:** "Join H1 (Ranked)" + "Join H1 (Casual)" buttons side by side. Calls `joinDirect(phase, mode)` → `join-arena-queue` Edge Function.
+- **Upcoming:** "Notify me for H1/H2" toggle — backed by `localStorage`; button label + class updates live.
+- **Closed:** Static "H1 Arena closed" label.
+- Mode info cards (Ranked/Casual) shown below when no specific mode is active — descriptions visible.
+
+**Ranked/Casual descriptions:**
+- Ranked: "Affects your ELO rating. Win to climb the leaderboard."
+- Casual: "No ELO at stake. Good for practice or low-pressure games."
+
+**`joinDirect(phase, mode)` flow:**
+1. POST `join-arena-queue` Edge Function with `{ action: 'join', fixture_id, phase, arena_mode, sport }`.
+2. On `matched` → redirect to `arena-session.html?id=<session_id>`.
+3. On `waiting` → subscribe to `arena_queue` Realtime on own row; show "Finding opponent…" overlay.
+4. Cancel button POSTs `{ action: 'cancel_queue', queue_id }` and tears down subscription.
+
+**Deployed:** pushed to GitHub → Vercel auto-deploy (commit `033bf12`).
+
+---
+
+### 2026-05-06 — Arena v1: queue foundation (migration 068 + join-arena-queue Edge Function)
+
+Server-authoritative 1v1 matchmaking replacing the old client-side lobby system. Players queue per fixture + phase (H1/H2); when two players match, an `arena_session` is created atomically.
+
+**Migration 068** (`backend/migrations/068_arena_queue.sql`):
+
+**`arena_sessions` additive columns:**
+- `session_start_minute INTEGER` — match minute at session creation.
+- `arena_mode TEXT CHECK ('ranked'|'casual') DEFAULT 'ranked'` — v1 queue concept; distinct from legacy `mode` column.
+
+**`arena_queue` table:**
+| Column | Notes |
+|---|---|
+| `id` UUID PK | |
+| `user_id` | FK → auth.users, CASCADE |
+| `fixture_id BIGINT` | |
+| `sport TEXT` | default `'football'` |
+| `phase TEXT` | `'H1'` or `'H2'` |
+| `mode TEXT` | `'ranked'` or `'casual'` |
+| `status TEXT` | `'waiting'` → `'matched'` / `'cancelled'` / `'expired'` |
+| `session_id UUID` | → arena_sessions; SET NULL on delete |
+| `joined_at` / `matched_at` / `expires_at` | expires = joined + 5 min |
+
+Indexes: unique partial on `(user_id) WHERE status='waiting'` (one active entry per user); hot-path index on `(fixture_id, phase, mode, status, joined_at) WHERE status='waiting'`.
+
+RLS: users read own rows only; all writes via SECURITY DEFINER RPCs.
+
+Realtime: `arena_queue` added to `supabase_realtime` publication.
+
+**`pair_arena_queue()` RPC (SECURITY DEFINER):**
+- Guard: rejects if user already has a `status='waiting'` entry → `already_in_queue`.
+- Claims oldest valid opponent (`FOR UPDATE SKIP LOCKED`) — concurrent-safe.
+- Pairing path: creates `arena_session` (`mode='1v1'`, `arena_mode`, `session_start_minute`), inserts both players into `arena_session_players`, marks opponent's queue row `matched`, records caller's queue entry as `matched`.
+- Waiting path: inserts caller into queue, returns `{ status: 'waiting', queue_id }`.
+- Returns `{ status: 'matched'|'waiting'|'error', session_id?, queue_id?, reason? }`.
+
+**`cancel_arena_queue()` RPC (SECURITY DEFINER):**
+- Sets caller's `waiting` entry to `cancelled`. `p_queue_id` optional — if NULL cancels any waiting entry.
+- Returns `{ cancelled: true }` or `{ cancelled: false, reason: 'no_waiting_entry' }`.
+
+**`join-arena-queue` Edge Function** (`supabase/functions/join-arena-queue/index.ts`):
+
+Actions (POST `body.action`):
+- `join` — validate JWT + required fields; check `live_match_stats` for liveness; enforce phase window (H1: status=`'1H'` + minute ≤ 25; H2: status=`'2H'` + minute 45–65); minimum viable question check (≥4 estimated at 1 per 3 min); call `pair_arena_queue`.
+- `cancel_queue` — call `cancel_arena_queue` for caller.
+
+Error codes: `unauthorized | missing_action | unknown_action | invalid_json | missing_fixture_id | invalid_fixture_id | invalid_phase | invalid_arena_mode | fixture_not_live | outside_join_window | insufficient_questions | already_in_queue | queue_error | cancel_failed`.
+
+**Deploy:** `supabase functions deploy join-arena-queue --no-verify-jwt` — deployed 2026-05-06.
+
+---
+
 ### 2026-05-06 — Custom Questions: full feature + security hardening (migrations 064–066)
 
 Admin-created manual questions for leagues. Full cycle: create → players answer → admin resolves with correct answers → scores applied → leaderboard updates.
