@@ -452,7 +452,7 @@ async function handleResolve(sb: ReturnType<typeof createClient>, userId: string
   const pointsCorrect = q.custom_points_correct ?? 10;
   const pointsWrong   = q.custom_points_wrong   ?? 0;
 
-  const updates: Array<{ id: string; is_correct: boolean; points_earned: number }> = [];
+  const updates: Array<{ id: string; user_id: string; is_correct: boolean; points_earned: number }> = [];
 
   for (const pa of answers) {
     // Normalise selected_options from DB (may be stored as JSONB array or comma-string)
@@ -471,8 +471,9 @@ async function handleResolve(sb: ReturnType<typeof createClient>, userId: string
       selectedSorted.every((v, i) => v === correctSorted[i]);
 
     updates.push({
-      id:           pa.id,
-      is_correct:   isCorrect,
+      id:            pa.id,
+      user_id:       pa.user_id,
+      is_correct:    isCorrect,
       points_earned: isCorrect ? pointsCorrect : pointsWrong,
     });
   }
@@ -499,6 +500,23 @@ async function handleResolve(sb: ReturnType<typeof createClient>, userId: string
     if (upErr) {
       console.error(`[custom-questions] resolve update player_answer ${u.id} error:`, upErr);
       updateErrors.push(u.id);
+    }
+  }
+
+  // ── Propagate points to users.total_points ────────────────────────────
+  const userDeltas = new Map<string, number>();
+  for (const u of updates) {
+    if (u.points_earned !== 0) {
+      userDeltas.set(u.user_id, (userDeltas.get(u.user_id) ?? 0) + u.points_earned);
+    }
+  }
+  for (const [uid, delta] of userDeltas) {
+    const { error: ptErr } = await sb.rpc('increment_user_total_points', {
+      p_user_id: uid,
+      p_delta:   delta,
+    });
+    if (ptErr) {
+      console.warn('[custom-questions] total_points increment failed:', ptErr.message, 'user:', uid);
     }
   }
 
@@ -550,15 +568,52 @@ async function handleVoid(sb: ReturnType<typeof createClient>, userId: string, b
 
   if (q.custom_resolution_status === 'voided') return err('already voided', 409);
 
-  // ── Zero out any points already awarded ───────────────────────────────
+  // ── Roll back points if question was already resolved ────────────────
+  // Read prior points_earned BEFORE zeroing so we can compute rollback deltas.
+  // Keep is_correct as it was — a player who answered correctly is still correct;
+  // the question was voided, not their answer. The UI reads player_answers.voided
+  // to show "Voided — points removed" instead of the wrong-answer state.
   if (q.custom_resolution_status === 'resolved') {
+    const { data: priorAnswers, error: priorErr } = await sb
+      .from('player_answers')
+      .select('id, user_id, points_earned')
+      .eq('question_id', question_id);
+
+    if (priorErr) {
+      console.error('[custom-questions] void: failed to read prior answers:', priorErr);
+    }
+
+    // Set voided=true + zero points; keep is_correct unchanged
     const { error: zeroErr } = await sb
       .from('player_answers')
-      .update({ points_earned: 0, is_correct: false, multiplier_breakdown: { model: 'custom_flat', voided: true } })
+      .update({
+        voided:        true,
+        points_earned: 0,
+        multiplier_breakdown: { model: 'custom_flat', voided: true },
+      })
       .eq('question_id', question_id);
 
     if (zeroErr) {
       console.error('[custom-questions] void zero points error:', zeroErr);
+    }
+
+    // Roll back users.total_points for each player who had non-zero points
+    const prior = priorAnswers ?? [];
+    const userDeltas = new Map<string, number>();
+    for (const pa of prior) {
+      const earned = (pa.points_earned as number) ?? 0;
+      if (earned !== 0) {
+        userDeltas.set(pa.user_id, (userDeltas.get(pa.user_id) ?? 0) - earned);
+      }
+    }
+    for (const [uid, delta] of userDeltas) {
+      const { error: ptErr } = await sb.rpc('increment_user_total_points', {
+        p_user_id: uid,
+        p_delta:   delta,
+      });
+      if (ptErr) {
+        console.warn('[custom-questions] void rollback total_points failed:', ptErr.message, 'user:', uid);
+      }
     }
   }
 

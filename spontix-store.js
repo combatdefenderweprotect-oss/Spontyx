@@ -4389,7 +4389,16 @@ SpontixStoreAsync.getLeaderboard = async function (opts) {
     if (age <= weekMs)  add(periodMap[g.user_id].week);
   });
 
-  // 4. Build leaderboard entries
+  // 4. Sort with deterministic tiebreaker before mapping:
+  //    pts desc → correct answers desc → wrong answers asc → user_id asc
+  usersRes.data.sort(function(a, b) {
+    if (b.total_points !== a.total_points)   return b.total_points - a.total_points;
+    if (b.total_correct !== a.total_correct) return b.total_correct - a.total_correct;
+    if (a.total_wrong !== b.total_wrong)     return a.total_wrong - b.total_wrong;
+    return a.id < b.id ? -1 : 1;
+  });
+
+  // 5. Build leaderboard entries
   var uid = SpontixStore.Session.getCurrentUserId();
   var toAcc = function (b) { return b.tot > 0 ? Math.round(b.cor / b.tot * 100) : 0; };
   return usersRes.data.map(function (row) {
@@ -4422,7 +4431,13 @@ SpontixStoreAsync.getLeagueLeaderboard = async function (leagueId) {
     .select('id,name,handle,avatar,avatar_color,tier,total_points,total_correct,total_wrong,best_streak,games_played,accuracy,leagues_joined,elo_rating')
     .in('id', ids)
     .order('total_points', { ascending: false });
-  return (usersRes.data || []).map(function (row) {
+  // Sort with deterministic tiebreaker: pts desc → correct desc → wrong asc → id asc
+  return (usersRes.data || []).slice().sort(function(a, b) {
+    if (b.total_points !== a.total_points)   return b.total_points - a.total_points;
+    if (b.total_correct !== a.total_correct) return b.total_correct - a.total_correct;
+    if (a.total_wrong !== b.total_wrong)     return a.total_wrong - b.total_wrong;
+    return a.id < b.id ? -1 : 1;
+  }).map(function (row) {
     return SpontixStore._mapLbEntry(row, uid, null);
   });
 };

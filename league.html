@@ -1862,7 +1862,7 @@ async function loadAndRenderQuestions(silent) {
       var qIds = qs.map(function(q) { return q.id; });
       var aRes = await window.sb
         .from('player_answers')
-        .select('question_id, answer, is_correct, points_earned, multiplier_breakdown, confidence_level, selected_options')
+        .select('question_id, answer, is_correct, points_earned, multiplier_breakdown, confidence_level, selected_options, voided')
         .eq('user_id', currentUserId)
         .in('question_id', qIds);
       (aRes.data || []).forEach(function(a) {
@@ -2022,6 +2022,7 @@ async function loadAndRenderQuestions(silent) {
     var curr = myAnswers[qid];
     var prev = prevSnapshot[qid];
     if (!curr || curr.is_correct === null || curr.is_correct === undefined) return;
+    if (curr.voided) return; // voided answers do not trigger result animations
     var wasResolved = prev && prev.is_correct !== null && prev.is_correct !== undefined;
     if (wasResolved) return; // already animated on a previous poll
     var card = feed.querySelector('[data-qid="' + qid + '"]');
@@ -2254,7 +2255,7 @@ function showLbNotif(pts) {
 // Uses the already-loaded myAnswers object — no extra DB call needed.
 function deriveLocalStreak() {
   var answers = Object.values(myAnswers)
-    .filter(function(a) { return a.is_correct !== null && a.is_correct !== undefined; });
+    .filter(function(a) { return a.is_correct !== null && a.is_correct !== undefined && !a.voided; });
   var streak = 0;
   for (var i = answers.length - 1; i >= 0; i--) {
     if (answers[i].is_correct) streak++;
@@ -3024,6 +3025,7 @@ async function computeCurrentStreak() {
       .eq('user_id', currentUserId)
       .eq('league_id', currentLeagueId)
       .not('is_correct', 'is', null)      // only resolved answers
+      .eq('voided', false)               // exclude voided-after-resolve
       .order('answered_at', { ascending: false })
       .limit(4);
     var answers = res.data || [];
@@ -3146,7 +3148,8 @@ async function loadLeaderboard() {
         .from('player_answers')
         .select('user_id, points_earned, is_correct')
         .eq('league_id', currentLeagueId)
-        .not('is_correct', 'is', null),
+        .not('is_correct', 'is', null)
+        .eq('voided', false),
       window.sb
         .from('league_members')
         .select('user_id')
@@ -3177,18 +3180,28 @@ async function loadLeaderboard() {
     console.warn('[leaderboard] fetch error:', e);
   }
 
-  // Aggregate scores per user
-  var scores = {};
+  // Aggregate scores and correct/wrong counts per user for tiebreaking
+  var scores   = {};
+  var corrects = {};
+  var wrongs   = {};
   answers.forEach(function(a) {
     scores[a.user_id] = (scores[a.user_id] || 0) + (a.points_earned || 0);
+    if (a.is_correct === true)  corrects[a.user_id] = (corrects[a.user_id] || 0) + 1;
+    if (a.is_correct === false) wrongs[a.user_id]   = (wrongs[a.user_id]   || 0) + 1;
   });
 
   // Build rows
   var rows = memberUsers.map(function(u) {
     var lp = lobbyPlayers.find(function(p) { return p.user_id === u.id; });
-    return { id: u.id, name: u.name || u.handle || 'Player', pts: scores[u.id] || 0, team: lp ? lp.team_number : null };
+    return { id: u.id, name: u.name || u.handle || 'Player', pts: scores[u.id] || 0, team: lp ? lp.team_number : null, correct: corrects[u.id] || 0, wrong: wrongs[u.id] || 0 };
   });
-  rows.sort(function(a, b) { return b.pts - a.pts; });
+  // Tiebreaker: pts desc → correct answers desc → wrong answers asc → user_id asc
+  rows.sort(function(a, b) {
+    if (b.pts !== a.pts)         return b.pts - a.pts;
+    if (b.correct !== a.correct) return b.correct - a.correct;
+    if (a.wrong !== b.wrong)     return a.wrong - b.wrong;
+    return a.id < b.id ? -1 : 1;
+  });
 
   if (!rows.length) {
     container.innerHTML = '<div class="feed-empty">No members yet.</div>';
@@ -3289,7 +3302,8 @@ async function loadSoloScore(container) {
       .select('points_earned, is_correct')
       .eq('league_id', currentLeagueId)
       .eq('user_id', currentUserId)
-      .not('is_correct', 'is', null);
+      .not('is_correct', 'is', null)
+      .eq('voided', false);
     answers = aRes.data || [];
   } catch(e) {
     console.warn('[solo-score] fetch error:', e);
@@ -3887,9 +3901,9 @@ function renderCustomQuestionCard(q) {
     timeLabel = '<span class="question-time" style="color:#FFA500;">Admin reviewing</span>';
   }
 
-  // Card border
+  // Card border — no highlight for voided questions regardless of prior is_correct
   var borderStyle = '';
-  if (resolved && myAns) {
+  if (!voided && resolved && myAns) {
     borderStyle = myAns.is_correct
       ? 'border-color:rgba(168,225,12,0.3);'
       : 'border-color:rgba(255,107,107,0.2);';
@@ -3919,7 +3933,11 @@ function renderCustomQuestionCard(q) {
         '<div class="q-point-range">' + getPointRange(q) + '</div>' +
       '</div>';
   } else if (voided) {
-    footerHtml = '<div class="q-voided">This question was voided and did not count.</div>';
+    // Void-after-resolve: player had points that are now removed. Show specific message.
+    // Void-before-scoring: generic message (answer had no points to remove).
+    footerHtml = (myAns && myAns.voided)
+      ? '<div class="q-voided">Voided — points removed from your score.</div>'
+      : '<div class="q-voided">This question was voided and did not count.</div>';
   } else if (resolved && myAns) {
     var pts = myAns.points_earned || 0;
     var correctIcon = myAns.is_correct

@@ -314,8 +314,23 @@ Deno.serve(async (req: Request) => {
       }
 
       if (!stats.finished) {
-        // Match not over yet — skip (retry next run)
-        runStats.skipped++;
+        // Match not over yet. Void PREMATCH/LIVE questions stuck >48 hours past
+        // resolves_after — covers abandoned matches and permanent API data gaps.
+        // REAL_WORLD has its own resolution_deadline path; leave it unchanged.
+        const STALE_TIMEOUT_TYPES = new Set(['CORE_MATCH_PREMATCH', 'CORE_MATCH_LIVE']);
+        const hoursElapsed = (Date.now() - new Date(q.resolves_after).getTime()) / 3_600_000;
+        if (hoursElapsed > 48 && STALE_TIMEOUT_TYPES.has(q.question_type ?? '')) {
+          console.warn(
+            `[resolve] staleness_timeout — question=${q.id} type=${q.question_type} ` +
+            `hours_elapsed=${Math.round(hoursElapsed)} match=${matchId}`,
+          );
+          await voidQuestion(sb, q.id, 'resolver_staleness_timeout');
+          runStats.voided++;
+          if (q.arena_session_id) await maybeCompleteArenaSession(sb, q.arena_session_id);
+          if (q.br_session_id)    await advanceBrRound(sb, q.br_session_id, brSessionMap, true);
+        } else {
+          runStats.skipped++;
+        }
         continue;
       }
 
@@ -643,6 +658,7 @@ async function markCorrectAnswers(
     }
 
     const nowL = new Date().toISOString();
+    const userDeltas = new Map<string, number>();
     for (const a of answers) {
       const isCorrect = (a.answer === outcome);
       // When confidence scoring is disabled for the league, always score Normal
@@ -665,6 +681,27 @@ async function markCorrectAnswers(
           note:                isCorrect ? 'league_v2_correct' : 'league_v2_wrong',
         },
       }).eq('id', a.id);
+
+      // Accumulate per-user delta for global leaderboard sync.
+      // Zero-point answers (Normal wrong) are skipped — no-op on total_points.
+      if (finalPts !== 0) {
+        userDeltas.set(a.user_id, (userDeltas.get(a.user_id) ?? 0) + finalPts);
+      }
+    }
+
+    // Propagate aggregate deltas to users.total_points.
+    // Negative deltas (High/Very High confidence wrong answers) correctly decrement.
+    for (const [userId, delta] of userDeltas) {
+      const { error: ptErr } = await sb.rpc('increment_user_total_points', {
+        p_user_id: userId,
+        p_delta:   delta,
+      });
+      if (ptErr) {
+        console.warn(
+          '[resolve-questions] total_points increment failed:',
+          ptErr.message, 'user:', userId, 'delta:', delta,
+        );
+      }
     }
     return;
   }
