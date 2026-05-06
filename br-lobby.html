@@ -1190,6 +1190,22 @@
         <div class="match-empty">Loading matches…</div>
       </div>
 
+      <!-- Segment picker: shown after a match is selected, before entering lobby -->
+      <div id="segment-picker" style="display:none; margin-top:16px; padding:16px; background:rgba(255,255,255,0.04); border-radius:12px; border:1px solid rgba(255,255,255,0.08);">
+        <p style="font-size:0.85rem; color:var(--grey); margin:0 0 12px 0; font-weight:600; text-transform:uppercase; letter-spacing:0.06em;">Choose segment</p>
+        <div style="display:flex; gap:10px;">
+          <button class="btn" id="btn-seg-first" onclick="confirmSegment('first_half')"
+            style="flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);">
+            First Half
+          </button>
+          <button class="btn" id="btn-seg-second" onclick="confirmSegment('second_half')"
+            style="flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);">
+            Second Half
+          </button>
+        </div>
+        <p id="segment-hint" style="font-size:0.78rem; color:var(--grey); margin:10px 0 0 0;"></p>
+      </div>
+
       <div class="action-row">
         <button class="btn btn-ghost" onclick="goStep(1)">← Back</button>
       </div>
@@ -1263,7 +1279,7 @@ var BR_TARGET_COUNTDOWN_MS = 15000;  // countdown when target reached
 // ── State ────────────────────────────────────────────────────────────────────
 var selectedMode   = null;   // 'classic' | 'ranked' (UI value; mapped to DB 'ffa')
 var selectedMatch  = null;   // match object from api_football_fixtures
-var selectedHalf   = 'full_match';
+var selectedHalf   = 'first_half';  // default; overridden by segment picker
 var currentUserId  = null;
 var currentHandle  = null;
 var currentSessionId = null;
@@ -1724,7 +1740,7 @@ function renderMatches(matches) {
   }).join('');
 }
 
-// Match click → instant join. No more Step 3 / Scope picker.
+// Match click → show segment picker. User picks First Half or Second Half before entering lobby.
 function selectMatch(fixtureId) {
   var m = allMatches.find(function(x) { return x.fixture_id == fixtureId; });
   if (!m) return;
@@ -1733,7 +1749,38 @@ function selectMatch(fixtureId) {
     return;
   }
   selectedMatch = m;
-  selectedHalf  = 'full_match';      // dropped Scope step — always full match
+  selectedHalf  = null;
+
+  // Highlight selected row
+  document.querySelectorAll('.match-row').forEach(function(r) {
+    r.classList.toggle('selected', r.dataset.fixtureId == fixtureId);
+  });
+
+  // Show segment picker and hint
+  var picker = document.getElementById('segment-picker');
+  var hint   = document.getElementById('segment-hint');
+  if (picker) picker.style.display = 'block';
+
+  var isLive = m.status && ['1H', 'HT', '2H', 'ET'].includes(m.status);
+  if (hint) {
+    hint.textContent = isLive
+      ? 'Match is live — only the active segment can be joined.'
+      : 'Pick which half of the match your session covers.';
+  }
+
+  // For live matches, pre-disable the unavailable segment
+  var btnFirst  = document.getElementById('btn-seg-first');
+  var btnSecond = document.getElementById('btn-seg-second');
+  if (btnFirst && btnSecond) {
+    btnFirst.disabled  = isLive && m.status === '2H';
+    btnSecond.disabled = isLive && m.status === '1H';
+  }
+
+  picker.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function confirmSegment(segment) {
+  selectedHalf = segment;
   enterLobby();
 }
 
@@ -1784,7 +1831,7 @@ async function instantDropIn() {
     }
 
     selectedMatch = hot.m;
-    selectedHalf  = 'full_match';
+    selectedHalf  = 'first_half';  // default for instant drop-in; segment-end detection handles finalize
     await enterLobby();
   } catch (err) {
     btn.disabled = false;
@@ -1806,12 +1853,11 @@ async function enterLobby() {
   document.querySelectorAll('.match-row').forEach(function(r) { r.style.pointerEvents = 'none'; });
 
   try {
-    // 1. Find or create a br_match_pools placeholder
-    var poolId = await getOrCreatePool();
-    if (!poolId) throw new Error('Could not create match pool');
+    // BR v2: no pre-generated pool — the live question pipeline writes directly
+    // to the questions table. Skip pool creation entirely.
 
-    // 2. Find an open waiting session for this context, or create one
-    var sessionId = await getOrCreateSession(poolId);
+    // 1. Find an open waiting session for this context, or create one
+    var sessionId = await getOrCreateSession();
     if (!sessionId) throw new Error('Could not create session');
     currentSessionId = sessionId;
 
@@ -1834,76 +1880,20 @@ async function enterLobby() {
   }
 }
 
-async function getOrCreatePool() {
-  var matchId = String(selectedMatch.fixture_id);
-  var kickoff = selectedMatch.kickoff_at;
-  var expiresAt = new Date(new Date(kickoff).getTime() + 130 * 60 * 1000).toISOString();
 
-  // Try to find an existing ready pool
-  var { data: existing } = await window.sb
-    .from('br_match_pools')
-    .select('id')
-    .eq('match_id', matchId)
-    .eq('half_scope', selectedHalf)
-    .in('status', ['ready', 'generating'])
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle();
+async function getOrCreateSession() {
+  var matchId    = String(selectedMatch.fixture_id);
+  var dbMode     = 'ffa';  // BR v1 is always FFA (all players, one lobby)
+  var ratingMode = (selectedMode === 'ranked') ? 'ranked' : 'classic';
 
-  if (existing) return existing.id;
-
-  // Create a placeholder pool (question generation happens server-side later)
-  var { data: pool, error } = await window.sb
-    .from('br_match_pools')
-    .insert({
-      match_id:           matchId,
-      half_scope:         selectedHalf,
-      status:             'ready',
-      question_count:     0,
-      expires_at:         expiresAt,
-      generation_profile: {
-        match_id:   matchId,
-        half_scope: selectedHalf,
-        home_team:  selectedMatch.home_team_name,
-        away_team:  selectedMatch.away_team_name,
-      },
-    })
-    .select('id')
-    .single();
-
-  if (error) {
-    // Unique conflict — race, re-fetch
-    if (error.code === '23505') {
-      var { data: retry } = await window.sb
-        .from('br_match_pools')
-        .select('id')
-        .eq('match_id', matchId)
-        .eq('half_scope', selectedHalf)
-        .in('status', ['ready', 'generating'])
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      return retry ? retry.id : null;
-    }
-    throw new Error('Pool creation failed: ' + error.message);
-  }
-  return pool.id;
-}
-
-async function getOrCreateSession(poolId) {
-  var matchId = String(selectedMatch.fixture_id);
-  // DB CHECK constraint allows '1v1' | 'ffa' | '2v2'. BR is now N-player survival,
-  // so we always store 'ffa' and track Classic vs Ranked client-side until the
-  // schema migration in Phase 4 adds a proper `rating_eligible` flag.
-  var dbMode = 'ffa';
-
-  // Look for a waiting session with space (under BR_MAX_PLAYERS)
+  // Look for a waiting session matching this match + segment + rating_mode with space
   var { data: waiting } = await window.sb
     .from('br_sessions')
-    .select('id, mode')
+    .select('id, mode, rating_mode')
     .eq('match_id', matchId)
-    .eq('half_scope', selectedHalf)
+    .eq('segment_scope', selectedHalf)
     .eq('mode', dbMode)
+    .eq('rating_mode', ratingMode)
     .eq('status', 'waiting')
     .order('created_at', { ascending: true })
     .limit(5);
@@ -1918,14 +1908,14 @@ async function getOrCreateSession(poolId) {
     }
   }
 
-  // Create a new session
+  // Create a new session — no pool_id in v2 (live pipeline writes questions directly)
   var { data: session, error } = await window.sb
     .from('br_sessions')
     .insert({
-      pool_id:        poolId,
-      match_id:       String(selectedMatch.fixture_id),
-      half_scope:     selectedHalf,
+      match_id:       matchId,
+      segment_scope:  selectedHalf,
       mode:           dbMode,
+      rating_mode:    ratingMode,
       home_team_name: selectedMatch.home_team_name,
       away_team_name: selectedMatch.away_team_name,
       kickoff_at:     selectedMatch.kickoff_at,
@@ -2097,12 +2087,11 @@ async function tryInstantiate(sessionId) {
   if (instantiateInFlight) return;
   instantiateInFlight = true;
   try {
+    // v2: no pool_id or total_questions — segment-based, live pipeline driven
     var { data: result } = await window.sb.rpc('instantiate_br_session', {
-      p_session_id:      sessionId,
-      p_pool_id:         await getPoolId(sessionId),
-      p_total_questions: 10, // placeholder until BR question generation is live
+      p_session_id: sessionId,
     });
-    // ok=false with reason='session_not_waiting' means another client got there first — fine
+    // ok=false with reason='session_not_waiting' means resolver locked it first — fine
     if (result && result.ok) {
       stopLobbyTick();
       redirectToSession(sessionId);
@@ -2113,15 +2102,6 @@ async function tryInstantiate(sessionId) {
     instantiateInFlight = false;
     // Ignore — Realtime will fire the status change and redirect
   }
-}
-
-async function getPoolId(sessionId) {
-  var { data } = await window.sb
-    .from('br_sessions')
-    .select('pool_id')
-    .eq('id', sessionId)
-    .single();
-  return data ? data.pool_id : null;
 }
 
 function redirectToSession(sessionId) {
@@ -2190,11 +2170,9 @@ async function rejoinSession(sessionId) {
     return;
   }
 
-  // Restore state and show waiting room.
-  // DB mode is 'ffa'; default UI label to Classic on rejoin (Ranked vs Classic
-  // distinction will be persisted on the session row in Phase 4).
-  selectedMode = 'classic';
-  selectedHalf = session.half_scope;
+  // Restore state from the session row and show waiting room.
+  selectedMode = (session.rating_mode === 'ranked') ? 'ranked' : 'classic';
+  selectedHalf = session.segment_scope || 'first_half';
   selectedMatch = {
     fixture_id:     parseInt(session.match_id),
     home_team_name: session.home_team_name,
@@ -2206,7 +2184,7 @@ async function rejoinSession(sessionId) {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function halfLabel(h) {
-  return { full_match: 'Full Match', first_half: '1st Half', second_half: '2nd Half' }[h] || h;
+  return { first_half: '1st Half', second_half: '2nd Half' }[h] || h;
 }
 
 function esc(s) {

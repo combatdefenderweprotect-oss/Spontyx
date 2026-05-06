@@ -649,7 +649,7 @@
   async function loadSession() {
     var { data, error } = await window.sb
       .from('br_sessions')
-      .select('id, status, match_id, half_scope, mode, current_question_seq, last_processed_seq, total_questions, winner_user_id, started_at, completed_at, home_team_name, away_team_name')
+      .select('id, status, match_id, segment_scope, rating_mode, mode, current_question_seq, last_processed_seq, winner_user_id, started_at, completed_at, home_team_name, away_team_name')
       .eq('id', sessionId)
       .maybeSingle();
     if (error || !data) { sessionData = null; return; }
@@ -710,7 +710,6 @@
   function renderTopbar() {
     if (!sessionData) return;
     var seq = sessionData.current_question_seq || 1;
-    var total = sessionData.total_questions || '?';
     var st = sessionData.status;
     var pill = document.getElementById('br-round-pill');
     if (st === 'waiting') {
@@ -718,10 +717,10 @@
     } else if (st === 'completed') {
       pill.textContent = 'Battle Over';
     } else {
-      pill.textContent = 'Round ' + seq + ' / ' + total;
+      pill.textContent = 'Round ' + seq;
     }
     var modeLabel = document.getElementById('br-mode-label');
-    var hl = sessionData.half_scope ? sessionData.half_scope.replace('_', ' ') : '';
+    var hl = sessionData.segment_scope ? sessionData.segment_scope.replace('_', ' ') : '';
     modeLabel.textContent = hl.toUpperCase();
   }
 
