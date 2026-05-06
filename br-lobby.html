@@ -767,8 +767,11 @@
   background: var(--navy);
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
+  overflow-y: auto;
   text-align: center;
+  padding-top: 48px;
+  padding-bottom: 32px;
 }
 .wr-overlay.show { display: flex; }
 
@@ -1293,6 +1296,7 @@ var targetCountdownStart= null;     // timestamp when target was first reached
 var lobbyTickInterval   = null;
 var lastPlayerCount     = 0;
 var instantiateInFlight = false;
+var currentAccessToken  = null;  // cached for pagehide cleanup
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async function() {
@@ -1301,6 +1305,10 @@ window.addEventListener('DOMContentLoaded', async function() {
   var { data: { user } } = await window.sb.auth.getUser();
   if (!user) { window.location.replace('login.html'); return; }
   currentUserId = user.id;
+
+  // Cache the access token for use in pagehide (can't call async there)
+  var { data: { session: authSession } } = await window.sb.auth.getSession();
+  if (authSession) currentAccessToken = authSession.access_token;
 
   var { data: prof } = await window.sb.from('users').select('handle, name').eq('id', user.id).single();
   currentHandle = (prof && prof.handle) ? prof.handle : (prof && prof.name) ? prof.name.split(' ')[0] : 'You';
@@ -2143,10 +2151,7 @@ async function leaveLobby() {
   stopRealtime();
   stopLobbyTick();
   if (currentSessionId) {
-    await window.sb.from('br_session_players')
-      .delete()
-      .eq('session_id', currentSessionId)
-      .eq('user_id', currentUserId);
+    await window.sb.rpc('leave_br_session', { p_session_id: currentSessionId });
   }
   document.getElementById('wr-overlay').classList.remove('show');
   currentSessionId = null;
@@ -2154,6 +2159,27 @@ async function leaveLobby() {
   targetCountdownStart = null;
   instantiateInFlight  = false;
 }
+
+// Clean up player row when the user navigates away or closes the tab.
+// Uses fetch keepalive so the request outlives the page.
+var SUPA_URL = 'https://hdulhffpmuqepoqstsor.supabase.co';
+var SUPA_KEY = 'sb_publishable_P-FAJ7Jp5IomFiiqEfB_qg_PKv24KS5';
+
+window.addEventListener('pagehide', function() {
+  if (!currentSessionId || !currentAccessToken) return;
+  try {
+    fetch(SUPA_URL + '/rest/v1/rpc/leave_br_session', {
+      method:  'POST',
+      keepalive: true,
+      headers: {
+        'Content-Type':  'application/json',
+        'apikey':        SUPA_KEY,
+        'Authorization': 'Bearer ' + currentAccessToken,
+      },
+      body: JSON.stringify({ p_session_id: currentSessionId }),
+    });
+  } catch(e) {}
+});
 
 // ── Rejoin existing session ───────────────────────────────────────────────────
 async function rejoinSession(sessionId) {

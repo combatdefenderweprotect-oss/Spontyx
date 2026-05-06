@@ -44,7 +44,29 @@ $$;
 GRANT EXECUTE ON FUNCTION join_br_session(UUID) TO authenticated;
 
 
--- Verify
+-- ── leave_br_session ─────────────────────────────────────────────────────────
+-- Removes the calling user from a waiting session. SECURITY DEFINER so it
+-- works even when the RLS DELETE policy can't be satisfied client-side.
+-- No-op if the user isn't in the session (safe to call on page unload).
+
+CREATE OR REPLACE FUNCTION leave_br_session(p_session_id UUID)
+RETURNS VOID
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+BEGIN
+  DELETE FROM br_session_players
+  WHERE session_id = p_session_id
+    AND user_id    = auth.uid();
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION leave_br_session(UUID) TO authenticated;
+
+
+-- Verify both functions exist
 SELECT proname, pg_get_function_arguments(oid) AS args, prosecdef AS security_definer
 FROM pg_proc
-WHERE proname = 'join_br_session';
+WHERE proname IN ('join_br_session', 'leave_br_session')
+ORDER BY proname;
