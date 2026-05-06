@@ -967,10 +967,17 @@ async function loadQuestions() {
       'clutch_context', 'created_at'
     ].join(', ');
 
-    var { data: qs } = await window.sb
+    // Only show questions that became visible after this session started.
+    // Prevents a newly-paired session from inheriting questions from a prior
+    // session on the same fixture. Falls back to unfiltered if started_at is null.
+    var qQuery = window.sb
       .from('questions')
       .select(cols)
-      .eq('arena_session_id', currentSessionId)
+      .eq('arena_session_id', currentSessionId);
+    if (sessionData && sessionData.started_at) {
+      qQuery = qQuery.gte('visible_from', sessionData.started_at);
+    }
+    var { data: qs } = await qQuery
       .order('created_at', { ascending: false })
       .limit(30);
 

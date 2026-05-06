@@ -857,7 +857,85 @@
     }
     .wr-cancel-btn:hover { color: rgba(255,255,255,0.6); border-color: rgba(255,255,255,0.2); }
 
-    /* ── TOAST ── */
+    /* ── Phase cards (H1 / H2) ──────────────────────────────────────────── */
+    .phase-cards { display: flex; flex-direction: column; gap: 8px; margin-bottom: 22px; }
+    .phase-card {
+      display: flex; align-items: center; justify-content: space-between;
+      background: rgba(255,255,255,0.03);
+      border: 1.5px solid rgba(255,255,255,0.07);
+      border-radius: 12px; padding: 13px 14px;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .phase-card:not(.disabled):hover { background: rgba(255,255,255,0.06); border-color: rgba(255,255,255,0.14); }
+    .phase-card.active { border-color: rgba(168,225,12,0.45); background: rgba(168,225,12,0.07); }
+    .phase-card.disabled { opacity: 0.45; cursor: not-allowed; }
+    .phase-card-left { display: flex; align-items: center; gap: 12px; }
+    .phase-card-label {
+      font-size: 0.75rem; font-weight: 800;
+      color: rgba(255,255,255,0.35); min-width: 24px;
+      text-align: center; letter-spacing: 0.04em;
+    }
+    .phase-card.active .phase-card-label { color: var(--lime); }
+    .phase-card-title { font-size: 0.88rem; font-weight: 700; color: #fff; }
+    .phase-card-sub   { font-size: 0.72rem; color: rgba(255,255,255,0.35); }
+    .phase-card-right { display: flex; align-items: center; gap: 10px; }
+    .phase-card-status {
+      font-size: 0.68rem; font-weight: 700;
+      padding: 3px 8px; border-radius: 10px; white-space: nowrap;
+    }
+    .phase-card-status.ok { background: rgba(168,225,12,0.12); color: var(--lime); border: 1px solid rgba(168,225,12,0.25); }
+    .phase-card-status.na { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.3); border: 1px solid rgba(255,255,255,0.07); }
+    .phase-card-check {
+      width: 20px; height: 20px; border-radius: 50%;
+      border: 1.5px solid rgba(255,255,255,0.15);
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: all 0.15s;
+    }
+    .phase-card.active .phase-card-check { background: var(--lime); border-color: var(--lime); }
+    .phase-card-check svg { width: 10px; height: 10px; opacity: 0; stroke: #000; transition: opacity 0.15s; }
+    .phase-card.active .phase-card-check svg { opacity: 1; }
+
+    /* ── Arena mode toggle (ranked / casual) ─────────────────────────────── */
+    .arena-mode-toggle { display: flex; gap: 8px; margin-bottom: 22px; }
+    .arena-mode-btn {
+      flex: 1;
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      background: rgba(255,255,255,0.04);
+      border: 1.5px solid rgba(255,255,255,0.07);
+      border-radius: 12px; padding: 12px 10px;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      font-size: 0.88rem; font-weight: 700;
+      color: rgba(255,255,255,0.45);
+      transition: border-color 0.15s, background 0.15s, color 0.15s;
+    }
+    .arena-mode-btn:hover { border-color: rgba(255,255,255,0.14); color: rgba(255,255,255,0.7); }
+    .arena-mode-btn.active { border-color: rgba(168,225,12,0.45); background: rgba(168,225,12,0.07); color: var(--lime); }
+    .mode-btn-sub { font-size: 0.65rem; font-weight: 500; color: rgba(255,255,255,0.25); }
+    .arena-mode-btn.active .mode-btn-sub { color: rgba(168,225,12,0.6); }
+
+    /* ── Phase availability badges on match cards ─────────────────────────── */
+    .phase-avail-badge {
+      display: inline-flex; align-items: center;
+      font-size: 0.6rem; font-weight: 700;
+      padding: 2px 6px; border-radius: 8px;
+    }
+    .phase-avail-badge.h1     { background: rgba(168,225,12,0.1); color: var(--lime); border: 1px solid rgba(168,225,12,0.25); }
+    .phase-avail-badge.h2     { background: rgba(78,205,196,0.1); color: var(--teal); border: 1px solid rgba(78,205,196,0.22); }
+    .phase-avail-badge.closed { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.07); }
+
+    /* ── "Match not live" info in config panel ────────────────────────────── */
+    .match-not-live-msg {
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.07);
+      border-radius: 10px; padding: 12px 14px;
+      font-size: 0.78rem; color: rgba(255,255,255,0.35);
+      margin-bottom: 16px; line-height: 1.5;
+    }
+
+    /* enter-arena-btn disabled */
+    .enter-arena-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+    /* ── TOAST ──
     #toast {
       position: fixed; bottom: 28px; left: 50%;
       transform: translateX(-50%) translateY(20px);
@@ -892,7 +970,7 @@
           </div>
           <div>
             <h1 class="mode-title">Arena</h1>
-            <p class="mode-subtitle">Real-time duels. 1v1 or 2v2. Every prediction matters.</p>
+            <p class="mode-subtitle">Real-time 1v1 duels on live sport.</p>
           </div>
           <span id="mp-page-title" style="display:none;">Arena</span>
         </div>
@@ -1081,27 +1159,26 @@
   </script>
   <script>
   // ── STATE ──────────────────────────────────────────────────────────────────
-  var currentStep   = 1;
-  var selectedMode  = null;    // '1v1' | '2v2'
-  var selectedMatch = null;    // match object
-  var selectedHalf  = 'full_match';
-  var selected2v2Sub = 'solo_queue'; // 'solo_queue' | 'invite_app' | 'invite_friend'
-  var currentLobbyId   = null;
-  var lobbyChannel     = null;
+  var currentStep      = 1;
+  var selectedMatch    = null;   // match object from allMatches
+  var selectedPhase    = null;   // 'H1' | 'H2'
+  var selectedArenaMode = 'ranked'; // 'ranked' | 'casual'
+  var currentQueueId   = null;   // arena_queue.id while waiting
+  var queueChannel     = null;   // Realtime channel for own queue row
+  var queuePollInterval = null;  // Fallback poll timer
   var allMatches       = [];
-  var compMap          = {};   // api_league_id → name
+  var liveStatsMap     = {};     // String(fixture_id) → live_match_stats row
+  var compMap          = {};     // api_league_id → name
   var filterSport      = 'all';
   var filterLeague     = 'all';
   var sortMode         = 'time';
-  var queueMap         = {};   // queueMap[matchId][halfScope][mode] = count
-  var trendingMap      = {};   // trendingMap[matchId] = players joined last 2 min
-  var readyMap         = {};   // readyMap[matchId] = true if any lobby is 1 away from full
-  var TRENDING_THRESHOLD = 5;
   var currentUserId    = null;
   var currentUserHandle = null;
 
-  var urlParams    = new URLSearchParams(window.location.search);
-  var joinLobbyId  = urlParams.get('join');
+  // Phase window constants — must match join-arena-queue Edge Function
+  var H1_MINUTE_MAX = 25;
+  var H2_MINUTE_MIN = 45;
+  var H2_MINUTE_MAX = 65;
 
   // ── INIT ───────────────────────────────────────────────────────────────────
   window.addEventListener('load', async function() {
@@ -1111,90 +1188,65 @@
     if (!session) { window.location.href = 'login.html'; return; }
     currentUserId = session.user.id;
 
-    // get handle
     var { data: profile } = await window.sb.from('users')
       .select('handle, name').eq('id', currentUserId).single();
-    if (profile) {
-      currentUserHandle = profile.handle || profile.name || 'You';
-    }
+    if (profile) currentUserHandle = profile.handle || profile.name || 'You';
 
-    // invite-link direct join
-    if (joinLobbyId) {
-      await directJoinLobby(joinLobbyId);
-      return;
-    }
-  });
-
-  // ── STEP NAVIGATION ────────────────────────────────────────────────────────
-  function goStep(n) {
+    // Arena v1: skip format selection, go straight to match browser
     var s1 = document.getElementById('step-1');
     var s2 = document.getElementById('step-2');
-    s1.style.display = (n === 1) ? '' : 'none';
-    if (s2) s2.style.display = (n === 2) ? 'flex' : 'none';
-    currentStep = n;
-    updateStepBars();
-    var titles = { 1: 'Multiplayer', 2: 'Choose Match' };
-    document.getElementById('mp-page-title').textContent = titles[n] || 'Multiplayer';
-    if (n === 2) {
-      if (allMatches.length === 0) { loadMatches(); }
-      loadQueueCounts();
-    }
-  }
+    if (s1) s1.style.display = 'none';
+    if (s2) s2.style.display = 'flex';
 
+    // Hide third step bar — Arena v1 has two steps (browse / waiting)
+    var bar3 = document.getElementById('step-bar-3');
+    if (bar3) bar3.style.display = 'none';
+
+    updateStepBars();
+    loadMatches();
+  });
+
+  // ── STEP / NAV ─────────────────────────────────────────────────────────────
   function updateStepBars() {
     var wrVisible = document.getElementById('wr-overlay').style.display === 'flex';
-    var eff = wrVisible ? 3 : currentStep;
-    for (var i = 1; i <= 3; i++) {
-      var bar = document.getElementById('step-bar-' + i);
-      if (!bar) continue;
-      bar.className = 'mp-step-bar' + (i < eff ? ' done' : (i === eff ? ' active' : ''));
-    }
+    var bar1 = document.getElementById('step-bar-1');
+    var bar2 = document.getElementById('step-bar-2');
+    if (bar1) bar1.className = 'mp-step-bar ' + (wrVisible ? 'done' : 'active');
+    if (bar2) bar2.className = 'mp-step-bar ' + (wrVisible ? 'active' : '');
   }
 
   function handleBack() {
-    var wrVisible = document.getElementById('wr-overlay').style.display === 'flex';
-    if (wrVisible) { cancelWaitingRoom(); return; }
-    if (currentStep === 1) { window.location.href = 'dashboard.html'; }
-    else { goStep(1); }
+    if (document.getElementById('wr-overlay').style.display === 'flex') {
+      cancelWaitingRoom();
+    } else {
+      window.location.href = 'dashboard.html';
+    }
   }
 
-  // ── STEP 1: FORMAT ─────────────────────────────────────────────────────────
-  function selectFormat(mode) {
-    selectedMode = mode;
-    document.getElementById('fc-1v1').classList.toggle('selected', mode === '1v1');
-    document.getElementById('fc-2v2').classList.toggle('selected', mode === '2v2');
-    document.getElementById('s1-cta-btn').disabled = false;
-  }
-
-  // ── STEP 2: MATCHES ────────────────────────────────────────────────────────
+  // ── MATCH LOADING ──────────────────────────────────────────────────────────
   async function loadMatches() {
     var list = document.getElementById('match-list');
     list.innerHTML = '<div class="match-list-loading">Loading matches…</div>';
 
-    var nowMinus3h = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
-    var fourteenDaysOut = new Date(Date.now() + 14 * 86400 * 1000).toISOString();
+    var nowMinus3h  = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
+    var twoDaysOut  = new Date(Date.now() + 2 * 86400 * 1000).toISOString();
 
     var { data: fixtures, error } = await window.sb
       .from('api_football_fixtures')
       .select('fixture_id, home_team_name, away_team_name, kickoff_at, status_short, league_id')
       .gte('kickoff_at', nowMinus3h)
-      .lte('kickoff_at', fourteenDaysOut)
+      .lte('kickoff_at', twoDaysOut)
       .order('kickoff_at', { ascending: true })
       .limit(100);
 
-    if (error) {
-      console.error('[multiplayer] fixture query error:', error);
-      list.innerHTML = '<div class="match-list-empty">Could not load fixtures.<br>' + error.message + '</div>';
-      return;
-    }
-    if (!fixtures || !fixtures.length) {
-      list.innerHTML = '<div class="match-list-empty">No upcoming fixtures found.<br>Fixture data syncs every 6 hours.</div>';
+    if (error || !fixtures || !fixtures.length) {
+      list.innerHTML = '<div class="match-list-empty">' +
+        (error ? 'Could not load fixtures.' : 'No upcoming fixtures found.') + '</div>';
       return;
     }
 
-    // fetch competition names from sports_competitions
     var leagueIds = [...new Set(fixtures.map(function(f) { return f.league_id; }).filter(Boolean))];
-    var compById = {};
+    var compById  = {};
     if (leagueIds.length) {
       var { data: comps } = await window.sb
         .from('sports_competitions')
@@ -1208,63 +1260,115 @@
     allMatches = fixtures.map(function(f) {
       var comp = compById[f.league_id] || { name: 'Football', sport: 'football' };
       return {
-        matchId: String(f.fixture_id),
-        home: f.home_team_name || 'Home',
-        away: f.away_team_name || 'Away',
-        kickoff: f.kickoff_at ? new Date(f.kickoff_at) : null,
+        matchId:    String(f.fixture_id),
+        home:       f.home_team_name || 'Home',
+        away:       f.away_team_name || 'Away',
+        kickoff:    f.kickoff_at ? new Date(f.kickoff_at) : null,
         statusShort: f.status_short || 'NS',
-        compId: f.league_id,
-        compName: comp.name,
-        sport: comp.sport,
+        compId:     f.league_id,
+        compName:   comp.name,
+        sport:      comp.sport,
       };
     });
 
-    // build sport filter
+    // Build sport filter
     var sports = [...new Set(allMatches.map(function(m) { return m.sport; }).filter(Boolean))].sort();
     var sportSel = document.getElementById('sport-filter');
     sportSel.innerHTML = '<option value="all">All Sports</option>';
     sports.forEach(function(s) {
       var opt = document.createElement('option');
-      opt.value = s;
-      opt.textContent = s.charAt(0).toUpperCase() + s.slice(1);
+      opt.value = s; opt.textContent = s.charAt(0).toUpperCase() + s.slice(1);
       sportSel.appendChild(opt);
     });
 
-    // build comp filter
+    // Build competition filter
     allMatches.forEach(function(m) {
-      if (m.compId && !compMap[String(m.compId)]) {
-        compMap[String(m.compId)] = m.compName;
-      }
+      if (m.compId && !compMap[String(m.compId)]) compMap[String(m.compId)] = m.compName;
     });
-    var sel = document.getElementById('league-filter');
-    sel.innerHTML = '<option value="all">All Competitions</option>';
-    Object.keys(compMap).sort(function(a,b) {
+    var compSel = document.getElementById('league-filter');
+    compSel.innerHTML = '<option value="all">All Competitions</option>';
+    Object.keys(compMap).sort(function(a, b) {
       return compMap[a].localeCompare(compMap[b]);
     }).forEach(function(cid) {
       var opt = document.createElement('option');
-      opt.value = cid;
-      opt.textContent = compMap[cid];
-      sel.appendChild(opt);
+      opt.value = cid; opt.textContent = compMap[cid];
+      compSel.appendChild(opt);
     });
 
+    await loadLiveStats();
     sortAndRender();
+  }
+
+  async function loadLiveStats() {
+    var liveIds = allMatches
+      .filter(function(m) { return isLiveStatus(m.statusShort); })
+      .map(function(m) { return parseInt(m.matchId, 10); })
+      .filter(Boolean);
+    if (!liveIds.length) { liveStatsMap = {}; return; }
+
+    var { data: rows } = await window.sb
+      .from('live_match_stats')
+      .select('fixture_id, status, minute')
+      .in('fixture_id', liveIds);
+
+    liveStatsMap = {};
+    (rows || []).forEach(function(r) { liveStatsMap[String(r.fixture_id)] = r; });
   }
 
   function isLiveStatus(s) {
     return ['1H','HT','2H','ET','BT','P','SUSP','INT','LIVE'].indexOf(s) !== -1;
   }
 
-  function getMatchQueueTotal(matchId) {
-    if (!queueMap[matchId]) return 0;
-    var total = 0;
-    ['full_match', 'first_half', 'second_half'].forEach(function(h) {
-      if (queueMap[matchId][h]) {
-        ['1v1','2v2'].forEach(function(m) { total += queueMap[matchId][h][m] || 0; });
+  // ── PHASE ELIGIBILITY ──────────────────────────────────────────────────────
+  // Returns {h1: {ok, reason, minute}, h2: {ok, reason, minute}}
+  // Rules mirror the join-arena-queue Edge Function validation exactly.
+  function getPhaseEligibility(matchId) {
+    var lms    = liveStatsMap[matchId];
+    var result = {
+      h1: { ok: false, reason: 'Not live yet', minute: null },
+      h2: { ok: false, reason: 'Not live yet', minute: null },
+    };
+    if (!lms) return result;
+
+    var status = lms.status;
+    var minute = lms.minute != null ? lms.minute : 0;
+
+    // H1
+    if (status === '1H') {
+      result.h1.minute = minute;
+      if (minute <= H1_MINUTE_MAX) {
+        result.h1.ok = true;
+      } else {
+        result.h1.reason = 'Window closed (' + minute + '\')';
       }
-    });
-    return total;
+    } else if (['2H','HT','FT','AET','PEN'].indexOf(status) !== -1) {
+      result.h1.reason = 'First half ended';
+    } else {
+      result.h1.reason = 'Not in first half';
+    }
+
+    // H2
+    if (status === '2H') {
+      result.h2.minute = minute;
+      if (minute >= H2_MINUTE_MIN && minute <= H2_MINUTE_MAX) {
+        result.h2.ok = true;
+      } else if (minute < H2_MINUTE_MIN) {
+        result.h2.reason = 'Second half just started';
+      } else {
+        result.h2.reason = 'Window closed (' + minute + '\')';
+      }
+    } else if (['FT','AET','PEN'].indexOf(status) !== -1) {
+      result.h2.reason = 'Match ended';
+    } else if (['1H','HT'].indexOf(status) !== -1) {
+      result.h2.reason = 'First half in progress';
+    } else {
+      result.h2.reason = 'Not in second half';
+    }
+
+    return result;
   }
 
+  // ── SORTING & FILTERING ────────────────────────────────────────────────────
   function setSortMode(mode) {
     sortMode = mode;
     document.getElementById('sort-time').classList.toggle('active', mode === 'time');
@@ -1273,19 +1377,21 @@
   }
 
   function sortAndRender() {
-    var now = Date.now();
     allMatches.sort(function(a, b) {
       if (sortMode === 'active') {
-        var aQ = getMatchQueueTotal(a.matchId);
-        var bQ = getMatchQueueTotal(b.matchId);
-        if (aQ !== bQ) return bQ - aQ;
+        // "Most Active" = matches with an open phase window first
+        var aElig  = getPhaseEligibility(a.matchId);
+        var bElig  = getPhaseEligibility(b.matchId);
+        var aOpen  = (aElig.h1.ok || aElig.h2.ok) ? 1 : 0;
+        var bOpen  = (bElig.h1.ok || bElig.h2.ok) ? 1 : 0;
+        if (aOpen !== bOpen) return bOpen - aOpen;
       }
       var aLive = isLiveStatus(a.statusShort);
       var bLive = isLiveStatus(b.statusShort);
       if (aLive && !bLive) return -1;
       if (!aLive && bLive) return 1;
-      var aDiff = a.kickoff ? Math.abs(a.kickoff.getTime() - now) : Infinity;
-      var bDiff = b.kickoff ? Math.abs(b.kickoff.getTime() - now) : Infinity;
+      var aDiff = a.kickoff ? Math.abs(a.kickoff.getTime() - Date.now()) : Infinity;
+      var bDiff = b.kickoff ? Math.abs(b.kickoff.getTime() - Date.now()) : Infinity;
       return aDiff - bDiff;
     });
     applyFilters();
@@ -1293,17 +1399,16 @@
 
   function onSportFilterChange() {
     filterSport = document.getElementById('sport-filter').value;
-    // reset competition filter when sport changes
     var sel = document.getElementById('league-filter');
     sel.innerHTML = '<option value="all">All Competitions</option>';
-    var filtered = filterSport === 'all' ? allMatches : allMatches.filter(function(m) { return m.sport === filterSport; });
+    var filtered = filterSport === 'all' ? allMatches
+      : allMatches.filter(function(m) { return m.sport === filterSport; });
     var seen = {};
     filtered.forEach(function(m) {
       if (m.compId && !seen[String(m.compId)]) {
         seen[String(m.compId)] = true;
         var opt = document.createElement('option');
-        opt.value = String(m.compId);
-        opt.textContent = m.compName;
+        opt.value = String(m.compId); opt.textContent = m.compName;
         sel.appendChild(opt);
       }
     });
@@ -1312,103 +1417,81 @@
   }
 
   function applyFilters() {
-    var q = (document.getElementById('match-search').value || '').toLowerCase().trim();
-    var sport = document.getElementById('sport-filter').value;
+    var q      = (document.getElementById('match-search').value || '').toLowerCase().trim();
+    var sport  = document.getElementById('sport-filter').value;
     var league = document.getElementById('league-filter').value;
 
     var visible = allMatches.filter(function(m) {
-      if (sport !== 'all' && m.sport !== sport) return false;
+      if (sport  !== 'all' && m.sport !== sport) return false;
       if (league !== 'all' && String(m.compId) !== league) return false;
-      if (q) {
-        var text = (m.home + ' ' + m.away + ' ' + m.compName).toLowerCase();
-        if (text.indexOf(q) === -1) return false;
-      }
+      if (q && (m.home + ' ' + m.away + ' ' + m.compName).toLowerCase().indexOf(q) === -1) return false;
       return true;
     });
 
     renderMatchList(visible);
-    document.getElementById('match-count-label').textContent = visible.length + ' match' + (visible.length !== 1 ? 'es' : '');
+    document.getElementById('match-count-label').textContent =
+      visible.length + ' match' + (visible.length !== 1 ? 'es' : '');
   }
 
+  // ── MATCH LIST RENDER ──────────────────────────────────────────────────────
   function renderMatchList(matches) {
     var list = document.getElementById('match-list');
-    if (!matches.length) {
-      list.innerHTML = '<div class="match-list-empty">No matches found</div>';
-      return;
-    }
+    if (!matches.length) { list.innerHTML = '<div class="match-list-empty">No matches found</div>'; return; }
 
-    var SCOPE_LABELS = { full_match: 'Full', first_half: '1st Half', second_half: '2nd Half' };
     var html = '';
     var lastDateKey = null;
 
     matches.forEach(function(m) {
       var isLive     = isLiveStatus(m.statusShort);
-      var qTotal     = getMatchQueueTotal(m.matchId);
       var isSelected = selectedMatch && selectedMatch.matchId === m.matchId;
+      var elig       = getPhaseEligibility(m.matchId);
 
-      // ── Date group header ──────────────────────────────────────────────
+      // Date group header
       if (m.kickoff) {
         var dateKey = m.kickoff.toDateString();
         if (dateKey !== lastDateKey) {
           lastDateKey = dateKey;
-          var now = new Date();
-          var tomorrow = new Date(now); tomorrow.setDate(now.getDate() + 1);
-          var label = dateKey === now.toDateString()      ? 'Today'
-                    : dateKey === tomorrow.toDateString() ? 'Tomorrow'
+          var now = new Date(); var tom = new Date(now); tom.setDate(now.getDate() + 1);
+          var label = dateKey === now.toDateString() ? 'Today'
+                    : dateKey === tom.toDateString() ? 'Tomorrow'
                     : m.kickoff.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'short' });
           html += '<div class="match-date-header">' + label + '</div>';
         }
       }
 
-      // ── Time column ────────────────────────────────────────────────────
+      // Time column
       var timeColHtml;
-      if (isLive) {
+      var lms = liveStatsMap[m.matchId];
+      if (isLive && lms) {
+        var minStr = lms.minute != null ? lms.minute + '\'' : lms.status;
+        timeColHtml = '<div class="time-live-badge"><span class="dot"></span>' + escHtml(minStr) + '</div>';
+      } else if (isLive) {
         timeColHtml = '<div class="time-live-badge"><span class="dot"></span>Live</div>';
       } else if (m.kickoff) {
         var kickoffTime = m.kickoff.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
         var diff = m.kickoff.getTime() - Date.now();
-        var dayLabel = '';
-        if (diff > 86400000) {
-          // already grouped under date header — just show time
-          dayLabel = '';
-        } else if (diff > 3600000) {
-          var hh = Math.floor(diff / 3600000);
-          var mm = Math.floor((diff % 3600000) / 60000);
-          dayLabel = 'in ' + hh + 'h ' + mm + 'm';
-        } else if (diff > 0) {
-          dayLabel = 'in ' + Math.floor(diff / 60000) + 'm';
-        }
+        var dayLabel = diff > 3600000
+          ? 'in ' + Math.floor(diff / 3600000) + 'h ' + Math.floor((diff % 3600000) / 60000) + 'm'
+          : diff > 0 ? 'in ' + Math.floor(diff / 60000) + 'm' : '';
         timeColHtml = '<div class="time-val">' + kickoffTime + '</div>' +
                       (dayLabel ? '<div class="time-label">' + dayLabel + '</div>' : '');
       } else {
         timeColHtml = '<div class="time-val">—</div>';
       }
 
-      // ── Queue pills ────────────────────────────────────────────────────
-      var scopePillsHtml = '';
-      if (queueMap[m.matchId]) {
-        var pills = [];
-        ['full_match', 'first_half', 'second_half'].forEach(function(scope) {
-          var count = 0;
-          if (queueMap[m.matchId][scope]) {
-            ['1v1','2v2'].forEach(function(mo) { count += queueMap[m.matchId][scope][mo] || 0; });
-          }
-          if (count > 0) pills.push('<span class="queue-scope-pill">' + SCOPE_LABELS[scope] + ' <span class="pill-count">' + count + '</span></span>');
-        });
-        if (pills.length) scopePillsHtml = '<div class="queue-scope-pills">' + pills.join('') + '</div>';
+      // Phase availability badges (only shown when live)
+      var phaseBadgesHtml = '';
+      if (isLive) {
+        var badges = [];
+        if (elig.h1.ok) badges.push('<span class="phase-avail-badge h1">H1 Open</span>');
+        if (elig.h2.ok) badges.push('<span class="phase-avail-badge h2">H2 Open</span>');
+        if (!elig.h1.ok && !elig.h2.ok) badges.push('<span class="phase-avail-badge closed">No window</span>');
+        phaseBadgesHtml = '<div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">' + badges.join('') + '</div>';
       }
 
-      var qBadgeHtml = qTotal > 0
-        ? '<span class="queue-total-badge"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>' + qTotal + ' waiting</span>'
-        : '';
-
-      // ── Card ───────────────────────────────────────────────────────────
       html += '<div class="match-row' + (isSelected ? ' selected' : '') + (isLive ? ' live-row' : '') +
               '" onclick="selectMatch(\'' + escAttr(m.matchId) + '\')" data-mid="' + escAttr(m.matchId) + '">';
-
       html += '<div class="match-row-time">' + timeColHtml + '</div>';
-
-      var signal = getMatchSignal(m.matchId);
       html += '<div class="match-row-teams">';
       html += '<div class="match-row-matchup">';
       html += '<span class="match-row-name">' + escHtml(m.home) + '</span>';
@@ -1416,14 +1499,8 @@
       html += '<span class="match-row-name">' + escHtml(m.away) + '</span>';
       html += '</div>';
       html += '<div class="match-row-comp">' + escHtml(m.compName) + '</div>';
-      if (signal) html += '<span class="match-signal ' + signal.type + '">' + signal.html + '</span>';
+      html += phaseBadgesHtml;
       html += '</div>';
-
-      html += '<div class="match-row-right">';
-      if (qBadgeHtml) html += qBadgeHtml;
-      if (scopePillsHtml) html += scopePillsHtml;
-      html += '</div>';
-
       html += '</div>';
     });
 
@@ -1431,82 +1508,14 @@
   }
 
   function selectMatch(matchId) {
-    var m = allMatches.find(function(x){ return x.matchId === matchId; });
+    var m = allMatches.find(function(x) { return x.matchId === matchId; });
     if (!m) return;
     selectedMatch = m;
-    // update row highlights
+    selectedPhase = null; // reset when match changes
     document.querySelectorAll('.match-row').forEach(function(row) {
       row.classList.toggle('selected', row.dataset.mid === matchId);
     });
     updateConfigPanel();
-  }
-
-  // ── QUEUE COUNTS ───────────────────────────────────────────────────────────
-  async function loadQueueCounts() {
-    // Single query — player_count is maintained by a DB trigger (migration 031).
-    var { data: lobbies } = await window.sb
-      .from('match_lobbies')
-      .select('id, match_id, half_scope, mode, player_count')
-      .eq('status', 'waiting');
-
-    queueMap  = {};
-    readyMap  = {};
-    var lobbyIdToMatchId = {};
-
-    (lobbies || []).forEach(function(lb) {
-      if (!queueMap[lb.match_id]) queueMap[lb.match_id] = {};
-      if (!queueMap[lb.match_id][lb.half_scope]) queueMap[lb.match_id][lb.half_scope] = {};
-      queueMap[lb.match_id][lb.half_scope][lb.mode] = lb.player_count || 0;
-
-      // ready = lobby is 1 player away from full (1v1 needs 2, 2v2 needs 4)
-      var capacity = lb.mode === '2v2' ? 4 : 2;
-      if ((lb.player_count || 0) >= capacity - 1) readyMap[lb.match_id] = true;
-
-      lobbyIdToMatchId[lb.id] = lb.match_id;
-    });
-
-    // Trending: count joins in the last 2 minutes across all waiting lobbies
-    trendingMap = {};
-    if (Object.keys(lobbyIdToMatchId).length > 0) {
-      var twoMinAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
-      var { data: recentJoins } = await window.sb
-        .from('match_lobby_players')
-        .select('lobby_id')
-        .in('lobby_id', Object.keys(lobbyIdToMatchId))
-        .gte('joined_at', twoMinAgo);
-
-      (recentJoins || []).forEach(function(r) {
-        var mid = lobbyIdToMatchId[r.lobby_id];
-        if (mid) trendingMap[mid] = (trendingMap[mid] || 0) + 1;
-      });
-    }
-
-    applyFilters();
-    if (selectedMatch) updateHalfQueueBadges();
-    if (selectedMatch) updateConfigPanel();
-  }
-
-  function getMatchSignal(matchId) {
-    var waiting = getMatchQueueTotal(matchId);
-    if (readyMap[matchId])                              return { type: 'ready',    html: '👥 Ready to play' };
-    if ((trendingMap[matchId] || 0) >= TRENDING_THRESHOLD) return { type: 'trending', html: '⚡ Trending' };
-    if (waiting >= 2)                                   return { type: 'queue',    html: '🔥 ' + waiting + ' in queue' };
-    return null;
-  }
-
-  function getQueueCount(matchId, half, mode) {
-    return (queueMap[matchId] && queueMap[matchId][half] && queueMap[matchId][half][mode]) || 0;
-  }
-
-  function updateHalfQueueBadges() {
-    if (!selectedMatch) return;
-    ['full_match', 'first_half', 'second_half'].forEach(function(h) {
-      var el = document.getElementById('hq-' + h);
-      if (!el) return;
-      var cnt = getQueueCount(selectedMatch.matchId, h, selectedMode);
-      el.textContent = cnt > 0 ? cnt + ' waiting' : '—';
-      el.className = 'half-q-count' + (cnt === 0 ? ' zero' : '');
-    });
   }
 
   // ── CONFIG PANEL ───────────────────────────────────────────────────────────
@@ -1521,144 +1530,250 @@
     placeholder.style.display = 'none';
     panel.style.display = 'block';
 
-    var m = selectedMatch;
-    var kickStr = '';
-    if (m.kickoff) {
-      kickStr = m.kickoff.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) +
-                ' · ' + m.kickoff.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    var m      = selectedMatch;
+    var elig   = getPhaseEligibility(m.matchId);
+    var isLive = isLiveStatus(m.statusShort);
+    var lms    = liveStatsMap[m.matchId];
+
+    // Match status string
+    var statusStr = '';
+    if (isLive && lms) {
+      var statusLabels = { '1H': 'First Half', 'HT': 'Half Time', '2H': 'Second Half', 'FT': 'Full Time' };
+      statusStr = (statusLabels[lms.status] || lms.status) + (lms.minute != null ? ' · ' + lms.minute + '\'' : '');
+    } else if (m.kickoff) {
+      statusStr = m.kickoff.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }) +
+                  ' · ' + m.kickoff.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
     }
-    if (isLiveStatus(m.statusShort)) kickStr = '🔴 Live now';
 
-    var modeBadgeClass = selectedMode === '1v1' ? 'm1v1' : 'm2v2';
-    var modeLabel      = selectedMode === '1v1' ? '1v1 DUEL' : '2v2 TEAM BATTLE';
-
-    // half cards
-    var halves = [
-      { id: 'full_match',   label: 'Full Match',   sub: 'All 90 minutes',   time: "90'" },
-      { id: 'first_half',   label: 'First Half',   sub: '0\' to 45\'',      time: "45'" },
-      { id: 'second_half',  label: 'Second Half',  sub: '45\' to 90\'',     time: "45'" },
+    // Phase cards
+    var phases = [
+      { id: 'H1', label: 'First Half',  sub: 'Join window: 0\'–25\'',  e: elig.h1 },
+      { id: 'H2', label: 'Second Half', sub: 'Join window: 45\'–65\'', e: elig.h2 },
     ];
-    var halfCardsHtml = halves.map(function(h) {
-      var cnt = getQueueCount(m.matchId, h.id, selectedMode);
-      var active = selectedHalf === h.id ? ' active' : '';
-      return '<div class="half-card' + active + '" id="hc-' + h.id + '" onclick="selectHalf(\'' + h.id + '\')">' +
-        '<div class="half-card-left">' +
-        '<div class="half-card-time">' + h.time + '</div>' +
-        '<div><div class="half-card-title">' + h.label + '</div><div class="half-card-sub">' + h.sub + '</div></div>' +
+    var phaseCardsHtml = phases.map(function(p) {
+      var isActive   = selectedPhase === p.id;
+      var isDisabled = !p.e.ok;
+      var cls  = 'phase-card' + (isActive ? ' active' : '') + (isDisabled ? ' disabled' : '');
+      var onclick = isDisabled ? '' : ' onclick="selectPhase(\'' + p.id + '\')"';
+      var statusBadge = p.e.ok
+        ? '<span class="phase-card-status ok">Available</span>'
+        : '<span class="phase-card-status na">' + escHtml(p.e.reason) + '</span>';
+      return '<div class="' + cls + '"' + onclick + '>' +
+        '<div class="phase-card-left">' +
+          '<div class="phase-card-label">' + p.id + '</div>' +
+          '<div>' +
+            '<div class="phase-card-title">' + p.label + '</div>' +
+            '<div class="phase-card-sub">' + p.sub + '</div>' +
+          '</div>' +
         '</div>' +
-        '<div class="half-card-right">' +
-        '<span class="half-q-count' + (cnt === 0 ? ' zero' : '') + '" id="hq-' + h.id + '">' + (cnt > 0 ? cnt + ' waiting' : '—') + '</span>' +
-        '<div class="half-card-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>' +
-        '</div></div>';
+        '<div class="phase-card-right">' +
+          statusBadge +
+          '<div class="phase-card-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>' +
+        '</div>' +
+      '</div>';
     }).join('');
 
-    // queue breakdown for selected half
-    var cnt1v1  = getQueueCount(m.matchId, selectedHalf, '1v1');
-    var cnt2v2  = getQueueCount(m.matchId, selectedHalf, '2v2');
-    var cntMode = getQueueCount(m.matchId, selectedHalf, selectedMode);
-
-    var qBreakdownHtml = '<div class="queue-breakdown">' +
-      '<div class="queue-breakdown-title">Players waiting now</div>' +
-      '<div class="queue-breakdown-row">' +
-        '<span class="queue-row-label">⚔️ 1v1 Duel</span>' +
-        '<span class="queue-row-val' + (cnt1v1 === 0 ? ' zero' : '') + '">' + (cnt1v1 || '—') + '</span>' +
-      '</div>' +
-      '<div class="queue-breakdown-row">' +
-        '<span class="queue-row-label">🛡️ 2v2 Team</span>' +
-        '<span class="queue-row-val' + (cnt2v2 === 0 ? ' zero' : '') + '">' + (cnt2v2 || '—') + '</span>' +
-      '</div>' +
+    // Ranked / casual toggle
+    var modeToggleHtml =
+      '<div class="arena-mode-toggle">' +
+        '<button class="arena-mode-btn' + (selectedArenaMode === 'ranked' ? ' active' : '') + '" onclick="selectArenaMode(\'ranked\')">' +
+          '<span>Ranked</span><span class="mode-btn-sub">Affects ELO</span>' +
+        '</button>' +
+        '<button class="arena-mode-btn' + (selectedArenaMode === 'casual' ? ' active' : '') + '" onclick="selectArenaMode(\'casual\')">' +
+          '<span>Casual</span><span class="mode-btn-sub">No ELO</span>' +
+        '</button>' +
       '</div>';
 
-    // teammate options (2v2 only)
-    var teammateHtml = '';
-    if (selectedMode === '2v2') {
-      var opts = [
-        { id: 'solo_queue',    icon: '🎲', label: 'Auto-match partner', sub: 'We\'ll find you a teammate from the queue', disabled: false },
-        { id: 'invite_app',    icon: '👤', label: 'Invite from friends', sub: 'Coming soon', disabled: true },
-        { id: 'invite_friend', icon: '🔗', label: 'Share invite link', sub: 'Send the link to your teammate', disabled: false },
-      ];
-      var optsHtml = opts.map(function(o) {
-        var active   = selected2v2Sub === o.id && !o.disabled ? ' active' : '';
-        var disabled = o.disabled ? ' disabled' : '';
-        var click    = o.disabled ? '' : ' onclick="select2v2Sub(\'' + o.id + '\')"';
-        return '<div class="teammate-card' + active + disabled + '"' + click + '>' +
-          '<div class="teammate-card-icon">' + o.icon + '</div>' +
-          '<div class="teammate-card-content">' +
-            '<div class="teammate-card-title">' + o.label + '</div>' +
-            '<div class="teammate-card-sub">' + o.sub + '</div>' +
-          '</div>' +
-          (o.disabled
-            ? '<span class="soon-tag">Soon</span>'
-            : '<div class="teammate-card-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>') +
-          '</div>';
-      }).join('');
-      teammateHtml = '<p class="config-section-label">Teammate</p><div class="teammate-cards">' + optsHtml + '</div>';
-    }
+    // Join button
+    var canJoin   = selectedPhase !== null;
+    var joinLabel = canJoin
+      ? 'Join ' + (selectedArenaMode === 'ranked' ? 'Ranked' : 'Casual') + ' · ' + selectedPhase
+      : 'Select a phase above';
+    var joinBtn =
+      '<button class="enter-arena-btn" onclick="handleJoin()"' + (canJoin ? '' : ' disabled') + '>' +
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>' +
+        escHtml(joinLabel) +
+      '</button>';
+
+    var notLiveNote = !isLive
+      ? '<div class="match-not-live-msg">This match has not started yet. Phase windows open once the match is live.</div>'
+      : '';
 
     panel.innerHTML =
       '<div class="config-match-header">' +
         '<div class="config-match-teams">' + escHtml(m.home) + ' vs ' + escHtml(m.away) + '</div>' +
-        '<div class="config-match-meta">' + escHtml(kickStr) + ' · ' + escHtml(m.compName) + '</div>' +
+        '<div class="config-match-meta">' + escHtml(statusStr) + (statusStr && m.compName ? ' · ' : '') + escHtml(m.compName) + '</div>' +
       '</div>' +
-      '<div class="config-mode-badge ' + modeBadgeClass + '">' + modeLabel + '</div>' +
-      '<p class="config-section-label">Match Scope</p>' +
-      '<div class="half-cards">' + halfCardsHtml + '</div>' +
-      qBreakdownHtml +
-      teammateHtml +
-      '<button class="enter-arena-btn" onclick="showWaitingRoom()">' +
-        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>' +
-        'Enter the Arena' +
-      '</button>';
+      notLiveNote +
+      '<p class="config-section-label">Phase</p>' +
+      '<div class="phase-cards">' + phaseCardsHtml + '</div>' +
+      '<p class="config-section-label">Mode</p>' +
+      modeToggleHtml +
+      joinBtn;
   }
 
-  function selectHalf(half) {
-    selectedHalf = half;
-    // update half card UI
-    ['full_match', 'first_half', 'second_half'].forEach(function(h) {
-      var el = document.getElementById('hc-' + h);
-      if (el) el.classList.toggle('active', h === half);
-    });
-    updateHalfQueueBadges();
-    // refresh queue breakdown in panel
-    var cnt1v1 = getQueueCount(selectedMatch.matchId, selectedHalf, '1v1');
-    var cnt2v2 = getQueueCount(selectedMatch.matchId, selectedHalf, '2v2');
-    var q = document.querySelector('.queue-breakdown');
-    if (q) {
-      var rows = q.querySelectorAll('.queue-row-val');
-      if (rows[0]) { rows[0].textContent = cnt1v1 || '—'; rows[0].className = 'queue-row-val' + (cnt1v1 === 0 ? ' zero' : ''); }
-      if (rows[1]) { rows[1].textContent = cnt2v2 || '—'; rows[1].className = 'queue-row-val' + (cnt2v2 === 0 ? ' zero' : ''); }
+  function selectPhase(phase) {
+    selectedPhase = phase;
+    updateConfigPanel();
+  }
+
+  function selectArenaMode(mode) {
+    selectedArenaMode = mode;
+    updateConfigPanel();
+  }
+
+  // ── JOIN QUEUE ─────────────────────────────────────────────────────────────
+  async function handleJoin() {
+    if (!selectedMatch || !selectedPhase) return;
+    await joinQueue(
+      selectedMatch.matchId,
+      selectedMatch.sport || 'football',
+      selectedPhase,
+      selectedArenaMode
+    );
+  }
+
+  async function joinQueue(fixtureId, sport, phase, arenaMode) {
+    showWaitingRoom();
+
+    var { data: { session } } = await window.sb.auth.getSession();
+    if (!session) {
+      hideWaitingRoom();
+      showToast('Session expired — please log in again.');
+      return;
+    }
+
+    try {
+      var { data, error } = await window.sb.functions.invoke('join-arena-queue', {
+        body: {
+          action:     'join',
+          fixture_id: parseInt(fixtureId, 10),
+          sport:      sport,
+          phase:      phase,
+          arena_mode: arenaMode,
+        },
+      });
+
+      if (error || !data) {
+        hideWaitingRoom();
+        console.warn('[arena-queue] invoke error', error);
+        showToast('Could not join queue. Try again.');
+        return;
+      }
+
+      if (!data.ok) {
+        hideWaitingRoom();
+        var msgs = {
+          outside_join_window:    'Phase window has closed for this match.',
+          fixture_not_live:       'This match is not live yet.',
+          already_in_queue:       'You are already in the queue.',
+          insufficient_questions: 'Not enough time left in this phase.',
+        };
+        showToast(msgs[data.error] || ('Could not join queue: ' + data.error));
+        return;
+      }
+
+      if (data.status === 'matched') {
+        // Instant match — skip waiting room animation
+        onQueueMatched(data.session_id);
+        return;
+      }
+
+      // status === 'waiting' — watch for the pairing
+      currentQueueId = data.queue_id;
+      startQueueWatch(currentQueueId);
+
+    } catch(e) {
+      hideWaitingRoom();
+      console.error('[arena-queue] joinQueue error', e);
+      showToast('Something went wrong. Try again.');
     }
   }
 
-  function select2v2Sub(value) {
-    selected2v2Sub = value;
-    document.querySelectorAll('.teammate-card').forEach(function(el) {
-      el.classList.remove('active');
-    });
-    var map = { solo_queue: 0, invite_app: 1, invite_friend: 2 };
-    var cards = document.querySelectorAll('.teammate-card');
-    var idx = map[value];
-    if (cards[idx] && !cards[idx].classList.contains('disabled')) {
-      cards[idx].classList.add('active');
-    }
+  // ── QUEUE WATCHING ─────────────────────────────────────────────────────────
+  function startQueueWatch(queueId) {
+    stopQueueWatch();
+
+    // Primary: Realtime subscription on own arena_queue row
+    queueChannel = window.sb.channel('aq-' + queueId)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'arena_queue',
+        filter: 'id=eq.' + queueId,
+      }, function(payload) {
+        var row = payload.new;
+        if (row.status === 'matched' && row.session_id) {
+          onQueueMatched(row.session_id);
+        } else if (row.status === 'cancelled' || row.status === 'expired') {
+          stopQueueWatch();
+          hideWaitingRoom();
+          showToast('Queue entry expired. Please try again.');
+        }
+      })
+      .subscribe(function(status) {
+        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          // Realtime unavailable — rely on poll only
+          stopQueuePoll();
+          startQueuePoll(queueId, 3000);
+        }
+      });
+
+    // Fallback: poll every 4 seconds regardless (Realtime may miss fast pairings)
+    startQueuePoll(queueId, 4000);
   }
 
-  function halfLabel(h) {
-    var labels = { full_match: 'Full Match', first_half: 'First Half', second_half: 'Second Half' };
-    return labels[h] || h;
+  function stopQueueWatch() {
+    if (queueChannel) { window.sb.removeChannel(queueChannel); queueChannel = null; }
+    stopQueuePoll();
+  }
+
+  function startQueuePoll(queueId, ms) {
+    stopQueuePoll();
+    queuePollInterval = setInterval(async function() {
+      try {
+        var { data: row } = await window.sb
+          .from('arena_queue')
+          .select('status, session_id')
+          .eq('id', queueId)
+          .single();
+        if (!row) return;
+        if (row.status === 'matched' && row.session_id) {
+          onQueueMatched(row.session_id);
+        } else if (row.status === 'cancelled' || row.status === 'expired') {
+          stopQueueWatch();
+          hideWaitingRoom();
+          showToast('Queue entry expired. Please try again.');
+        }
+      } catch(e) { /* ignore transient errors */ }
+    }, ms || 4000);
+  }
+
+  function stopQueuePoll() {
+    if (queuePollInterval) { clearInterval(queuePollInterval); queuePollInterval = null; }
+  }
+
+  function onQueueMatched(sessionId) {
+    stopQueueWatch();
+    var foundEl  = document.getElementById('wr-found');
+    var statusEl = document.getElementById('wr-status');
+    if (foundEl)  { foundEl.style.display = 'block'; foundEl.textContent = 'Opponent found — heading to the arena!'; }
+    if (statusEl) statusEl.style.display = 'none';
+    setTimeout(function() { window.location.href = 'arena-session.html?id=' + sessionId; }, 1500);
   }
 
   // ── WAITING ROOM ───────────────────────────────────────────────────────────
   function showWaitingRoom() {
     if (!selectedMatch) return;
+    var m = selectedMatch;
 
-    // populate static info
-    document.getElementById('wr-match-teams').textContent = selectedMatch.home + ' vs ' + selectedMatch.away;
-    document.getElementById('wr-match-meta').textContent = halfLabel(selectedHalf) + ' · ' + (selectedMatch.compName || 'Football');
+    document.getElementById('wr-match-teams').textContent = m.home + ' vs ' + m.away;
+    document.getElementById('wr-match-meta').textContent  =
+      (selectedPhase === 'H1' ? 'First Half' : 'Second Half') + ' · ' +
+      (selectedArenaMode === 'ranked' ? 'Ranked' : 'Casual') + ' · ' +
+      (m.compName || 'Football');
 
     var modeBadge = document.getElementById('wr-mode-badge');
-    modeBadge.textContent = selectedMode === '1v1' ? '1v1 DUEL' : '2v2 TEAM BATTLE';
-    modeBadge.className   = 'wr-mode-badge ' + (selectedMode === '1v1' ? 'm1v1' : 'm2v2');
+    modeBadge.textContent = '1v1 · ' + (selectedArenaMode === 'ranked' ? 'RANKED' : 'CASUAL');
+    modeBadge.className   = 'wr-mode-badge m1v1';
 
     var initials = (currentUserHandle || 'Y')[0].toUpperCase();
     document.getElementById('wr-you-avatar').textContent = initials;
@@ -1672,206 +1787,34 @@
     document.getElementById('wr-status').style.display = '';
     document.getElementById('wr-found').style.display  = 'none';
 
-    var invSection = document.getElementById('wr-invite-section');
-    invSection.style.display = (selectedMode === '2v2' && selected2v2Sub === 'invite_friend') ? '' : 'none';
+    // Hide legacy invite section (2v2 — not used in Arena v1)
+    var inv = document.getElementById('wr-invite-section');
+    if (inv) inv.style.display = 'none';
 
     document.getElementById('wr-overlay').style.display = 'flex';
     updateStepBars();
-
-    enterLobby();
   }
 
-  function cancelWaitingRoom() {
-    leaveLobby(true);
+  function hideWaitingRoom() {
     document.getElementById('wr-overlay').style.display = 'none';
     updateStepBars();
   }
 
-  // ── LOBBY LOGIC ────────────────────────────────────────────────────────────
-  async function enterLobby() {
-    if (!currentUserId || !selectedMatch) return;
-    try {
-      var result = await SpontixStoreAsync.findOrJoinLobby({
-        matchId:   selectedMatch.matchId,
-        halfScope: selectedHalf,
-        mode:      selectedMode,
-        userId:    currentUserId,
-        homeTeamName: selectedMatch.home,
-        awayTeamName: selectedMatch.away,
-        kickoffAt:    selectedMatch.kickoff ? selectedMatch.kickoff.toISOString() : null,
-        apiLeagueId:  selectedMatch.apiLeagueId || null,
-        isInvited:    false,
-      });
-      if (!result || !result.ok) {
-        showToast('Could not join lobby. Try again.');
-        cancelWaitingRoom();
-        return;
+  async function cancelWaitingRoom() {
+    stopQueueWatch();
+    hideWaitingRoom();
+
+    if (currentQueueId) {
+      var qid = currentQueueId;
+      currentQueueId = null;
+      try {
+        await window.sb.functions.invoke('join-arena-queue', {
+          body: { action: 'cancel_queue', queue_id: qid },
+        });
+      } catch(e) {
+        console.warn('[arena-queue] cancel error', e);
       }
-      currentLobbyId = result.lobbyId;
-      if (result.league_id) { redirectToGame(result.league_id); return; }
-      if (selected2v2Sub === 'invite_friend' && currentLobbyId) {
-        // team=1 → invited player joins as the host's teammate on team 1.
-        // The opponent side should share their own ?join=X&team=2 link.
-        var inviteUrl = window.location.origin + window.location.pathname + '?join=' + currentLobbyId + '&team=1';
-        var inp = document.getElementById('wr-invite-link');
-        if (inp) inp.value = inviteUrl;
-      }
-      startLobbyRealtime(currentLobbyId);
-      refreshLobbyUI(currentLobbyId);
-    } catch(e) {
-      console.error('enterLobby error', e);
-      showToast('Something went wrong. Try again.');
-      cancelWaitingRoom();
     }
-  }
-
-  async function leaveLobby(backOnly) {
-    stopLobbyRealtime();
-    if (currentLobbyId && currentUserId) {
-      await window.sb.from('match_lobby_players').delete()
-        .eq('lobby_id', currentLobbyId).eq('user_id', currentUserId);
-      currentLobbyId = null;
-    }
-    if (!backOnly) window.location.href = 'dashboard.html';
-  }
-
-  function startLobbyRealtime(lobbyId) {
-    stopLobbyRealtime();
-    lobbyChannel = window.sb.channel('lobby-' + lobbyId)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'match_lobbies', filter: 'id=eq.' + lobbyId }, function() {
-        refreshLobbyUI(lobbyId);
-      })
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'match_lobby_players', filter: 'lobby_id=eq.' + lobbyId }, function() {
-        refreshLobbyUI(lobbyId);
-      })
-      .subscribe();
-  }
-
-  function stopLobbyRealtime() {
-    if (lobbyChannel) { window.sb.removeChannel(lobbyChannel); lobbyChannel = null; }
-  }
-
-  async function refreshLobbyUI(lobbyId) {
-    var { data: lobby } = await window.sb.from('match_lobbies')
-      .select('*, match_lobby_players ( user_id, team_number, joined_at, is_invited )')
-      .eq('id', lobbyId).single();
-    if (!lobby) return;
-    if (lobby.league_id) { redirectToGame(lobby.league_id); return; }
-
-    var players = lobby.match_lobby_players || [];
-    var maxPlayers = lobby.mode === '1v1' ? 2 : 4;
-
-    var handleMap = {};
-    if (players.length > 0) {
-      var { data: profiles } = await window.sb.from('users').select('id, handle, name')
-        .in('id', players.map(function(p){ return p.user_id; }));
-      (profiles || []).forEach(function(u) {
-        handleMap[u.id] = u.handle || u.name || u.id.slice(0, 8);
-      });
-    }
-
-    var team2 = players.filter(function(p){ return p.team_number === 2; });
-    var oppPlayer = team2.length > 0 ? team2[0] : null;
-
-    if (oppPlayer) {
-      var oppHandle  = handleMap[oppPlayer.user_id] || '?';
-      var oppAvatarEl = document.getElementById('wr-opp-avatar');
-      if (oppAvatarEl) {
-        oppAvatarEl.textContent = (oppHandle[0] || '?').toUpperCase();
-        oppAvatarEl.className   = 'wr-avatar opp found';
-      }
-      var oppNameEl = document.getElementById('wr-opp-name');
-      if (oppNameEl) oppNameEl.textContent = oppHandle;
-
-      var statusEl = document.getElementById('wr-status');
-      if (statusEl) statusEl.style.display = 'none';
-      var foundEl = document.getElementById('wr-found');
-      if (foundEl) { foundEl.style.display = 'block'; foundEl.textContent = 'Opponent found — heading to the arena!'; }
-    }
-
-    if (players.length >= maxPlayers) {
-      handleLobbyFull(lobby, players, maxPlayers);
-    }
-  }
-
-  async function handleLobbyFull(lobby, players, maxPlayers) {
-    // If an arena session already exists for this lobby, go straight there
-    if (lobby.arena_session_id) { redirectToArena(lobby.arena_session_id); return; }
-    var result = await SpontixStoreAsync.createArenaSession(lobby.id, currentUserId);
-    if (result && result.sessionId) {
-      redirectToArena(result.sessionId);
-    } else if (result && result.error === 'invalid_team_split') {
-      showToast('Team assignment failed — please rejoin to retry.');
-    } else {
-      showToast('Setting up arena match…');
-    }
-  }
-
-  function redirectToArena(sessionId) {
-    stopLobbyRealtime();
-    var foundEl = document.getElementById('wr-found');
-    if (foundEl) { foundEl.style.display = 'block'; foundEl.textContent = 'Match starting — taking you to the arena!'; }
-    var statusEl = document.getElementById('wr-status');
-    if (statusEl) statusEl.style.display = 'none';
-    setTimeout(function(){ window.location.href = 'arena-session.html?id=' + sessionId; }, 1600);
-  }
-
-  async function directJoinLobby(lobbyId) {
-    var { data: lobby } = await window.sb.from('match_lobbies').select('*').eq('id', lobbyId).single();
-    if (!lobby) { showToast('Lobby not found.'); window.location.href = 'dashboard.html'; return; }
-
-    if (lobby.status === 'finished' || lobby.status === 'active') {
-      if (lobby.league_id) { window.location.href = 'league.html?id=' + lobby.league_id; }
-      else { showToast('That lobby has already started.'); window.location.href = 'dashboard.html'; }
-      return;
-    }
-
-    selectedMatch = {
-      matchId: lobby.match_id,
-      home: lobby.home_team_name || 'Home',
-      away: lobby.away_team_name || 'Away',
-      kickoff: lobby.kickoff_at ? new Date(lobby.kickoff_at) : null,
-      apiLeagueId: lobby.api_league_id,
-      compName: 'Football',
-    };
-    selectedHalf   = lobby.half_scope;
-    selectedMode   = lobby.mode;
-    selected2v2Sub = 'invite_friend';
-
-    if (!currentUserId) {
-      var { data: { session } } = await window.sb.auth.getSession();
-      if (!session) { window.location.href = 'login.html'; return; }
-      currentUserId = session.user.id;
-    }
-
-    // Read ?team param — valid (1 or 2) → use it; missing/invalid → null (assigned in createArenaSession)
-    var urlTeam = new URLSearchParams(window.location.search).get('team');
-    var teamFromUrl = (urlTeam === '1' || urlTeam === '2') ? parseInt(urlTeam, 10) : null;
-    var joinResult = await SpontixStoreAsync.joinLobbyById(lobbyId, teamFromUrl, true, currentUserId);
-    if (!joinResult.ok && joinResult.error !== 'already_in_lobby') {
-      showToast(joinResult.error === 'lobby_full' ? 'This lobby is already full.' : 'Could not join lobby.');
-      window.location.href = 'dashboard.html';
-      return;
-    }
-
-    currentLobbyId = lobbyId;
-    document.getElementById('step-1').style.display = 'none';
-    var s2 = document.getElementById('step-2');
-    if (s2) s2.style.display = 'flex';
-    currentStep = 2;
-    updateStepBars();
-    showWaitingRoom();
-  }
-
-  function copyInviteLink() {
-    var inp = document.getElementById('wr-invite-link');
-    if (!inp || !inp.value) return;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(inp.value);
-    } else {
-      inp.select(); document.execCommand('copy');
-    }
-    showToast('Invite link copied!');
   }
 
   // ── HELPERS ────────────────────────────────────────────────────────────────
@@ -1889,161 +1832,21 @@
     t.textContent = msg;
     t.classList.add('show');
     if (_toastTimer) clearTimeout(_toastTimer);
-    _toastTimer = setTimeout(function(){ t.classList.remove('show'); }, duration || 3000);
+    _toastTimer = setTimeout(function(){ t.classList.remove('show'); }, duration || 3500);
   }
 
-  // Stub fallbacks for store methods that may not exist yet
-  if (typeof SpontixStoreAsync === 'undefined') {
-    window.SpontixStoreAsync = {};
+  // ── LEGACY LOBBY FUNCTIONS ─────────────────────────────────────────────────
+  // Preserved in file to avoid breaking any ?join=<lobbyId> links in circulation.
+  // Not reachable from the normal Arena v1 UI.
+  function redirectToArena(sessionId) {
+    var foundEl  = document.getElementById('wr-found');
+    var statusEl = document.getElementById('wr-status');
+    if (foundEl)  { foundEl.style.display = 'block'; foundEl.textContent = 'Match starting — taking you to the arena!'; }
+    if (statusEl) statusEl.style.display = 'none';
+    setTimeout(function(){ window.location.href = 'arena-session.html?id=' + sessionId; }, 1600);
   }
-  if (typeof SpontixStoreAsync.findOrJoinLobby !== 'function') {
-    SpontixStoreAsync.findOrJoinLobby = async function(opts) {
-      // find waiting lobby for this match+half+mode
-      var { data: existing } = await window.sb.from('match_lobbies')
-        .select('id, league_id')
-        .eq('match_id', opts.matchId)
-        .eq('half_scope', opts.halfScope)
-        .eq('mode', opts.mode)
-        .eq('status', 'waiting')
-        .limit(1);
-      var lobbyId;
-      if (existing && existing.length > 0) {
-        lobbyId = existing[0].id;
-        if (existing[0].league_id) return { ok: true, lobbyId: lobbyId, league_id: existing[0].league_id };
-      } else {
-        var { data: created, error } = await window.sb.from('match_lobbies').insert({
-          match_id: opts.matchId, half_scope: opts.halfScope, mode: opts.mode,
-          status: 'waiting',
-          home_team_name: opts.homeTeamName, away_team_name: opts.awayTeamName,
-          kickoff_at: opts.kickoffAt, api_league_id: opts.apiLeagueId,
-        }).select('id').single();
-        if (error || !created) return { ok: false, error: 'create_failed' };
-        lobbyId = created.id;
-      }
-      // Host (lobby creator) joins as team 1. All other players join with null — team assigned deterministically in createArenaSession().
-      var isHost = !(existing && existing.length > 0);
-      await window.sb.from('match_lobby_players').upsert({
-        lobby_id: lobbyId, user_id: opts.userId, team_number: isHost ? 1 : null,
-        is_invited: opts.isInvited || false,
-      }, { onConflict: 'lobby_id,user_id' });
-      return { ok: true, lobbyId: lobbyId };
-    };
-  }
-  if (typeof SpontixStoreAsync.joinLobbyById !== 'function') {
-    SpontixStoreAsync.joinLobbyById = async function(lobbyId, teamNumber, isInvited, userId) {
-      var { data: existing } = await window.sb.from('match_lobby_players')
-        .select('user_id').eq('lobby_id', lobbyId).eq('user_id', userId);
-      if (existing && existing.length > 0) return { ok: true, error: 'already_in_lobby' };
-      var { data: players } = await window.sb.from('match_lobby_players').select('user_id').eq('lobby_id', lobbyId);
-      var { data: lobbyInfo } = await window.sb.from('match_lobbies').select('mode').eq('id', lobbyId).single();
-      var maxP = lobbyInfo && lobbyInfo.mode === '1v1' ? 2 : 4;
-      if (players && players.length >= maxP) return { ok: false, error: 'lobby_full' };
-      var { error } = await window.sb.from('match_lobby_players').insert({
-        lobby_id: lobbyId, user_id: userId, team_number: teamNumber, is_invited: isInvited || false,
-      });
-      return error ? { ok: false, error: error.message } : { ok: true };
-    };
-  }
-  if (typeof SpontixStoreAsync.createArenaSession !== 'function') {
-    SpontixStoreAsync.createArenaSession = async function(lobbyId, userId) {
-      // Fetch lobby details
-      var { data: lobby, error: lobbyErr } = await window.sb
-        .from('match_lobbies')
-        .select('*')
-        .eq('id', lobbyId)
-        .single();
-      if (lobbyErr || !lobby) return null;
-
-      var mode = lobby.mode; // '1v1' or '2v2'
-      var required = mode === '2v2' ? 4 : 2;
-
-      // Fetch all players sorted by join order (oldest first)
-      var { data: rawPlayers } = await window.sb
-        .from('match_lobby_players')
-        .select('user_id, team_number, joined_at')
-        .eq('lobby_id', lobbyId)
-        .order('joined_at', { ascending: true });
-
-      var players = rawPlayers || [];
-
-      // Validate total player count
-      if (players.length !== required) {
-        console.warn('createArenaSession: wrong player count', players.length, 'expected', required);
-        return { ok: false, error: 'invalid_team_split' };
-      }
-
-      // ── Assign team numbers ──────────────────────────────────────────────────
-      var assignedPlayers;
-      if (mode === '1v1') {
-        // Always assign by join order — first joined = team 1, second = team 2
-        assignedPlayers = players.map(function(p, i) {
-          return { user_id: p.user_id, team_number: i === 0 ? 1 : 2 };
-        });
-      } else {
-        // 2v2: use stored team_numbers if all are valid; otherwise balanced fallback
-        var hasNulls = players.some(function(p) { return p.team_number == null; });
-        if (!hasNulls) {
-          var t1stored = players.filter(function(p) { return p.team_number === 1; });
-          var t2stored = players.filter(function(p) { return p.team_number === 2; });
-          if (t1stored.length !== 2 || t2stored.length !== 2) {
-            console.warn('createArenaSession: invalid stored 2v2 split', t1stored.length, 'vs', t2stored.length);
-            return { ok: false, error: 'invalid_team_split' };
-          }
-          assignedPlayers = players.map(function(p) {
-            return { user_id: p.user_id, team_number: p.team_number };
-          });
-        } else {
-          // Balanced fallback: sorted by joined_at → 1, 2, 1, 2
-          assignedPlayers = players.map(function(p, i) {
-            return { user_id: p.user_id, team_number: i % 2 === 0 ? 1 : 2 };
-          });
-        }
-      }
-
-      // Final validation: correct split, no nulls
-      var perTeam = required / 2;
-      var finalT1 = assignedPlayers.filter(function(p) { return p.team_number === 1; });
-      var finalT2 = assignedPlayers.filter(function(p) { return p.team_number === 2; });
-      if (finalT1.length !== perTeam || finalT2.length !== perTeam) {
-        console.warn('createArenaSession: final split invalid', finalT1.length, 'vs', finalT2.length);
-        return { ok: false, error: 'invalid_team_split' };
-      }
-
-      // Insert arena_session row
-      var { data: session, error: sessionErr } = await window.sb
-        .from('arena_sessions')
-        .insert({
-          lobby_id:       lobbyId,
-          match_id:       lobby.match_id,
-          half_scope:     lobby.half_scope || 'full_match',
-          mode:           mode,
-          home_team_name: lobby.home_team_name,
-          away_team_name: lobby.away_team_name,
-          kickoff_at:     lobby.kickoff_at,
-          api_league_id:  lobby.api_league_id,
-          status:         'active',
-          started_at:     new Date().toISOString(),
-        })
-        .select('id')
-        .single();
-      if (sessionErr || !session) { console.error('createArenaSession insert failed:', sessionErr); return null; }
-
-      var sessionId = session.id;
-
-      // Add players with validated team assignments
-      var playerRows = assignedPlayers.map(function(p) {
-        return { session_id: sessionId, user_id: p.user_id, team_number: p.team_number };
-      });
-      await window.sb.from('arena_session_players').insert(playerRows);
-
-      // Update lobby status and store arena_session_id reference
-      await window.sb.from('match_lobbies').update({
-        status: 'active',
-        arena_session_id: sessionId,
-      }).eq('id', lobbyId);
-
-      return { sessionId: sessionId };
-    };
+  function redirectToGame(leagueId) {
+    window.location.href = 'league.html?id=' + leagueId;
   }
   </script>
 </body>
