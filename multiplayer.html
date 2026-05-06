@@ -1379,7 +1379,7 @@
       var statusShort = lms ? lms.status : (f.status_short || 'NS');
       if (TERMINAL_STATUSES.indexOf(statusShort) !== -1) return;
 
-      var comp = compById[f.league_id] || { name: 'Football', sport: 'football' };
+      var comp = compById[f.league_id] || { name: 'League ' + f.league_id, sport: 'football' };
       allMatches.push({
         matchId:    String(f.fixture_id),
         home:       lms ? (lms.home_team_name || f.home_team_name || 'Home') : (f.home_team_name || 'Home'),
