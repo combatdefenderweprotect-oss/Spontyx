@@ -2174,6 +2174,9 @@ async function leaveLobby() {
   if (picker) picker.style.display = 'none';
   selectedMatch = null;
   selectedHalf  = 'first_half';
+
+  // Go back to Step 1 so the user sees mode selection, not a dangling match list
+  goStep(1);
 }
 
 // Clean up player row when the user navigates away or closes the tab.
