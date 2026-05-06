@@ -636,197 +636,229 @@
 }
 .mode-card.selected .mode-check { display: flex; }
 
-/* ── Back button (top of Step 2) ─────────────────────────────────────────── */
+/* ── Game-style Back Button ──────────────────────────────────────────────── */
 .bf-back-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: none; border: none;
-  color: var(--grey); font-family: 'Inter', sans-serif;
-  font-size: 0.82rem; font-weight: 600;
-  cursor: pointer; padding: 0; margin-bottom: 18px;
-  transition: color 0.15s;
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 8px;
+  color: rgba(255,255,255,0.55);
+  font-family: 'Inter', sans-serif; font-size: 0.72rem; font-weight: 800;
+  letter-spacing: 0.10em; text-transform: uppercase;
+  padding: 8px 14px; cursor: pointer; margin-bottom: 16px;
+  transition: all 0.15s;
 }
-.bf-back-btn:hover { color: var(--off-white); }
-.bf-back-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.5; }
-
-/* ── Match List ─────────────────────────────────────────────────────────── */
-.match-search-row {
-  display: flex;
-  gap: 10px;
-  margin-bottom: 12px;
-}
-.match-search-row input {
-  flex: 1;
-  background: var(--navy-card);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 10px;
-  padding: 9px 14px;
+.bf-back-btn:hover {
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.18);
   color: var(--off-white);
-  font-size: 0.85rem;
-  font-family: 'Inter', sans-serif;
-  outline: none;
+}
+.bf-back-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2.5; }
+
+/* ── Filters / Search ────────────────────────────────────────────────────── */
+.match-search-row { display: flex; gap: 10px; margin-bottom: 10px; }
+.match-search-row input {
+  flex: 1; background: var(--navy-card);
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+  padding: 9px 14px; color: var(--off-white);
+  font-size: 0.85rem; font-family: 'Inter', sans-serif; outline: none;
 }
 .match-search-row input:focus { border-color: rgba(168,225,12,0.45); }
-
-/* Filter chip rows under the search input */
-.match-filter-row {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 8px;
-  margin-bottom: 10px;
-}
+.match-filter-row { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
 .match-filter-label {
   font-size: 0.6rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
-  color: var(--grey-dark);
-  width: 56px; flex-shrink: 0;
+  color: var(--grey-dark); width: 56px; flex-shrink: 0;
 }
 .match-filter-chip {
-  padding: 6px 12px; border-radius: 999px;
+  padding: 5px 12px; border-radius: 999px;
   border: 1px solid rgba(255,255,255,0.1);
   background: transparent; color: var(--grey);
   font-family: 'Inter', sans-serif; font-size: 0.74rem; font-weight: 600;
-  cursor: pointer; white-space: nowrap;
-  transition: all 0.15s;
+  cursor: pointer; white-space: nowrap; transition: all 0.15s;
 }
 .match-filter-chip:hover { color: var(--off-white); border-color: rgba(168,225,12,0.3); }
 .match-filter-chip.active { background: var(--lime); color: var(--navy); border-color: var(--lime); }
-.match-filter-chip.disabled { opacity: 0.4; cursor: not-allowed; }
-.match-filter-chip.disabled:hover { border-color: rgba(255,255,255,0.1); color: var(--grey); }
 .match-filters-wrap {
-  background: rgba(255,255,255,0.02);
-  border: 1px solid rgba(255,255,255,0.05);
-  border-radius: 12px;
-  padding: 10px 14px;
-  margin-bottom: 14px;
+  background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px; padding: 10px 14px; margin-bottom: 12px;
   display: flex; flex-direction: column; gap: 6px;
 }
 
-.match-list { display: flex; flex-direction: column; gap: 6px; max-height: 480px; overflow-y: auto; padding-right: 4px; }
+/* ── Card list ───────────────────────────────────────────────────────────── */
+.match-list { display: flex; flex-direction: column; gap: 8px; max-height: 540px; overflow-y: auto; padding-right: 2px; }
 .match-list::-webkit-scrollbar { width: 4px; }
 .match-list::-webkit-scrollbar-track { background: transparent; }
-.match-list::-webkit-scrollbar-thumb { background: rgba(168,225,12,0.25); border-radius: 2px; }
+.match-list::-webkit-scrollbar-thumb { background: rgba(168,225,12,0.2); border-radius: 2px; }
 
-/* Compact match row — date | info | segment buttons */
-.match-row {
-  display: grid;
-  grid-template-columns: 54px 1fr auto;
-  align-items: center;
-  gap: 10px;
+/* ── BF Card ─────────────────────────────────────────────────────────────── */
+.bf-card {
   background: var(--navy-card);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 10px;
-  padding: 10px 12px;
-  transition: border-color 0.15s, background 0.15s;
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 14px;
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
 }
-.match-row:hover { border-color: rgba(168,225,12,0.22); background: var(--navy-hover); }
+.bf-card:not(.too-late):not(.active):hover {
+  border-color: rgba(168,225,12,0.28);
+  box-shadow: 0 0 20px rgba(168,225,12,0.06);
+}
+.bf-card.active {
+  border-color: rgba(168,225,12,0.50);
+  box-shadow: 0 0 32px rgba(168,225,12,0.14), inset 0 0 0 1px rgba(168,225,12,0.08);
+}
+.bf-card.too-late { opacity: 0.38; cursor: not-allowed; }
 
-/* Date column */
-.match-row-date {
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  flex-shrink: 0;
-  font-size: 0.68rem; font-weight: 700;
-  color: var(--grey-dark);
-  text-align: center;
-  line-height: 1.3;
-  border-right: 1px solid rgba(255,255,255,0.06);
-  padding-right: 10px;
+/* Clickable top zone */
+.bf-card-clickable {
+  padding: 16px 18px 14px;
+  cursor: pointer;
+  display: flex; flex-direction: column; gap: 10px;
 }
-.match-row-date .date-label { font-size: 0.7rem; font-weight: 800; color: var(--grey); }
-.match-row-date .time-label { font-size: 0.62rem; color: var(--grey-dark); margin-top: 1px; }
+.bf-card.too-late .bf-card-clickable { cursor: not-allowed; }
+.bf-card.active .bf-card-clickable { cursor: default; }
 
-/* Match info */
-.match-row-teams { min-width: 0; }
-.match-row-name {
-  font-size: 0.85rem; font-weight: 600; color: var(--off-white);
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+/* Meta row: league | time/live */
+.bf-card-meta {
+  display: flex; align-items: center; justify-content: space-between;
+  font-size: 0.65rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase;
 }
-.match-row-sub {
-  display: flex; align-items: center; gap: 8px; margin-top: 3px;
-}
-.match-row-comp { font-size: 0.7rem; color: var(--grey-dark); }
-.match-row-countdown {
-  font-size: 0.68rem; font-weight: 600; color: var(--grey-dark);
-}
-.match-row-live-badge {
-  display: inline-block;
-  font-size: 0.62rem; font-weight: 800;
-  letter-spacing: 0.06em; text-transform: uppercase;
-  background: rgba(255,107,107,0.15);
-  color: var(--coral);
-  border: 1px solid rgba(255,107,107,0.30);
-  border-radius: 4px;
-  padding: 1px 6px;
-}
-@keyframes live-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-/* Segment buttons column */
-.match-seg-btns {
-  display: flex; flex-direction: column; gap: 5px;
-  flex-shrink: 0;
-}
-.match-seg-btn {
+.bf-card-league { color: rgba(255,255,255,0.38); }
+.bf-live-badge {
   display: inline-flex; align-items: center; gap: 5px;
-  padding: 5px 10px; border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.04);
-  color: var(--grey);
-  font-family: 'Inter', sans-serif; font-size: 0.72rem; font-weight: 700;
-  cursor: pointer; white-space: nowrap;
-  transition: all 0.15s;
+  font-size: 0.6rem; font-weight: 900; letter-spacing: 0.1em;
+  background: rgba(255,107,107,0.14); color: var(--coral);
+  border: 1px solid rgba(255,107,107,0.32); border-radius: 5px;
+  padding: 2px 8px;
 }
-.match-seg-btn:hover:not(:disabled) {
-  border-color: rgba(168,225,12,0.40);
-  background: rgba(168,225,12,0.08);
+.bf-live-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--coral); animation: live-pulse 1.4s infinite;
+}
+@keyframes live-pulse { 0%,100%{opacity:1} 50%{opacity:0.35} }
+.bf-card-countdown { color: rgba(255,255,255,0.30); }
+
+/* Teams — large, game-font feel */
+.bf-card-matchup {
+  display: grid; grid-template-columns: 1fr auto 1fr;
+  align-items: center; gap: 6px;
+}
+.bf-card-team {
+  font-size: clamp(0.95rem, 2.2vw, 1.2rem);
+  font-weight: 900; letter-spacing: -0.01em;
+  color: var(--off-white);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bf-card-team.away { text-align: right; }
+.bf-card-vs {
+  font-size: 0.68rem; font-weight: 900; letter-spacing: 0.1em;
+  color: rgba(255,255,255,0.18);
+  padding: 0 4px; flex-shrink: 0;
+}
+
+/* Hype row: player count + date */
+.bf-card-hype-row { display: flex; align-items: center; justify-content: space-between; }
+.bf-card-hype {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 0.8rem; font-weight: 900;
+  letter-spacing: 0.05em; text-transform: uppercase;
   color: var(--lime);
 }
-.match-seg-btn:disabled {
-  opacity: 0.35; cursor: not-allowed;
+.bf-card-hype.zero {
+  color: rgba(255,255,255,0.22); font-weight: 600;
+  letter-spacing: 0.01em; text-transform: none; font-size: 0.75rem;
 }
-.match-seg-btn .seg-count {
-  font-size: 0.66rem; color: var(--grey-dark);
+.bf-hype-pulse {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--lime);
+  box-shadow: 0 0 10px rgba(168,225,12,0.75);
+  animation: live-pulse 1.4s infinite;
+  flex-shrink: 0;
 }
-.match-seg-btn:hover:not(:disabled) .seg-count { color: rgba(168,225,12,0.7); }
+.bf-card-date { font-size: 0.68rem; color: rgba(255,255,255,0.25); }
 
-/* Inline join confirmation */
-.match-seg-confirm {
-  display: flex; flex-direction: column; gap: 5px;
-  align-items: flex-end;
+/* ── Expand section (half select + join) ─────────────────────────────────── */
+.bf-card-expand {
+  display: none;
+  flex-direction: column; gap: 10px;
+  padding: 0 18px 18px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  margin-top: -2px; padding-top: 14px;
+  animation: bf-expand-in 0.22s cubic-bezier(0.16,1,0.3,1);
 }
-.match-seg-confirm-label {
-  font-size: 0.7rem; font-weight: 700; color: var(--off-white);
-  white-space: nowrap;
+.bf-card.active .bf-card-expand { display: flex; }
+@keyframes bf-expand-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
-.match-seg-confirm-btns { display: flex; gap: 5px; }
-.match-seg-confirm-join {
-  padding: 5px 12px; border-radius: 6px;
+.bf-halves-label {
+  font-size: 0.6rem; font-weight: 800; letter-spacing: 0.12em; text-transform: uppercase;
+  color: rgba(255,255,255,0.28);
+}
+.bf-halves { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.bf-half-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 14px 10px;
+  background: rgba(255,255,255,0.04);
+  border: 2px solid rgba(255,255,255,0.09);
+  border-radius: 11px;
+  cursor: pointer; font-family: 'Inter', sans-serif;
+  transition: all 0.15s cubic-bezier(0.16,1,0.3,1);
+}
+.bf-half-btn:hover:not(:disabled) {
+  border-color: rgba(168,225,12,0.38);
+  background: rgba(168,225,12,0.07);
+  transform: translateY(-1px);
+}
+.bf-half-btn.selected {
+  border-color: var(--lime);
+  background: var(--lime-dim);
+  box-shadow: 0 0 22px rgba(168,225,12,0.16);
+}
+.bf-half-btn:disabled { opacity: 0.32; cursor: not-allowed; }
+.bf-half-name {
+  font-size: 0.88rem; font-weight: 900;
+  letter-spacing: 0.04em; text-transform: uppercase;
+  color: var(--off-white);
+}
+.bf-half-btn.selected .bf-half-name { color: var(--lime); }
+.bf-half-count { font-size: 0.68rem; font-weight: 600; color: rgba(255,255,255,0.32); }
+.bf-half-btn.selected .bf-half-count { color: rgba(168,225,12,0.60); }
+
+/* JOIN BATTLE — primary CTA */
+.bf-join-btn {
+  display: none;
+  width: 100%; padding: 15px;
   background: var(--lime); color: var(--navy);
-  border: none; font-family: 'Inter', sans-serif;
-  font-size: 0.72rem; font-weight: 800;
-  cursor: pointer; transition: background 0.15s;
+  border: none; border-radius: 11px;
+  font-family: 'Inter', sans-serif; font-size: 1rem; font-weight: 900;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 0 32px rgba(168,225,12,0.32), 0 4px 16px rgba(0,0,0,0.28);
+  transition: all 0.15s cubic-bezier(0.16,1,0.3,1);
+  animation: bf-join-in 0.28s cubic-bezier(0.16,1,0.3,1);
 }
-.match-seg-confirm-join:hover { background: #b8f00f; }
-.match-seg-confirm-cancel {
-  padding: 5px 8px; border-radius: 6px;
-  background: transparent; color: var(--grey);
-  border: 1px solid rgba(255,255,255,0.12);
-  font-family: 'Inter', sans-serif;
-  font-size: 0.72rem; font-weight: 700;
-  cursor: pointer; transition: all 0.15s;
+.bf-join-btn.show { display: block; }
+@keyframes bf-join-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
 }
-.match-seg-confirm-cancel:hover { border-color: rgba(255,107,107,0.4); color: var(--coral); }
+.bf-join-btn:hover {
+  background: #b8f00f;
+  box-shadow: 0 0 44px rgba(168,225,12,0.44), 0 6px 20px rgba(0,0,0,0.32);
+  transform: translateY(-1px) scale(1.01);
+}
+.bf-join-btn:active { transform: scale(0.98); }
 
-/* Late-match treatment */
-.match-row.too-late { opacity: 0.4; }
-.match-row.too-late .match-seg-btn { cursor: not-allowed; }
+/* Too-late label inside card */
+.bf-too-late-badge {
+  font-size: 0.62rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+  color: var(--coral); background: rgba(255,107,107,0.08);
+  border: 1px solid rgba(255,107,107,0.22); border-radius: 5px; padding: 2px 8px;
+}
 
 .match-empty {
-  text-align: center;
-  padding: 40px 20px;
-  color: var(--grey-dark);
-  font-size: 0.88rem;
-}
-
-@media (max-width: 600px) {
-  .match-row { grid-template-columns: 44px 1fr auto; gap: 8px; padding: 9px 10px; }
-  .match-row-date { padding-right: 8px; }
-  .match-seg-btn { padding: 4px 8px; font-size: 0.68rem; }
+  text-align: center; padding: 48px 20px;
+  color: var(--grey-dark); font-size: 0.88rem;
 }
 
 /* ── Half Scope ─────────────────────────────────────────────────────────── */
@@ -1260,8 +1292,8 @@
 
       <div class="bf-head">
         <div>
-          <p class="section-title">Choose your battlefield</p>
-          <p class="section-sub">Pick the match and half you want to survive.</p>
+          <p class="section-title">Select your battlefield</p>
+          <p class="section-sub">Choose a match · pick a half · enter the fight.</p>
         </div>
         <span class="bf-mode-pill" id="bf-mode-pill">Battlefield</span>
       </div>
@@ -1377,6 +1409,7 @@ var lobbyTickInterval   = null;
 var lastPlayerCount     = 0;
 var instantiateInFlight = false;
 var currentAccessToken  = null;  // cached for pagehide cleanup
+var expandedCardId      = null;  // which match card is open in Step 2
 
 // ── Init ─────────────────────────────────────────────────────────────────────
 window.addEventListener('DOMContentLoaded', async function() {
@@ -1772,7 +1805,7 @@ function filterMatches() {
   renderMatches(applyCurrentFilters());
 }
 
-// ── Date / countdown helpers for compact match rows ───────────────────────────
+// ── Date / countdown helpers ──────────────────────────────────────────────────
 function formatMatchDate(iso) {
   var d = new Date(iso);
   var today = new Date(); today.setHours(0,0,0,0);
@@ -1784,8 +1817,7 @@ function formatMatchDate(iso) {
 }
 
 function formatMatchTime(iso) {
-  var d = new Date(iso);
-  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
 
 function formatCountdownShort(iso) {
@@ -1793,30 +1825,28 @@ function formatCountdownShort(iso) {
   if (diff <= 0) return null;
   var h = Math.floor(diff / 3600);
   var m = Math.floor((diff % 3600) / 60);
-  if (h >= 24) { var days = Math.floor(h / 24); return 'in ' + days + 'd'; }
-  if (h > 0) return 'in ' + h + 'h ' + m + 'm';
-  if (m > 0) return 'in ' + m + 'm';
+  if (h >= 24) return 'in ' + Math.floor(h / 24) + 'd';
+  if (h > 0)   return 'in ' + h + 'h ' + m + 'm';
+  if (m > 0)   return 'in ' + m + 'm';
   return 'Starting soon';
 }
 
-// Pending segment confirmation — {fixtureId, segment} or null
-var pendingConfirm = null;
+// ── Match card renderer ───────────────────────────────────────────────────────
+var LIVE_ST = ['1H','HT','2H','ET','BT','P'];
 
 function renderMatches(matches) {
   var list = document.getElementById('match-list');
   if (!matches.length) {
-    list.innerHTML = '<div class="match-empty">No matches match your search</div>';
+    list.innerHTML = '<div class="match-empty">No matches found</div>';
     return;
   }
 
-  var LIVE_ST = ['1H','HT','2H','ET','BT','P'];
   var sorted = matches.slice();
   if (selectedSort === 'players') {
     sorted.sort(function(a, b) {
       var pa = (playerCountByMatchHalf[String(a.fixture_id)+'_first_half']||0) + (playerCountByMatchHalf[String(a.fixture_id)+'_second_half']||0);
       var pb = (playerCountByMatchHalf[String(b.fixture_id)+'_first_half']||0) + (playerCountByMatchHalf[String(b.fixture_id)+'_second_half']||0);
-      if (pb !== pa) return pb - pa;
-      return new Date(a.kickoff_at) - new Date(b.kickoff_at);
+      return pb !== pa ? pb - pa : new Date(a.kickoff_at) - new Date(b.kickoff_at);
     });
   } else {
     sorted.sort(function(a, b) { return new Date(a.kickoff_at) - new Date(b.kickoff_at); });
@@ -1826,79 +1856,123 @@ function renderMatches(matches) {
     var fid      = m.fixture_id;
     var live     = LIVE_ST.indexOf(m.status_short) !== -1;
     var tooLate  = isMatchTooLate(m);
-    var rowCls   = 'match-row' + (tooLate ? ' too-late' : '');
+    var isOpen   = expandedCardId == fid && !tooLate;
 
-    // Date column
-    var dateLabel = formatMatchDate(m.kickoff_at);
-    var timeLabel = live
-      ? '<span class="match-row-live-badge">LIVE</span>'
-      : formatMatchTime(m.kickoff_at);
+    var c1h   = playerCountByMatchHalf[String(fid)+'_first_half']  || 0;
+    var c2h   = playerCountByMatchHalf[String(fid)+'_second_half'] || 0;
+    var total = c1h + c2h;
 
-    // Countdown text shown below league name
-    var countdownHtml = '';
-    if (!live) {
-      var cd = formatCountdownShort(m.kickoff_at);
-      if (cd) countdownHtml = ' · <span class="match-row-countdown">' + cd + '</span>';
-    }
+    // Card classes
+    var cardCls = 'bf-card' + (isOpen ? ' active' : '') + (tooLate ? ' too-late' : '');
 
-    // Segment buttons or confirm UI
-    var segHtml;
-    if (pendingConfirm && pendingConfirm.fixtureId == fid && !tooLate) {
-      var halfName = pendingConfirm.segment === 'first_half' ? '1st Half' : '2nd Half';
-      segHtml =
-        '<div class="match-seg-confirm">' +
-          '<span class="match-seg-confirm-label">Join ' + halfName + '?</span>' +
-          '<div class="match-seg-confirm-btns">' +
-            '<button class="match-seg-confirm-join" onclick="joinPendingSegment()">Join</button>' +
-            '<button class="match-seg-confirm-cancel" onclick="cancelPendingSegment()">✕</button>' +
+    // Top-zone click (only when not already open; click again = collapse)
+    var zoneClick = tooLate ? '' : ' onclick="expandCard(' + fid + ')"';
+
+    // Meta row
+    var timeHtml = live
+      ? '<span class="bf-live-badge"><span class="bf-live-dot"></span>LIVE</span>'
+      : '<span class="bf-card-countdown">' + esc(formatCountdownShort(m.kickoff_at) || formatMatchDate(m.kickoff_at)) + '</span>';
+
+    // Hype
+    var hypeHtml = total > 0
+      ? '<span class="bf-card-hype"><span class="bf-hype-pulse"></span>' + total + ' Players Waiting</span>'
+      : '<span class="bf-card-hype zero">Be the first to enter</span>';
+
+    // Date + time footer
+    var dateStr = esc(formatMatchDate(m.kickoff_at) + ' · ' + formatMatchTime(m.kickoff_at));
+
+    // Too-late overlay text
+    var tooLateBadge = tooLate ? '<span class="bf-too-late-badge">Match ended</span>' : '';
+
+    // Expand section
+    var expandHtml = '';
+    if (isOpen) {
+      var dis1 = (live && m.status_short === '2H') ? ' disabled' : '';
+      var dis2 = (live && m.status_short === '1H') ? ' disabled' : '';
+      var sel1 = selectedHalf === 'first_half'  ? ' selected' : '';
+      var sel2 = selectedHalf === 'second_half' ? ' selected' : '';
+      var joinCls = selectedHalf ? ' show' : '';
+
+      expandHtml =
+        '<div class="bf-card-expand">' +
+          '<div class="bf-halves-label">Select your half</div>' +
+          '<div class="bf-halves">' +
+            '<button class="bf-half-btn' + sel1 + '"' + dis1 +
+              ' onclick="selectSegment(' + fid + ',\'first_half\'); event.stopPropagation();">' +
+              '<span class="bf-half-name">1st Half</span>' +
+              '<span class="bf-half-count">' + c1h + ' waiting</span>' +
+            '</button>' +
+            '<button class="bf-half-btn' + sel2 + '"' + dis2 +
+              ' onclick="selectSegment(' + fid + ',\'second_half\'); event.stopPropagation();">' +
+              '<span class="bf-half-name">2nd Half</span>' +
+              '<span class="bf-half-count">' + c2h + ' waiting</span>' +
+            '</button>' +
           '</div>' +
-        '</div>';
-    } else {
-      var c1h = playerCountByMatchHalf[String(fid)+'_first_half'] || 0;
-      var c2h = playerCountByMatchHalf[String(fid)+'_second_half'] || 0;
-      var dis1 = tooLate || (live && m.status_short === '2H') ? ' disabled' : '';
-      var dis2 = tooLate || (live && m.status_short === '1H') ? ' disabled' : '';
-      var click1 = tooLate ? '' : 'onclick="selectSegment(' + fid + ',\'first_half\')"';
-      var click2 = tooLate ? '' : 'onclick="selectSegment(' + fid + ',\'second_half\')"';
-      segHtml =
-        '<div class="match-seg-btns">' +
-          '<button class="match-seg-btn"' + dis1 + ' ' + click1 + '>1H <span class="seg-count">· ' + c1h + '</span></button>' +
-          '<button class="match-seg-btn"' + dis2 + ' ' + click2 + '>2H <span class="seg-count">· ' + c2h + '</span></button>' +
+          '<button class="bf-join-btn' + joinCls + '"' +
+            ' onclick="joinPendingSegment(); event.stopPropagation();">⚔ JOIN BATTLE</button>' +
         '</div>';
     }
 
-    return '<div class="' + rowCls + '">' +
-      '<div class="match-row-date"><span class="date-label">' + dateLabel + '</span><span class="time-label">' + timeLabel + '</span></div>' +
-      '<div class="match-row-teams">' +
-        '<div class="match-row-name">' + esc(m.home_team_name) + ' vs ' + esc(m.away_team_name) + '</div>' +
-        '<div class="match-row-sub"><span class="match-row-comp">' + esc(m.league_display || '') + '</span>' + countdownHtml + '</div>' +
-      '</div>' +
-      segHtml +
-    '</div>';
+    return (
+      '<div class="' + cardCls + '">' +
+        '<div class="bf-card-clickable"' + zoneClick + '>' +
+          '<div class="bf-card-meta">' +
+            '<span class="bf-card-league">' + esc(m.league_display || '') + '</span>' +
+            '<span>' + timeHtml + (tooLate ? ' ' + tooLateBadge : '') + '</span>' +
+          '</div>' +
+          '<div class="bf-card-matchup">' +
+            '<span class="bf-card-team home">' + esc(m.home_team_name) + '</span>' +
+            '<span class="bf-card-vs">VS</span>' +
+            '<span class="bf-card-team away">' + esc(m.away_team_name) + '</span>' +
+          '</div>' +
+          '<div class="bf-card-hype-row">' +
+            hypeHtml +
+            '<span class="bf-card-date">' + dateStr + '</span>' +
+          '</div>' +
+        '</div>' +
+        expandHtml +
+      '</div>'
+    );
   }).join('');
 }
 
-// Segment button click → show inline confirmation for that match+half
-function selectSegment(fixtureId, segment) {
-  var m = allMatches.find(function(x) { return x.fixture_id == fixtureId; });
-  if (!m || isMatchTooLate(m)) return;
+// Expand / collapse a match card
+function expandCard(fid) {
+  if (expandedCardId == fid) {
+    // Second click = collapse
+    expandedCardId = null;
+    selectedHalf   = null;
+    selectedMatch  = null;
+  } else {
+    expandedCardId = fid;
+    selectedHalf   = null;
+    selectedMatch  = allMatches.find(function(m) { return m.fixture_id == fid; }) || null;
+  }
+  renderMatches(applyCurrentFilters());
+}
+
+// Select 1H or 2H — shows JOIN button
+function selectSegment(fid, seg) {
+  if (expandedCardId != fid) return;
+  var m = allMatches.find(function(x) { return x.fixture_id == fid; });
+  if (!m) return;
   selectedMatch = m;
-  selectedHalf  = segment;
-  pendingConfirm = { fixtureId: fixtureId, segment: segment };
+  selectedHalf  = seg;
   renderMatches(applyCurrentFilters());
 }
 
-function cancelPendingSegment() {
-  pendingConfirm = null;
-  selectedMatch  = null;
-  selectedHalf   = 'first_half';
-  renderMatches(applyCurrentFilters());
-}
-
+// JOIN BATTLE clicked
 function joinPendingSegment() {
-  if (!pendingConfirm) return;
-  pendingConfirm = null;
+  if (!selectedMatch || !selectedHalf) return;
   enterLobby();
+}
+
+// Reset card state (used by leaveLobby)
+function cancelPendingSegment() {
+  expandedCardId = null;
+  selectedHalf   = null;
+  selectedMatch  = null;
+  renderMatches(applyCurrentFilters());
 }
 
 function formatKickoff(iso) {
@@ -1966,12 +2040,12 @@ async function instantDropIn() {
 // Triggered by selectMatch() click on a match row, OR by instantDropIn()
 // after the busiest waiting session is picked.
 async function enterLobby() {
-  // Soft loading affordance — busy match row, dimmed step 1 buttons.
+  // Soft loading affordance — lock cards and step 1 buttons while joining.
   var dropBtn = document.getElementById('btn-instant-drop');
   var pickBtn = document.getElementById('btn-pick-battlefield');
   if (dropBtn) dropBtn.disabled = true;
   if (pickBtn) pickBtn.disabled = true;
-  document.querySelectorAll('.match-row').forEach(function(r) { r.style.pointerEvents = 'none'; });
+  document.querySelectorAll('.bf-card').forEach(function(c) { c.style.pointerEvents = 'none'; });
 
   try {
     // BR v2: no pre-generated pool — the live question pipeline writes directly
@@ -1996,7 +2070,7 @@ async function enterLobby() {
   } catch (err) {
     if (dropBtn) { dropBtn.disabled = false; dropBtn.textContent = '🔥 Instant Drop In'; }
     if (pickBtn) pickBtn.disabled = false;
-    document.querySelectorAll('.match-row').forEach(function(r) { r.style.pointerEvents = ''; });
+    document.querySelectorAll('.bf-card').forEach(function(c) { c.style.pointerEvents = ''; });
     showToast(err.message || 'Failed to enter lobby', true);
   }
 }
@@ -2277,15 +2351,12 @@ async function leaveLobby() {
   var pickBtn = document.getElementById('btn-pick-battlefield');
   if (dropBtn) { dropBtn.disabled = false; dropBtn.textContent = '🔥 Instant Drop In'; }
   if (pickBtn) pickBtn.disabled = false;
-  document.querySelectorAll('.match-row').forEach(function(r) {
-    r.style.pointerEvents = '';
-    r.classList.remove('selected');
-  });
+  document.querySelectorAll('.bf-card').forEach(function(c) { c.style.pointerEvents = ''; });
 
-  // Reset match selection and pending confirmation
-  pendingConfirm = null;
+  // Reset card state and re-render match list
+  expandedCardId = null;
   selectedMatch  = null;
-  selectedHalf   = 'first_half';
+  selectedHalf   = null;
   renderMatches(applyCurrentFilters());
 }
 
