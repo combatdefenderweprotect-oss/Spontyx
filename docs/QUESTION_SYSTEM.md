@@ -177,6 +177,25 @@ Pre-match generation is **demand-driven**, not cron-primary. Two client-side hoo
 
 The CORE_MATCH_LIVE lane has an equivalent: `live_questions_per_match` (migration 054, INT 1–10, default 6). Read order: `live_questions_per_match ?? live_question_budget ?? 6`. See [docs/LIVE_QUESTION_SYSTEM.md](LIVE_QUESTION_SYSTEM.md) for full slot logic.
 
+### Per-league lane configuration (migration 055)
+
+Four columns on `leagues` control which lanes run for a given league:
+
+| Column | Type | Default | Effect |
+|---|---|---|---|
+| `question_style` | `TEXT CHECK IN ('prematch','live','hybrid')` | `'hybrid'` | `'prematch'` → CORE_MATCH_LIVE skipped; `'live'` → CORE_MATCH_PREMATCH skipped + REAL_WORLD blocked; `'hybrid'` → both lanes run |
+| `real_world_enabled` | `BOOLEAN NOT NULL` | `true` | `false` → REAL_WORLD pass skipped entirely for this league |
+| `real_world_questions_per_week` | `INTEGER` (1–3) | `2` | User-chosen intensity cap: 1=Low, 2=Medium, 3=High. Enforced by `checkRealWorldQuota()` before the platform hard cap of 3/week |
+| `custom_questions_enabled` | `BOOLEAN NOT NULL` | `false` | Reserved for admin-created Custom Questions. Generator does not act on this flag yet — no generation logic until the Custom Questions UI ships |
+
+**Derivation rule** (`question_style` from the Create League UI):
+- Pre-match + Live both selected → `'hybrid'`
+- Live only → `'live'`
+- Pre-match only → `'prematch'`
+- Neither (Real World or Custom only) → `'hybrid'` as safe fallback (lanes run but produce questions only if fixtures exist)
+
+**Backward compat:** `question_style NULL` is treated as `'hybrid'` at runtime. `real_world_enabled` defaults `true` so leagues created before migration 055 continue receiving REAL_WORLD generation unchanged.
+
 **Idempotency** — per-(league, match_id) existing-count check runs before Phase A. If existing `CORE_MATCH_PREMATCH` rows (non-voided) already meet the target → match is skipped immediately. If partial → only the shortfall is generated. Additionally:
 - Pool fingerprint dedup in `lib/pool-manager.ts`
 - Two-pass quality filter in `lib/prematch-quality-filter.ts` (see below)

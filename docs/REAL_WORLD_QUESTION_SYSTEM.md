@@ -1,7 +1,7 @@
 # REAL_WORLD Question System
 
 **Status: ✅ Fully deployed — pipeline live, resolver active, feed rendering**  
-Last updated: 2026-05-05 — Sprint 1 cleanup: log key `real_world_attempt_skip_manual_review_mvp` renamed to `real_world_attempt_skip_manual_review`; `manual_review` section reframed as "blocked until admin UI ships" (not MVP-specific). — Previous: Two critical bugs fixed: **(F-1)** `match_lineup` `resolvesAfter` was set to `kickoff` instead of `kickoff + 91min`, causing every TYPE 1 question to silently fail Stage 3 validator and never insert. **(F-2/F-3)** `manual_review` questions now skipped at generation (before insert) and at resolver (no AI verifier call) — prevents daily quota burn and hourly OpenAI loops since no admin review UI exists. Bounded retry loop (MAX_RW_RETRIES=3) and AI-assisted fallback for `match_lineup` post-deadline remain active (since 2026-04-29).
+Last updated: 2026-05-06 — Migration 055: `real_world_enabled` per-league flag and `real_world_questions_per_week` user cap now stored on `leagues` table and enforced in `checkRealWorldQuota()`. Create League UI exposes Real World as a selectable Question Type card (Pro+) with a 1–3/week intensity slider. `real_world_enabled` defaults `true` for backward compat. — Previous: Three pre-live generation gaps fixed: **(G-1)** `targetMatches` filter and early-exit moved to immediately after `fetchSportsContext` — news fetch and team_players DB query now skipped when no 7-day fixture exists. **(G-2)** Call 2 (`buildPredicatePrompt`) now receives `targetMatches` instead of all upcoming matches — prevents match binding failure on fixtures outside the 7-day window. **(G-3)** Shape H (`match_lineup`) added to `buildPredicatePrompt` REQUIRED OUTPUT SCHEMA — Call 2 now has explicit field list and worked example for TYPE 1 questions. Also: weekly cap updated from 1/day to 3/week (Monday 00:00 UTC boundary). — Previous: Sprint 1 cleanup (log key renamed; `manual_review` reframed as "blocked until admin UI ships"). — Previous: Two critical bugs fixed: **(F-1)** `match_lineup` `resolvesAfter` was `kickoff` instead of `kickoff + 91min` — silent Stage 3 failure for all TYPE 1 questions. **(F-2/F-3)** `manual_review` skipped at generation + resolver — prevents quota burn and hourly OpenAI loops. Bounded retry loop (MAX_RW_RETRIES=3) and AI-assisted fallback for `match_lineup` post-deadline remain active (since 2026-04-29). `player_stat` 30-min API-lag grace window added to resolver (skip instead of void within 30 min of `resolves_after`).
 
 This document is the authoritative reference for the `REAL_WORLD` question lane. Read it before building, modifying, or debugging any part of the REAL_WORLD pipeline.
 
@@ -37,8 +37,8 @@ They are NOT core match questions. They are a premium add-on.
 | Feed priority | 2nd | **1st — always** | 3rd |
 | Tier gate | All tiers | Starter (limited) / Pro / Elite | Pro (limited) / Elite (full) |
 | Pool reuse | Yes | No | No |
-| Match required | Yes (`match_id` NOT NULL) | Yes | Yes — bound to 48h target match (`match_id` NOT NULL) |
-| Volume | Up to weekly quota | Up to 3 active / 3-min rate limit | **Max 1 per league per day** |
+| Match required | Yes (`match_id` NOT NULL) | Yes | Yes — bound to 7-day target match (`match_id` NOT NULL) |
+| Volume | Up to weekly quota | Up to 3 active / 3-min rate limit | **Max 3 per league per week** |
 
 ### Critical product rule
 
@@ -57,15 +57,32 @@ REAL_WORLD questions must never:
 |---|---|---|
 | Starter | 🔒 Locked | 0 — shown as locked state in feed |
 | Pro | ⚠️ Limited | 10 REAL_WORLD questions per league per month |
-| Elite | ✅ Full | Unlimited (daily cap still applies) |
+| Elite | ✅ Full | Unlimited (weekly cap still applies) |
 
-### Daily cap — applies to ALL tiers including Elite
+### Per-league opt-in: `real_world_enabled` (migration 055)
 
-**Max 1 REAL_WORLD question per league per day (UTC boundary).** This is a production safety rule, not a monetization rule. It prevents flooding and cost overruns. A bug in the pipeline cannot produce more than 1 question per league per day.
+Each league has a `real_world_enabled BOOLEAN NOT NULL DEFAULT true` column. The REAL_WORLD generation pass is skipped entirely if `real_world_enabled = false`. Default is `true` so leagues created before the UI update continue receiving REAL_WORLD questions. The Create League UI sets this field when the user toggles the Real World question type card — deselecting Real World sets it to `false`.
+
+Also skipped (regardless of flag): `question_style = 'live'` — live-only leagues never receive REAL_WORLD questions.
+
+### User-controlled weekly intensity: `real_world_questions_per_week` (migration 055)
+
+Each league stores `real_world_questions_per_week INTEGER DEFAULT 2 CHECK (1–3)`. This is the creator's chosen intensity:
+- 1 = Low (max 1 REAL_WORLD question per week for this league)
+- 2 = Medium (default)
+- 3 = High (max 3 — same as platform cap)
+
+The effective weekly limit is `MIN(user_cap, platform_cap=3)`. Skip reasons:
+- `real_world_user_weekly_cap` — user's chosen cap hit before platform cap
+- `real_world_weekly_cap` — platform cap hit
+
+### Weekly cap — applies to ALL tiers including Elite
+
+**Max 3 REAL_WORLD questions per league per ISO week (Monday 00:00 UTC through Sunday 23:59 UTC).** This is a production safety rule, not a monetization rule. It prevents flooding and cost overruns. A bug in the pipeline cannot produce more than 3 questions per league per week.
 
 ### Quota check flow (`checkRealWorldQuota()` in `lib/quota-checker.ts`)
 
-1. **Daily cap** — count `REAL_WORLD` questions for this league created since UTC midnight today. If ≥ 1 → `real_world_daily_cap` (blocks all tiers)
+1. **User + platform weekly cap** — effective limit = `MIN(league.real_world_questions_per_week ?? 2, 3)`. Count `REAL_WORLD` questions since Monday 00:00 UTC. If ≥ limit → `real_world_user_weekly_cap` or `real_world_weekly_cap`
 2. **Tier check** — Starter: `real_world_tier_locked`. Pro: count this month → block if ≥ 10 (`real_world_quota_reached`). Elite: allowed.
 3. **Fail-safe** — DB error on either count query → `real_world_quota_check_failed` (fail-closed, not fail-open)
 
@@ -77,15 +94,15 @@ The full pipeline runs inside `generate-questions/index.ts` in the **REAL_WORLD 
 
 ```
 For each ai-enabled football league:
-  ① checkRealWorldQuota()          — daily cap + tier gate
+  ① checkRealWorldQuota()          — weekly cap (3/week) + tier gate
   ② fetchSportsContext()           — upcoming matches, standings, injuries, keyPlayers
-  ③ fetchNewsContext()             — Google News RSS (BROAD + SIGNAL + PLAYER BOOST)
-  ④ mergeKnownPlayers()            — team_players DB + keyPlayers combined
-  ⑤ enrichArticlesWithScraper()    — deep-read top 5 candidates via scraper service (optional)
-  ⑥ Select 48h target matches      — filter upcomingMatches to kickoff ≤ 48h away; SKIP if none
+  ③ Select 7-day target matches    — filter upcomingMatches to 0 < kickoff ≤ 7 days; SKIP if none
+  ④ fetchNewsContext()             — Google News RSS (BROAD + SIGNAL + PLAYER BOOST)
+  ⑤ mergeKnownPlayers()            — team_players DB + keyPlayers combined
+  ⑥ enrichArticlesWithScraper()    — deep-read top 5 candidates via scraper service (optional)
   ⑦ Call 1: generateRealWorldQuestion()   — generate question bound to a target match
   ⑧ Call 2: convertToPredicate()         — convert to structured resolution predicate
-  ⑨ Hard binding validation        — predicate.match_id must match a 48h target match; SKIP if not
+  ⑨ Hard binding validation        — predicate.match_id must match a 7-day target match; SKIP if not
   ⑨b blocked — admin UI required  — skip `manual_review` predicate type; continue retry loop (no admin review UI — always auto-voids)
   ⑩ Call 3: generateRealWorldContext()   — curated sources + context snippet
   ⑪ Call 4: scoreRealWorldQuestion()     — quality gate: APPROVE / WEAK / REJECT
@@ -136,7 +153,7 @@ If either variable is absent, enrichment is skipped entirely and the pipeline be
 **Input:**
 - Scored news articles from Google News RSS (BROAD + SIGNAL + PLAYER BOOST)
 - `league_scope` — string describing the league (e.g. "Premier League, team-specific: Arsenal")
-- `upcoming_matches[]` — **48h target matches only** (filtered from upcomingMatches before this call; kickoff ≤ 48h away)
+- `upcoming_matches[]` — **7-day target matches only** (filtered from upcomingMatches before this call; 0 < kickoff ≤ 7 days)
 - `known_players[]` — `mergedKnownPlayers` (team_players DB top-8 per team + keyPlayers injury list), deduplicated by player ID
 - `now_timestamp` — current UTC time
 
@@ -220,7 +237,7 @@ The v2.9 prompt opens with a non-negotiable hard constraint:
 **Output:** structured `ResolutionPredicate` (one of 5 types)
 
 After Call 2:
-- **Hard binding validation**: `rwPredicate.match_id` is looked up against the `targetMatches` (48h window) list only — **no fallback to `[0]`**. If the ID is missing or doesn't match any target match → skip with `real_world_match_binding_failed`. This is the enforcement point for the TARGET MATCH CONSTRAINT.
+- **Hard binding validation**: `rwPredicate.match_id` is looked up against the `targetMatches` (7-day window) list only — **no fallback to `[0]`**. If the ID is missing or doesn't match any target match → skip with `real_world_match_binding_failed`. This is the enforcement point for the TARGET MATCH CONSTRAINT.
 - `entity_focus` is cross-validated against predicate type and normalised:
   - `match_lineup` / `player_stat` → must be `'player'`
   - `match_stat` / `btts` / `match_outcome` → must be `'team'`
@@ -331,6 +348,8 @@ Five predicate types are supported. Each has different timing, resolver behaviou
 
 **Resolver:** reads player stats from `live_match_stats.player_stats` (populated by live-stats-poller from `/fixtures/players` endpoint).
 
+**API-lag grace window (30 min post `resolves_after`):** If the resolver returns `player_not_in_stats` or `player_stat_unavailable` and fewer than 30 minutes have elapsed since `resolves_after`, the question is skipped (retried next hourly cycle) instead of immediately voided. This covers the typical API-Sports propagation delay (~10–15 min post-FT). After 30 minutes the grace expires and the question voids normally. Log events: `player_stat_lag_skip` (skipping) and `player_stat_lag_grace_expired` (voiding after grace).
+
 ### `match_stat`
 
 **What it resolves:** Did a specific team stat meet a threshold?
@@ -384,7 +403,7 @@ Five predicate types are supported. Each has different timing, resolver behaviou
 
 ## 5. Timing Model
 
-Every REAL_WORLD question carries all three mandatory timestamps, and is hard-bound to a specific match within 48 hours of generation.
+Every REAL_WORLD question carries all three mandatory timestamps, and is hard-bound to a specific match kicking off within 7 days of generation.
 
 | Timestamp | Purpose |
 |---|---|
@@ -410,12 +429,12 @@ now > resolution_deadline + 1 hour
 ```
 This applies to all predicate types. It prevents dead questions from sitting in `pending` indefinitely after their deadline passes.
 
-### 48-hour match binding rule
+### 7-day match binding rule
 
-REAL_WORLD questions may only be generated when at least one upcoming match kicks off within 48 hours. The pipeline:
-1. Filters `upcomingMatches` to `0 < msUntilKickoff ≤ 48h` → `targetMatches`
-2. If `targetMatches` is empty → skip this league for the current run
-3. Passes only `targetMatches` to Call 1 — the model selects the one relevant to the news signal
+REAL_WORLD questions may only be generated when at least one upcoming match kicks off within 7 days. The filter runs immediately after `fetchSportsContext` — before `fetchNewsContext` and the `team_players` DB query, so no RSS quota is burned for leagues with no 7-day fixture. The pipeline:
+1. Filters `upcomingMatches` to `0 < msUntilKickoff ≤ SEVEN_DAYS_MS (7 × 24h)` → `targetMatches`
+2. If `targetMatches` is empty → skip this league for the current run (log: `no upcoming match within 7 days`)
+3. Passes only `targetMatches` to Call 1 and Call 2 — the model selects the one relevant to the news signal
 4. After Call 2, validates `predicate.match_id` is in `targetMatches` — no fallback
 
 ---
@@ -544,7 +563,7 @@ skip reason: real_world_match_binding_failed
 
 Triggered when either:
 1. `rwPredicate.match_id` is absent or empty string, OR
-2. `rwPredicate.match_id` does not match any match in `targetMatches` (the 48h filtered list)
+2. `rwPredicate.match_id` does not match any match in `targetMatches` (the 7-day filtered list)
 
 ```typescript
 const upcomingMatch = rwPredicateMatchId
@@ -556,7 +575,7 @@ if (!upcomingMatch) {
 }
 ```
 
-No fallback is attempted. A question with a match_id outside the 48h window, a fabricated ID, or no ID at all is discarded at this point. This ensures `match_id` on every inserted REAL_WORLD question is a valid, known, upcoming-within-48h match.
+No fallback is attempted. A question with a match_id outside the 7-day window, a fabricated ID, or no ID at all is discarded at this point. This ensures `match_id` on every inserted REAL_WORLD question is a valid, known, upcoming-within-7-days match.
 
 ---
 
@@ -778,11 +797,11 @@ ORDER BY created_at DESC LIMIT 10;
 
 | File | Role |
 |---|---|
-| `generate-questions/index.ts` | REAL_WORLD generation pass (~lines 1020–1530) |
+| `generate-questions/index.ts` | REAL_WORLD generation pass (~lines 2196–2760); `targetMatches` early-exit at ~line 2253 |
 | `lib/openai-client.ts` | `generateRealWorldQuestion()` (Call 1), `generateRealWorldContext()` (Call 3), `scoreRealWorldQuestion()` (Call 4), `RW_GENERATION_SYSTEM_PROMPT`, `RW_CONTEXT_SYSTEM_PROMPT`, `RW_QUALITY_SYSTEM_PROMPT` |
-| `lib/context-builder.ts` | `buildContextPacket()` — prematch/live shared; `generateRealWorldQuestion()` receives news directly |
+| `lib/context-builder.ts` | `buildPredicatePrompt()` — Call 2 schema including Shape H (`match_lineup`) at ~line 490; `buildContextPacket()` for prematch/live |
 | `lib/predicate-validator.ts` | `validateQuestion()` — all 4 stages; REAL_WORLD exemptions in `checkEntities` |
-| `lib/quota-checker.ts` | `checkRealWorldQuota()` — daily cap + tier gate |
+| `lib/quota-checker.ts` | `checkRealWorldQuota()` — weekly cap (3/week) + tier gate |
 | `lib/news-adapter/google-news-rss.ts` | RSS fetch, scoring, dedup, entity extraction, PLAYER BOOST query |
 | `lib/news-adapter/index.ts` | `fetchNewsContext()` wrapper — derives `knownTeams`, `leagueAliases`, passes `topPlayers` |
 | `lib/types.ts` | `RawRealWorldQuestion`, `RwContextResult`, `RwQualityResult`, `MatchLineupPredicate`, `ManualReviewPredicate` |
@@ -802,9 +821,10 @@ ORDER BY created_at DESC LIMIT 10;
 
 | Limitation | Impact | Fix |
 |---|---|---|
-| `manual_review` blocked until admin UI ships | Generator skips `manual_review` before insert (no daily quota burn); resolver skips without AI call. Questions always auto-void at `deadline+1h`. No admin review UI exists. | Remove generation guard and restore AI verifier in resolver when admin UI ships |
+| `manual_review` blocked until admin UI ships | Generator skips `manual_review` before insert (no weekly quota burn); resolver skips without AI call. Questions always auto-void at `deadline+1h`. No admin review UI exists. | Remove generation guard and restore AI verifier in resolver when admin UI ships |
 | Bounded retry loop active | System attempts up to 3 ranked news batches per league per run. REJECT questions are never published. Best WEAK published only if no APPROVE was found and `rwLeagueApproved === 0`. Items sorted by news quality score so attempt 1 has the strongest signals. | — |
 | `rw_quality_breakdown` not shown in feed | Users see confidence badge but not why the question was scored | Surface breakdown in feed or admin view |
-| Player DB cold-start | Fresh deployment has no `team_players` data — no PLAYER BOOST until poller runs for a live match | Expected — populate naturally from first live match |
+| Player DB cold-start | Fresh deployment has no `team_players` data — no PLAYER BOOST until poller runs for a live match. Also: `match_lineup` TYPE 1 questions for players absent from `mergedKnownPlayers` will have no `player_id` in the predicate_hint — Stage 1 schema check will reject them until the player DB is seeded. | Expected — populate naturally from first live match |
+| `player_stat` API-lag false-void (mitigated) | API-Sports `/fixtures/players` can take 10–15 min to populate post-FT. Grace window (30 min post `resolves_after`) skips instead of voiding on `player_not_in_stats` / `player_stat_unavailable`. After 30 min, question voids. | Grace window active in resolver — no further action needed |
 | Football only | `sport !== 'football'` guard skips all non-football leagues | By design until sport adapters are verified end-to-end |
-| `match_lineup.check` defaults to `'squad'` | If Call 2 omits the field, question resolves as `correct` if player is anywhere in squad, not just starting XI | Starting XI questions use correct value; acceptable until adapter tuned |
+| `match_lineup.check` defaults to `'squad'` | If Call 2 omits the field, question resolves as `correct` if player is anywhere in squad, not just starting XI. Shape H (explicit Call 2 schema) reduces this risk significantly. | Starting XI questions use correct value; monitor Call 2 output |

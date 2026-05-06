@@ -945,55 +945,6 @@
       <div class="form-hint" id="match-select-hint" style="display:none; margin-top:6px; color:var(--grey-dark);">No upcoming matches found in our database for this competition yet.</div>
     </div>
 
-    <!-- Question Mode (Match Night only) -->
-    <div id="matchnight-extra" style="display:none;">
-      <div class="form-group">
-        <label class="form-label">Question Style</label>
-        <div class="form-hint" style="margin-bottom:14px;">Choose what questions your players get during the match night.</div>
-        <div class="qmode-cards">
-
-          <!-- Pre-match only — all tiers -->
-          <div class="qmode-card" onclick="selectQuestionMode('prematch', this)">
-            <div class="qmode-icon" style="background:var(--lime-dim);">
-              <svg viewBox="0 0 24 24" stroke="var(--lime)" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-            </div>
-            <div class="qmode-body">
-              <div class="qmode-name">Pre-match only</div>
-              <div class="qmode-desc">Predictions set before kick-off — scorers, outcomes, clean sheets.</div>
-            </div>
-            <div class="qmode-check"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-          </div>
-
-          <!-- Live in-game — Pro+ -->
-          <div class="qmode-card" id="qmode-live-card" onclick="selectQuestionModeGated('live', this, 'pro', 'Live in-game questions')">
-            <span class="lock-badge" id="qmode-live-badge" style="display:none;">Pro</span>
-            <div class="qmode-icon" style="background:rgba(255,107,107,0.12);">
-              <svg viewBox="0 0 24 24" stroke="var(--coral)" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
-            </div>
-            <div class="qmode-body">
-              <div class="qmode-name">Live in-game <span class="tier-badge pro" id="qmode-live-tier" style="display:none;">Pro</span></div>
-              <div class="qmode-desc">Real-time questions as the match unfolds — goals, cards, corners.</div>
-            </div>
-            <div class="qmode-check"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-          </div>
-
-          <!-- Hybrid — Pro+ -->
-          <div class="qmode-card" id="qmode-hybrid-card" onclick="selectQuestionModeGated('hybrid', this, 'pro', 'Hybrid mode')">
-            <span class="lock-badge" id="qmode-hybrid-badge" style="display:none;">Pro</span>
-            <div class="qmode-icon" style="background:rgba(78,205,196,0.12);">
-              <svg viewBox="0 0 24 24" stroke="var(--teal)" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-            </div>
-            <div class="qmode-body">
-              <div class="qmode-name">Hybrid <span class="tier-badge pro" id="qmode-hybrid-tier" style="display:none;">Pro</span></div>
-              <div class="qmode-desc">Pre-match predictions plus live questions during the game — best of both.</div>
-            </div>
-            <div class="qmode-check"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
-          </div>
-
-        </div>
-      </div>
-    </div>
-
     <!-- Play Experience: Singleplayer vs Multiplayer (migration 029) -->
     <!-- play_mode is INDEPENDENT of subscription tier. Tier limits apply to both modes. -->
     <div class="form-group" id="play-experience-section" style="margin-top:24px;">
@@ -1014,10 +965,6 @@
           <div class="mode-card-name">Solo</div>
           <div class="mode-card-desc">Just you vs the match. Personal score only.</div>
         </div>
-      </div>
-      <!-- Shown for Starter on live/hybrid in singleplayer mode. Tier cap applies to both modes. -->
-      <div id="sp-live-cap-notice" style="display:none; margin-top:10px; font-size:0.72rem; color:var(--coral); background:rgba(255,107,107,0.08); border:1px solid rgba(255,107,107,0.25); border-radius:8px; padding:8px 12px;">
-        ⚠️ Your Starter plan allows <strong>3 live answers per match</strong>. This limit applies in Solo mode too. <span style="color:var(--lime); cursor:pointer; font-weight:700;" onclick="SpontixSidebar.showUpgradeModal({feature:'More Live Answers',requiredTier:'Pro',icon:'⚡',description:'Starter allows 3 live answers per match in any play mode. Upgrade for unlimited.',benefits:['Unlimited live answers per match','Full live + hybrid mode','Real World questions']})">Upgrade to Pro →</span>
       </div>
     </div>
 
@@ -1139,24 +1086,112 @@
     <!-- MANUAL RULES PANEL -->
     <div class="rules-panel active" id="rules-manual">
 
-    <div class="form-group">
+    <!-- ── Question Types — multi-select cards (shared across all league types) ── -->
+    <div class="form-group" id="question-types-section">
       <label class="form-label">Question Types</label>
-      <div class="option-grid" id="q-types">
-        <div class="option-chip selected" onclick="toggleChip(this)">
-          <div class="option-chip-label">Live Predictions</div>
+      <div class="form-hint" style="margin-bottom:14px;">Choose which types of questions your league uses. Select all that apply.</div>
+      <div class="qmode-cards">
+
+        <!-- Pre-match — all tiers -->
+        <div class="qmode-card selected" id="qt-prematch-card" onclick="toggleQuestionType('prematch', this)">
+          <div class="qmode-icon" style="background:var(--lime-dim);">
+            <svg viewBox="0 0 24 24" stroke="var(--lime)" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          <div class="qmode-body">
+            <div class="qmode-name">Pre-match</div>
+            <div class="qmode-desc">Predictions set before kick-off — scorers, outcomes, clean sheets.</div>
+          </div>
+          <div class="qmode-check"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
-        <div class="option-chip" onclick="toggleChip(this)">
-          <div class="option-chip-label">Pre-match</div>
+
+        <!-- Live in-game — Pro+ -->
+        <div class="qmode-card" id="qt-live-card" onclick="toggleQuestionTypeGated('live', this, 'pro', 'Live in-game questions')">
+          <span class="lock-badge" id="qt-live-badge" style="display:none;">Pro</span>
+          <div class="qmode-icon" style="background:rgba(255,107,107,0.12);">
+            <svg viewBox="0 0 24 24" stroke="var(--coral)" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+          </div>
+          <div class="qmode-body">
+            <div class="qmode-name">Live in-game</div>
+            <div class="qmode-desc">Real-time questions as the match unfolds — goals, cards, corners.</div>
+          </div>
+          <div class="qmode-check"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
-        <div class="option-chip" onclick="toggleChip(this)" data-min-tier="pro" data-feature="Real World questions">
-          <span class="lock-badge">Pro</span>
-          <div class="option-chip-label">Real World</div>
+
+        <!-- Real World — Pro+ -->
+        <div class="qmode-card" id="qt-realworld-card" onclick="toggleQuestionTypeGated('realworld', this, 'pro', 'Real World questions')">
+          <span class="lock-badge" id="qt-realworld-badge" style="display:none;">Pro</span>
+          <div class="qmode-icon" style="background:rgba(78,205,196,0.12);">
+            <svg viewBox="0 0 24 24" stroke="var(--teal)" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+          </div>
+          <div class="qmode-body">
+            <div class="qmode-name">Real World</div>
+            <div class="qmode-desc">AI-generated questions based on real match news, injuries, and events.</div>
+          </div>
+          <div class="qmode-check"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
-        <div class="option-chip" onclick="toggleChip(this)" data-min-tier="elite" data-feature="Custom Questions">
-          <span class="lock-badge">Elite</span>
-          <div class="option-chip-label">Custom Questions</div>
+
+        <!-- Custom Questions — Elite+ -->
+        <div class="qmode-card" id="qt-custom-card" onclick="toggleQuestionTypeGated('custom', this, 'elite', 'Custom Questions')">
+          <span class="lock-badge" id="qt-custom-badge" style="display:none;">Elite</span>
+          <div class="qmode-icon" style="background:rgba(124,92,252,0.12);">
+            <svg viewBox="0 0 24 24" stroke="var(--purple)" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          </div>
+          <div class="qmode-body">
+            <div class="qmode-name">Custom Questions</div>
+            <div class="qmode-desc">You create the questions, players answer, you resolve the outcome.</div>
+          </div>
+          <div class="qmode-check"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg></div>
         </div>
+
       </div>
+      <!-- Starter live-answer cap notice -->
+      <div id="sp-live-cap-notice" style="display:none; margin-top:10px; font-size:0.72rem; color:var(--coral); background:rgba(255,107,107,0.08); border:1px solid rgba(255,107,107,0.25); border-radius:8px; padding:8px 12px;">
+        ⚠️ Your Starter plan allows <strong>3 live answers per match</strong>. <span style="color:var(--lime); cursor:pointer; font-weight:700;" onclick="SpontixSidebar.showUpgradeModal({feature:'More Live Answers',requiredTier:'Pro',icon:'⚡',description:'Starter allows 3 live answers per match in any play mode. Upgrade for unlimited.',benefits:['Unlimited live answers per match','Live in-game questions','Real World questions']})">Upgrade to Pro →</span>
+      </div>
+
+      <!-- ── Per-type quantity sliders — shown only when type is selected ── -->
+      <div class="form-group" id="prematch-qpm-group" style="margin-top:20px;">
+        <label class="form-label" style="display:flex;align-items:center;gap:6px;">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--lime)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          Pre-match questions per match
+        </label>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
+          <input type="range" id="prematch-qpm-slider" min="1" max="10" value="5"
+                 style="flex:1;accent-color:var(--lime);"
+                 oninput="document.getElementById('prematch-qpm-display').textContent=this.value" />
+          <span id="prematch-qpm-display" style="font-size:0.9rem;font-weight:700;color:var(--lime);min-width:18px;text-align:right;">5</span>
+        </div>
+        <div class="form-hint" style="margin-top:4px;">Questions lock at kickoff. More = richer pre-match experience.</div>
+      </div>
+
+      <div class="form-group" id="live-qpm-group" style="margin-top:20px;display:none;">
+        <label class="form-label" style="display:flex;align-items:center;gap:6px;">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--coral)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Live questions per match
+        </label>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
+          <input type="range" id="live-qpm-slider" min="1" max="10" value="6"
+                 style="flex:1;accent-color:var(--coral);"
+                 oninput="document.getElementById('live-qpm-display').textContent=this.value" />
+          <span id="live-qpm-display" style="font-size:0.9rem;font-weight:700;color:var(--coral);min-width:18px;text-align:right;">6</span>
+        </div>
+        <div class="form-hint" style="margin-top:4px;">Questions appear at planned moments during the match. More = higher intensity.</div>
+      </div>
+
+      <div class="form-group" id="realworld-qpm-group" style="margin-top:20px;display:none;">
+        <label class="form-label" style="display:flex;align-items:center;gap:6px;">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>
+          Real World questions per week
+        </label>
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
+          <input type="range" id="realworld-qpw-slider" min="1" max="3" value="2"
+                 style="flex:1;accent-color:var(--teal);"
+                 oninput="updateRealWorldLabel(this.value)" />
+          <span id="realworld-qpw-display" style="font-size:0.9rem;font-weight:700;color:var(--teal);min-width:48px;text-align:right;">Medium</span>
+        </div>
+        <div class="form-hint" style="margin-top:4px;">1 = Low · 2 = Medium · 3 = High. Platform cap: max 3 per week.</div>
+      </div>
+
     </div>
 
     <div class="slider-group" id="max-players-group">
@@ -1325,65 +1360,6 @@
       </div>
     </div>
 
-    <!-- ── Pre-Match Questions Per Match ── -->
-    <div class="form-group" style="margin-top:20px;">
-      <label class="form-label" style="display:flex;align-items:center;gap:6px;">
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--lime)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        Pre-match questions per match
-      </label>
-      <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
-        <input type="range" id="prematch-qpm-slider" min="1" max="10" value="5"
-               style="flex:1;accent-color:var(--lime);"
-               oninput="document.getElementById('prematch-qpm-display').textContent=this.value" />
-        <span id="prematch-qpm-display" style="font-size:0.9rem;font-weight:700;color:var(--lime);min-width:18px;text-align:right;">5</span>
-      </div>
-      <div class="form-hint" style="margin-top:4px;">Questions lock at kickoff. More questions = richer pre-match experience.</div>
-    </div>
-
-    <!-- ── Live Questions Per Match ── -->
-    <div class="form-group" style="margin-top:20px;">
-      <label class="form-label" style="display:flex;align-items:center;gap:6px;">
-        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Live questions per match
-      </label>
-      <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
-        <input type="range" id="live-qpm-slider" min="1" max="10" value="6"
-               style="flex:1;accent-color:var(--teal);"
-               oninput="document.getElementById('live-qpm-display').textContent=this.value" />
-        <span id="live-qpm-display" style="font-size:0.9rem;font-weight:700;color:var(--teal);min-width:18px;text-align:right;">6</span>
-      </div>
-      <div class="form-hint" style="margin-top:4px;">Questions appear at planned moments during the match. More = higher intensity.</div>
-    </div>
-
-    <!-- ── Pre-Match Question Timing ── -->
-    <div class="form-group" id="prematch-timing-section" style="margin-top:20px;display:none;">
-      <div style="font-size:0.8rem;font-weight:700;color:var(--text);margin-bottom:6px;display:flex;align-items:center;gap:6px;">
-        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="var(--teal)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-        Pre-Match Question Timing
-      </div>
-      <div class="form-hint" style="margin-bottom:10px;">Control when pre-match questions appear in the league feed before kickoff.</div>
-
-      <div class="timing-mode-cards">
-        <div class="timing-card selected" id="timing-auto" onclick="selectPrematchMode('automatic', this)">
-          <div class="timing-card-label">Automatic</div>
-          <div class="timing-card-hint">24–48h before kickoff</div>
-        </div>
-        <div class="timing-card" id="timing-manual" onclick="selectPrematchModeGated(this)">
-          <div class="timing-card-label">
-            Manual
-            <span class="timing-lock-badge" id="timing-manual-lock" style="display:none;">Pro+</span>
-          </div>
-          <div class="timing-card-hint">Choose your timing</div>
-        </div>
-      </div>
-
-      <div class="timing-offset-grid" id="timing-offset-grid" style="display:none;">
-        <div class="timing-offset-pill" id="offset-48" onclick="selectPrematchOffset(48, this)">48h before</div>
-        <div class="timing-offset-pill selected" id="offset-24" onclick="selectPrematchOffset(24, this)">24h before</div>
-        <div class="timing-offset-pill" id="offset-12" onclick="selectPrematchOffset(12, this)">12h before</div>
-        <div class="timing-offset-pill" id="offset-6" onclick="selectPrematchOffset(6, this)">6h before</div>
-      </div>
-    </div>
 
     </div><!-- end rules-manual -->
 
@@ -1438,67 +1414,19 @@
     </div>
   </div>
 
-  <!-- STEP 4: Invite Mates -->
+  <!-- STEP 4: Invite -->
   <div class="wizard-panel" id="step-3">
     <h1 class="wizard-title">Invite the crew</h1>
-    <p class="wizard-sub">Share the code or invite people directly. You can always add more later.</p>
+    <p class="wizard-sub">Share your league code with friends. They can use it to join when the invite system launches.</p>
 
     <div class="invite-code-display">
       <div class="invite-code-label">Your League Code</div>
       <div class="invite-code-value" id="generated-code">—</div>
       <div class="invite-code-actions">
-        <button class="invite-btn primary" onclick="showToast('Code copied to clipboard!')">
+        <button class="invite-btn primary" onclick="copyLeagueCode()">
           <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
           Copy Code
         </button>
-        <button class="invite-btn" onclick="showToast('Link copied!')">
-          <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
-          Copy Link
-        </button>
-      </div>
-    </div>
-
-    <div style="display:flex;gap:8px;margin:16px 0;">
-      <button class="invite-btn" style="flex:1;justify-content:center;" onclick="showToast('Opening WhatsApp...')">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>
-        WhatsApp
-      </button>
-      <button class="invite-btn" style="flex:1;justify-content:center;" onclick="showToast('Opening iMessage...')">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-        iMessage
-      </button>
-      <button class="invite-btn" style="flex:1;justify-content:center;" onclick="showToast('Opening Discord...')">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4-4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
-        Discord
-      </button>
-    </div>
-
-    <div class="invite-contacts">
-      <h4>Invite from your leagues</h4>
-      <div class="invite-contact-row">
-        <div class="invite-contact-avatar" style="background:var(--purple);color:#fff;">JR</div>
-        <div><div class="invite-contact-name">Jake R.</div><div class="invite-contact-sub">In 2 leagues with you</div></div>
-        <button class="invite-contact-btn" onclick="inviteContact(this)">Invite</button>
-      </div>
-      <div class="invite-contact-row">
-        <div class="invite-contact-avatar" style="background:var(--coral);color:#fff;">MT</div>
-        <div><div class="invite-contact-name">Marcus T.</div><div class="invite-contact-sub">In 2 leagues with you</div></div>
-        <button class="invite-contact-btn" onclick="inviteContact(this)">Invite</button>
-      </div>
-      <div class="invite-contact-row">
-        <div class="invite-contact-avatar" style="background:var(--teal);color:var(--navy);">IL</div>
-        <div><div class="invite-contact-name">Ines L.</div><div class="invite-contact-sub">In 1 league with you</div></div>
-        <button class="invite-contact-btn" onclick="inviteContact(this)">Invite</button>
-      </div>
-      <div class="invite-contact-row">
-        <div class="invite-contact-avatar" style="background:rgba(255,255,255,0.08);color:var(--off-white);">DO</div>
-        <div><div class="invite-contact-name">Dan O.</div><div class="invite-contact-sub">In 1 league with you</div></div>
-        <button class="invite-contact-btn" onclick="inviteContact(this)">Invite</button>
-      </div>
-      <div class="invite-contact-row">
-        <div class="invite-contact-avatar" style="background:rgba(124,92,252,0.2);color:var(--purple);">KW</div>
-        <div><div class="invite-contact-name">Kai W.</div><div class="invite-contact-sub">In 1 league with you</div></div>
-        <button class="invite-contact-btn" onclick="inviteContact(this)">Invite</button>
       </div>
     </div>
 
@@ -1613,7 +1541,7 @@ let selectedCompetition = null;
 // Holds the full row from sports_teams for the chosen team
 let selectedScopedTeam = null;
 // Match Night specific state
-let matchNightMode = ''; // 'prematch' | 'live' | 'hybrid'
+let selectedQTypes = { prematch: true, live: false, realworld: false, custom: false };
 // Pre-match scheduling
 let prematchScheduleMode = 'automatic'; // 'automatic' | 'manual'
 let prematchPublishOffset = 24;         // hours before kickoff (manual mode only)
@@ -1901,6 +1829,7 @@ function nextStep() {
     if (sessionType === 'singleplayer' && currentStep === 3) currentStep++;
     updateProgress();
     window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (currentStep === 2) initStep3();
     if (currentStep === 4) populateReview();
   }
 }
@@ -1953,7 +1882,11 @@ function restoreStepState(step) {
     if (slider) slider.disabled = sessionType === 'singleplayer';
     validateStep1();
   }
-  // Steps 2 & 3 — chip selections and slider values persist in DOM naturally
+  // Step 2 (Rules) — re-apply tier gating and slider visibility
+  if (step === 2) {
+    initStep3();
+  }
+  // Step 3 (Invite) — chip selections and slider values persist in DOM naturally
 }
 
 // ── Step 1: Type Selection ──
@@ -2000,7 +1933,7 @@ function validateStep1() {
   const comp = document.getElementById('league-comp').value;
   if (leagueType === 'match') {
     const match = document.getElementById('league-match').value;
-    const ok = name.length > 0 && comp !== '' && match !== '' && matchNightMode !== '';
+    const ok = name.length > 0 && comp !== '' && match !== '';
     document.getElementById('btn-next-1').disabled = !ok;
   } else if (leagueType === 'season') {
     // Season-Long: require name + a path + path-specific selections.
@@ -2129,7 +2062,7 @@ function initSeasonLongStep(reloadComps) {
   document.getElementById('scoped-team-group').style.display = 'none';
   document.getElementById('dates-section').style.display = 'none';
   document.getElementById('match-select-group').style.display = 'none';
-  document.getElementById('matchnight-extra').style.display = 'none';
+  // matchnight-extra removed (question style moved to Step 3)
   // Season-Long: Sport drives both Path A team search and Path B competition picker.
   // Hide the legacy Competition dropdown — it's only used by Match Night / Custom.
   var compFG = document.getElementById('comp-form-group');
@@ -2485,7 +2418,7 @@ function initMatchNightStep(reloadComps) {
   // Update title/subtitle
   document.querySelector('#step-1 .wizard-title').textContent = 'Match Night setup';
   document.querySelector('#step-1 .wizard-sub').textContent =
-    'Pick the match, choose your question style, and name your league.';
+    'Pick the match and name your league.';
 
   // Hide standard-only fields
   document.getElementById('scope-section').style.display = 'none';
@@ -2501,10 +2434,7 @@ function initMatchNightStep(reloadComps) {
 
   // Show match night fields
   document.getElementById('match-select-group').style.display = 'block';
-  document.getElementById('matchnight-extra').style.display = 'block';
-
-  // Apply tier gating to Live/Hybrid cards
-  applyMatchNightTierGating();
+  // Question Style cards are now in Step 3 (shared across all league types)
 
   if (reloadComps) loadMatchNightCompetitions();
 }
@@ -2521,7 +2451,7 @@ function initStandardStep(reloadComps) {
 
   // Hide match night fields
   document.getElementById('match-select-group').style.display = 'none';
-  document.getElementById('matchnight-extra').style.display = 'none';
+  // Question Style cards are now in Step 3 (shared across all league types)
 
   // Hide Season-Long fork
   var slFork2 = document.getElementById('season-long-fork');
@@ -2529,12 +2459,8 @@ function initStandardStep(reloadComps) {
   // Restore the legacy Competition dropdown for Custom League
   var compFGc = document.getElementById('comp-form-group');
   if (compFGc) compFGc.style.display = '';
-  // Restore the legacy Competition dropdown for Custom League
-  var compFGc = document.getElementById('comp-form-group');
-  if (compFGc) compFGc.style.display = '';
 
-  // Reset match night state
-  matchNightMode = '';
+  // Reset match state (question style preserved for Step 3)
   selectedMatch = null;
 
   // Apply RW tier gate for standard league flow (same gate, both play modes)
@@ -2543,42 +2469,61 @@ function initStandardStep(reloadComps) {
   if (reloadComps) onSportChange();
 }
 
-function applyMatchNightTierGating() {
-  const player = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
-  const tier   = player ? (player.tier || 'starter') : 'starter';
-  const limits = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(tier) : null;
+// ── Step 3 init — called when entering the Rules step ──────────────────
+function initStep3() {
+  applyQuestionTypeTierGating();
+  syncQuestionTypeCards();
+  updateStep3Visibility();
+  applySingleplayerLiveCapNotice();
+}
+
+// Sync card selected state to match selectedQTypes object
+function syncQuestionTypeCards() {
+  var types = ['prematch', 'live', 'realworld', 'custom'];
+  types.forEach(function(t) {
+    var card = document.getElementById('qt-' + t + '-card');
+    if (card) card.classList.toggle('selected', !!selectedQTypes[t]);
+  });
+}
+
+// Show/hide sliders based on which question types are selected
+function updateStep3Visibility() {
+  var pg = document.getElementById('prematch-qpm-group');
+  var lg = document.getElementById('live-qpm-group');
+  var rg = document.getElementById('realworld-qpm-group');
+  if (pg) pg.style.display = selectedQTypes.prematch  ? '' : 'none';
+  if (lg) lg.style.display = selectedQTypes.live      ? '' : 'none';
+  if (rg) rg.style.display = selectedQTypes.realworld ? '' : 'none';
+}
+
+function applyQuestionTypeTierGating() {
+  const player  = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
+  const tier    = player ? (player.tier || 'starter') : 'starter';
+  const limits  = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(tier) : null;
   const canLive = limits ? (limits.liveQuestionsEnabled && limits.liveQuestionsMode !== 'limited') : false;
+  const canRW   = limits ? !!limits.realWorldQuestionsEnabled : false;
+  const canCustom = (tier === 'elite');
 
-  // Live card — requires liveQuestionsEnabled (Pro+)
-  const liveCard  = document.getElementById('qmode-live-card');
-  const liveBadge = document.getElementById('qmode-live-badge');
-  const liveTier  = document.getElementById('qmode-live-tier');
-  if (!canLive) {
-    liveCard.classList.add('locked');
-    if (liveBadge) liveBadge.style.display = 'inline-block';
-    if (liveTier)  liveTier.style.display  = 'none';
-  } else {
-    liveCard.classList.remove('locked');
-    if (liveBadge) liveBadge.style.display = 'none';
-    if (liveTier)  liveTier.style.display  = 'none';
+  function gateCard(id, badgeId, allowed) {
+    const card  = document.getElementById(id);
+    const badge = document.getElementById(badgeId);
+    if (!card) return;
+    if (!allowed) {
+      card.classList.add('locked');
+      if (badge) badge.style.display = 'inline-block';
+      // deselect if locked
+      if (selectedQTypes[id.replace('qt-', '').replace('-card', '')]) {
+        selectedQTypes[id.replace('qt-', '').replace('-card', '')] = false;
+      }
+    } else {
+      card.classList.remove('locked');
+      if (badge) badge.style.display = 'none';
+    }
   }
 
-  // Hybrid card — also requires liveQuestionsEnabled (Pro+)
-  const hybridCard  = document.getElementById('qmode-hybrid-card');
-  const hybridBadge = document.getElementById('qmode-hybrid-badge');
-  const hybridTier  = document.getElementById('qmode-hybrid-tier');
-  if (!canLive) {
-    hybridCard.classList.add('locked');
-    if (hybridBadge) hybridBadge.style.display = 'inline-block';
-    if (hybridTier)  hybridTier.style.display  = 'none';
-  } else {
-    hybridCard.classList.remove('locked');
-    if (hybridBadge) hybridBadge.style.display = 'none';
-    if (hybridTier)  hybridTier.style.display  = 'none';
-  }
-
-  // AI Real World toggle gate — applies in both singleplayer and multiplayer
-  applyRealWorldTierGating();
+  gateCard('qt-live-card',      'qt-live-badge',      canLive);
+  gateCard('qt-realworld-card', 'qt-realworld-badge', canRW);
+  gateCard('qt-custom-card',    'qt-custom-badge',    canCustom);
 }
 
 async function loadMatchNightCompetitions() {
@@ -2696,35 +2641,39 @@ function onMatchSelect() {
   validateStep1();
 }
 
-function selectQuestionMode(mode, el) {
-  matchNightMode = mode;
-  document.querySelectorAll('.qmode-card').forEach(c => c.classList.remove('selected'));
-  el.classList.add('selected');
-  updatePrematchTimingVisibility();
-  // Update live-cap notice: tier cap applies identically in solo and multiplayer
+function toggleQuestionType(type, el) {
+  selectedQTypes[type] = !selectedQTypes[type];
+  el.classList.toggle('selected', selectedQTypes[type]);
+  updateStep3Visibility();
   applySingleplayerLiveCapNotice();
-  validateStep1();
 }
 
-function selectQuestionModeGated(mode, el, minTier, featureName) {
+function toggleQuestionTypeGated(type, el, minTier, featureName) {
   if (el.classList.contains('locked')) {
+    var requiredTier = minTier === 'elite' ? 'Elite' : 'Pro';
     SpontixSidebar.showUpgradeModal({
       feature: featureName,
-      requiredTier: 'Pro',
+      requiredTier: requiredTier,
       isVenue: false,
       icon: '⚡',
-      description: 'Upgrade to <strong>Pro</strong> to unlock live in-game questions and hybrid mode.',
+      description: 'Upgrade to <strong>' + requiredTier + '</strong> to unlock ' + featureName + '.',
       benefits: [
         'Live in-game questions during the match',
-        'Hybrid mode — pre-match + live combined',
-        'Streak bonuses and risky answers',
+        'Real World AI-generated questions',
+        'Custom Questions (Elite)',
         'All question types',
         'Ad-free experience'
       ]
     });
     return;
   }
-  selectQuestionMode(mode, el);
+  toggleQuestionType(type, el);
+}
+
+function updateRealWorldLabel(val) {
+  var labels = { '1': 'Low', '2': 'Medium', '3': 'High' };
+  var el = document.getElementById('realworld-qpw-display');
+  if (el) el.textContent = labels[val] || 'Medium';
 }
 
 // ── Pre-match question timing ──
@@ -2816,21 +2765,7 @@ function renderPrematchTimingTierLocks() {
   }
 }
 
-function updatePrematchTimingVisibility() {
-  var section = document.getElementById('prematch-timing-section');
-  if (!section) return;
-  // Show when prematch questions are relevant:
-  //   Match Night: mode = prematch or hybrid
-  //   Season league: AI questions enabled (always includes prematch)
-  var shouldShow = false;
-  if (leagueType === 'match') {
-    shouldShow = (matchNightMode === 'prematch' || matchNightMode === 'hybrid');
-  } else {
-    shouldShow = aiQuestionsEnabled;
-  }
-  section.style.display = shouldShow ? 'block' : 'none';
-  if (shouldShow) renderPrematchTimingTierLocks();
-}
+function updatePrematchTimingVisibility() { /* timing section removed */ }
 
 // ── Scope selection ──
 function selectScope(scope) {
@@ -2962,48 +2897,21 @@ function selectSessionType(type, el) {
   applySingleplayerLiveCapNotice();
 }
 
-// Applies visual lock to the AI Real World toggle for tiers where realWorldQuestionsEnabled = false.
-// The tier gate applies in both singleplayer and multiplayer modes — never create separate RW limits.
 function applyRealWorldTierGating() {
-  const player = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
-  const tier   = player ? (player.tier || 'starter') : 'starter';
-  const limits = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(tier) : null;
-  const canRW  = limits ? !!limits.realWorldQuestionsEnabled : false;
-
-  const rwBadge = document.getElementById('ai-rw-lock-badge');
-  const toggleEl = document.getElementById('ai-toggle');
-  if (!toggleEl) return;
-
-  if (!canRW) {
-    if (rwBadge) rwBadge.style.display = 'inline-block';
-    toggleEl.style.opacity = '0.45';
-    toggleEl.title = 'Pro+ required — click for upgrade options';
-    // Force RW off if it was on
-    if (aiQuestionsEnabled) {
-      aiQuestionsEnabled = false;
-      toggleEl.classList.remove('on');
-      const cfgEl = document.getElementById('ai-questions-config');
-      if (cfgEl) cfgEl.classList.remove('visible');
-      updatePrematchTimingVisibility();
-    }
-  } else {
-    if (rwBadge) rwBadge.style.display = 'none';
-    toggleEl.style.opacity = '';
-    toggleEl.title = '';
-  }
+  // Legacy call sites (page init, season-long path select) — delegate to unified gating.
+  applyQuestionTypeTierGating();
+  syncQuestionTypeCards();
+  updateStep3Visibility();
 }
 
-// Shows the Starter live-answer cap notice when: singleplayer + live/hybrid + limited tier.
-// The cap (liveQuestionsPerMatch) comes from TIER_LIMITS and is the same for both play modes.
 function applySingleplayerLiveCapNotice() {
   const noticeEl = document.getElementById('sp-live-cap-notice');
   if (!noticeEl) return;
   const player = typeof SpontixStore !== 'undefined' ? SpontixStore.getPlayer() : null;
   const tier   = player ? (player.tier || 'starter') : 'starter';
   const limits = typeof SpontixStore !== 'undefined' ? SpontixStore.getTierLimits(tier) : null;
-  const isLimitedLive   = limits && limits.liveQuestionsMode === 'limited';
-  const isLiveOrHybrid  = matchNightMode === 'live' || matchNightMode === 'hybrid';
-  noticeEl.style.display = (sessionType === 'singleplayer' && isLimitedLive && isLiveOrHybrid) ? 'block' : 'none';
+  const isLimitedLive = limits && limits.liveQuestionsMode === 'limited';
+  noticeEl.style.display = (sessionType === 'singleplayer' && isLimitedLive && selectedQTypes.live) ? 'block' : 'none';
 }
 
 let leagueVisibility = 'public';
@@ -3110,34 +3018,39 @@ function updatePlayerCount(slider) {
 
 // ── Step 4: Invite ──
 let generatedCode = '';
+
+function _generateRawCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
 function generateCode() {
   if (generatedCode) {
     document.getElementById('generated-code').textContent = generatedCode;
     return;
   }
-  if (leagueVisibility === 'private') {
-    // Use the user-entered password, or the autogenerated one from launchLeague
-    const entered = document.getElementById('league-password').value.trim();
-    generatedCode = entered || Math.random().toString(36).slice(2, 8).toUpperCase();
-    document.getElementById('generated-code').textContent = generatedCode;
-    document.getElementById('generated-code').style.color = 'var(--coral)';
-    document.querySelector('.invite-code-label').textContent = 'Join Password — share this to invite members';
-  } else {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-    let code = '';
-    for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
-    generatedCode = code;
-    document.getElementById('generated-code').textContent = code;
-    document.getElementById('generated-code').style.color = 'var(--lime)';
-    document.querySelector('.invite-code-label').textContent = 'Your League Code';
-  }
+  generatedCode = _generateRawCode();
+  document.getElementById('generated-code').textContent = generatedCode;
 }
 
-function inviteContact(btn) {
-  btn.textContent = 'Invited';
-  btn.classList.add('invited');
-  invitedCount++;
-  showToast('Invite sent!');
+function copyLeagueCode() {
+  const code = document.getElementById('generated-code').textContent.trim();
+  if (!code || code === '—') return;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(code).then(() => showToast('Code copied!'));
+  } else {
+    // Fallback for older browsers
+    const ta = document.createElement('textarea');
+    ta.value = code;
+    ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('Code copied!');
+  }
 }
 
 // ── Step 5: Review ──
@@ -3170,15 +3083,18 @@ function populateReview() {
     } else {
       matchRow.style.display = 'none';
     }
-    // Question mode
-    const qmodeRow = document.getElementById('review-qmode-row');
-    const qmodeVal = document.getElementById('review-qmode');
-    const modeLabels = { prematch: 'Pre-match only', live: 'Live in-game', hybrid: 'Hybrid' };
-    qmodeRow.style.display = matchNightMode ? 'flex' : 'none';
-    qmodeVal.textContent = modeLabels[matchNightMode] || '—';
   } else {
     document.getElementById('review-match-row').style.display = 'none';
-    document.getElementById('review-qmode-row').style.display = 'none';
+  }
+
+  // Question Types — shown for all league types
+  const qmodeRow = document.getElementById('review-qmode-row');
+  const qmodeVal = document.getElementById('review-qmode');
+  if (qmodeRow && qmodeVal) {
+    const typeLabels = { prematch: 'Pre-match', live: 'Live', realworld: 'Real World', custom: 'Custom' };
+    const active = Object.keys(selectedQTypes).filter(t => selectedQTypes[t]).map(t => typeLabels[t]);
+    qmodeRow.style.display = 'flex';
+    qmodeVal.textContent = active.length ? active.join(' + ') : 'Pre-match';
   }
 
   // Scope + Team
@@ -3298,14 +3214,14 @@ function populateReview() {
   var qpmEl  = document.getElementById('review-qpm');
   var qpmRow = document.getElementById('review-qpm-row');
   if (qpmEl) qpmEl.textContent = qpmVal + ' per match';
-  if (qpmRow) qpmRow.style.display = aiQuestionsEnabled ? '' : 'none';
+  if (qpmRow) qpmRow.style.display = selectedQTypes.prematch ? '' : 'none';
 
   // Live questions per match
   var liveQpmVal = parseInt(document.getElementById('live-qpm-slider').value, 10) || 6;
   var liveQpmEl  = document.getElementById('review-live-qpm');
   var liveQpmRow = document.getElementById('review-live-qpm-row');
   if (liveQpmEl) liveQpmEl.textContent = liveQpmVal + ' per match';
-  if (liveQpmRow) liveQpmRow.style.display = aiQuestionsEnabled ? '' : 'none';
+  if (liveQpmRow) liveQpmRow.style.display = selectedQTypes.live ? '' : 'none';
 
   // AI Questions
   const aiEl = document.getElementById('review-ai-questions');
@@ -3374,6 +3290,14 @@ async function launchLeague() {
       });
       return;
     }
+  }
+
+  // Season Long requires at least one future fixture to be loaded.
+  // The preview step populates slLoadedFixtures; zero means the competition has
+  // no upcoming matches in the API cache. Block rather than create an empty shell.
+  if (leagueType === 'season' && (!slLoadedFixtures || slLoadedFixtures.length === 0)) {
+    showToast('No upcoming fixtures found — try a different team or competition.');
+    return;
   }
 
   // Save to Supabase (falls back to localStorage if offline)
@@ -3526,15 +3450,51 @@ async function launchLeague() {
     prematch_questions_per_match: parseInt(document.getElementById('prematch-qpm-slider').value, 10) || 5,
     // User-chosen live count (migration 054) — soccer slot-paced generation.
     live_questions_per_match: parseInt(document.getElementById('live-qpm-slider').value, 10) || 6,
+    // Universal question configuration (migration 055).
+    // question_style derived from prematch + live selections.
+    question_style: (selectedQTypes.prematch && selectedQTypes.live) ? 'hybrid'
+                  : selectedQTypes.live                              ? 'live'
+                  : selectedQTypes.prematch                          ? 'prematch'
+                  : 'hybrid',
+    real_world_enabled: !!selectedQTypes.realworld,
+    real_world_questions_per_week: parseInt(document.getElementById('realworld-qpw-slider').value, 10) || 2,
+    custom_questions_enabled: !!selectedQTypes.custom,
+    // League invite code (migration 056) — unique 6-char alphanumeric, generated here,
+    // stored in leagues.league_code. On unique_violation the insert is retried with a new code.
+    league_code: generatedCode || _generateRawCode(),
+    // Match Night single-fixture binding (migration 057).
+    // Stored as BIGINT matching api_football_fixtures.fixture_id.
+    // NULL for Season-Long and Custom — their competition/team scope applies instead.
+    fixture_id: (leagueType === 'match' && selectedMatch && selectedMatch.match_id)
+      ? parseInt(selectedMatch.match_id, 10) || null
+      : null,
+    // Explicit league type (migration 058) — replaces heuristic inference from
+    // league_end_date / creation_path in backend and context builder.
+    league_type: leagueType === 'match'  ? 'match_night'
+               : leagueType === 'season' ? 'season_long'
+               : 'custom',
   };
 
   var newLeagueId = null;
   try {
-    const result = await SpontixStoreAsync.createLeague(leagueData);
-    if (result && result.ok && result.data) {
-      newLeagueId = result.data.id;
-    } else if (result && !result.ok) {
-      console.warn('[launchLeague] create failed:', result.error);
+    // Retry up to 10 times on league_code unique_violation
+    var createResult = null;
+    for (var _attempt = 0; _attempt < 10; _attempt++) {
+      createResult = await SpontixStoreAsync.createLeague(leagueData);
+      if (createResult && createResult.ok) break;
+      if (createResult && createResult.error && createResult.error.includes('league_code')) {
+        // Collision — regenerate and retry
+        leagueData.league_code = _generateRawCode();
+        generatedCode = leagueData.league_code;
+        document.getElementById('generated-code').textContent = generatedCode;
+        continue;
+      }
+      break; // any other error — stop retrying
+    }
+    if (createResult && createResult.ok && createResult.data) {
+      newLeagueId = createResult.data.id;
+    } else if (createResult && !createResult.ok) {
+      console.warn('[launchLeague] create failed:', createResult.error);
       var local = SpontixStore.createLeague(leagueData);
       newLeagueId = local.id;
     }
@@ -3544,11 +3504,50 @@ async function launchLeague() {
     newLeagueId = local.id;
   }
 
+  // ── Season Long: persist fixture scope into league_fixtures ─────────────
+  // slLoadedFixtures is the exact set of future fixtures shown in the preview.
+  // We batch-insert them now so the generator can scope to this list instead
+  // of re-querying a broad competition window. Fire-and-forget; creation is not
+  // blocked if this fails (generation will fall back to competition scope).
+  if (newLeagueId && leagueType === 'season' && slLoadedFixtures && slLoadedFixtures.length > 0
+      && typeof window.sb !== 'undefined') {
+    try {
+      const fixtureRows = slLoadedFixtures.map(function(f) {
+        return {
+          league_id:    newLeagueId,
+          fixture_id:   f.fixture_id,
+          api_league_id: f.league_id,   // api_football_fixtures.league_id = competition ID
+          kickoff_at:   f.kickoff_at,
+        };
+      });
+      const { error: fxErr } = await window.sb
+        .from('league_fixtures')
+        .insert(fixtureRows);
+      if (fxErr) {
+        console.warn('[launchLeague] league_fixtures insert failed:', fxErr);
+      } else {
+        // Update fixture_count on the league row (best-effort).
+        await window.sb
+          .from('leagues')
+          .update({ fixture_count: fixtureRows.length })
+          .eq('id', newLeagueId);
+        console.log('[launchLeague] league_fixtures: inserted', fixtureRows.length, 'rows for league', newLeagueId);
+      }
+    } catch (e) {
+      console.warn('[launchLeague] league_fixtures batch insert threw:', e);
+    }
+  }
+
   // Demand-driven pre-match generation — fire-and-forget. Cron remains as
   // backstop. Spec: docs/QUESTION_SYSTEM.md, docs/LEAGUE_CREATION_FLOW.md.
   if (newLeagueId && typeof window.sb !== 'undefined' && window.sb.functions) {
     try {
-      window.sb.functions.invoke('ensure-prematch', { body: { league_id: newLeagueId } })
+      // For Match Night, pass match_id so the generator narrows to that fixture.
+      var ensureBody = { league_id: newLeagueId };
+      if (leagueType === 'match' && selectedMatch && selectedMatch.match_id) {
+        ensureBody.match_id = selectedMatch.match_id;
+      }
+      window.sb.functions.invoke('ensure-prematch', { body: ensureBody })
         .then(function(res) { console.log('[ensure-prematch:create]', res); })
         .catch(function(err) { console.warn('[ensure-prematch:create] failed:', err); });
     } catch (e) { console.warn('[ensure-prematch:create] invoke threw:', e); }

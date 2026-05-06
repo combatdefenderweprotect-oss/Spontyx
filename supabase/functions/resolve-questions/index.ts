@@ -253,14 +253,12 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      // ── manual_review: attempt AI web verification for REAL_WORLD ────
-      // For REAL_WORLD questions, try AI verification before leaving pending.
-      // For all other lanes (or if AI key missing), skip as normal — admin resolves.
+      // ── manual_review: skip in MVP — auto-void handles cleanup ──────
+      // AI verifier removed for MVP: manual_review questions always
+      // auto-void at deadline+1h (no admin UI exists). Calling the verifier
+      // every hourly cycle burns OpenAI budget with no user value.
+      // Restore tryAiVerification here when admin review UI is shipped.
       if (pred.resolution_type === 'manual_review') {
-        if (q.question_type === 'REAL_WORLD' && OPENAI_API_KEY && q.question_text && q.resolution_condition) {
-          const aiResolved = await tryAiVerification(sb, q, pred.resolution_type, runStats);
-          if (aiResolved) continue; // resolved or voided — handled inside helper
-        }
         console.log(`[resolve] skipping manual_review question ${q.id} (pending admin action, deadline=${q.resolution_deadline ?? 'none'})`);
         runStats.skipped++;
         continue;
@@ -354,6 +352,34 @@ Deno.serve(async (req: Request) => {
           }
           // Deadline passed and AI could not resolve — fall through to void
         }
+
+        // ── player_stat API lag grace window (30 min post resolves_after) ─────
+        // /fixtures/players can lag several minutes after FT before all player
+        // entries are populated. Skip and retry rather than voiding permanently
+        // during this window. After 30 min the grace expires and the void stands.
+        if (pred.resolution_type === 'player_stat') {
+          const reason = result.reason ?? '';
+          const isStatLag =
+            reason.startsWith('player_not_in_stats') ||
+            reason.startsWith('player_stat_unavailable');
+          if (isStatLag) {
+            const msPostFt = Date.now() - new Date(q.resolves_after).getTime();
+            const GRACE_MS = 30 * 60 * 1000;
+            if (msPostFt < GRACE_MS) {
+              console.log(
+                `[resolve] player_stat_lag_skip — question=${q.id} reason=${reason} ` +
+                `seconds_post_ft=${Math.round(msPostFt / 1000)} — retrying next cycle`,
+              );
+              runStats.skipped++;
+              continue;
+            }
+            console.log(
+              `[resolve] player_stat_lag_grace_expired — question=${q.id} reason=${reason} ` +
+              `minutes_post_ft=${Math.round(msPostFt / 60000)} — voiding`,
+            );
+          }
+        }
+
         await voidQuestion(sb, q.id, result.reason ?? 'unresolvable');
         runStats.voided++;
         if (q.arena_session_id) {

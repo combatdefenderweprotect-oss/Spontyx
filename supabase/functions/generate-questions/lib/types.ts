@@ -146,6 +146,14 @@ export interface LiveMatchContext {
   activeQuestionCount: number;        // current count of active (pending + answer window open) LIVE questions
   generationTrigger: 'time_driven' | 'event_driven';
   lastGenerationMinute: number | null;  // match_minute_at_generation from the most recent LIVE question
+  // All CORE_MATCH_LIVE questions generated so far for this league+match (excluding voided).
+  // Used by the live quality filter for market diversity and consecutive-market checks.
+  matchQuestions: Array<{
+    question_text: string;
+    resolution_predicate: unknown;
+    match_minute_at_generation: number | null;
+    resolution_status: string;
+  }>;
 }
 
 export interface LeagueWithConfig {
@@ -188,6 +196,26 @@ export interface LeagueWithConfig {
   prematch_generation_mode: 'automatic' | 'manual' | null;
   prematch_publish_offset_hours: number | null;  // manual mode: hours before kickoff (48/24/12/6)
   created_at?: string | null;  // used by isMatchEligibleForPrematch late-creation fallback
+  // ── Universal question configuration (migration 055) ─────────────────
+  // question_style: which lanes the generator runs for this league.
+  // null treated as 'hybrid' (all passes) for backward compatibility.
+  question_style: 'prematch' | 'live' | 'hybrid' | null;
+  // real_world_enabled: creator opt-in to REAL_WORLD generation.
+  // REAL_WORLD pass skips this league when false.
+  real_world_enabled: boolean;
+  // real_world_questions_per_week: user-chosen weekly cap (1–3).
+  // null treated as 2 (Medium) by the generator.
+  real_world_questions_per_week: number | null;
+  // custom_questions_enabled: reserved — generator does NOT act on this yet.
+  custom_questions_enabled: boolean;
+  // ── Match Night single-fixture binding (migration 057) ────────────────
+  // When set, restricts prematch, live, and REAL_WORLD generation to this
+  // specific fixture. NULL means the league covers all fixtures in scope.
+  fixture_id?: number | null;
+  // ── Explicit league type (migration 058) ─────────────────────────────
+  // Set at creation. NULL for legacy leagues — context builder falls back
+  // to the old league_end_date heuristic when this is absent.
+  league_type?: 'match_night' | 'season_long' | 'custom' | null;
 }
 
 export interface LeagueClassification {
@@ -445,7 +473,7 @@ export interface RwQualityResult {
 
 export interface RejectionLogEntry {
   attempt: number;
-  stage: 'question_generation' | 'predicate_parse' | 'schema_validation' | 'entity_validation' | 'temporal_validation' | 'logic_validation' | 'availability_validation' | 'prematch_quality' | 'prematch_quality_post' | 'live_timing_validation' | 'real_world_generation' | 'rw_quality_score';
+  stage: 'question_generation' | 'predicate_parse' | 'schema_validation' | 'entity_validation' | 'temporal_validation' | 'logic_validation' | 'availability_validation' | 'prematch_quality' | 'prematch_quality_post' | 'live_timing_validation' | 'live_quality' | 'real_world_generation' | 'rw_quality_score';
   question_text?: string;
   error: string;
   // ── Structured fields for prematch_quality stage (used by analytics views) ──

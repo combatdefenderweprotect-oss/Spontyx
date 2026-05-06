@@ -92,7 +92,19 @@ export function buildContextPacket(params: {
   const { generationMode, hoursUntilKickoff } = classification;
 
   const promptMode = toPromptMode(generationMode);
-  const leagueType = league.league_end_date ? 'Type2_season' : 'Type1_single_match';
+  // Derive prompt-facing league type from the explicit league_type column (migration 058).
+  // Legacy leagues (NULL) fall back to the old heuristic: fixture_id present → single match,
+  // otherwise treat as season. This avoids misclassifying Match Night as Type2_season just
+  // because league_end_date is set (Match Night sets start=end=kickoff date).
+  const leagueType = (() => {
+    if (league.league_type === 'match_night') return 'Type1_single_match';
+    if (league.league_type === 'season_long') return 'Type2_season';
+    if (league.league_type === 'custom')      return 'Type2_season';
+    // Legacy fallback: prefer fixture_id presence over league_end_date heuristic.
+    if (league.fixture_id)        return 'Type1_single_match';
+    if (league.league_end_date)   return 'Type2_season';
+    return 'Type1_single_match';
+  })();
   const maxAllowed = questionsToGenerate;
   const targetLow = Math.max(1, Math.floor(questionsToGenerate * 0.6));
   const targetRange = `${targetLow}–${questionsToGenerate}`;
@@ -487,6 +499,19 @@ Shape G — btts (use ONLY for "Will both teams score?"):
   No binary_condition — the resolver evaluates home_score >= 1 AND away_score >= 1 directly.
   Example hint: "btts: both teams to score"
 
+Shape H — match_lineup (use ONLY for REAL_WORLD player start / squad availability questions):
+  Trigger phrase: predicate_hint contains "match_lineup:"
+{ "resolution_type":"match_lineup", "match_id":string, "sport":string,
+  "player_id":string, "player_name":string, "check":"starting_xi"|"squad",
+  "expected":true }
+  player_id  = the player's numeric API ID (copy exactly from predicate_hint)
+  player_name = player's name as given in predicate_hint
+  check      = "starting_xi" when question asks if the player STARTS; "squad" for squad presence
+  expected   = always true
+  Example hint: "match_lineup: player_id=12345 player_name=Marcus Rashford check=starting_xi match_id=1379323"
+  → { "resolution_type":"match_lineup", "match_id":"1379323", "sport":"football",
+      "player_id":"12345", "player_name":"Marcus Rashford", "check":"starting_xi", "expected":true }
+
 Valid fields:
   match_outcome:  winner_team_id, draw
   match_stat:     total_goals, total_cards, total_corners, home_score, away_score, shots_total
@@ -638,6 +663,25 @@ export async function buildLiveContext(
 
   const activeQuestionCount = (activeQRows ?? []).length;
 
+  // ── 6. All CORE_MATCH_LIVE questions for this league+match ────────────
+  // Used by the live quality filter for consecutive-market and diversity checks.
+  // Ordered oldest-first so the last element is the most recently generated question.
+  // Voided questions are included so the filter can explicitly exclude them.
+  const { data: matchQRows } = await sb
+    .from('questions')
+    .select('question_text, resolution_predicate, match_minute_at_generation, resolution_status')
+    .eq(ownerCol, ownerId)
+    .eq('match_id', matchId)
+    .eq('question_type', 'CORE_MATCH_LIVE')
+    .order('created_at', { ascending: true });
+
+  const matchQuestions: LiveMatchContext['matchQuestions'] = (matchQRows ?? []).map((r: any) => ({
+    question_text:              r.question_text             as string,
+    resolution_predicate:       r.resolution_predicate,
+    match_minute_at_generation: r.match_minute_at_generation as number | null,
+    resolution_status:          r.resolution_status          as string,
+  }));
+
   return {
     matchId,
     kickoff:              fixtureRow.kickoff_at,
@@ -658,5 +702,6 @@ export async function buildLiveContext(
     activeQuestionCount,
     generationTrigger,
     lastGenerationMinute,
+    matchQuestions,
   };
 }

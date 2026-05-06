@@ -180,7 +180,9 @@ Deno.serve(async (req: Request) => {
         league_start_date, league_end_date, owner_id,
         prematch_question_budget, prematch_questions_per_match, live_question_budget, live_questions_per_match,
         prematch_generation_mode, prematch_publish_offset_hours,
-        created_at
+        created_at,
+        question_style, real_world_enabled, real_world_questions_per_week, custom_questions_enabled,
+        fixture_id, league_type
       `)
       .eq('ai_questions_enabled', true)
       // Accept either the legacy singular or the new array column.
@@ -230,6 +232,29 @@ Deno.serve(async (req: Request) => {
       const { data: ownerRows } = await sb.from('users').select('id, tier').in('id', ownerIds);
       for (const row of ownerRows ?? []) {
         ownerTierMap.set(row.id, row.tier ?? 'starter');
+      }
+    }
+
+    // ── Build league_fixtures scope map (Season Long only) ───────────────
+    // Maps leagueId → Set<fixtureId string> for every season_long league that
+    // has rows in league_fixtures (populated at creation). The generator uses
+    // this to restrict all three passes (prematch, live, REAL_WORLD) to the
+    // exact fixtures the creator previewed. Leagues with no rows fall back to
+    // the broad competition query (legacy behaviour — logged per pass).
+    const leagueFixtureScopes = new Map<string, Set<string>>();
+    const seasonLeagueIds = (leagues as LeagueWithConfig[])
+      .filter((l) => l.league_type === 'season_long')
+      .map((l) => l.id)
+      .filter((id, i, arr) => arr.indexOf(id) === i); // dedupe
+    if (seasonLeagueIds.length > 0) {
+      const { data: lfRows } = await sb
+        .from('league_fixtures')
+        .select('league_id, fixture_id')
+        .in('league_id', seasonLeagueIds);
+      for (const row of lfRows ?? []) {
+        const key = row.league_id as string;
+        if (!leagueFixtureScopes.has(key)) leagueFixtureScopes.set(key, new Set());
+        leagueFixtureScopes.get(key)!.add(String(row.fixture_id));
       }
     }
 
@@ -301,6 +326,18 @@ Deno.serve(async (req: Request) => {
       if (cls.classification === 'DISTANT') {
         result.skipped    = true;
         result.skipReason = 'match_too_distant';
+        runStats.leaguesSkipped++;
+        await writeLeagueResult(sb, runId, result);
+        continue;
+      }
+
+      // ── Lane gate: prematch pass ──────────────────────────────────────
+      // Skip if the creator chose live-only mode.
+      // null is treated as 'hybrid' (backward compat for pre-migration-055 leagues).
+      const effectiveStylePrematch = league.question_style ?? 'hybrid';
+      if (effectiveStylePrematch === 'live') {
+        result.skipped    = true;
+        result.skipReason = 'lane_disabled_prematch';
         runStats.leaguesSkipped++;
         await writeLeagueResult(sb, runId, result);
         continue;
@@ -391,8 +428,22 @@ Deno.serve(async (req: Request) => {
       // automatic: within 48h of kickoff; manual: now >= kickoff − offset_hours.
       // Never generate after kickoff (handled inside isMatchEligibleForPrematch).
       const nowMs = Date.now();
+
+      // Season Long fixture scope: restrict to league_fixtures rows when present.
+      // Leagues with no rows (legacy) proceed with the full competition window.
+      const slScope = league.league_type === 'season_long' ? leagueFixtureScopes.get(league.id) : undefined;
+      if (league.league_type === 'season_long') {
+        if (slScope && slScope.size > 0) {
+          console.log(`[prematch] league ${league.id} — season_long scope: ${slScope.size} fixtures`);
+        } else {
+          console.log(`[prematch] league ${league.id} — season_long legacy fallback (no league_fixtures rows)`);
+        }
+      }
+
       const eligibleMatches = sportsCtx.upcomingMatches
         .filter((m) => !targetMatchId || String(m.id) === String(targetMatchId))
+        .filter((m) => !league.fixture_id || String(m.id) === String(league.fixture_id))
+        .filter((m) => !slScope || slScope.size === 0 || slScope.has(String(m.id)))
         .filter((m) => isMatchEligibleForPrematch(m.kickoff, league, nowMs));
 
       if (!eligibleMatches.length) {
@@ -1071,6 +1122,12 @@ Deno.serve(async (req: Request) => {
       // Football only — non-football adapters not yet verified for production.
       if (league.sport !== 'football') continue;
 
+      // ── Lane gate: live pass ──────────────────────────────────────────
+      // Skip if the creator chose pre-match only mode.
+      // null is treated as 'hybrid' (backward compat for pre-migration-055 leagues).
+      const effectiveStyleLive = league.question_style ?? 'hybrid';
+      if (effectiveStyleLive === 'prematch') continue;
+
       // Fetch in_progress fixtures for this league from cache
       let inProgressFixtures: any[];
       try {
@@ -1083,6 +1140,26 @@ Deno.serve(async (req: Request) => {
       } catch (err) {
         console.warn(`[live-gen] fixture fetch failed for league ${league.id}:`, err);
         continue;
+      }
+
+      // Match Night single-fixture binding: restrict to the bound fixture.
+      if (league.fixture_id) {
+        inProgressFixtures = inProgressFixtures.filter(
+          (f) => String(f.fixture_id) === String(league.fixture_id),
+        );
+      }
+
+      // Season Long fixture scope: only allow fixtures in league_fixtures.
+      // Falls back to full competition list for legacy leagues with no rows.
+      if (league.league_type === 'season_long') {
+        const slScopeLive = leagueFixtureScopes.get(league.id);
+        if (slScopeLive && slScopeLive.size > 0) {
+          inProgressFixtures = inProgressFixtures.filter(
+            (f) => slScopeLive.has(String(f.fixture_id)),
+          );
+        } else {
+          console.log(`[live-gen] league ${league.id} — season_long legacy fallback (no league_fixtures rows)`);
+        }
       }
 
       if (!inProgressFixtures.length) continue;
@@ -2223,6 +2300,23 @@ Deno.serve(async (req: Request) => {
       // not a community intelligence layer.
       if ((league as any).session_type === 'solo_match') continue;
 
+      // ── Lane gate: REAL_WORLD pass ────────────────────────────────────
+      // Block 1: creator must have explicitly enabled REAL_WORLD.
+      // Pre-migration-055 leagues that had ai_questions_enabled=true were backfilled
+      // with real_world_enabled=true, so they are unaffected.
+      if (!league.real_world_enabled) {
+        console.log(`[rw-gen] league ${league.id} — skipping REAL_WORLD (real_world_disabled)`);
+        continue;
+      }
+      // Block 2: REAL_WORLD must not run for live-only leagues.
+      // There is no pre-fixture window to act on news signals in live-only mode.
+      // null treated as 'hybrid' (backward compat).
+      const effectiveStyleRW = league.question_style ?? 'hybrid';
+      if (effectiveStyleRW === 'live') {
+        console.log(`[rw-gen] league ${league.id} — skipping REAL_WORLD (lane=live, no pre-fixture window)`);
+        continue;
+      }
+
       // Per-league APPROVE counter for WEAK fairness.
       // WEAK questions (score 65–79) are only published when no APPROVE was generated
       // for THIS league in this run. The counter is reset for every league so each
@@ -2232,7 +2326,12 @@ Deno.serve(async (req: Request) => {
 
       // ── REAL_WORLD quota check ────────────────────────────────────────
       const ownerTierRW = ownerTierMap.get(league.owner_id ?? '') ?? 'starter';
-      const rwQ = await checkRealWorldQuota(sb, league.id, ownerTierRW);
+      const rwQ = await checkRealWorldQuota(
+        sb,
+        league.id,
+        ownerTierRW,
+        league.real_world_questions_per_week,
+      );
       if (!rwQ.allowed) {
         continue;
       }
@@ -2242,6 +2341,34 @@ Deno.serve(async (req: Request) => {
       try {
         sportsCtxRW = await fetchSportsContext(league, API_SPORTS_KEY, sb);
       } catch {
+        continue;
+      }
+
+      // ── Select target matches (7-day window) — early exit ────────────
+      // Computed right after sports context so the team_players DB query and
+      // Google News fetch are skipped entirely when no match exists within 7
+      // days. REAL_WORLD questions are hard-bound to a specific fixture; news
+      // has no value without one and the RSS calls burn rate-limit quota.
+      const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+      const slScopeRW = league.league_type === 'season_long' ? leagueFixtureScopes.get(league.id) : undefined;
+      if (league.league_type === 'season_long' && (!slScopeRW || slScopeRW.size === 0)) {
+        console.log(`[rw-gen] league ${league.id} — season_long legacy fallback (no league_fixtures rows)`);
+      }
+      const targetMatches = sportsCtxRW.upcomingMatches.filter((m) => {
+        const msUntil = new Date(m.kickoff).getTime() - Date.now();
+        if (msUntil <= 0 || msUntil > SEVEN_DAYS_MS) return false;
+        // Match Night single-fixture binding: only generate for the bound fixture.
+        if (league.fixture_id && String(m.id) !== String(league.fixture_id)) return false;
+        // Season Long fixture scope: restrict to league_fixtures when rows exist.
+        if (slScopeRW && slScopeRW.size > 0 && !slScopeRW.has(String(m.id))) return false;
+        return true;
+      });
+
+      if (targetMatches.length === 0) {
+        console.log(
+          `[rw-gen] league ${league.id} — no upcoming match within 7 days — skipping REAL_WORLD ` +
+          `(next match: ${sportsCtxRW.upcomingMatches[0]?.kickoff ?? 'none'})`,
+        );
         continue;
       }
 
@@ -2311,26 +2438,7 @@ Deno.serve(async (req: Request) => {
         continue;
       }
 
-      // ── Select target matches (7-day window) ─────────────────────────
-      // REAL_WORLD questions must be hard-bound to a specific upcoming match.
-      // Matches up to 7 days away are eligible — news signals (injuries,
-      // suspensions, form) are often published days before the fixture.
-      // Call 1 is instructed to prefer the soonest match relevant to the signal.
-      const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
-      const targetMatches = sportsCtxRW.upcomingMatches.filter((m) => {
-        const msUntil = new Date(m.kickoff).getTime() - Date.now();
-        return msUntil > 0 && msUntil <= SEVEN_DAYS_MS;
-      });
-
-      if (targetMatches.length === 0) {
-        console.log(
-          `[rw-gen] league ${league.id} — no upcoming match within 7 days — skipping REAL_WORLD ` +
-          `(next match: ${sportsCtxRW.upcomingMatches[0]?.kickoff ?? 'none'})`,
-        );
-        continue;
-      }
-
-      // Build match strings from the 48h target set only.
+      // Build match strings from the 7-day target set only.
       // Each string includes match_id so the model embeds it verbatim in predicate_hint,
       // preventing ID fabrication that passes schema validation but resolves against
       // the wrong fixture.
@@ -2434,7 +2542,7 @@ Deno.serve(async (req: Request) => {
             type:               'binary',
             options:            [{ id: 'yes', text: 'Yes' }, { id: 'no', text: 'No' }],
             resolutionRuleText: rawRW.predicate_hint,
-            matches:            sportsCtxRW.upcomingMatches,
+            matches:            targetMatches,
             players:            sportsCtxRW.keyPlayers,
             sport:              league.sport,
           });

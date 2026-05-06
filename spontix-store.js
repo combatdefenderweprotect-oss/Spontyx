@@ -3211,6 +3211,7 @@ SpontixStore._mapLeagueFromDb = function (row, memberUserIds) {
     stage:          row.stage        || 'Matchday 1',
     trophy:         row.trophy       || null,
     joinPassword:   row.join_password || null,
+    leagueCode:     row.league_code   || null,
     createdAt:      row.created_at,
     updatedAt:      row.updated_at,
     // AI / sports config (migration 002)
@@ -3240,6 +3241,10 @@ SpontixStore._mapLeagueFromDb = function (row, memberUserIds) {
     // Multiplayer lobby (migration 030)
     lobbyId:             row.lobby_id             || null,
     multiplayerMode:     row.multiplayer_mode     || null,
+    // Match Night single-fixture binding (migration 057)
+    fixtureId:           row.fixture_id           || null,
+    // Explicit league type (migration 058): 'match_night' | 'season_long' | 'custom' | null
+    leagueType:          row.league_type          || null,
   };
 };
 
@@ -3257,6 +3262,7 @@ SpontixStore._mapLeagueToDb = function (l) {
   if (l.stage !== undefined)      out.stage       = l.stage;
   if (l.trophy !== undefined)     out.trophy      = l.trophy;
   if (l.joinPassword !== undefined) out.join_password = l.joinPassword;
+  if (l.leagueCode   !== undefined) out.league_code   = l.leagueCode;
   // AI / sports config (camelCase input, snake_case output)
   if (l.scope !== undefined)               out.scope                = l.scope;
   if (l.scopedTeamId !== undefined)        out.scoped_team_id       = l.scopedTeamId;
@@ -3285,6 +3291,17 @@ SpontixStore._mapLeagueToDb = function (l) {
   // Multiplayer lobby (migration 030)
   if (l.lobbyId !== undefined)         out.lobby_id          = l.lobbyId;
   if (l.multiplayerMode !== undefined) out.multiplayer_mode  = l.multiplayerMode;
+  // Question count + lane config (migrations 053, 054, 055)
+  if (l.prematchQuestionsPerMatch !== undefined) out.prematch_questions_per_match   = l.prematchQuestionsPerMatch;
+  if (l.liveQuestionsPerMatch     !== undefined) out.live_questions_per_match       = l.liveQuestionsPerMatch;
+  if (l.questionStyle             !== undefined) out.question_style                 = l.questionStyle;
+  if (l.realWorldEnabled          !== undefined) out.real_world_enabled             = l.realWorldEnabled;
+  if (l.realWorldQuestionsPerWeek !== undefined) out.real_world_questions_per_week  = l.realWorldQuestionsPerWeek;
+  if (l.customQuestionsEnabled    !== undefined) out.custom_questions_enabled       = l.customQuestionsEnabled;
+  // Match Night single-fixture binding (migration 057)
+  if (l.fixtureId !== undefined)                out.fixture_id                     = l.fixtureId;
+  // Explicit league type (migration 058)
+  if (l.leagueType !== undefined)               out.league_type                    = l.leagueType;
   return out;
 };
 
@@ -3360,6 +3377,7 @@ SpontixStoreAsync.createLeague = async function (data) {
     maxMembers:   data.maxMembers || 50,
     trophy:       data.trophy || null,
     joinPassword: data.joinPassword || null,
+    leagueCode:   data.league_code  || data.leagueCode || null,
     // AI / sports config — create-league.html sends these as snake_case
     scope:               data.scope               || null,
     scopedTeamId:        data.scoped_team_id      || null,
@@ -3383,6 +3401,19 @@ SpontixStoreAsync.createLeague = async function (data) {
     questionIntensityPreset: data.question_intensity_preset || 'standard',
     prematchQuestionBudget:  data.prematch_question_budget  != null ? data.prematch_question_budget  : 4,
     liveQuestionBudget:      data.live_question_budget      != null ? data.live_question_budget      : 8,
+    // Play mode (migration 029) — create-league.html sends camelCase playMode
+    playMode: data.playMode || 'multiplayer',
+    // Question count + lane config (migrations 053, 054, 055)
+    prematchQuestionsPerMatch:  data.prematch_questions_per_match  != null ? data.prematch_questions_per_match  : 5,
+    liveQuestionsPerMatch:      data.live_questions_per_match      != null ? data.live_questions_per_match      : 6,
+    questionStyle:              data.question_style                || 'hybrid',
+    realWorldEnabled:           data.real_world_enabled            != null ? !!data.real_world_enabled          : true,
+    realWorldQuestionsPerWeek:  data.real_world_questions_per_week != null ? data.real_world_questions_per_week : 2,
+    customQuestionsEnabled:     !!data.custom_questions_enabled,
+    // Match Night single-fixture binding (migration 057)
+    fixtureId: data.fixture_id != null ? data.fixture_id : null,
+    // Explicit league type (migration 058)
+    leagueType: data.league_type || null,
   });
   const { data: inserted, error } = await window.sb
     .from('leagues')

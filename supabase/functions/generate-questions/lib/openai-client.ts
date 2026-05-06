@@ -949,6 +949,28 @@ If you cannot identify a strong, concrete signal from the provided news → retu
 DO NOT generate fallback or generic questions.
 
 ==================================================
+SIGNAL CONTEXT (when provided — use as primary anchor)
+==================================================
+
+If signal_context is present in the input, it identifies the strongest news signal
+already detected from the articles:
+- signal_type: injury | suspension | return | form | coach | transfer
+- entity_name: the specific player or team this signal is about
+- entity_type: player | team
+- headline: the article headline that detected this signal
+- published_at: when the signal was published
+- bound_match: the fixture this signal is associated with (includes match_id)
+
+Use signal_context as your starting point:
+1. Confirm the signal is supported by at least one news_item
+2. Build your question specifically around signal_type and entity_name
+3. Use bound_match's match_id in your predicate_hint
+4. If you cannot form a strong, resolvable question from this signal → return { "skip": true }
+
+A stronger signal found directly in news_items may override signal_context. Never generate
+a question that is unrelated to the detected signal or the upcoming match.
+
+==================================================
 STEP 0 — READ INPUTS BEFORE WRITING ANYTHING
 ==================================================
 
@@ -1017,7 +1039,7 @@ TARGET MATCH CONSTRAINT (HARD RULE)
 ==================================================
 
 You are given upcoming_matches[] — these are the ONLY eligible target matches.
-All matches are within 48 hours.
+Matches may be up to 7 days away — prefer the soonest match relevant to the news signal.
 
 You MUST:
 1. Identify which team or player in the news signal is referenced.
@@ -1194,6 +1216,7 @@ export async function generateRealWorldQuestion(
   knownPlayers:    Array<{ id: string; name: string; teamName: string }>,
   nowIso:          string,
   apiKey:          string,
+  signalContext?:  Record<string, string | null>,
 ): Promise<RawRealWorldQuestion | null> {
   // Normalise to an array — single string kept for backward compat.
   // Pass all upcoming matches so the model can select the one most relevant
@@ -1208,6 +1231,7 @@ export async function generateRealWorldQuestion(
     league_scope:     leagueScope,
     upcoming_matches: matchList.length > 0 ? matchList : ['unknown'],
     known_players:    knownPlayers,
+    ...(signalContext ? { signal_context: signalContext } : {}),
     news_items:     newsItems.map((n) => {
       const item: Record<string, string> = {
         headline:     n.headline,

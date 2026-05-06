@@ -888,7 +888,88 @@
     .stats-empty{text-align:center;padding:48px 24px;}
     .stats-empty-icon{font-size:2.5rem;margin-bottom:12px;}
     .stats-empty-title{font-size:1rem;font-weight:700;color:#fff;margin-bottom:8px;}
-    .stats-empty-sub{font-size:0.82rem;color:var(--grey);line-height:1.5;}</style>
+    .stats-empty-sub{font-size:0.82rem;color:var(--grey);line-height:1.5;}
+
+    /* ── Custom Questions ───────────────────────────────── */
+    /* Badge */
+    .qt-custom{background:rgba(255,165,0,0.15);color:#FFA500;border:1px solid rgba(255,165,0,0.35);padding:3px 9px;border-radius:var(--radius-pill);font-size:0.68rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
+
+    /* Multi-choice checkboxes */
+    .custom-multi-opts{display:flex;flex-direction:column;gap:8px;margin:12px 0 0;}
+    .custom-multi-opt{display:flex;align-items:center;gap:10px;padding:10px 14px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:var(--radius-md);cursor:pointer;transition:all .15s;user-select:none;}
+    .custom-multi-opt:hover{border-color:rgba(255,165,0,0.4);background:rgba(255,165,0,0.06);}
+    .custom-multi-opt.selected{border-color:rgba(255,165,0,0.6);background:rgba(255,165,0,0.12);}
+    .custom-multi-opt.correct{border-color:rgba(168,225,12,0.5);background:rgba(168,225,12,0.1);}
+    .custom-multi-opt.wrong{border-color:rgba(255,107,107,0.4);background:rgba(255,107,107,0.06);}
+    .custom-multi-opt input[type=checkbox]{accent-color:#FFA500;width:16px;height:16px;flex-shrink:0;}
+    .custom-multi-opt.disabled{cursor:not-allowed;opacity:0.7;}
+    .custom-multi-submit{width:100%;margin-top:12px;padding:11px;background:#FFA500;border:none;color:#1A1A2E;border-radius:var(--radius-md);font-size:0.88rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s;}
+    .custom-multi-submit:hover{opacity:0.9;}
+    .custom-multi-submit:disabled{opacity:0.4;cursor:not-allowed;}
+
+    /* Admin resolve footer */
+    .custom-admin-footer{margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,0.06);}
+    .custom-resolve-label{font-size:0.72rem;color:var(--grey);margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;}
+    .custom-resolve-opts{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;}
+    .custom-resolve-opt{display:flex;align-items:center;gap:8px;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:var(--radius-sm);cursor:pointer;font-size:0.82rem;font-weight:600;color:#fff;transition:all .15s;user-select:none;}
+    .custom-resolve-opt:hover{border-color:rgba(168,225,12,0.4);background:rgba(168,225,12,0.07);}
+    .custom-resolve-opt.selected{border-color:rgba(168,225,12,0.6);background:rgba(168,225,12,0.13);color:var(--lime);}
+    .custom-resolve-opt input{accent-color:var(--lime);width:15px;height:15px;flex-shrink:0;}
+    .custom-resolve-actions{display:flex;gap:8px;}
+    .custom-resolve-btn{flex:1;padding:9px;background:var(--lime);color:var(--navy);border:none;border-radius:var(--radius-md);font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;transition:opacity .15s;}
+    .custom-resolve-btn:hover{opacity:0.88;}
+    .custom-resolve-btn:disabled{opacity:0.35;cursor:not-allowed;}
+    .custom-void-btn{padding:9px 14px;background:none;border:1px solid rgba(255,107,107,0.35);color:var(--coral);border-radius:var(--radius-md);font-size:0.82rem;font-weight:700;cursor:pointer;font-family:inherit;transition:all .15s;}
+    .custom-void-btn:hover{background:rgba(255,107,107,0.08);}
+
+    /* Create Question FAB */
+    .cq-fab{position:fixed;bottom:80px;right:20px;z-index:200;background:#FFA500;color:#1A1A2E;border:none;border-radius:var(--radius-pill);padding:12px 20px;font-size:0.88rem;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 20px rgba(255,165,0,0.35);transition:all .2s;display:flex;align-items:center;gap:8px;}
+    .cq-fab:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(255,165,0,0.5);}
+    .cq-fab-icon{font-size:1rem;line-height:1;}
+
+    /* Create Question Modal */
+    .cq-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.72);z-index:500;display:flex;align-items:flex-end;justify-content:center;}
+    .cq-sheet{background:var(--navy-card);border-radius:var(--radius-xl) var(--radius-xl) 0 0;padding:28px 24px 40px;width:100%;max-width:480px;border-top:1px solid rgba(255,255,255,0.1);max-height:92vh;overflow-y:auto;}
+    .cq-title{font-size:1.05rem;font-weight:800;color:#fff;margin-bottom:6px;}
+    .cq-subtitle{font-size:0.78rem;color:var(--grey);margin-bottom:20px;}
+    .cq-section-label{font-size:0.72rem;font-weight:700;color:var(--grey);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;}
+    .cq-type-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;}
+    .cq-type-card{padding:14px 10px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:var(--radius-md);cursor:pointer;text-align:center;transition:all .15s;}
+    .cq-type-card:hover{border-color:rgba(255,165,0,0.4);}
+    .cq-type-card.selected{border-color:#FFA500;background:rgba(255,165,0,0.12);}
+    .cq-type-icon{font-size:1.4rem;margin-bottom:6px;}
+    .cq-type-name{font-size:0.78rem;font-weight:700;color:#fff;}
+    .cq-type-desc{font-size:0.65rem;color:var(--grey);margin-top:3px;}
+    .cq-field{margin-bottom:16px;}
+    .cq-field label{display:block;font-size:0.75rem;font-weight:700;color:var(--grey);margin-bottom:6px;text-transform:uppercase;letter-spacing:.04em;}
+    .cq-input{width:100%;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#fff;border-radius:var(--radius-md);padding:10px 12px;font-size:0.88rem;font-family:inherit;outline:none;box-sizing:border-box;transition:border-color .15s;}
+    .cq-input:focus{border-color:rgba(255,165,0,0.5);}
+    .cq-options-list{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
+    .cq-option-row{display:flex;align-items:center;gap:8px;}
+    .cq-option-input{flex:1;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);color:#fff;border-radius:var(--radius-sm);padding:8px 10px;font-size:0.85rem;font-family:inherit;outline:none;transition:border-color .15s;}
+    .cq-option-input:focus{border-color:rgba(255,165,0,0.4);}
+    .cq-option-remove{background:none;border:none;color:var(--grey);cursor:pointer;font-size:1.1rem;padding:4px;line-height:1;flex-shrink:0;}
+    .cq-add-opt-btn{background:none;border:1px dashed rgba(255,255,255,0.2);color:var(--grey);border-radius:var(--radius-sm);padding:8px 12px;font-size:0.8rem;cursor:pointer;font-family:inherit;width:100%;transition:all .15s;}
+    .cq-add-opt-btn:hover{border-color:rgba(255,165,0,0.4);color:#FFA500;}
+    .cq-preset-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:0;}
+    .cq-preset-card{padding:12px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:var(--radius-md);cursor:pointer;transition:all .15s;}
+    .cq-preset-card:hover{border-color:rgba(255,165,0,0.35);}
+    .cq-preset-card.selected{border-color:#FFA500;background:rgba(255,165,0,0.1);}
+    .cq-preset-name{font-size:0.82rem;font-weight:700;color:#fff;margin-bottom:3px;}
+    .cq-preset-pts{font-size:0.72rem;color:var(--grey);}
+    .cq-deadline-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;}
+    .cq-deadline-btn{padding:8px 4px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);color:var(--grey);border-radius:var(--radius-sm);font-size:0.78rem;font-weight:700;cursor:pointer;font-family:inherit;text-align:center;transition:all .15s;}
+    .cq-deadline-btn:hover{border-color:rgba(255,165,0,0.35);}
+    .cq-deadline-btn.selected{border-color:#FFA500;background:rgba(255,165,0,0.12);color:#FFA500;}
+    .cq-error{font-size:0.78rem;color:var(--coral);margin-top:8px;min-height:18px;}
+    .cq-publish-btn{width:100%;margin-top:20px;padding:14px;background:#FFA500;border:none;color:#1A1A2E;border-radius:var(--radius-md);font-size:0.92rem;font-weight:800;cursor:pointer;font-family:inherit;transition:opacity .15s;}
+    .cq-publish-btn:hover:not(:disabled){opacity:0.88;}
+    .cq-publish-btn:disabled{opacity:0.4;cursor:not-allowed;}
+    .cq-cancel-btn{width:100%;margin-top:10px;padding:11px;background:none;border:1px solid rgba(255,255,255,0.1);color:var(--grey);border-radius:var(--radius-md);font-size:0.88rem;font-weight:600;cursor:pointer;font-family:inherit;}
+    /* Awaiting admin review state */
+    .custom-pending-strip{display:flex;align-items:center;gap:8px;padding:9px 12px;background:rgba(255,165,0,0.08);border:1px solid rgba(255,165,0,0.25);border-radius:var(--radius-sm);font-size:0.78rem;color:#FFA500;font-weight:600;margin-top:10px;}
+    .custom-pending-dot{width:7px;height:7px;border-radius:50%;background:#FFA500;animation:pulse 1.8s ease-in-out infinite;flex-shrink:0;}
+    </style>
 </head>
 <body>
 <!-- Moment feeling flash — fixed overlay, shown briefly when a new LIVE question arrives -->
@@ -1149,6 +1230,92 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- Create Custom Question FAB (admin only — shown by JS after load) -->
+<button class="cq-fab" id="cq-fab" style="display:none;" onclick="openCreateQuestionModal()">
+  <span class="cq-fab-icon">+</span> Create Question
+</button>
+
+<!-- Create Custom Question Modal -->
+<div id="cq-overlay" class="cq-overlay" style="display:none;" onclick="if(event.target===this)closeCreateQuestionModal()">
+  <div class="cq-sheet">
+    <div class="cq-title">Create Question</div>
+    <div class="cq-subtitle">Players answer before the deadline. You resolve after.</div>
+
+    <!-- Step 1: Type -->
+    <div id="cq-step-type">
+      <div class="cq-section-label">Question Type</div>
+      <div class="cq-type-grid">
+        <div class="cq-type-card" id="cq-t-single" onclick="selectCqType('single')">
+          <div class="cq-type-icon">☝️</div>
+          <div class="cq-type-name">Single</div>
+          <div class="cq-type-desc">One correct answer</div>
+        </div>
+        <div class="cq-type-card" id="cq-t-multi" onclick="selectCqType('multi')">
+          <div class="cq-type-icon">✅</div>
+          <div class="cq-type-name">Multi</div>
+          <div class="cq-type-desc">Exact match to win</div>
+        </div>
+        <div class="cq-type-card" id="cq-t-yesno" onclick="selectCqType('yesno')">
+          <div class="cq-type-icon">🟢</div>
+          <div class="cq-type-name">Yes / No</div>
+          <div class="cq-type-desc">Quick 2-option</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: Form (shown after type selected) -->
+    <div id="cq-step-form" style="display:none;">
+      <div class="cq-field">
+        <label>Question</label>
+        <textarea class="cq-input" id="cq-question-text" rows="2" placeholder="What will happen next?"></textarea>
+      </div>
+
+      <!-- Options (hidden for Yes/No) -->
+      <div id="cq-options-section" class="cq-field">
+        <label>Answer Options <span style="color:var(--grey-dark);font-weight:400;">(2–8)</span></label>
+        <div class="cq-options-list" id="cq-options-list"></div>
+        <button class="cq-add-opt-btn" onclick="addCqOption()">+ Add option</button>
+      </div>
+
+      <div class="cq-field">
+        <label>Scoring</label>
+        <div class="cq-preset-grid">
+          <div class="cq-preset-card" id="cq-p-safe" onclick="selectCqPreset('safe')">
+            <div class="cq-preset-name">Safe</div>
+            <div class="cq-preset-pts">+10 / 0</div>
+          </div>
+          <div class="cq-preset-card" id="cq-p-balanced" onclick="selectCqPreset('balanced')">
+            <div class="cq-preset-name">Balanced</div>
+            <div class="cq-preset-pts">+15 / −5</div>
+          </div>
+          <div class="cq-preset-card" id="cq-p-risk" onclick="selectCqPreset('risk')">
+            <div class="cq-preset-name">Risk</div>
+            <div class="cq-preset-pts">+25 / −10</div>
+          </div>
+          <div class="cq-preset-card" id="cq-p-high_risk" onclick="selectCqPreset('high_risk')">
+            <div class="cq-preset-name">High Risk</div>
+            <div class="cq-preset-pts">+40 / −25</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="cq-field">
+        <label>Time Limit</label>
+        <div class="cq-deadline-grid">
+          <button class="cq-deadline-btn" onclick="selectCqDeadline(30)">30s</button>
+          <button class="cq-deadline-btn" onclick="selectCqDeadline(60)">1m</button>
+          <button class="cq-deadline-btn" onclick="selectCqDeadline(120)">2m</button>
+          <button class="cq-deadline-btn" onclick="selectCqDeadline(300)">5m</button>
+        </div>
+      </div>
+
+      <div class="cq-error" id="cq-error"></div>
+      <button class="cq-publish-btn" id="cq-publish-btn" onclick="submitCreateQuestion()">Publish Question</button>
+      <button class="cq-cancel-btn" onclick="closeCreateQuestionModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- Delete / Leave Confirmation Modal -->
 <div id="danger-overlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;">
   <div style="background:var(--navy-card);border:1px solid rgba(255,107,107,0.3);border-radius:var(--radius-xl);padding:32px;max-width:400px;width:90%;margin:auto;">
@@ -1180,6 +1347,15 @@
 var currentLeague    = null;
 var currentLeagueId  = null;
 
+// ── Custom Questions state ─────────────────────────────
+var CQ_FUNCTION_URL = 'https://hdulhffpmuqepoqstsor.supabase.co/functions/v1/custom-questions';
+var cqModalType     = null;   // 'single' | 'multi' | 'yesno' — selected in step 1
+var cqModalPreset   = null;   // 'safe' | 'balanced' | 'risk' | 'high_risk'
+var cqModalDeadline = null;   // seconds
+var cqModalOptions  = [];     // array of option strings (managed by addCqOption)
+// Per-question pending multi-choice selections (before Submit pressed)
+var pendingMultiSelections = {}; // questionId → Set of selected option labels
+
 // League Scoring V2 (migration 052) — pending confidence selection per question.
 // Reset to 'normal' on each question render. Set by user clicking the Confidence
 // strip BEFORE pressing an answer button. Locked once an answer is submitted.
@@ -1202,6 +1378,26 @@ function spontixTrack(event, data) {
   if (typeof window.spontixAnalytics === 'function') {
     try { window.spontixAnalytics(event, data); } catch(e) {}
   }
+}
+
+// ── Custom Questions helpers ──────────────────────────
+function isLeagueAdmin() {
+  return !!(currentLeague && currentUserId &&
+    (currentLeague.isOwner || currentLeague.ownerId === currentUserId));
+}
+
+async function callCustomQuestions(payload) {
+  var session = await window.sb.auth.getSession();
+  var token   = session.data?.session?.access_token;
+  if (!token) throw new Error('not authenticated');
+  var res = await fetch(CQ_FUNCTION_URL, {
+    method:  'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + token },
+    body:    JSON.stringify(payload),
+  });
+  var data = await res.json();
+  if (!res.ok || !data.ok) throw new Error(data.error || 'request failed');
+  return data;
 }
 
 // ── Live context banner text ──────────────────────────
@@ -1443,6 +1639,13 @@ function getClutchMultiplier(q) {
 }
 
 function getPointRange(q) {
+  // Custom questions use flat preset scoring — no multipliers
+  if (detectLane(q) === 'CUSTOM') {
+    var correct = q.custom_points_correct != null ? q.custom_points_correct : 10;
+    var wrong   = q.custom_points_wrong   != null ? q.custom_points_wrong   : 0;
+    if (wrong === 0) return '+' + correct + ' pts';
+    return '+' + correct + ' / ' + wrong + ' pts';
+  }
   var base   = getBaseValue(q);
   var diff   = parseFloat(q.difficulty_multiplier) || 1.0;
   var clutch = getClutchMultiplier(q);
@@ -1595,6 +1798,10 @@ async function hydrateLeaguePage() {
   // Start Realtime subscription AFTER the initial render so the feed is
   // already populated before we switch to push-driven updates.
   startRealtime();
+
+  // Show Create Question FAB for league admins (owners)
+  var fab = document.getElementById('cq-fab');
+  if (fab) fab.style.display = isLeagueAdmin() ? 'flex' : 'none';
 }
 
 // ════════════════════════════════════════════════════════
@@ -1620,7 +1827,11 @@ async function loadAndRenderQuestions(silent) {
       'base_value', 'difficulty_multiplier', 'match_minute_at_generation',
       'created_at',
       // REAL_WORLD fields (migration 024)
-      'rw_context', 'confidence_level', 'entity_focus', 'resolution_deadline', 'source_news_urls'
+      'rw_context', 'confidence_level', 'entity_focus', 'resolution_deadline', 'source_news_urls',
+      // Custom question fields (migration 064)
+      'custom_question_type', 'custom_options', 'custom_correct_answers',
+      'custom_points_correct', 'custom_points_wrong', 'custom_resolution_status',
+      'created_by_user_id', 'resolved_at'
     ].join(', ');
 
     var res = await window.sb
@@ -1651,7 +1862,7 @@ async function loadAndRenderQuestions(silent) {
       var qIds = qs.map(function(q) { return q.id; });
       var aRes = await window.sb
         .from('player_answers')
-        .select('question_id, answer, is_correct, points_earned, multiplier_breakdown, confidence_level')
+        .select('question_id, answer, is_correct, points_earned, multiplier_breakdown, confidence_level, selected_options')
         .eq('user_id', currentUserId)
         .in('question_id', qIds);
       (aRes.data || []).forEach(function(a) {
@@ -1939,6 +2150,8 @@ var LIVE_EVENT_TYPES = ['goal','penalty','red_card','hockey_goal','match_point',
   'time_window','stat_threshold','clean_sheet','equaliser','next_scorer'];
 
 function detectLane(q) {
+  // Custom questions are their own independent lane.
+  if (q.source === 'custom' || q.question_type === 'CUSTOM') return 'CUSTOM';
   // Gameplay logic MUST be based on question_type (product lane), NOT on source.
   // Prefer q.question_type when present (future-proof for the 3-lane column migration).
   if (q.question_type === 'CORE_MATCH_LIVE')     return 'LIVE';
@@ -1958,6 +2171,9 @@ function detectLane(q) {
 
 function getQuestionTypeBadge(q) {
   var lane = detectLane(q);
+  if (lane === 'CUSTOM') {
+    return '<span class="qt-custom">Custom</span>';
+  }
   if (lane === 'LIVE') {
     return '<span class="qt-label qt-live"><span class="qt-live-dot"></span>Live</span>';
   }
@@ -2267,6 +2483,9 @@ function updateLiveMatchCard(qs) {
 //  QUESTION CARD RENDERING
 // ════════════════════════════════════════════════════════
 function renderQuestionCard(q, isPrimary) {
+  // Custom questions have their own full renderer
+  if (detectLane(q) === 'CUSTOM') return renderCustomQuestionCard(q);
+
   var state    = questionState(q);
   var open     = state === 'active';
   var pending  = state === 'closed';
@@ -2827,7 +3046,7 @@ async function computeLeaderGap() {
       .from('player_answers')
       .select('user_id, points_earned')
       .eq('league_id', currentLeagueId)
-      .eq('is_correct', true);   // only resolved correct answers contribute to score
+      .not('is_correct', 'is', null);
     var answers = res.data || [];
     if (!answers.length) return 0;
 
@@ -2927,7 +3146,7 @@ async function loadLeaderboard() {
         .from('player_answers')
         .select('user_id, points_earned, is_correct')
         .eq('league_id', currentLeagueId)
-        .eq('is_correct', true),
+        .not('is_correct', 'is', null),
       window.sb
         .from('league_members')
         .select('user_id')
@@ -3080,7 +3299,8 @@ async function loadSoloScore(container) {
   var correctCnt  = 0;
   var totalCnt    = answers.length;
   answers.forEach(function(a) {
-    if (a.is_correct) { totalPts += (a.points_earned || 0); correctCnt++; }
+    totalPts += (a.points_earned || 0);
+    if (a.is_correct) correctCnt++;
   });
   var accuracy = totalCnt > 0 ? Math.round(correctCnt / totalCnt * 100) : 0;
 
@@ -3636,6 +3856,458 @@ document.addEventListener('DOMContentLoaded', function() {
     stopTimerTick();
   });
 });
+
+// ════════════════════════════════════════════════════════
+//  CUSTOM QUESTIONS — renderer
+// ════════════════════════════════════════════════════════
+
+function renderCustomQuestionCard(q) {
+  var state    = questionState(q);
+  var open     = state === 'active';
+  var resolved = q.resolution_status === 'resolved';
+  var voided   = q.resolution_status === 'voided';
+  var myAns    = myAnswers[q.id];
+  var isAdmin  = isLeagueAdmin();
+
+  // Header
+  var typeBadge = getQuestionTypeBadge(q);
+  var timeLabel;
+  if (open) {
+    var ms   = msLeft(q);
+    var tStr = formatMsLeft(ms);
+    var tCol = (ms !== null && ms < 60000) ? 'var(--coral)' : '#FFA500';
+    timeLabel = '<span class="question-time timer-tick" data-closes-at="' +
+      (getAnswerClosesAt(q) ? getAnswerClosesAt(q).getTime() : '') +
+      '" style="color:' + tCol + ';">' + tStr + '</span>';
+  } else if (resolved) {
+    timeLabel = '<span class="question-time">Resolved</span>';
+  } else if (voided) {
+    timeLabel = '<span class="question-time">Voided</span>';
+  } else {
+    timeLabel = '<span class="question-time" style="color:#FFA500;">Admin reviewing</span>';
+  }
+
+  // Card border
+  var borderStyle = '';
+  if (resolved && myAns) {
+    borderStyle = myAns.is_correct
+      ? 'border-color:rgba(168,225,12,0.3);'
+      : 'border-color:rgba(255,107,107,0.2);';
+  } else if (open) {
+    borderStyle = 'border-color:rgba(255,165,0,0.25);';
+  }
+
+  // Timer bar
+  var timerBar = open ? renderTimerBar(q) : '';
+
+  // Options rendering
+  var bodyHtml = renderCustomOptions(q, myAns, open, resolved);
+
+  // Footer
+  var footerHtml = '';
+  if (open) {
+    var ms2 = msLeft(q);
+    var tColor = (ms2 !== null && ms2 < 60000) ? 'var(--coral)' : '#FFA500';
+    footerHtml =
+      '<div class="question-footer">' +
+        '<div class="question-timer" style="color:' + tColor + ';">' +
+          '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round">' +
+            '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>' +
+          '</svg>' +
+          '<span class="timer-tick" data-closes-at="' + (getAnswerClosesAt(q) ? getAnswerClosesAt(q).getTime() : '') + '">' + formatMsLeft(ms2) + '</span>' +
+        '</div>' +
+        '<div class="q-point-range">' + getPointRange(q) + '</div>' +
+      '</div>';
+  } else if (voided) {
+    footerHtml = '<div class="q-voided">This question was voided and did not count.</div>';
+  } else if (resolved && myAns) {
+    var pts = myAns.points_earned || 0;
+    var correctIcon = myAns.is_correct
+      ? '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>'
+      : '<svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    var resultClass = myAns.is_correct ? 'correct' : 'wrong';
+    var ptsText = myAns.is_correct
+      ? (pts > 0 ? '+' + pts + ' pts' : 'Correct')
+      : (pts < 0 ? pts + ' pts' : 'No points — better luck next time');
+    footerHtml = '<div class="question-result ' + resultClass + '">' + correctIcon + ptsText + '</div>';
+  } else if (resolved) {
+    footerHtml = '<div class="q-awaiting" style="color:var(--grey-dark);">You did not answer this one.</div>';
+  } else if (!open) {
+    // Closed, not yet resolved — admin needs to review
+    if (isAdmin) {
+      footerHtml = renderAdminResolveFooter(q);
+    } else {
+      footerHtml = '<div class="custom-pending-strip"><span class="custom-pending-dot"></span>Admin is reviewing — result coming soon</div>';
+    }
+  }
+
+  return '<div class="question-card" style="' + borderStyle + '" data-qid="' + q.id + '">' +
+    '<div class="question-card-header">' + typeBadge + timeLabel + '</div>' +
+    timerBar +
+    '<div class="question-text">' + escHtml(q.question_text) + '</div>' +
+    bodyHtml +
+    footerHtml +
+    '</div>';
+}
+
+function renderCustomOptions(q, myAns, open, resolved) {
+  var opts = Array.isArray(q.custom_options) ? q.custom_options : [];
+  if (!opts.length) return '';
+
+  var isMulti    = q.custom_question_type === 'multi';
+  var correctArr = Array.isArray(q.custom_correct_answers) ? q.custom_correct_answers : [];
+
+  // For multi-choice: track pending state in pendingMultiSelections
+  if (isMulti && open && !myAns) {
+    if (!pendingMultiSelections[q.id]) pendingMultiSelections[q.id] = new Set();
+    var pending = pendingMultiSelections[q.id];
+
+    var html = '<div class="custom-multi-opts">';
+    opts.forEach(function(opt) {
+      var isSel = pending.has(opt);
+      html += '<label class="custom-multi-opt' + (isSel ? ' selected' : '') + '">' +
+        '<input type="checkbox"' + (isSel ? ' checked' : '') +
+          ' onchange="toggleCustomMulti(\'' + escAttr(q.id) + '\', ' + JSON.stringify(escAttr(opt)) + ', this.checked)">' +
+        escHtml(opt) +
+        '</label>';
+    });
+    html += '</div>';
+    html += '<button class="custom-multi-submit" onclick="submitCustomMultiAnswer(\'' + escAttr(q.id) + '\')">Submit Answer</button>';
+    return html;
+  }
+
+  // Single-choice (open, no answer yet): plain option buttons
+  if (!isMulti && open && !myAns) {
+    var html2 = '<div class="question-options">';
+    opts.forEach(function(opt) {
+      html2 += '<button class="question-option" onclick="handleCustomSingleAnswer(\'' + escAttr(q.id) + '\', ' + JSON.stringify(opt) + ')">' +
+        escHtml(opt) + '</button>';
+    });
+    html2 += '</div>';
+    return html2;
+  }
+
+  // Already answered or closed/resolved: show locked state
+  var mySelected = [];
+  if (myAns) {
+    if (Array.isArray(myAns.selected_options)) mySelected = myAns.selected_options;
+    else if (myAns.answer) mySelected = myAns.answer.split(',').map(function(s) { return s.trim(); });
+  }
+
+  if (isMulti) {
+    var html3 = '<div class="custom-multi-opts">';
+    opts.forEach(function(opt) {
+      var isMine    = mySelected.indexOf(opt) !== -1;
+      var isCorrect = resolved && correctArr.indexOf(opt) !== -1;
+      var cls = 'custom-multi-opt disabled';
+      if (isMine && resolved) cls += isCorrect ? ' correct' : ' wrong';
+      else if (isMine) cls += ' selected';
+      else if (isCorrect) cls += ' correct';
+      html3 += '<label class="' + cls + '">' +
+        '<input type="checkbox"' + (isMine ? ' checked' : '') + ' disabled>' +
+        escHtml(opt) +
+        (isCorrect ? ' <span style="color:var(--lime);font-size:0.7rem;">✓ correct</span>' : '') +
+        '</label>';
+    });
+    html3 += '</div>';
+    return html3;
+  }
+
+  // Single-choice locked
+  var html4 = '<div class="question-options">';
+  opts.forEach(function(opt) {
+    var isMine    = mySelected.indexOf(opt) !== -1;
+    var isCorrect = resolved && correctArr.indexOf(opt) !== -1;
+    var cls = 'question-option';
+    if (resolved) {
+      if (isCorrect) cls += ' correct';
+      else if (isMine) cls += ' wrong';
+    } else if (isMine) {
+      cls += ' selected';
+    }
+    html4 += '<button class="' + cls + '" disabled>' + escHtml(opt) + '</button>';
+  });
+  html4 += '</div>';
+  return html4;
+}
+
+function renderAdminResolveFooter(q) {
+  var opts = Array.isArray(q.custom_options) ? q.custom_options : [];
+  var isMulti = q.custom_question_type === 'multi';
+  var inputType = isMulti ? 'checkbox' : 'radio';
+  var name = 'resolve_' + q.id;
+
+  var html = '<div class="custom-admin-footer">' +
+    '<div class="custom-resolve-label">Select correct answer' + (isMulti ? 's' : '') + ' to resolve</div>' +
+    '<div class="custom-resolve-opts" id="resolve-opts-' + escAttr(q.id) + '">';
+
+  opts.forEach(function(opt) {
+    var inputName = isMulti ? '' : ' name="' + escAttr(name) + '"';
+    html += '<label class="custom-resolve-opt" onclick="toggleResolveOpt(this)">' +
+      '<input type="' + inputType + '"' + inputName + ' value="' + escAttr(opt) + '">' +
+      escHtml(opt) + '</label>';
+  });
+
+  html += '</div>' +
+    '<div class="custom-resolve-actions">' +
+      '<button class="custom-resolve-btn" onclick="adminResolveQuestion(\'' + escAttr(q.id) + '\')">Resolve</button>' +
+      '<button class="custom-void-btn" onclick="adminVoidQuestion(\'' + escAttr(q.id) + '\')">Void</button>' +
+    '</div>' +
+  '</div>';
+  return html;
+}
+
+// ── Custom question interaction handlers ─────────────
+
+function toggleResolveOpt(label) {
+  // For radio inputs, clear siblings; for checkboxes, just toggle class
+  var input = label.querySelector('input');
+  if (!input) return;
+  if (input.type === 'radio') {
+    var container = label.parentElement;
+    container.querySelectorAll('.custom-resolve-opt').forEach(function(l) { l.classList.remove('selected'); });
+  }
+  label.classList.toggle('selected', input.checked);
+}
+
+function toggleCustomMulti(questionId, opt, checked) {
+  if (!pendingMultiSelections[questionId]) pendingMultiSelections[questionId] = new Set();
+  if (checked) pendingMultiSelections[questionId].add(opt);
+  else         pendingMultiSelections[questionId].delete(opt);
+  // Reflect selection class on the label
+  var feed = document.getElementById('questions-feed');
+  if (!feed) return;
+  feed.querySelectorAll('.custom-multi-opt').forEach(function(el) {
+    var inp = el.querySelector('input');
+    if (inp) el.classList.toggle('selected', inp.checked);
+  });
+}
+
+async function handleCustomSingleAnswer(questionId, opt) {
+  if (!currentUserId) { showToast('Sign in to answer'); return; }
+  if (myAnswers[questionId]) { showToast('Already answered'); return; }
+
+  // Optimistic UI — mark selected
+  var feed = document.getElementById('questions-feed');
+  if (feed) {
+    feed.querySelectorAll('[data-qid="' + questionId + '"] .question-option').forEach(function(btn) {
+      btn.classList.toggle('selected', btn.textContent === opt);
+      btn.disabled = true;
+    });
+  }
+
+  try {
+    await callCustomQuestions({ action: 'submit_answer', question_id: questionId, selected_options: [opt] });
+    myAnswers[questionId] = { answer: opt, selected_options: [opt], is_correct: null, points_earned: 0 };
+    loadAndRenderQuestions(true);
+  } catch(e) {
+    console.warn('[custom] single answer failed:', e);
+    showToast(e.message || 'Answer failed — try again');
+    loadAndRenderQuestions(true);
+  }
+}
+
+async function submitCustomMultiAnswer(questionId) {
+  if (!currentUserId) { showToast('Sign in to answer'); return; }
+  if (myAnswers[questionId]) { showToast('Already answered'); return; }
+  var sel = pendingMultiSelections[questionId];
+  if (!sel || sel.size === 0) { showToast('Select at least one option'); return; }
+
+  var selected = Array.from(sel);
+  try {
+    await callCustomQuestions({ action: 'submit_answer', question_id: questionId, selected_options: selected });
+    myAnswers[questionId] = { answer: selected.join(','), selected_options: selected, is_correct: null, points_earned: 0 };
+    delete pendingMultiSelections[questionId];
+    loadAndRenderQuestions(true);
+  } catch(e) {
+    console.warn('[custom] multi answer failed:', e);
+    showToast(e.message || 'Answer failed — try again');
+  }
+}
+
+async function adminResolveQuestion(questionId) {
+  var container = document.getElementById('resolve-opts-' + questionId);
+  if (!container) return;
+  var checked = Array.from(container.querySelectorAll('input:checked')).map(function(i) { return i.value; });
+  if (!checked.length) { showToast('Select at least one correct answer'); return; }
+
+  var btn = container.parentElement.querySelector('.custom-resolve-btn');
+  if (btn) { btn.disabled = true; btn.textContent = 'Resolving…'; }
+
+  try {
+    var res = await callCustomQuestions({ action: 'resolve', question_id: questionId, correct_answers: checked });
+    showToast('Resolved — ' + res.correct_count + ' correct of ' + res.total_answers);
+    loadAndRenderQuestions(false);
+  } catch(e) {
+    console.warn('[custom] resolve failed:', e);
+    showToast(e.message || 'Resolve failed');
+    if (btn) { btn.disabled = false; btn.textContent = 'Resolve'; }
+  }
+}
+
+async function adminVoidQuestion(questionId) {
+  if (!confirm('Void this question? All answers will score 0.')) return;
+  try {
+    await callCustomQuestions({ action: 'void', question_id: questionId });
+    showToast('Question voided');
+    loadAndRenderQuestions(false);
+  } catch(e) {
+    console.warn('[custom] void failed:', e);
+    showToast(e.message || 'Void failed');
+  }
+}
+
+// ════════════════════════════════════════════════════════
+//  CUSTOM QUESTIONS — create modal
+// ════════════════════════════════════════════════════════
+
+function openCreateQuestionModal() {
+  // Reset state
+  cqModalType = null;
+  cqModalPreset = null;
+  cqModalDeadline = null;
+  cqModalOptions = ['', ''];
+
+  document.getElementById('cq-step-type').style.display = '';
+  document.getElementById('cq-step-form').style.display = 'none';
+  document.getElementById('cq-error').textContent = '';
+  if (document.getElementById('cq-question-text')) {
+    document.getElementById('cq-question-text').value = '';
+  }
+
+  ['single','multi','yesno'].forEach(function(t) {
+    var el = document.getElementById('cq-t-' + t);
+    if (el) el.classList.remove('selected');
+  });
+
+  document.getElementById('cq-overlay').style.display = 'flex';
+}
+
+function closeCreateQuestionModal() {
+  document.getElementById('cq-overlay').style.display = 'none';
+}
+
+function selectCqType(type) {
+  cqModalType = type;
+  ['single','multi','yesno'].forEach(function(t) {
+    var el = document.getElementById('cq-t-' + t);
+    if (el) el.classList.toggle('selected', t === type);
+  });
+
+  // Show form step
+  document.getElementById('cq-step-type').style.display = 'none';
+  document.getElementById('cq-step-form').style.display = '';
+
+  // Yes/No: hide options section (fixed options)
+  var optSec = document.getElementById('cq-options-section');
+  if (optSec) optSec.style.display = (type === 'yesno') ? 'none' : '';
+
+  // Default 2 options for single/multi
+  if (type !== 'yesno') {
+    cqModalOptions = ['', ''];
+    renderCqOptionsList();
+  }
+
+  // Default scoring preset
+  selectCqPreset('safe');
+  selectCqDeadline(60);
+}
+
+function renderCqOptionsList() {
+  var list = document.getElementById('cq-options-list');
+  if (!list) return;
+  list.innerHTML = '';
+  cqModalOptions.forEach(function(val, idx) {
+    var row = document.createElement('div');
+    row.className = 'cq-option-row';
+    row.innerHTML =
+      '<input class="cq-option-input" type="text" placeholder="Option ' + (idx + 1) + '" value="' + escAttr(val) + '"' +
+        ' oninput="cqModalOptions[' + idx + ']=this.value">' +
+      (cqModalOptions.length > 2
+        ? '<button class="cq-option-remove" onclick="removeCqOption(' + idx + ')">×</button>'
+        : '');
+    list.appendChild(row);
+  });
+}
+
+function addCqOption() {
+  if (cqModalOptions.length >= 8) { showToast('Maximum 8 options'); return; }
+  cqModalOptions.push('');
+  renderCqOptionsList();
+}
+
+function removeCqOption(idx) {
+  if (cqModalOptions.length <= 2) return;
+  cqModalOptions.splice(idx, 1);
+  renderCqOptionsList();
+}
+
+function selectCqPreset(preset) {
+  cqModalPreset = preset;
+  ['safe','balanced','risk','high_risk'].forEach(function(p) {
+    var el = document.getElementById('cq-p-' + p);
+    if (el) el.classList.toggle('selected', p === preset);
+  });
+}
+
+function selectCqDeadline(secs) {
+  cqModalDeadline = secs;
+  document.querySelectorAll('.cq-deadline-btn').forEach(function(btn) {
+    btn.classList.toggle('selected', parseInt(btn.textContent) === secs ||
+      (secs === 30 && btn.textContent === '30s') ||
+      (secs === 60 && btn.textContent === '1m') ||
+      (secs === 120 && btn.textContent === '2m') ||
+      (secs === 300 && btn.textContent === '5m'));
+  });
+}
+
+async function submitCreateQuestion() {
+  var errorEl = document.getElementById('cq-error');
+  var publishBtn = document.getElementById('cq-publish-btn');
+  errorEl.textContent = '';
+
+  var questionText = (document.getElementById('cq-question-text').value || '').trim();
+  if (!questionText) { errorEl.textContent = 'Enter a question.'; return; }
+  if (!cqModalPreset) { errorEl.textContent = 'Select a scoring preset.'; return; }
+  if (!cqModalDeadline) { errorEl.textContent = 'Select a time limit.'; return; }
+
+  var options;
+  var qType;
+  if (cqModalType === 'yesno') {
+    options = ['Yes', 'No'];
+    qType = 'single';
+  } else {
+    // Read current option values from inputs
+    var inputs = document.querySelectorAll('#cq-options-list .cq-option-input');
+    options = Array.from(inputs).map(function(i) { return i.value.trim(); }).filter(Boolean);
+    if (options.length < 2) { errorEl.textContent = 'At least 2 options required.'; return; }
+    if (new Set(options).size !== options.length) { errorEl.textContent = 'Options must be unique.'; return; }
+    qType = cqModalType;
+  }
+
+  publishBtn.disabled = true;
+  publishBtn.textContent = 'Publishing…';
+
+  try {
+    await callCustomQuestions({
+      action:               'create',
+      league_id:            currentLeagueId,
+      question_text:        questionText,
+      custom_question_type: qType,
+      options:              options,
+      scoring_preset:       cqModalPreset,
+      deadline_seconds:     cqModalDeadline,
+    });
+    closeCreateQuestionModal();
+    showToast('Question published — players can answer now');
+    loadAndRenderQuestions(false);
+  } catch(e) {
+    console.warn('[custom] create failed:', e);
+    errorEl.textContent = e.message || 'Publish failed — try again.';
+    publishBtn.disabled = false;
+    publishBtn.textContent = 'Publish Question';
+  }
+}
 </script>
 </body>
 </html>

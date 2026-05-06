@@ -12,6 +12,184 @@ For canonical specs, see the domain docs in this folder. This file is history on
 
 ## Recent updates (top-of-CLAUDE.md history)
 
+### 2026-05-06 — evaluate-season-leagues: Season Long completion evaluator Phase 2b
+
+New Edge Function `evaluate-season-leagues`. Competition-based (`creation_path = 'competition'`) Season Long leagues only. Path A (team-based) explicitly skipped.
+
+**Decision tree per league:**
+1. `league_fixtures` all terminal (FT/AET/PEN/CANC/ABD/AWD/WO)? No → defer, `lifecycle_status = 'active'`. PST (postponed) is NOT terminal.
+2. `sports_competitions.current_season_end` present + synced within 48h? No → defer, `lifecycle_status = 'awaiting_fixtures'`.
+3. `current_season_end <= today`? No → defer, `lifecycle_status = 'awaiting_fixtures'`.
+4. Pending questions == 0? No → defer, `lifecycle_status = 'pending_resolution'`.
+5. Finalize: compute scores, write `final_points`/`final_rank` to `league_members`, set `winner_user_id`, `completed_at`, `lifecycle_status = 'completed'`.
+
+**Finalization scoring:** sums `player_answers.points_earned` per member across all resolved questions for the league. RANK logic for ties (shared rank, next skips). Members with no answers get `final_points = 0` and rank at bottom. Winner = first rank-1 user in sorted order.
+
+**Idempotency:** `.neq('lifecycle_status', 'completed')` guard on all writes — completed leagues never touched again.
+
+**Dry run:** `?dry_run=1` or `{ dry_run: true }` — reads + logs, zero DB writes.
+
+**Skips:** no `league_fixtures` rows (legacy pre-Phase-1 league), no competition ID on league row.
+
+**File:** `supabase/functions/evaluate-season-leagues/index.ts`
+
+**Deploy:** `supabase functions deploy evaluate-season-leagues --no-verify-jwt`
+
+**Cron:** not yet scheduled — add daily at 04:00 UTC after `season_meta` (03:00 UTC).
+
+---
+
+### 2026-05-06 — Migrations 060–063: Season Long completion evaluator foundations (Phase 2a)
+
+Schema and sync additions required before the completion evaluator can be built safely. No evaluator logic implemented. No league is completed by these changes.
+
+**Migration 060** (`leagues` columns):
+- `lifecycle_status TEXT NOT NULL DEFAULT 'active'` — CHECK IN (`active`, `awaiting_fixtures`, `pending_resolution`, `completed`, `archived`). All existing leagues default to `active`. Partial index on `lifecycle_status != 'completed'` for evaluator queries.
+- `last_completion_check_at TIMESTAMPTZ NULL` — debug: last time evaluator ran for this league.
+- `completion_deferred_reason TEXT NULL` — debug: last defer reason.
+
+**Migration 061** (`sports_competitions` columns):
+- `current_season_end DATE NULL` — official season end date from API-Sports `/leagues`. Populated by `sync-fixtures?type=season_meta`. NULL = evaluator must defer.
+- `season_end_synced_at TIMESTAMPTZ NULL` — freshness timestamp for staleness checks.
+
+**Migration 062** (`team_competition_status` table):
+- New table: `(sport, api_team_id, api_league_id, season)` PK. Status: `active | eliminated | unknown`. RLS: authenticated read, service-role write. Starts empty — populated by a future `sync-team-status` job (not yet built).
+
+**Migration 063** (`league_fixtures` columns):
+- `fixture_status TEXT NULL` — mirrors `api_football_fixtures.status_short`. Populated by sync.
+- `finished_at TIMESTAMPTZ NULL` — when the fixture reached a terminal status.
+- Index on `(league_id, fixture_status)` for fast evaluator unfinished-count query.
+
+**`sync-fixtures` Edge Function changes:**
+- New mode `season_meta`: calls API-Sports `/leagues?id={id}&season={season}` for each competition in `ACTIVE_LEAGUES`, writes `current_season_end` + `season_end_synced_at` to `sports_competitions`. If API returns no end date, existing value is preserved (never overwritten with NULL).
+- `syncLive`: after each fixture upsert to `api_football_fixtures`, calls `propagateFixtureStatus()` to update matching `league_fixtures` row with `fixture_status` and `finished_at` (for terminal statuses).
+- `syncDaily`: calls `bulkPropagateTerminalStatuses()` at the end — batch-reads all non-terminal `league_fixtures` rows, cross-references `api_football_fixtures`, updates any that have reached a terminal status. Catches finishes missed by live sync.
+- `season_meta` cron schedule: **not yet added** — run manually or schedule after deployment verification.
+
+---
+
+### 2026-05-06 — Migration 059: Season Long fixture lifecycle Phase 1
+
+**Migration 059** (`backend/migrations/059_league_fixtures.sql`):
+
+- **`league_fixtures` table**: authoritative fixture scope per Season Long league. Populated at creation. Columns: `id`, `league_id`, `fixture_id`, `api_league_id`, `kickoff_at`. Unique constraint on `(league_id, fixture_id)`. RLS: owners and members may read.
+- **`leagues`** scaffold columns: `fixture_count INTEGER`, `completed_at TIMESTAMPTZ`, `winner_user_id UUID` (FK to users). Completion evaluator NOT yet live.
+- **`league_members`** scaffold columns: `final_rank INTEGER`, `final_points INTEGER`.
+
+**`create-league.html`:**
+- **Zero-fixture guard**: if `leagueType === 'season'` and `slLoadedFixtures.length === 0`, show toast and block creation.
+- **Batch insert**: after successful Season Long league creation, inserts all `slLoadedFixtures` rows into `league_fixtures`, then updates `leagues.fixture_count`. Fire-and-forget — creation is not blocked if this fails (generator falls back to competition scope).
+
+**`generate-questions/index.ts`:**
+- Builds `leagueFixtureScopes: Map<leagueId, Set<fixtureId>>` from `league_fixtures` table before the main loop. One query for all `season_long` leagues in the run.
+- **Prematch pass**: filters `sportsCtx.upcomingMatches` to only fixture IDs in scope.
+- **Live pass**: filters `inProgressFixtures` to only fixture IDs in scope.
+- **REAL_WORLD pass**: filters `targetMatches` to only fixture IDs in scope.
+- All three passes: legacy leagues with no `league_fixtures` rows fall back to the full competition window (logged).
+
+---
+
+### 2026-05-06 — Migrations 057–058: Match Night fixture binding + league_type
+
+- **Migration 057** (`057_match_night_fixture_id.sql`): adds `fixture_id BIGINT` to `leagues` with deferred FK to `api_football_fixtures`. Match Night stores the exact fixture ID chosen in Step 2.
+- **Migration 058** (`058_league_type.sql`): adds `league_type TEXT CHECK ('match_night'|'season_long'|'custom')` to `leagues`. Replaces unreliable `league_end_date` heuristic in context builder.
+- Generator: all three passes filter by `fixture_id` for Match Night, by `league_type` for Season Long.
+- Context builder: uses `league_type` column first, falls back to `fixture_id` / `league_end_date` for legacy rows.
+
+---
+
+### 2026-05-06 — Migration 056: league_code + Invite step production cleanup
+
+**Migration 056** (`backend/migrations/056_league_code.sql`) adds a short unique invite code to every league.
+
+**Schema:**
+```sql
+ALTER TABLE public.leagues ADD COLUMN IF NOT EXISTS league_code TEXT;
+-- PL/pgSQL backfill: assigns unique 6-char code to all existing leagues
+ALTER TABLE public.leagues ADD CONSTRAINT leagues_league_code_unique UNIQUE (league_code);
+CREATE INDEX IF NOT EXISTS idx_leagues_league_code ON public.leagues (league_code);
+```
+
+Charset: `ABCDEFGHJKLMNPQRSTUVWXYZ23456789` — excludes O/0 and I/1 to prevent misreads. Collision retry loop in PL/pgSQL during backfill.
+
+**Invite step (`create-league.html` step-3) — production cleanup:**
+- Removed placeholder users (Jake R., Marcus T., Ines L., Dan O., Kai W.)
+- Removed social share buttons (WhatsApp / iMessage / Discord) — no functional share URL exists yet
+- Removed Copy Link button — no join-by-link flow yet
+- Kept: **League Code display** + single **Copy Code** button (`navigator.clipboard.writeText()` with `execCommand('copy')` fallback)
+
+**Code generation logic:**
+1. On Step 3 entry, `generateCode()` generates a 6-char code client-side and shows it in the display
+2. Code is sent as `league_code` in the `launchLeague` insert payload
+3. On unique_violation containing `league_code`, a new code is regenerated and the insert retries — up to 10 attempts
+
+**`spontix-store.js`:** `_mapLeagueFromDb`, `_mapLeagueToDb`, and `createLeague` normalization all map `leagueCode` ↔ `league_code`.
+
+**Semantic separation:** `league_code` is a universal human-friendly share code for ALL leagues. `join_password` (migration 002) is a separate private-league access gate. They must never be conflated.
+
+**Deployed:** migration applied in Supabase SQL Editor; frontend already live on `https://spontyx.com`.
+
+---
+
+### 2026-05-06 — Create League Step 3: unified Question Types multi-select (UI)
+
+Replaced the two separate "Question Style" (prematch/live/hybrid radio cards) and "Question Types" (chip grid) sections in `create-league.html` Step 3 with a single unified **Question Types** multi-select card section. Shared across all three league types (Match Night, Season-Long, Custom). Deployed to production via `vercel --prod`.
+
+**Four cards (multi-select, not mutually exclusive):**
+- **Pre-match** — all tiers. Questions generated before kickoff.
+- **Live in-game** — Pro+. Real-time questions during the match.
+- **Real World** — Pro+. AI-generated questions from news/injuries/events.
+- **Custom Questions** — Elite+. Admin-created questions; admin resolves. No quantity slider (fully manually operated).
+
+**Conditional quantity sliders** — appear immediately below the cards, only when the matching type is selected:
+- Pre-match selected → Pre-match questions per match (1–10, default 5)
+- Live selected → Live questions per match (1–10, default 6)
+- Real World selected → Real World questions per week (1–3 = Low/Medium/High, default 2 = Medium)
+
+**Removed:** "Hybrid" style card (hybrid is now implicit: select both Pre-match + Live), "Question Types" chip grid, Pre-Match Question Timing section (timing logic lives in the pipeline; no UI control needed).
+
+**JS changes (`create-league.html`):**
+- `matchNightMode` variable replaced by `selectedQTypes = { prematch, live, realworld, custom }` object
+- `toggleQuestionType(type, el)` / `toggleQuestionTypeGated(type, el, minTier, featureName)` replace `selectQuestionMode` / `selectQuestionModeGated`
+- `applyQuestionTypeTierGating()` replaces `applyMatchNightTierGating()` — handles all 4 cards with tier locking
+- `updateStep3Visibility()` shows/hides 3 sliders based on `selectedQTypes`
+- `updateRealWorldLabel(val)` maps 1/2/3 → Low/Medium/High display
+- `launchLeague` payload: `question_style` derived from prematch + live booleans; `real_world_enabled = selectedQTypes.realworld`; `real_world_questions_per_week` from slider; `custom_questions_enabled = selectedQTypes.custom`
+- Review panel shows active types as "Pre-match + Live" etc.
+
+**No migration required.** Migration 055 columns already in place.
+
+---
+
+### 2026-05-05/06 — Migration 055: Universal question configuration + generator lane gating
+
+**Migration 055** (`backend/migrations/055_universal_question_config.sql`) adds four columns to `public.leagues`:
+
+| Column | Type | Default | Purpose |
+|---|---|---|---|
+| `question_style` | `TEXT CHECK IN ('prematch','live','hybrid')` | `'hybrid'` | Which generation lanes run: `prematch` = CORE_MATCH_PREMATCH only; `live` = CORE_MATCH_LIVE only; `hybrid` = both |
+| `real_world_enabled` | `BOOLEAN NOT NULL` | `true` | Per-league REAL_WORLD generation opt-in. Defaults `true` so leagues created before the UI update continue receiving REAL_WORLD |
+| `real_world_questions_per_week` | `INTEGER` (1–3) | `2` | User-chosen REAL_WORLD intensity: 1=Low, 2=Medium, 3=High. Acts as a per-league weekly cap — always ≤ platform cap of 3/week |
+| `custom_questions_enabled` | `BOOLEAN NOT NULL` | `false` | Reserved for Custom Questions feature. Generator does not act on it yet |
+
+**Backfill:** existing leagues set to `question_style='hybrid'`, `real_world_enabled=true` (where `ai_questions_enabled=true`), `real_world_questions_per_week=2`.
+
+**`generate-questions` Edge Function (index.ts) — lane gating:**
+- Prematch lane: skipped if `question_style = 'live'` (skip reason: `lane_disabled_prematch`)
+- Live lane: skipped if `question_style = 'prematch'`
+- REAL_WORLD lane: skipped if `!real_world_enabled`, or if `question_style = 'live'` (live-only blocks RW)
+
+**`lib/quota-checker.ts` — `checkRealWorldQuota()` updated:**
+- New optional param `userWeeklyCap?: number | null`
+- Effective weekly limit = `Math.min(userWeeklyCap ?? 2, RW_WEEKLY_CAP=3)` — user cap enforced before platform cap
+- New skip reasons: `real_world_user_weekly_cap` (user cap hit), `real_world_weekly_cap` (platform cap hit)
+
+**`lib/types.ts` — `LeagueWithConfig` updated** with all four new fields.
+
+**Deployed:** migration applied in Supabase SQL Editor; `generate-questions` redeployed.
+
+---
+
 ### 2026-05-05 — Dashboard plan panel: live usage data wired
 
 Replaced all hardcoded fake values in `dashboard.html` plan panel with real Supabase queries.

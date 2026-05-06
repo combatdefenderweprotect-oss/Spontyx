@@ -55,13 +55,14 @@ Deno.serve(async (req: Request) => {
 
   try {
     switch (type) {
-      case 'daily':    return jsonOk(await syncDaily(sb, apiKey));
-      case 'prematch': return jsonOk(await syncPrematch(sb, apiKey));
-      case 'live':     return jsonOk(await syncLive(sb, apiKey));
-      case 'stats':    return jsonOk(await syncStats(sb, apiKey));
+      case 'daily':       return jsonOk(await syncDaily(sb, apiKey));
+      case 'prematch':    return jsonOk(await syncPrematch(sb, apiKey));
+      case 'live':        return jsonOk(await syncLive(sb, apiKey));
+      case 'stats':       return jsonOk(await syncStats(sb, apiKey));
+      case 'season_meta': return jsonOk(await syncSeasonMeta(sb, apiKey));
       default:
         return new Response(
-          JSON.stringify({ error: 'unknown type — use daily | prematch | live | stats' }),
+          JSON.stringify({ error: 'unknown type — use daily | prematch | live | stats | season_meta' }),
           { status: 400 },
         );
     }
@@ -133,6 +134,16 @@ async function syncDaily(sb: any, apiKey: string) {
       errors.push(`standings league ${leagueId}: ${msg}`);
       await logSync(sb, 'daily_standings', null, leagueId, 'error', 1, 0, msg);
     }
+  }
+
+  // Bulk-propagate fixture_status for any league_fixtures rows whose fixture has
+  // reached a terminal state in api_football_fixtures. This catches finishes that
+  // happened outside the live sync window (e.g. daily catch-up after a midnight game).
+  // Fire-and-forget — failure does not affect daily sync result.
+  try {
+    await bulkPropagateTerminalStatuses(sb);
+  } catch (err) {
+    console.warn('[sync-daily] bulk propagate terminal statuses failed:', err);
   }
 
   return { ok: true, type: 'daily', requests: totalRequests, fixturesSynced, errors };
@@ -239,6 +250,10 @@ async function syncLive(sb: any, apiKey: string) {
         const { error } = await sb.from('api_football_fixtures').upsert(row, { onConflict: 'fixture_id' });
         if (error) throw error;
         synced++;
+
+        // Propagate fixture_status + finished_at into league_fixtures (migration 063).
+        // Runs after every live upsert so league_fixtures stays current without a join.
+        await propagateFixtureStatus(sb, fixtureId, row.status_short);
       }
     } catch (err) {
       errors.push(`status fixture ${fixtureId}: ${String(err)}`);
@@ -353,6 +368,145 @@ async function getRelevantFixtureIds(sb: any): Promise<number[]> {
   });
 
   return [...ids];
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// MODE: season_meta
+// Fetches official season start/end dates from API-Sports /leagues endpoint
+// for each competition in ACTIVE_LEAGUES and writes them to sports_competitions.
+//
+// Populates:
+//   sports_competitions.current_season_end    — official season end date
+//   sports_competitions.season_end_synced_at  — timestamp of this sync
+//
+// The Season Long completion evaluator reads current_season_end to decide
+// if a competition's season has officially concluded (Phase 2b+).
+// NULL means unknown — evaluator must defer when NULL.
+//
+// Safe to run daily. Recommended cron: once per day at 03:00 UTC.
+// Call manually: curl "...sync-fixtures?type=season_meta" -H "Authorization: Bearer <CRON_SECRET>"
+// ─────────────────────────────────────────────────────────────────────────
+
+async function syncSeasonMeta(sb: any, apiKey: string) {
+  const headers = apiHeaders(apiKey);
+  const season  = getCurrentSeason();
+  const results: Array<{ leagueId: number; seasonEnd: string | null; status: string }> = [];
+  const errors: string[] = [];
+  let totalRequests = 0;
+
+  for (const leagueId of ACTIVE_LEAGUES) {
+    try {
+      const res = await fetch(`${BASE}/leagues?id=${leagueId}&season=${season}`, { headers });
+      totalRequests++;
+      if (!res.ok) throw new Error(`leagues API ${res.status}`);
+
+      const json  = await res.json();
+      const entry = json.response?.[0];
+
+      // API-Sports returns seasons[] array; find the one matching our season year.
+      const seasonMeta = (entry?.seasons ?? []).find((s: any) => s.year === season);
+      const seasonEnd: string | null = seasonMeta?.end ?? null; // format: "YYYY-MM-DD"
+
+      if (seasonEnd) {
+        const { error } = await sb
+          .from('sports_competitions')
+          .update({
+            current_season_end:   seasonEnd,
+            season_end_synced_at: new Date().toISOString(),
+          })
+          .eq('api_league_id', leagueId)
+          .eq('api_provider', 'api-sports');
+
+        if (error) throw error;
+        results.push({ leagueId, seasonEnd, status: 'ok' });
+        console.log(`[season_meta] league ${leagueId} — season end: ${seasonEnd}`);
+      } else {
+        // API returned no end date — leave existing value, do not overwrite with NULL.
+        results.push({ leagueId, seasonEnd: null, status: 'no_end_date_in_api' });
+        console.warn(`[season_meta] league ${leagueId} — API returned no season end date for season ${season}`);
+      }
+
+      await logSync(sb, 'season_meta', null, leagueId, 'ok', 1, 0);
+    } catch (err) {
+      const msg = String(err);
+      errors.push(`season_meta league ${leagueId}: ${msg}`);
+      results.push({ leagueId, seasonEnd: null, status: 'error' });
+      console.error(`[season_meta] league ${leagueId} error:`, msg);
+      await logSync(sb, 'season_meta', null, leagueId, 'error', 1, 0, msg);
+    }
+  }
+
+  return { ok: true, type: 'season_meta', season, requests: totalRequests, results, errors };
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Propagate a single fixture's status into league_fixtures (migration 063).
+// Called by syncLive after each fixture upsert.
+// ─────────────────────────────────────────────────────────────────────────
+
+const TERMINAL_STATUSES = new Set(['FT', 'AET', 'PEN', 'AWD', 'WO', 'CANC', 'ABD']);
+
+async function propagateFixtureStatus(sb: any, fixtureId: number, statusShort: string | null) {
+  if (!statusShort) return;
+
+  const isTerminal = TERMINAL_STATUSES.has(statusShort);
+  const update: Record<string, any> = { fixture_status: statusShort };
+  if (isTerminal) update.finished_at = new Date().toISOString();
+
+  const { error } = await sb
+    .from('league_fixtures')
+    .update(update)
+    .eq('fixture_id', fixtureId)
+    // Only update if status actually changed (skip if already terminal to preserve finished_at).
+    .or(`fixture_status.is.null,fixture_status.neq.${statusShort}`);
+
+  if (error) {
+    console.warn(`[propagate] league_fixtures update failed for fixture ${fixtureId}:`, error.message);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Bulk-propagate terminal statuses from api_football_fixtures → league_fixtures.
+// Called at the end of syncDaily to catch any finishes missed by live sync.
+// Uses a raw SQL approach via RPC — falls back to a JS loop if RPC unavailable.
+// ─────────────────────────────────────────────────────────────────────────
+
+async function bulkPropagateTerminalStatuses(sb: any) {
+  // Fetch all league_fixtures rows that don't yet have a terminal fixture_status.
+  const { data: pending, error: fetchErr } = await sb
+    .from('league_fixtures')
+    .select('fixture_id')
+    .or('fixture_status.is.null,fixture_status.not.in.(FT,AET,PEN,AWD,WO,CANC,ABD)');
+
+  if (fetchErr) {
+    console.warn('[bulk-propagate] fetch pending failed:', fetchErr.message);
+    return;
+  }
+  if (!pending || pending.length === 0) return;
+
+  const fixtureIds = (pending as any[]).map((r) => r.fixture_id);
+
+  // Look up current status in api_football_fixtures.
+  const { data: canonicalRows, error: canonErr } = await sb
+    .from('api_football_fixtures')
+    .select('fixture_id, status_short')
+    .in('fixture_id', fixtureIds)
+    .in('status_short', [...TERMINAL_STATUSES]);
+
+  if (canonErr) {
+    console.warn('[bulk-propagate] api_football_fixtures lookup failed:', canonErr.message);
+    return;
+  }
+  if (!canonicalRows || canonicalRows.length === 0) return;
+
+  // Update each fixture with a terminal status that hasn't been propagated yet.
+  let updated = 0;
+  for (const row of canonicalRows as any[]) {
+    await propagateFixtureStatus(sb, row.fixture_id, row.status_short);
+    updated++;
+  }
+
+  console.log(`[bulk-propagate] propagated terminal status for ${updated} fixture(s)`);
 }
 
 // ─────────────────────────────────────────────────────────────────────────

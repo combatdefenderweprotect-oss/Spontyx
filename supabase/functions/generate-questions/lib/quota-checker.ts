@@ -238,12 +238,25 @@ export async function checkRealWorldQuota(
   sb: SupabaseClient,
   leagueId: string,
   ownerTier: string,
+  userWeeklyCap?: number | null,
 ): Promise<{ allowed: boolean; skipReason?: string }> {
-  // Step 1: Weekly cap — max 3 REAL_WORLD questions per league per ISO week (Mon–Sun UTC).
+  // Step 1a: User-chosen weekly cap (real_world_questions_per_week, migration 055).
+  // This is a per-league intent cap set by the creator (1 = Low, 2 = Medium, 3 = High).
+  // Defaults to 2 if null/undefined. Enforced before the platform hard cap so a creator
+  // who chose Low (1) isn't overridden by the platform cap of 3.
+  const effectiveUserCap = (userWeeklyCap != null && userWeeklyCap >= 1 && userWeeklyCap <= 3)
+    ? userWeeklyCap
+    : 2;
+
+  // Step 1b: Platform hard cap — max 3 REAL_WORLD questions per league per ISO week.
+  // Cannot be exceeded regardless of tier or user setting. Production safety rule.
   // Per-match cap (max 1 per match) is enforced separately in the generation pass after
   // match binding, since match_id is not known at quota-check time.
   // Fail-safe: DB error → fail-closed rather than silently allowing over-quota generation.
   const RW_WEEKLY_CAP = 3;
+
+  // The effective weekly limit is the lower of the two caps.
+  const weeklyLimit = Math.min(effectiveUserCap, RW_WEEKLY_CAP);
   const now = new Date();
   const weekStart = getMondayUTC(now).toISOString();
   const { count: weeklyCount, error: weeklyErr } = await sb
@@ -253,8 +266,13 @@ export async function checkRealWorldQuota(
     .eq('question_type', 'REAL_WORLD')
     .gte('created_at', weekStart);
   if (weeklyErr) return { allowed: false, skipReason: 'real_world_quota_check_failed' };
-  if ((weeklyCount ?? 0) >= RW_WEEKLY_CAP) {
-    return { allowed: false, skipReason: 'real_world_weekly_cap' };
+  if ((weeklyCount ?? 0) >= weeklyLimit) {
+    // Report which cap was hit for log clarity.
+    const hitUserCap = weeklyLimit < RW_WEEKLY_CAP;
+    return {
+      allowed: false,
+      skipReason: hitUserCap ? 'real_world_user_weekly_cap' : 'real_world_weekly_cap',
+    };
   }
 
   // Step 2: Tier rule
