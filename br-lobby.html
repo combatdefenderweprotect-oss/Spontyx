@@ -636,6 +636,18 @@
 }
 .mode-card.selected .mode-check { display: flex; }
 
+/* ── Back button (top of Step 2) ─────────────────────────────────────────── */
+.bf-back-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: none;
+  color: var(--grey); font-family: 'Inter', sans-serif;
+  font-size: 0.82rem; font-weight: 600;
+  cursor: pointer; padding: 0; margin-bottom: 18px;
+  transition: color 0.15s;
+}
+.bf-back-btn:hover { color: var(--off-white); }
+.bf-back-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.5; }
+
 /* ── Match List ─────────────────────────────────────────────────────────── */
 .match-search-row {
   display: flex;
@@ -686,52 +698,135 @@
   display: flex; flex-direction: column; gap: 6px;
 }
 
-.match-list { display: flex; flex-direction: column; gap: 8px; max-height: 420px; overflow-y: auto; padding-right: 4px; }
+.match-list { display: flex; flex-direction: column; gap: 6px; max-height: 480px; overflow-y: auto; padding-right: 4px; }
 .match-list::-webkit-scrollbar { width: 4px; }
 .match-list::-webkit-scrollbar-track { background: transparent; }
 .match-list::-webkit-scrollbar-thumb { background: rgba(168,225,12,0.25); border-radius: 2px; }
 
+/* Compact match row — date | info | segment buttons */
 .match-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: 54px 1fr auto;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   background: var(--navy-card);
   border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 12px;
-  padding: 12px 14px;
-  cursor: pointer;
-  transition: all 0.15s;
+  border-radius: 10px;
+  padding: 10px 12px;
+  transition: border-color 0.15s, background 0.15s;
 }
-.match-row:hover { border-color: rgba(168,225,12,0.3); background: var(--navy-hover); }
-.match-row.selected { border-color: var(--lime); background: var(--lime-dim); }
-.match-row-status {
-  width: 8px; height: 8px;
-  border-radius: 50%;
+.match-row:hover { border-color: rgba(168,225,12,0.22); background: var(--navy-hover); }
+
+/* Date column */
+.match-row-date {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
   flex-shrink: 0;
+  font-size: 0.68rem; font-weight: 700;
+  color: var(--grey-dark);
+  text-align: center;
+  line-height: 1.3;
+  border-right: 1px solid rgba(255,255,255,0.06);
+  padding-right: 10px;
 }
-.match-row-status.live { background: var(--coral); animation: live-pulse 1.4s infinite; }
-.match-row-status.soon { background: #f59e0b; }
-.match-row-status.upcoming { background: var(--grey-dark); }
-@keyframes live-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-.match-row-teams { flex: 1; min-width: 0; }
-.match-row-name { font-size: 0.88rem; font-weight: 600; color: var(--off-white); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.match-row-comp { font-size: 0.75rem; color: var(--grey-dark); margin-top: 1px; }
-.match-row-time { font-size: 0.78rem; color: var(--grey); white-space: nowrap; }
+.match-row-date .date-label { font-size: 0.7rem; font-weight: 800; color: var(--grey); }
+.match-row-date .time-label { font-size: 0.62rem; color: var(--grey-dark); margin-top: 1px; }
+
+/* Match info */
+.match-row-teams { min-width: 0; }
+.match-row-name {
+  font-size: 0.85rem; font-weight: 600; color: var(--off-white);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.match-row-sub {
+  display: flex; align-items: center; gap: 8px; margin-top: 3px;
+}
+.match-row-comp { font-size: 0.7rem; color: var(--grey-dark); }
+.match-row-countdown {
+  font-size: 0.68rem; font-weight: 600; color: var(--grey-dark);
+}
 .match-row-live-badge {
-  font-size: 0.68rem;
-  font-weight: 700;
+  display: inline-block;
+  font-size: 0.62rem; font-weight: 800;
+  letter-spacing: 0.06em; text-transform: uppercase;
   background: rgba(255,107,107,0.15);
   color: var(--coral);
-  border: 1px solid rgba(255,107,107,0.25);
+  border: 1px solid rgba(255,107,107,0.30);
   border-radius: 4px;
-  padding: 2px 6px;
+  padding: 1px 6px;
 }
+@keyframes live-pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+/* Segment buttons column */
+.match-seg-btns {
+  display: flex; flex-direction: column; gap: 5px;
+  flex-shrink: 0;
+}
+.match-seg-btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 5px 10px; border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(255,255,255,0.04);
+  color: var(--grey);
+  font-family: 'Inter', sans-serif; font-size: 0.72rem; font-weight: 700;
+  cursor: pointer; white-space: nowrap;
+  transition: all 0.15s;
+}
+.match-seg-btn:hover:not(:disabled) {
+  border-color: rgba(168,225,12,0.40);
+  background: rgba(168,225,12,0.08);
+  color: var(--lime);
+}
+.match-seg-btn:disabled {
+  opacity: 0.35; cursor: not-allowed;
+}
+.match-seg-btn .seg-count {
+  font-size: 0.66rem; color: var(--grey-dark);
+}
+.match-seg-btn:hover:not(:disabled) .seg-count { color: rgba(168,225,12,0.7); }
+
+/* Inline join confirmation */
+.match-seg-confirm {
+  display: flex; flex-direction: column; gap: 5px;
+  align-items: flex-end;
+}
+.match-seg-confirm-label {
+  font-size: 0.7rem; font-weight: 700; color: var(--off-white);
+  white-space: nowrap;
+}
+.match-seg-confirm-btns { display: flex; gap: 5px; }
+.match-seg-confirm-join {
+  padding: 5px 12px; border-radius: 6px;
+  background: var(--lime); color: var(--navy);
+  border: none; font-family: 'Inter', sans-serif;
+  font-size: 0.72rem; font-weight: 800;
+  cursor: pointer; transition: background 0.15s;
+}
+.match-seg-confirm-join:hover { background: #b8f00f; }
+.match-seg-confirm-cancel {
+  padding: 5px 8px; border-radius: 6px;
+  background: transparent; color: var(--grey);
+  border: 1px solid rgba(255,255,255,0.12);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.72rem; font-weight: 700;
+  cursor: pointer; transition: all 0.15s;
+}
+.match-seg-confirm-cancel:hover { border-color: rgba(255,107,107,0.4); color: var(--coral); }
+
+/* Late-match treatment */
+.match-row.too-late { opacity: 0.4; }
+.match-row.too-late .match-seg-btn { cursor: not-allowed; }
 
 .match-empty {
   text-align: center;
   padding: 40px 20px;
   color: var(--grey-dark);
   font-size: 0.88rem;
+}
+
+@media (max-width: 600px) {
+  .match-row { grid-template-columns: 44px 1fr auto; gap: 8px; padding: 9px 10px; }
+  .match-row-date { padding-right: 8px; }
+  .match-seg-btn { padding: 4px 8px; font-size: 0.68rem; }
 }
 
 /* ── Half Scope ─────────────────────────────────────────────────────────── */
@@ -1158,10 +1253,15 @@
 
     <!-- ── Step 2: Battlefield ───────────────────────────────────────────── -->
     <div class="step-section" id="step-2">
+      <button class="bf-back-btn" onclick="goStep(1)">
+        <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+        Back
+      </button>
+
       <div class="bf-head">
         <div>
           <p class="section-title">Choose your battlefield</p>
-          <p class="section-sub">Pick the match you want to survive.</p>
+          <p class="section-sub">Pick the match and half you want to survive.</p>
         </div>
         <span class="bf-mode-pill" id="bf-mode-pill">Battlefield</span>
       </div>
@@ -1191,26 +1291,6 @@
 
       <div class="match-list" id="match-list">
         <div class="match-empty">Loading matches…</div>
-      </div>
-
-      <!-- Segment picker: shown after a match is selected, before entering lobby -->
-      <div id="segment-picker" style="display:none; margin-top:16px; padding:16px; background:rgba(255,255,255,0.04); border-radius:12px; border:1px solid rgba(255,255,255,0.08);">
-        <p style="font-size:0.85rem; color:var(--grey); margin:0 0 12px 0; font-weight:600; text-transform:uppercase; letter-spacing:0.06em;">Choose segment</p>
-        <div style="display:flex; gap:10px;">
-          <button class="btn" id="btn-seg-first" onclick="confirmSegment('first_half')"
-            style="flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);">
-            First Half
-          </button>
-          <button class="btn" id="btn-seg-second" onclick="confirmSegment('second_half')"
-            style="flex:1; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);">
-            Second Half
-          </button>
-        </div>
-        <p id="segment-hint" style="font-size:0.78rem; color:var(--grey); margin:10px 0 0 0;"></p>
-      </div>
-
-      <div class="action-row">
-        <button class="btn btn-ghost" onclick="goStep(1)">← Back</button>
       </div>
     </div>
 
@@ -1544,33 +1624,30 @@ async function loadMatches() {
   loadWaitingPlayerCounts();
 }
 
-// ── Player counts per match (real data) ──────────────────────────────────────
-// Two queries:
-//   1. waiting br_sessions for our visible match list
-//   2. count of players per session
-// Aggregated client-side into playerCountByMatch[match_id] = N.
-var playerCountByMatch = {};   // match_id (string) → total waiting players
+// ── Player counts per match+half (real data) ─────────────────────────────────
+// Keyed as "matchId_segment" (e.g. "12345_first_half").
+var playerCountByMatchHalf = {};
 async function loadWaitingPlayerCounts() {
   if (!allMatches.length) return;
   var ids = allMatches.map(function(m){ return String(m.fixture_id); });
   try {
-    // Step 1: waiting BR sessions for these matches
     var sessRes = await window.sb
       .from('br_sessions')
-      .select('id, match_id')
+      .select('id, match_id, segment_scope')
       .eq('status', 'waiting')
       .in('match_id', ids);
     if (!sessRes || !sessRes.data || sessRes.data.length === 0) {
-      playerCountByMatch = {};
+      playerCountByMatchHalf = {};
       renderMatches(applyCurrentFilters());
       return;
     }
     var sessions = sessRes.data;
     var sessIds  = sessions.map(function(s){ return s.id; });
-    var sessToMatch = {};
-    sessions.forEach(function(s){ sessToMatch[s.id] = String(s.match_id); });
+    var sessToKey = {};
+    sessions.forEach(function(s){
+      sessToKey[s.id] = String(s.match_id) + '_' + (s.segment_scope || 'first_half');
+    });
 
-    // Step 2: players in those sessions
     var playerRes = await window.sb
       .from('br_session_players')
       .select('session_id')
@@ -1578,13 +1655,13 @@ async function loadWaitingPlayerCounts() {
 
     var counts = {};
     (playerRes.data || []).forEach(function(p){
-      var mid = sessToMatch[p.session_id];
-      if (mid) counts[mid] = (counts[mid] || 0) + 1;
+      var key = sessToKey[p.session_id];
+      if (key) counts[key] = (counts[key] || 0) + 1;
     });
-    playerCountByMatch = counts;
+    playerCountByMatchHalf = counts;
   } catch (e) {
     console.warn('[br-lobby] player count load failed', e);
-    playerCountByMatch = {};
+    playerCountByMatchHalf = {};
   }
   renderMatches(applyCurrentFilters());
 }
@@ -1695,6 +1772,36 @@ function filterMatches() {
   renderMatches(applyCurrentFilters());
 }
 
+// ── Date / countdown helpers for compact match rows ───────────────────────────
+function formatMatchDate(iso) {
+  var d = new Date(iso);
+  var today = new Date(); today.setHours(0,0,0,0);
+  var matchDay = new Date(d); matchDay.setHours(0,0,0,0);
+  var diff = Math.round((matchDay - today) / 86400000);
+  if (diff === 0) return 'Today';
+  if (diff === 1) return 'Tomorrow';
+  return d.toLocaleDateString([], { day: 'numeric', month: 'short' });
+}
+
+function formatMatchTime(iso) {
+  var d = new Date(iso);
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+function formatCountdownShort(iso) {
+  var diff = (new Date(iso) - Date.now()) / 1000;
+  if (diff <= 0) return null;
+  var h = Math.floor(diff / 3600);
+  var m = Math.floor((diff % 3600) / 60);
+  if (h >= 24) { var days = Math.floor(h / 24); return 'in ' + days + 'd'; }
+  if (h > 0) return 'in ' + h + 'h ' + m + 'm';
+  if (m > 0) return 'in ' + m + 'm';
+  return 'Starting soon';
+}
+
+// Pending segment confirmation — {fixtureId, segment} or null
+var pendingConfirm = null;
+
 function renderMatches(matches) {
   var list = document.getElementById('match-list');
   if (!matches.length) {
@@ -1702,93 +1809,95 @@ function renderMatches(matches) {
     return;
   }
 
-  // Apply the active sort BEFORE rendering.
+  var LIVE_ST = ['1H','HT','2H','ET','BT','P'];
   var sorted = matches.slice();
   if (selectedSort === 'players') {
     sorted.sort(function(a, b) {
-      var pa = playerCountByMatch[String(a.fixture_id)] || 0;
-      var pb = playerCountByMatch[String(b.fixture_id)] || 0;
-      if (pb !== pa) return pb - pa;                                      // most-waited first
-      return new Date(a.kickoff_at) - new Date(b.kickoff_at);             // tie-break: kickoff
+      var pa = (playerCountByMatchHalf[String(a.fixture_id)+'_first_half']||0) + (playerCountByMatchHalf[String(a.fixture_id)+'_second_half']||0);
+      var pb = (playerCountByMatchHalf[String(b.fixture_id)+'_first_half']||0) + (playerCountByMatchHalf[String(b.fixture_id)+'_second_half']||0);
+      if (pb !== pa) return pb - pa;
+      return new Date(a.kickoff_at) - new Date(b.kickoff_at);
     });
   } else {
     sorted.sort(function(a, b) { return new Date(a.kickoff_at) - new Date(b.kickoff_at); });
   }
 
-  var isLive = function(s) { return ['1H','HT','2H','ET','BT','P'].includes(s); };
-  var isSoon = function(m) {
-    var diff = (new Date(m.kickoff_at) - Date.now()) / 60000;
-    return diff >= 0 && diff <= 60;
-  };
-
   list.innerHTML = sorted.map(function(m) {
-    var live        = isLive(m.status_short);
-    var soon        = !live && isSoon(m);
-    var statusClass = live ? 'live' : soon ? 'soon' : 'upcoming';
-    var timeStr     = live ? '' : formatKickoff(m.kickoff_at);
-    var liveBadge   = live ? '<span class="match-row-live-badge">LIVE</span>' : '';
-    var tooLate     = isMatchTooLate(m);
-    var rowCls      = 'match-row' + (tooLate ? ' too-late' : '');
-    var clickHandler = tooLate ? '' : ' onclick="selectMatch(' + m.fixture_id + ')"';
+    var fid      = m.fixture_id;
+    var live     = LIVE_ST.indexOf(m.status_short) !== -1;
+    var tooLate  = isMatchTooLate(m);
+    var rowCls   = 'match-row' + (tooLate ? ' too-late' : '');
 
-    var count       = playerCountByMatch[String(m.fixture_id)] || 0;
-    var playersBadge = count > 0
-      ? '<span class="match-players-badge"><span class="pulse-dot"></span>' + count + ' waiting</span>'
-      : '<span class="match-players-badge empty"><span class="pulse-dot"></span>0 waiting</span>';
+    // Date column
+    var dateLabel = formatMatchDate(m.kickoff_at);
+    var timeLabel = live
+      ? '<span class="match-row-live-badge">LIVE</span>'
+      : formatMatchTime(m.kickoff_at);
 
-    return '<div class="' + rowCls + '"' + clickHandler + '>' +
-      '<div class="match-row-status ' + statusClass + '"></div>' +
+    // Countdown text shown below league name
+    var countdownHtml = '';
+    if (!live) {
+      var cd = formatCountdownShort(m.kickoff_at);
+      if (cd) countdownHtml = ' · <span class="match-row-countdown">' + cd + '</span>';
+    }
+
+    // Segment buttons or confirm UI
+    var segHtml;
+    if (pendingConfirm && pendingConfirm.fixtureId == fid && !tooLate) {
+      var halfName = pendingConfirm.segment === 'first_half' ? '1st Half' : '2nd Half';
+      segHtml =
+        '<div class="match-seg-confirm">' +
+          '<span class="match-seg-confirm-label">Join ' + halfName + '?</span>' +
+          '<div class="match-seg-confirm-btns">' +
+            '<button class="match-seg-confirm-join" onclick="joinPendingSegment()">Join</button>' +
+            '<button class="match-seg-confirm-cancel" onclick="cancelPendingSegment()">✕</button>' +
+          '</div>' +
+        '</div>';
+    } else {
+      var c1h = playerCountByMatchHalf[String(fid)+'_first_half'] || 0;
+      var c2h = playerCountByMatchHalf[String(fid)+'_second_half'] || 0;
+      var dis1 = tooLate || (live && m.status_short === '2H') ? ' disabled' : '';
+      var dis2 = tooLate || (live && m.status_short === '1H') ? ' disabled' : '';
+      var click1 = tooLate ? '' : 'onclick="selectSegment(' + fid + ',\'first_half\')"';
+      var click2 = tooLate ? '' : 'onclick="selectSegment(' + fid + ',\'second_half\')"';
+      segHtml =
+        '<div class="match-seg-btns">' +
+          '<button class="match-seg-btn"' + dis1 + ' ' + click1 + '>1H <span class="seg-count">· ' + c1h + '</span></button>' +
+          '<button class="match-seg-btn"' + dis2 + ' ' + click2 + '>2H <span class="seg-count">· ' + c2h + '</span></button>' +
+        '</div>';
+    }
+
+    return '<div class="' + rowCls + '">' +
+      '<div class="match-row-date"><span class="date-label">' + dateLabel + '</span><span class="time-label">' + timeLabel + '</span></div>' +
       '<div class="match-row-teams">' +
         '<div class="match-row-name">' + esc(m.home_team_name) + ' vs ' + esc(m.away_team_name) + '</div>' +
-        '<div class="match-row-comp">' + esc(m.league_display || '') + '</div>' +
+        '<div class="match-row-sub"><span class="match-row-comp">' + esc(m.league_display || '') + '</span>' + countdownHtml + '</div>' +
       '</div>' +
-      playersBadge +
-      '<div class="match-row-time">' + (live ? liveBadge : timeStr) + '</div>' +
+      segHtml +
     '</div>';
   }).join('');
 }
 
-// Match click → show segment picker. User picks First Half or Second Half before entering lobby.
-function selectMatch(fixtureId) {
+// Segment button click → show inline confirmation for that match+half
+function selectSegment(fixtureId, segment) {
   var m = allMatches.find(function(x) { return x.fixture_id == fixtureId; });
-  if (!m) return;
-  if (isMatchTooLate(m)) {
-    showToast('That match is too late to join — too little time left for a survival round.', true);
-    return;
-  }
+  if (!m || isMatchTooLate(m)) return;
   selectedMatch = m;
-  selectedHalf  = null;
-
-  // Highlight selected row
-  document.querySelectorAll('.match-row').forEach(function(r) {
-    r.classList.toggle('selected', r.dataset.fixtureId == fixtureId);
-  });
-
-  // Show segment picker and hint
-  var picker = document.getElementById('segment-picker');
-  var hint   = document.getElementById('segment-hint');
-  if (picker) picker.style.display = 'block';
-
-  var isLive = m.status && ['1H', 'HT', '2H', 'ET'].includes(m.status);
-  if (hint) {
-    hint.textContent = isLive
-      ? 'Match is live — only the active segment can be joined.'
-      : 'Pick which half of the match your session covers.';
-  }
-
-  // For live matches, pre-disable the unavailable segment
-  var btnFirst  = document.getElementById('btn-seg-first');
-  var btnSecond = document.getElementById('btn-seg-second');
-  if (btnFirst && btnSecond) {
-    btnFirst.disabled  = isLive && m.status === '2H';
-    btnSecond.disabled = isLive && m.status === '1H';
-  }
-
-  picker.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  selectedHalf  = segment;
+  pendingConfirm = { fixtureId: fixtureId, segment: segment };
+  renderMatches(applyCurrentFilters());
 }
 
-function confirmSegment(segment) {
-  selectedHalf = segment;
+function cancelPendingSegment() {
+  pendingConfirm = null;
+  selectedMatch  = null;
+  selectedHalf   = 'first_half';
+  renderMatches(applyCurrentFilters());
+}
+
+function joinPendingSegment() {
+  if (!pendingConfirm) return;
+  pendingConfirm = null;
   enterLobby();
 }
 
@@ -1822,7 +1931,11 @@ async function instantDropIn() {
     // are not too late to join.
     var candidates = allMatches
       .filter(function(m) { return !isMatchTooLate(m); })
-      .map(function(m) { return { m: m, count: playerCountByMatch[String(m.fixture_id)] || 0 }; })
+      .map(function(m) {
+        var fid = String(m.fixture_id);
+        var count = (playerCountByMatchHalf[fid+'_first_half']||0) + (playerCountByMatchHalf[fid+'_second_half']||0);
+        return { m: m, count: count };
+      })
       .sort(function(a, b) {
         if (b.count !== a.count) return b.count - a.count;             // busiest first
         return new Date(a.m.kickoff_at) - new Date(b.m.kickoff_at);    // tie-break: soonest
@@ -2169,11 +2282,11 @@ async function leaveLobby() {
     r.classList.remove('selected');
   });
 
-  // Hide segment picker and reset match selection so the list is fresh
-  var picker = document.getElementById('segment-picker');
-  if (picker) picker.style.display = 'none';
-  selectedMatch = null;
-  selectedHalf  = 'first_half';
+  // Reset match selection and pending confirmation
+  pendingConfirm = null;
+  selectedMatch  = null;
+  selectedHalf   = 'first_half';
+  renderMatches(applyCurrentFilters());
 }
 
 // Clean up player row when the user navigates away or closes the tab.
