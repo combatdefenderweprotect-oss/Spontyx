@@ -1861,14 +1861,14 @@ async function enterLobby() {
     if (!sessionId) throw new Error('Could not create session');
     currentSessionId = sessionId;
 
-    // 3. Join session as a player
-    var { error: joinErr } = await window.sb.from('br_session_players').insert({
-      session_id: sessionId,
-      user_id: currentUserId,
+    // 3. Join session as a player (via SECURITY DEFINER RPC — bypasses RLS,
+    //    atomic status check + insert, handles duplicate join gracefully)
+    var { data: joinResult, error: joinErr } = await window.sb.rpc('join_br_session', {
+      p_session_id: sessionId,
     });
-    // Ignore duplicate join (23505 = unique_violation — already in session)
-    if (joinErr && joinErr.code !== '23505') {
-      throw new Error(joinErr.message);
+    if (joinErr) throw new Error(joinErr.message);
+    if (joinResult && !joinResult.ok && joinResult.reason !== 'session_not_waiting') {
+      throw new Error('Could not join session: ' + (joinResult.reason || 'unknown'));
     }
 
     showWaitingRoom(sessionId);
