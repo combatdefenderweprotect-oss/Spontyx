@@ -6,7 +6,7 @@
 
 > **This section defines the authoritative naming and structure for all questions in Spontix. It must be respected in all code, pipelines, logs, database fields, and documentation without exception.**
 
-Spontix is a **Core Match Questions product**. There are exactly three question lanes. They must never be merged, combined, or treated as interchangeable.
+Spontix is a **Core Match Questions product**. There are four question lanes. The first three are AI-generated; the fourth is admin-created. They must never be merged, combined, or treated as interchangeable.
 
 ---
 
@@ -76,11 +76,43 @@ A **separate premium intelligence layer** — not a core match question. Based o
 
 ---
 
+---
+
+### Lane 4: CUSTOM
+
+Admin-created manual questions for a specific league. Resolved by the admin, not the automated resolver.
+
+**Created by:** league owner via the `custom-questions` Edge Function (`action: create`)
+
+**Examples:**
+- Will Salah score tonight? (admin's own call)
+- Which club wins the transfer battle?
+- Trivia: How many UCL titles does Real Madrid have?
+
+**Rules:**
+- `source = 'custom'`, `question_type = 'CUSTOM'`, `event_type = 'custom'`
+- Single-choice or multi-choice (strict exact match scoring — no partial credit)
+- 2–8 options; admin sets correct answers at resolve time
+- Scoring preset chosen at creation: safe (+10/0), balanced (+15/-5), risk (+25/-10), high_risk (+40/-25). No multipliers.
+- Deadline 15–300 s from creation; admin may NOT resolve before deadline passes
+- Tier-gated creation: starter 2/day 3/match, pro 5/5, elite 10/8
+- Resolved via `action: resolve` — atomic claim guard prevents double-scoring
+- Voided via `action: void` — zeroes all earned points
+- `resolves_after` set to far future (1 year); the automated resolver skips custom questions (it filters `WHERE resolution_predicate IS NOT NULL`)
+- Other players' answers hidden by RLS until resolution (`pa_select_member` policy)
+- `answered` audit events hidden from other members until resolution (`cqe_select_member` policy)
+- Browser client cannot UPDATE custom question rows (RLS `q_update_admin` restricted to `source = 'system'`)
+
+**Feed display:** rendered by `detectLane()` returning `'CUSTOM'` (checked before AI lanes). Orange "Custom" badge. Admin sees resolve/void panel after deadline.
+
+---
+
 ### Feed display priority
 
 1. **CORE_MATCH_LIVE** — always first
 2. **CORE_MATCH_PREMATCH** — second
 3. **REAL_WORLD** — only if enabled; never crowds out lanes 1 or 2
+4. **CUSTOM** — interleaved with the above; no fixed slot priority (rendered whenever active)
 
 ### Priority enforcement (UI + generation)
 
@@ -106,13 +138,14 @@ This ensures that the core match experience remains dominant.
 
 ### `question_type` naming standard (MANDATORY)
 
-The `question_type` column in the database and all code uses exactly these three values:
+The `question_type` column in the database and all code uses exactly these four values:
 
 | Value | Meaning |
 |---|---|
 | `CORE_MATCH_PREMATCH` | Pre-match question tied to a specific match |
 | `CORE_MATCH_LIVE` | Live in-match question with a time window |
 | `REAL_WORLD` | Premium real-world intelligence question |
+| `CUSTOM` | Admin-created manual question (migration 064) |
 
 **Do NOT use** as `question_type` values: `"ai_generated"`, `"premium_question"`, `"smart_question"`, `"event_driven"`, `"time_driven"`, `"prematch"`, `"live"`. These are internal generation trigger descriptors — not lane identifiers.
 
@@ -123,17 +156,20 @@ The `question_type` defines the PRODUCT LANE:
 - CORE_MATCH_PREMATCH
 - CORE_MATCH_LIVE
 - REAL_WORLD
+- CUSTOM
 
-The `source` field defines the ORIGIN of the question:
+The `source` field (migration 064, `TEXT NOT NULL DEFAULT 'system'`) defines the ORIGIN of the question:
 
-- ai_generated
-- pool_reuse
-- manual
-- (future sources possible)
+| Value | Meaning |
+|---|---|
+| `system` | AI-generated, pool reuse, or fallback template (default for all pre-064 rows) |
+| `custom` | Admin-created via the custom-questions Edge Function |
 
 IMPORTANT:
 - `question_type` controls logic, UI, priority, and gameplay behavior
-- `source` is ONLY metadata about how the question was created
+- `source` is ONLY metadata about how the question was created — except for two security-critical uses:
+  1. `pa_select_member` RLS — hides other players' answers on `source='custom'` questions until resolved
+  2. `q_update_admin` RLS — restricts browser-client UPDATEs to `source IS NULL OR source='system'`
 
 These must NEVER be confused or used interchangeably.
 
@@ -186,7 +222,7 @@ Four columns on `leagues` control which lanes run for a given league:
 | `question_style` | `TEXT CHECK IN ('prematch','live','hybrid')` | `'hybrid'` | `'prematch'` → CORE_MATCH_LIVE skipped; `'live'` → CORE_MATCH_PREMATCH skipped + REAL_WORLD blocked; `'hybrid'` → both lanes run |
 | `real_world_enabled` | `BOOLEAN NOT NULL` | `true` | `false` → REAL_WORLD pass skipped entirely for this league |
 | `real_world_questions_per_week` | `INTEGER` (1–3) | `2` | User-chosen intensity cap: 1=Low, 2=Medium, 3=High. Enforced by `checkRealWorldQuota()` before the platform hard cap of 3/week |
-| `custom_questions_enabled` | `BOOLEAN NOT NULL` | `false` | Reserved for admin-created Custom Questions. Generator does not act on this flag yet — no generation logic until the Custom Questions UI ships |
+| `custom_questions_enabled` | `BOOLEAN NOT NULL` | `false` | Admin-created Custom Questions. Controls UI gate (FAB visibility) — generator never produces CUSTOM questions; they are created exclusively via the `custom-questions` Edge Function |
 
 **Derivation rule** (`question_style` from the Create League UI):
 - Pre-match + Live both selected → `'hybrid'`
@@ -236,6 +272,7 @@ For full quality filter analytics and monitoring queries, see [docs/PREMATCH_QUA
 | `CORE_MATCH_LIVE` | ✅ Primary focus | Max 3 active total, goals/cards, budget `live_questions_per_match` (1–10, default 6), slot-paced (floor(N/2) pre-HT, ceil(N/2) post-HT), 3-min rate limit (time-driven), event-driven bypasses slot + rate limit |
 | `CORE_MATCH_PREMATCH` | ✅ Supported | Generated pre-kickoff, resolved post-match |
 | `REAL_WORLD` | ⚠️ Limited | Max 1 per league per day, skip if signal weak, tier-gated |
+| `CUSTOM` | ✅ Live (2026-05-06) | Admin-created; tier-gated creation limits; atomic claim resolve; no automated resolver; scoring presets only; negative points included in leaderboard |
 
 ### Critical product rule
 

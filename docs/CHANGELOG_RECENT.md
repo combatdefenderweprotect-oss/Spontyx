@@ -12,6 +12,40 @@ For canonical specs, see the domain docs in this folder. This file is history on
 
 ## Recent updates (top-of-CLAUDE.md history)
 
+### 2026-05-06 — Custom Questions: full feature + security hardening (migrations 064–066)
+
+Admin-created manual questions for leagues. Full cycle: create → players answer → admin resolves with correct answers → scores applied → leaderboard updates.
+
+**Schema (migration 064):**
+- 10 new columns on `questions`: `source` (`system`|`custom`), `custom_question_type` (`single`|`multi`), `custom_options` JSONB, `custom_correct_answers` JSONB, `custom_points_correct`, `custom_points_wrong`, `created_by_user_id`, `resolved_by_user_id`, `resolved_at`, `custom_resolution_status` (`pending`|`resolved`|`voided`)
+- `question_type` CHECK extended to include `'CUSTOM'`; `event_type` CHECK extended to include `'custom'`
+- `selected_options JSONB` added to `player_answers` (stores player's chosen option labels)
+- `custom_question_events` audit table: append-only log for created/published/answered/resolved/voided events
+
+**RLS (migration 065):** `pa_select_member` replaced — other players' answers on unresolved custom questions are hidden until admin resolves.
+
+**Security hardening (migration 066):**
+- `q_update_admin` restricted to `source IS NULL OR source = 'system'` — browser client can no longer UPDATE custom question rows directly
+- `cqe_select_member` updated — `answered` events only visible to their creator or after resolution (prevents answer-snooping)
+
+**Edge Function (`custom-questions`):** four actions:
+- `create` — admin only; validates tier limits (starter: 2/day 3/match, pro: 5/5, elite: 10/8); 2–8 options; 4 scoring presets (safe +10/0, balanced +15/-5, risk +25/-10, high_risk +40/-25); 15–300s deadline; comma-in-label guard
+- `submit_answer` — member only; deadline enforced; option validation; DB unique constraint catches race; audit payload is `{ answered: true }` (no answer exposure)
+- `resolve` — admin only; **atomic claim**: question marked `resolved` with `.eq('custom_resolution_status','pending')` before scoring loop — duplicate resolves get 409; strict sorted-array exact match scoring; null `answer_closes_at` returns 500
+- `void` — admin only; zeroes all earned points if previously resolved
+
+**Frontend (league.html):**
+- Admin FAB (orange +) → create modal with type/options/scoring preset/deadline
+- Custom question card: timer countdown, single-choice buttons, multi-choice checkboxes, locked state after answer, admin resolve/void panel post-deadline
+- `detectLane()` returns `'CUSTOM'` for `source='custom'` questions (checked first, before AI lanes)
+- Realtime: custom questions arrive via existing questions channel subscription
+
+**Leaderboard fix (same deploy):** `loadLeaderboard`, `computeLeaderGap`, `loadSoloScore` changed from `.eq('is_correct', true)` to `.not('is_correct', 'is', null)` — negative points from risk/high_risk presets now correctly reduce standings.
+
+**Deployment:** migrations 064→065→066 applied 2026-05-06; Edge Function deployed with `--no-verify-jwt`; pushed to spontyx.com.
+
+---
+
 ### 2026-05-06 — evaluate-season-leagues: Season Long completion evaluator Phase 2b
 
 New Edge Function `evaluate-season-leagues`. Competition-based (`creation_path = 'competition'`) Season Long leagues only. Path A (team-based) explicitly skipped.
