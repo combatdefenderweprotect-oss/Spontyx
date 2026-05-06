@@ -12,6 +12,79 @@ For canonical specs, see the domain docs in this folder. This file is history on
 
 ## Recent updates (top-of-CLAUDE.md history)
 
+### 2026-05-06 — BR lobby: esports card redesign + join/leave SECURITY DEFINER RPCs (migration 075)
+
+**Migration 075** (`backend/migrations/075_join_br_session_rpc.sql`):
+
+- `join_br_session(p_session_id UUID) RETURNS JSONB` — SECURITY DEFINER. Replaces the client-side INSERT into `br_session_players` that was blocked by RLS WITH CHECK. Atomically checks `status = 'waiting'` then inserts; `ON CONFLICT DO NOTHING` for idempotency. Returns `{ok: true}` on success; `{ok: false, reason: 'session_not_waiting'|'session_not_found'|'not_authenticated'}` on failure. `GRANT EXECUTE TO authenticated`.
+- `leave_br_session(p_session_id UUID) RETURNS VOID` — SECURITY DEFINER. Deletes caller's row from `br_session_players` where `session_id` + `user_id` match. No-op if not present — safe to call on page unload via `fetch keepalive`. `GRANT EXECUTE TO authenticated`.
+
+Both RPCs bypass the RLS policies that blocked direct client writes while keeping server-side safety guarantees.
+
+**`br-lobby.html` — esports card redesign:**
+
+Full redesign of the Step 2 match list from compact grid rows to large esports-style interactive cards.
+
+- **Card structure:** each match renders as a `.bf-card` — dark navy background, subtle border, `border-radius: 14px`, `overflow: hidden`. Click to expand; expanded card gets lime glow border.
+- **Player count as primary driver:** `🔥 N Players Waiting` (lime, bold, with pulse dot) is the dominant visual element. "Be the first to enter" shown when no players.
+- **Expand → half select → JOIN flow:**
+  - Click card → card expands with `bf-card-expand` section (CSS class toggle, not re-render)
+  - Two half buttons (`1st Half` / `2nd Half`) with per-half player counts; disabled when match status makes that half unavailable (H1 disabled during 2H, vice-versa)
+  - `JOIN BATTLE ⚔` button appears only after a half is selected (`bf-join-btn.show`)
+- **State variables:** `expandedCardId` (which card is open), `selectedHalf`, `selectedMatch` — all reset on leave/back
+- **Game-style back button** (`.bf-back-btn`) — icon + "BACK" text, not a browser default
+- **Too-late guard:** matches in terminal/late status get `.too-late` class (opacity 0.38, cursor not-allowed, "Match ended" badge)
+- **`pagehide` cleanup:** `leave_br_session` called via `fetch keepalive` on navigation/unload — prevents ghost player rows
+
+**Bug fixes:**
+- **flex-shrink collapse:** `.bf-card` elements inside `.match-list { display: flex; flex-direction: column; gap: 8px; max-height: 540px }` were being compressed to ~0px height when 100+ matches loaded — the cumulative `gap` alone exceeded `max-height`, causing the flex algorithm to proportionally shrink all items. Fixed with `flex-shrink: 0` on `.bf-card`.
+- **display: block on clickable zone:** `.bf-card-clickable` changed from `display: flex; flex-direction: column; gap: 10px` to `display: block` with `margin-bottom` on child rows, mirroring the working `.pv-mode` card pattern.
+
+---
+
+### 2026-05-06 — Battle Royale v2: segment-based survival, live pipeline questions, pairwise ELO
+
+Full redesign and deployment of the BR backend. Replaced pool-based, question-count-terminated sessions with a segment-based survival model driven by live match status.
+
+**Schema changes (migrations 069–074):**
+- `br_sessions.half_scope` → `segment_scope`; `full_match` removed from CHECK; sport-generic segment list added (period/quarter/set for future sports)
+- `br_sessions.pool_id` made nullable — pool tables dormant in v2
+- `br_sessions.rating_mode TEXT CHECK ('classic'|'ranked')` added — separate from `mode` (gameplay format)
+- `br_sessions.segment_ends_at TIMESTAMPTZ` added — written at instantiation
+- `br_session_players`: `hp_at_elimination`, `eliminated_at_seq`, `avg_response_ms`, `correct_answer_count` added
+- `update_br_ratings` v2: pairwise ELO replacing placement-weighted formula; K=40/30/20 (<10/<30/≥30 games); clamp ±18; floor 800; `rated_mode` gate; ≥4 player gate; `REVOKE EXECUTE FROM authenticated`
+- Migration 074: dropped stale `instantiate_br_session(uuid, bigint, integer)` v1 overload
+
+**RPCs v2 (migration 072):**
+- `instantiate_br_session(p_session_id)` — pool-free; computes `segment_ends_at`; no `p_pool_id` or `p_total_questions`
+- `advance_br_session_round` — removes `v_is_last_question` question-count termination; writes `correct_answer_count`/`hp_at_elimination`/`eliminated_at_seq`/`avg_response_ms`; session terminates only on ≤1 survivor
+- `finalize_br_session` — idempotency guard on `completed/cancelled`; segment-end is now the external termination path via `runBrLifecycle()`
+
+**Generator changes (`generate-questions/index.ts`):**
+- BR pass reads `segment_scope` and `kickoff_at` from session
+- HT skip only when `segment_scope = 'first_half'`
+- Late-minute cutoffs: 43 (H1) / 87 (H2)
+- **Predicate allowlist:** rejects any predicate that is not `match_stat_window` with `field IN ('goals', 'cards')`
+- **Segment window validation:** H1 `window_end ≤ 45`; H2 `window_start ≥ 46 AND window_end ≤ 90`
+- Clutch threshold: 35' (H1) / 80' (H2) — was hardcoded to 80' assuming `full_match`
+- `session_scope` in `clutch_context` metadata uses actual `segment_scope`
+
+**Resolver changes (`resolve-questions/index.ts`):**
+- `runBrLifecycle(sb)` added — fetches waiting/active sessions, reads `live_match_stats`
+- Lock phase: calls `instantiate_br_session` when `first_half + 1H` or `second_half + 2H`
+- Segment-end phase: calls `finalize_br_session` on terminal/segment-end match statuses
+- `SEGMENT_END_STATUSES` map: `first_half → [HT, 2H, FT, AET, PEN, FT_PEN, ABD]`; `second_half → [FT, AET, PEN, FT_PEN, ABD]`
+
+**Frontend (`br-lobby.html`, `br-session.html`):**
+- Lobby: segment picker UI; `getOrCreatePool()` / `getPoolId()` removed; session creation uses `segment_scope` + `rating_mode`, no `pool_id`
+- Session: SELECT uses `segment_scope, rating_mode` (not `half_scope, total_questions`); round pill shows `Round N` (no fixed total); mode label uses `segment_scope`
+
+**Both Edge Functions redeployed. All 5 RPCs verified via `pg_proc`. Constraints confirmed in DB.**
+
+Canonical spec: [docs/BR_SESSION_SYSTEM.md](BR_SESSION_SYSTEM.md).
+
+---
+
 ### 2026-05-06 — Arena multiplayer.html UI overhaul: schedule, filters, phase sections
 
 Full rebuild of `multiplayer.html` Arena entry experience. The old 1v1/2v2 format-card lobby is replaced by a live schedule browser with per-phase join controls.

@@ -1,374 +1,283 @@
-# Battle Royale Session System — Implementation Plan
+# Battle Royale Session System
 
-Last updated: 2026-05-01 — Phase 1 migrations 040–047 written. Cron migration 048 written. `spontix-store.js` updated. Edge Function changes + deployment pending.
+Last updated: 2026-05-06 — v2 fully deployed. Segment-based survival, live pipeline questions, pairwise ELO. Migrations 040–075 applied. Edge Functions redeployed. Esports card lobby live.
 
 ---
 
-## Battle Royale — Final Product Definition
-
-**This is the canonical product model. The previous lobby model using 1v1 / FFA was incorrect and is replaced by this structure.** All UI work must align with this section. Backend already matches.
+## Product Definition
 
 **Survival model:**
 - One shared lobby per session, multiple players, sequential questions
 - Every player must answer every question
-- Wrong answer → HP loss
-- **No answer (timeout) → same damage as a wrong answer** — silence is not safe
+- Wrong answer or no answer (timeout) → HP loss — silence is not safe
 - HP = 0 → eliminated; placement assigned in elimination order
-- Session ends when one player remains OR the question budget is exhausted (then placement by HP)
+- Session ends when the match segment ends (HT for first_half, FT for second_half) via the resolver cron — not by question count
 
-**Modes — exactly two:**
-- **Classic** — casual survival, no rating impact
-- **Ranked** — identical gameplay, ELO applied via `update_br_ratings()`
+**Modes:**
+- `mode` column — gameplay format: `ffa`, `1v1`, `2v2` (ffa is the standard BR format)
+- `rating_mode` column — ELO gate: `classic` (no rating impact) or `ranked` (pairwise ELO applied at session end)
 
-There are no other modes. No 1v1. No duel. No FFA. No "format" selection. The DB column `br_sessions.mode` carries the Classic / Ranked value.
+These are independent. A player can play `ffa` classic or `ffa` ranked.
 
 **Player count:**
-- MVP can run with 4 players
-- System and UI must be designed for **8–12 players** as the target
-- No hardcoded player limits in the UI; the waiting room must scale from a handful to a full dozen
+- Minimum 4 players with placements for ELO to apply (enforced in `update_br_ratings`)
+- Target 8–12 players. No hardcoded upper limit in DB; `BR_MAX_PLAYERS = 12` enforced client-side only (Phase 4 will move this server-side)
 
-**UI/UX principles:**
-- Entering a dangerous environment, not configuring a match
-- Group survival, not a duel
-- Tension and elimination risk are the dominant emotions
-- "Last one standing" framing throughout
-- Arena UI patterns (format cards, duel framing, player-count pickers) are forbidden in BR pages
-
-**What BR is NOT:** not Arena, not a match format, not a configurable duel.
+**What BR is NOT:** not Arena, not a match format, not a configurable duel. Arena UI patterns (format cards, duel framing, player-count pickers) are forbidden in BR pages.
 
 ---
 
-## Lobby Sizing — Client UI vs Server Enforcement
+## Architecture — Deployed State
 
-**Current implementation (UI prototype):**
+### Session lifecycle
 
-The lobby sizing rules below are enforced **only in `br-lobby.html` JS constants**. The DB schema (`br_sessions`, `br_session_players`) has no `min_players` / `max_players` columns, and `instantiate_br_session()` does not gate on player count beyond requiring the session row to exist and be in `waiting` status.
+```
+waiting  →  active  →  completed
+                   ↘  cancelled
+```
 
-| Constant | Value | Purpose |
+- **waiting** — players join via `br-lobby.html`. Session has `segment_scope`, `rating_mode`, `match_id`.
+- **active** — `instantiate_br_session()` fires when the match segment starts (via `runBrLifecycle()` in resolver). Questions start flowing from `generate-questions`.
+- **completed** — `finalize_br_session()` fires when the segment ends. Placements written. ELO applied if ranked + ≥4 players.
+- **cancelled** — `finalize_br_session()` can cancel stuck sessions.
+
+### Question source (v2 — no pool)
+
+Questions are generated directly into the `questions` table by the `generate-questions` Edge Function BR pass. There is no pre-generated pool. `br_match_pools` and `br_match_pool_questions` tables are dormant (schema preserved, not used).
+
+- `question_type = 'BR_MATCH_LIVE'`
+- `br_session_id` FK on the `questions` row binds the question to the session
+- Generator runs every 6 hours (cron) + every 1 minute (br-resolve-every-minute triggers generation indirectly via resolver)
+- **Predicate allowlist (v1):** only `match_stat_window` with `field IN ('goals', 'cards')` — all other predicates are rejected at generation time
+- **Segment window validation:** first_half questions must have `window_end ≤ 45`; second_half questions must have `window_start ≥ 46 AND window_end ≤ 90` — no cross-boundary questions
+
+### Segment model
+
+`br_sessions.segment_scope` defines when the session runs:
+
+| Value | Segment | Ends when |
 |---|---|---|
-| `BR_MIN_PLAYERS` | 4 | Below this, "Start" is locked |
-| `BR_TARGET_PLAYERS` | 10 | Reaching target triggers a 15s auto-start countdown |
-| `BR_MAX_PLAYERS` | 12 | Hard cap; reaching this triggers immediate auto-start |
-| `BR_FILL_TIMEOUT_MS` | 60000 | Auto-fill timer once min is reached |
-| `BR_TARGET_COUNTDOWN_MS` | 15000 | Countdown when target reached |
+| `first_half` | H1 (0'–45') | Match status reaches `HT`, `2H`, `FT`, `AET`, `PEN`, `FT_PEN`, `ABD` |
+| `second_half` | H2 (45'–90') | Match status reaches `FT`, `AET`, `PEN`, `FT_PEN`, `ABD` |
+| `period_1/2/3` | Hockey periods | Future — adapter not yet active |
+| `quarter_1/2/3/4` | Basketball quarters | Future |
+| `set_1–5` | Tennis sets | Future |
 
-This is acceptable for the UI prototype. **It is not acceptable for production Ranked BR.**
+Football v1 uses `first_half` and `second_half` only.
 
-### ⚠️ TODO — Production server-side enforcement (Phase 4)
+### Late-join enforcement
 
-Before Ranked BR ships to production, the following must be enforced on the server:
-
-1. **Minimum players to start** — `instantiate_br_session()` must reject when the player count is below `BR_MIN_PLAYERS`. Currently it only checks `status = 'waiting'`.
-2. **Maximum lobby size** — joining a session (`INSERT INTO br_session_players`) must be rejected when the player count is at `BR_MAX_PLAYERS`. Currently this is only blocked client-side.
-3. **Start eligibility** — only the lobby host (or auto-fill timer expiry) should be able to invoke `instantiate_br_session()`. Currently any participant can call it.
-4. **Ranked validity gate** — `update_br_ratings()` must only apply ELO when the session was instantiated with `≥ BR_MIN_PLAYERS` participants. A Ranked session that started below the minimum must be treated as Classic for rating purposes (or rejected at instantiate time). The column `br_sessions.mode` carries `'classic' | 'ranked'`; the rating RPC must read this AND the player count, not just the mode.
-5. **Full lobby blocking** — `INSERT INTO br_session_players` RLS or a SECURITY DEFINER `join_br_session()` RPC should atomically count players and reject when full, closing the race window.
-
-**Why this matters:** without server-side gates, a determined client can bypass the JS constants and:
-- Start a Ranked session with 1 player and farm easy ELO
-- Join a "full" lobby, breaking pacing for everyone else
-- Trigger `instantiate_br_session()` early, robbing the lobby of fill time
-
-**Implementation approach (sketch, do not build yet):**
-- Migration `051_br_lobby_constraints.sql`:
-  - Add `min_players`, `max_players` columns to `br_sessions` (default 4 / 12)
-  - Replace direct `INSERT INTO br_session_players` with a SECURITY DEFINER `join_br_session(p_session_id)` RPC that counts players and rejects when full
-  - Update `instantiate_br_session()` to verify `COUNT(br_session_players) >= min_players`; reject otherwise
-  - Update `update_br_ratings()` to skip rating when session metadata indicates the start was below `min_players` (store the start count on session row at instantiate time, e.g. `br_sessions.starting_player_count`)
-
-This is **Phase 4** scope. Phase 1–3 (current) deliberately defers it to keep the prototype shippable.
+Hard DB-level via `enforce_br_late_join()` trigger on `br_session_players`. Rejects INSERT if `br_sessions.status != 'waiting'`. No application-level bypass possible.
 
 ---
 
-## Status
+## DB Schema — Key Columns
 
-| Phase | Description | Status |
+### `br_sessions`
+
+| Column | Type | Notes |
 |---|---|---|
-| Phase 0 | Security guardrails + architecture design | ✅ Complete |
-| Phase 1 | Foundation infrastructure (schema, RPCs, resolver, pool generation) | 🔄 In progress |
-| Phase 2 | Client gameplay page (`br-session.html`) | 🔲 Not started |
-| Phase 3 | BR ratings, leaderboard, profile integration | 🔲 Not started |
+| `id` | UUID PK | |
+| `match_id` | BIGINT | FK → api_football_fixtures |
+| `status` | TEXT | `waiting / active / completed / cancelled` |
+| `mode` | TEXT | `ffa / 1v1 / 2v2` — gameplay format |
+| `rating_mode` | TEXT | `classic / ranked` — ELO gate |
+| `segment_scope` | TEXT | `first_half / second_half / …` |
+| `segment_ends_at` | TIMESTAMPTZ | Written by `instantiate_br_session`; kickoff + segment end minute |
+| `pool_id` | BIGINT | Nullable — dormant in v2 |
+| `current_question_seq` | INT | Monotonically increasing; UI routes on this |
+| `last_processed_seq` | INT | Idempotency guard for `advance_br_session_round` |
+| `winner_user_id` | UUID | Written by `finalize_br_session` |
+| `started_at / completed_at` | TIMESTAMPTZ | |
+
+### `br_session_players`
+
+| Column | Type | Notes |
+|---|---|---|
+| `session_id / user_id` | UUID | Composite PK |
+| `hp` | INT | Start 100, cap 150, floor 0 |
+| `is_eliminated` | BOOLEAN | |
+| `eliminated_at` | TIMESTAMPTZ | |
+| `current_streak` | INT | Correct answer streak |
+| `placement` | INT | Final rank |
+| `hp_at_elimination` | INT | Exact HP at elimination (may be negative) |
+| `eliminated_at_seq` | INT | Which round they were eliminated |
+| `avg_response_ms` | INT | Average answer time — tie-breaker |
+| `correct_answer_count` | INT | Correct answers total — tie-breaker |
+| `br_rating_before / after / delta` | INT | ELO snapshot; written by `update_br_ratings` |
 
 ---
 
-## Architecture Decisions (locked)
+## RPCs (SECURITY DEFINER)
 
-These decisions are final. Do not re-open without a documented reason.
+### `instantiate_br_session(p_session_id UUID)`
 
-### Session model
-- Sessions are **question-count based**, not clock-based. Classic BR = 4 questions. Ranked BR = 5 questions.
-- One active question at a time. Flow: appear → answer → resolve → HP damage → elimination check → streak update → next question.
-- `current_question_seq` is the single source of truth for UI routing. The UI shows only the question matching this sequence number.
+- Called by `runBrLifecycle()` when match segment starts
+- Transitions `status = 'active'`, sets `current_question_seq = 1`, `last_processed_seq = 0`
+- Computes and writes `segment_ends_at` (kickoff + 45 or 90 minutes)
+- No `p_pool_id` or `p_total_questions` — v2 is pool-free
 
-### Question source
-- BR questions are generated from live match data, identical pipeline to `CORE_MATCH_LIVE`.
-- Question type: `BR_MATCH_LIVE` (new value in `questions.question_type` CHECK constraint).
-- Questions are stored in a shared `br_match_pool_questions` table per match. Multiple sessions share one pool; each session reads independently.
-- Pool expiry: `kickoff + 130 minutes` (covers full match including extra time).
+### `advance_br_session_round(p_session_id UUID, p_question_seq INTEGER, p_is_voided BOOLEAN DEFAULT false)`
 
-### Timing model
-- All questions receive all three timestamps at instantiation: `visible_from`, `answer_closes_at`, `resolves_after`. The invariant that all timestamps are always populated is maintained.
-- Timestamps are pre-computed via `minuteToTimestamp(kickoff, minute)`.
-- **No clamping of `visible_from` to now().** Stale questions (answer window already closed at instantiation time) are skipped by the activation guard in `advance_br_session_round()`. The instantiation guard ensures at least 2 valid questions exist before the session goes active.
+- **Idempotency guard:** `last_processed_seq >= p_question_seq` → immediate return (no-op)
+- If voided: advance `current_question_seq`, update `last_processed_seq`, skip HP
+- Otherwise: applies `V1_WRONG_DAMAGE = −15` for wrong/no answer; `br_correct_reward = 0` for correct
+- Marks HP ≤ 0 players as eliminated; writes `hp_at_elimination`, `eliminated_at_seq`
+- Applies streak bonuses to survivors: 2-correct → +5 HP; 3+ → +10 HP; clamped at 150
+- Writes `correct_answer_count` and `avg_response_ms` per player
+- If ≤1 survivor: calls `finalize_br_session()`
+- Otherwise: advances `current_question_seq`, updates `last_processed_seq`
 
-### `correct_answer` nullability
-- `questions.correct_answer` is nullable for BR questions. Drop the NOT NULL constraint (Option A).
-- Correctness is determined post-hoc via predicate evaluation. The resolver writes `is_correct` to `player_answers`. `correct_answer` on the questions row is never read for BR resolution.
-- Any UI displaying `correct_answer` must handle NULL. BR questions never appear in league or arena feeds, so this is unreachable from existing UI.
+### `finalize_br_session(p_session_id UUID)`
 
-### HP survival model
-- All players start at 100 HP. Cap: 150 HP. Floor: 0 HP (eliminated).
-- Standard wrong answer / no answer: −15 HP (configurable via `br_wrong_damage` on question row).
-- Standard correct answer: 0 HP reward (standard questions have `br_correct_reward = 0`).
-- Streak bonuses applied after damage and elimination, to surviving players only: 2 correct in a row → +5 HP; 3+ correct → +10 HP. Both clamped at 150.
-- No-answer is treated as wrong answer. HP damage is applied regardless of whether the player submitted.
+- **Idempotency guard:** `status IN ('completed', 'cancelled')` → return `already_finalized`
+- Ranks survivors: HP desc → correct_answer_count desc → avg_response_ms asc → current_streak desc
+- Writes `placement` to all `br_session_players` rows
+- Sets `winner_user_id`, `status = 'completed'`, `completed_at = now()` on session
+- Calls `update_br_ratings(p_session_id)` when `rating_mode = 'ranked'`
 
-### Risk/Bonus mechanics
-- Schema columns included in Phase 1: `br_question_type`, `br_wrong_damage`, `br_correct_reward`.
-- Phase 1 pool generation produces only `br_question_type = 'standard'` questions.
-- `advance_br_session_round()` already reads `br_wrong_damage` and applies it — standard weighted damage works immediately.
-- Risk/Bonus activation in a future phase requires only a pool generation configuration change. No RPC modification needed.
-- Bonus uniqueness: partial unique index `UNIQUE (pool_id) WHERE br_question_type = 'bonus'` — at most 1 bonus question per pool. Included in Phase 1 schema even though Bonus questions will not be generated yet.
+### `update_br_ratings(p_session_id UUID)`
 
-### Placement ranking priority
-1. Alive vs eliminated
-2. Remaining HP (higher is better)
-3. Correct answer count (higher is better)
-4. Average response time in ms (lower is better)
-5. `hp_at_elimination` captures the exact HP value at elimination (may be negative). Used for tie-breaking among eliminated players from the same round.
-
-### Eliminated players
-- All players eliminated in the same round receive the same provisional placement.
-- If all players are eliminated in the same round, `finalize_br_session()` is called immediately. Placements are assigned by elimination round + `hp_at_elimination`.
-- If the session runs all questions without full elimination, surviving players are ranked by HP → correct answers → avg response time.
-
-### Late join
-- Hard DB-level enforcement via Postgres trigger on `br_session_players`.
-- Trigger rejects INSERT if `br_sessions.status != 'waiting'` for the target session.
-- No application-level bypass possible.
-
-### Stuck session detection
-- Stuck condition (both must be true): `last_processed_seq < current_question_seq` AND current question's `resolves_after < now() - 10 minutes`.
-- Normal post-round state is `last_processed_seq = N`, `current_question_seq = N+1`. This does NOT satisfy the stuck condition.
-- Only sessions where the current round has not been processed despite being 10+ minutes overdue are terminated.
-- Stuck sessions are cancelled via `finalize_br_session()` with cancellation reason logged.
-
-### Cron schedule
-- A 1-minute BR-only cron (`resolve-questions?br_only=1`) is required. Without it, up to 60 minutes of dead time exists between rounds on the hourly cron.
-- The regular hourly resolver also processes BR questions (safety net). Double-processing is safe due to the `last_processed_seq` idempotency guard in `advance_br_session_round()`.
-
-### BR rating
-- Separate from `arena_rating`. Stored in `users.br_rating` (DEFAULT 500, floor 0).
-- Placement-weighted ELO: `actualScore = (lobbySize - placement) / (lobbySize - 1)`, `expectedScore = 1 / (1 + 10^((avgOpponentsRating - playerRating) / 400))`, `eloChange = K × (actualScore - expectedScore)`.
-- K-factor: 32 (< 10 games), 24 (10–29 games), 20 (≥ 30 games).
-- Delta clamped ±18. Rating floor 0.
-- Only Ranked BR sessions affect `br_rating`. Classic BR does not.
-- `update_br_ratings()` RPC is a Phase 3 deliverable.
-
-### Security status of existing `br-elo.js`
-- `br-elo.js` is CLIENT-TRUSTED. Placement is reported from the browser — any player can manipulate their JS state.
-- Acceptable uses: visual display only, prototype demos, development testing.
-- Never use for competitive prizes, rare trophies, paid rewards, or any integrity-sensitive ranked feature.
-- `br-elo.js` will remain in the codebase as the display layer. Do not remove it. Do not change its logic.
-- The new server-authoritative `br_rating` system (Phase 3) is the correct ranking mechanism.
+- Restricted to `service_role` only — `REVOKE EXECUTE FROM authenticated`
+- **Ranked gate:** returns `{skipped: true, reason: 'not_ranked'}` if `rating_mode != 'ranked'`
+- **Minimum players gate:** requires ≥4 players with placements; returns `{skipped: true, reason: 'insufficient_players'}` otherwise
+- **Idempotency guard:** `br_rating_before IS NOT NULL` on any row → returns `already_processed`
+- **Algorithm:** pairwise ELO — each player compared vs every other participant
+  - Expected: `1 / (1 + 10^((opp_rating - own_rating) / 400))`
+  - Actual: 1 (win), 0.5 (tie placement), 0 (loss)
+  - Delta pair: `K × (actual − expected)`
+  - Total delta: sum across all opponents, normalised by `(N−1)`
+  - Rounded, then clamped `±18`
+  - Rating floor: 800
+- **K-factor:** `< 10 games → 40`, `< 30 games → 30`, `≥ 30 games → 20`
+- Writes `br_rating_before/after/delta` on `br_session_players`
+- Updates `users.br_rating`, `br_games_played`, `br_rating_updated_at`
 
 ---
 
-## Phase 1 — Foundation Infrastructure
+## Resolver Integration — `runBrLifecycle()`
 
-**Scope:** Full foundational infrastructure. A BR session can be created, instantiated, run through all rounds via the resolver, and finalized with placement rankings. No client gameplay page in Phase 1. Phase 2 adds `br-session.html`. Phase 3 adds `update_br_ratings()` and leaderboard integration.
+Called by `resolve-questions` Edge Function when invoked with `?br_only=1` (1-minute cron job 9).
 
----
+**Lock phase** — fires `instantiate_br_session` when conditions are met:
+- `segment_scope = 'first_half'` AND match status = `'1H'` → instantiate
+- `segment_scope = 'second_half'` AND match status = `'2H'` → instantiate
 
-### Migrations
+**Segment-end phase** — fires `finalize_br_session` when:
+- `first_half` session AND match status in `['HT', '2H', 'FT', 'AET', 'PEN', 'FT_PEN', 'ABD']`
+- `second_half` session AND match status in `['FT', 'AET', 'PEN', 'FT_PEN', 'ABD']`
 
-Run in the Supabase SQL editor in order. Migration 046 is independent and can run at any point. Migration 047 must run after the resolver Edge Function is deployed.
-
-- [x] **Migration 040 — `br_match_pools`** ✅ Written
-  - File: `backend/migrations/040_br_match_pools.sql`
-
-- [x] **Migration 041 — `br_match_pool_questions`** ✅ Written
-  - File: `backend/migrations/041_br_match_pool_questions.sql`
-
-- [x] **Migration 042 — `br_sessions`** ✅ Written
-  - File: `backend/migrations/042_br_sessions.sql`
-
-- [x] **Migration 043 — `br_session_players`** ✅ Written — includes late-join trigger `enforce_br_late_join()`
-  - File: `backend/migrations/043_br_session_players.sql`
-
-- [x] **Migration 044 — `questions` table alterations** ✅ Written
-  - `correct_answer` made nullable. `br_session_id` FK added. Three-way exclusivity CHECK added.
-  - File: `backend/migrations/044_br_questions_alterations.sql`
-
-- [x] **Migration 045 — `player_answers` RLS PATH C** ✅ Written
-  - `br_session_id` column + index added to `player_answers`. `pa_insert_self` and `pa_select_member` extended.
-  - File: `backend/migrations/045_br_player_answers_rls.sql`
-
-- [x] **Migration 046 — `users` table additions** ✅ Written
-  - `br_rating` (DEFAULT 1000), `br_games_played`, `br_rating_updated_at` on `users`. Snapshot columns on `br_session_players`.
-  - ⚠️ NOTE: DEFAULT is 1000 (not 500 as listed in the constants table below — 1000 matches `arena_rating` start convention; floor is 0).
-  - File: `backend/migrations/046_br_users_columns.sql`
-
-- [x] **Migration 047 — BR RPCs** ✅ Written
-  - `instantiate_br_session()`, `advance_br_session_round()`, `finalize_br_session()` SECURITY DEFINER functions.
-  - ⚠️ NOTE: The original plan reserved 047 for the cron job. The RPCs file took this slot; cron moved to 048.
-  - File: `backend/migrations/047_br_rpcs.sql`
-
-- [x] **Migration 048 — 1-minute BR cron job** ✅ Written *(run after resolver deploy)*
-  - `cron.schedule('br-resolve-every-minute', '* * * * *', ...)` — hits `resolve-questions?br_only=1`.
-  - Replace `<<YOUR_CRON_SECRET>>` before running.
-  - File: `backend/migrations/048_br_cron.sql`
+The regular hourly resolver also processes BR questions as a safety net. Double-processing is safe due to `last_processed_seq` idempotency guard.
 
 ---
 
-### Postgres RPCs (SECURITY DEFINER)
+## Generator Integration
 
-Write these as part of the migrations or as standalone SQL. Run before Phase 1 smoke test.
+**BR pass** in `generate-questions/index.ts` (after REAL_WORLD pass):
 
-- [ ] **`instantiate_br_session(p_session_id, p_match_id, p_half_scope, p_mode)`**
-  - Reads matching pool (`status = 'ready'`, correct `half_scope`, not stale).
-  - Validates minimum 2 pool questions have valid future answer windows (`MIN_ANSWER_WINDOW_SECONDS = 60` remaining at call time).
-  - Fails with cancellation reason `insufficient_pool_questions` if fewer than 2 valid questions.
-  - For each valid pool question, inserts a row into `questions` with all three timestamps pre-computed, `br_session_id = p_session_id`, `question_type = 'BR_MATCH_LIVE'`, `resolution_status = 'pending'`, `correct_answer = NULL`.
-  - Sets `br_sessions.status = 'active'`, `current_question_seq = 1`, `last_processed_seq = 0`.
+1. Finds `active` BR sessions whose match has live stats
+2. Checks late-minute cutoff: skips when `matchMinute >= 43` (H1) or `>= 87` (H2)
+3. Skips sessions with `segment_scope = 'first_half'` when match is in HT or later
+4. Builds same `LiveContext` as `CORE_MATCH_LIVE`
+5. Generates question via OpenAI (same prompts)
+6. Applies predicate allowlist: rejects if not `match_stat_window` with `field IN ('goals', 'cards')`
+7. Applies segment window validation: H1 requires `window_end ≤ 45`; H2 requires `window_start ≥ 46 AND window_end ≤ 90`
+8. Clutch threshold: `matchMinute >= 35` (H1) or `>= 80` (H2)
+9. Writes directly to `questions` table with `br_session_id`, `question_type = 'BR_MATCH_LIVE'`
 
-- [ ] **`advance_br_session_round(p_session_id, p_question_seq, p_is_voided DEFAULT false)`**
-  - **Idempotency guard:** if `last_processed_seq >= p_question_seq`, return immediately (no-op).
-  - If `p_is_voided = true`: skip HP calculations, advance `current_question_seq` to next question, update `last_processed_seq`, return.
-  - Otherwise: read all `player_answers` for this question + session. For each non-eliminated player: apply `br_wrong_damage` (wrong or no answer) or `br_correct_reward` (correct); clamp HP at 150.
-  - Mark players with HP ≤ 0 as eliminated: set `is_eliminated = true`, `hp_at_elimination` (exact value, may be negative), `eliminated_at_seq`.
-  - Apply streak bonuses to surviving players after all damage: update `current_streak` per player; 2 in a row → +5 HP; 3+ → +10 HP; clamp at 150.
-  - If all players eliminated OR max sequence reached: call `finalize_br_session()`.
-  - Otherwise: advance `current_question_seq` to next unvoided question; update `last_processed_seq = p_question_seq`.
-
-- [ ] **`finalize_br_session(p_session_id)`** *(internal — called by `advance_br_session_round()`)*
-  - Assigns final placements: surviving players ranked by HP desc → correct answers desc → `avg_response_ms` asc. Eliminated players retain provisional placements from their elimination round; ties broken by `hp_at_elimination` desc.
-  - Writes `game_history` rows for all players (placement, correct answers, session type, source_session_id).
-  - Sets `br_sessions.status = 'completed'`, `completed_at = now()`.
+Log prefix: `[br-gen]`
 
 ---
 
-### Edge Function changes
+## HP Model
 
-- [ ] **`supabase/functions/resolve-questions/index.ts`**
-  - Add `br_only` URL param: when set to `'1'`, filter the questions SELECT to `br_session_id IS NOT NULL` only. The regular cron does not pass this param and processes all question types as before.
-  - Add `br_session_id`, `br_question_seq`, `br_question_type` to the questions SELECT.
-  - Add `question_text`, `resolution_condition` to SELECT (already present from REAL_WORLD addition — verify).
-  - After `markCorrectAnswers()`: if `q.br_session_id` is set, call `advance_br_session_round(q.br_session_id, q.br_question_seq)`.
-  - If `evaluatePredicate()` returns `unresolvable` past grace period for a BR question: call `advance_br_session_round(q.br_session_id, q.br_question_seq, p_is_voided = true)` instead of standard void.
-  - Add stuck session watchdog query at start of each run:
-    - Find sessions where `last_processed_seq < current_question_seq` AND current question's `resolves_after < now() - 10 minutes`.
-    - For each: log stuck session, call `finalize_br_session()` with cancellation status, increment a `stuck_sessions_terminated` counter in the run stats.
+| Event | HP change |
+|---|---|
+| Wrong answer | −15 |
+| No answer (timeout) | −15 (same as wrong) |
+| Correct answer | 0 (standard questions) |
+| Streak 2 correct | +5 (surviving players only, after damage) |
+| Streak 3+ correct | +10 (surviving players only, after damage) |
 
-- [ ] **`supabase/functions/generate-questions/lib/predicate-validator.ts`**
-  - Add `'BR_MATCH_LIVE'` to the `validTypes` array.
-  - In `checkLiveTiming()`: treat `BR_MATCH_LIVE` identically to `CORE_MATCH_LIVE` for timing validation.
-  - In `checkEntities()`: when `question_type = 'BR_MATCH_LIVE'` and predicate type is `player_stat`, apply the same exemption as `REAL_WORLD` player_stat (player may not be in the injury list).
-
-- [ ] **`supabase/functions/generate-questions/lib/types.ts`**
-  - Add `BrPoolQuestion` interface: all fields from `br_match_pool_questions`.
-  - Extend `GenerationMode` union to include `'br_pool'` for logging purposes.
-  - No new predicate interfaces needed — BR uses existing `match_stat_window`, `btts`, `match_stat`, etc.
-
-- [ ] **`supabase/functions/generate-questions/index.ts`**
-  - Add BR pool generation pass after the REAL_WORLD pass (before `finaliseRun()`).
-  - Pass logic: find active BR sessions (`status = 'active'`) whose associated match has live stats. For each session without a `pool_id`, or whose pool is stale: generate questions using the same live context builder and OpenAI calls as `CORE_MATCH_LIVE`. Write results to `br_match_pool_questions` (not `questions`). Mark pool `status = 'ready'`.
-  - Pool generation produces only `br_question_type = 'standard'` rows in Phase 1.
-  - Skip sessions whose match is not live or whose kickoff is past pool expiry (`kickoff + 130 minutes`).
-  - Log prefix: `[br-pool]`.
+HP start: 100. HP cap: 150. HP floor: 0 (eliminated).
 
 ---
 
-### `spontix-store.js` changes
+## Placement Ranking Priority
 
-- [ ] Add `br_rating`, `br_games_played`, `br_rating_updated_at` to `_mapUserFromDb()`.
+1. Alive vs eliminated (alive ranks higher)
+2. HP remaining (higher is better)
+3. `correct_answer_count` (higher is better)
+4. `avg_response_ms` (lower is better)
+5. `current_streak` (higher is better)
 
----
-
-### Deployment order
-
-- [ ] Run migrations 040–045 in Supabase SQL editor in order
-- [ ] Run migration 046 (`users` columns) — can be done in parallel with 040–045
-- [ ] Deploy updated `generate-questions` Edge Function (BR pool pass + validator addition)
-- [ ] **Smoke test:** confirm `br_match_pool_questions` rows are written for at least one active match
-- [ ] Deploy updated `resolve-questions` Edge Function (BR dispatch block + stuck session watchdog)
-- [ ] **Smoke test:** manually insert a `br_sessions` row, call `instantiate_br_session()`, confirm `questions` rows exist with all three timestamps and `correct_answer = NULL`
-- [ ] Run migration 047 (1-minute cron) — only after resolver deploy is verified
-- [ ] **End-to-end test:** a BR session runs through all rounds and reaches `status = 'completed'` with valid placements in `br_session_players`
+Eliminated players tie-break by `hp_at_elimination` desc then `eliminated_at_seq` asc.
 
 ---
 
-### Risk controls
+## Migrations Applied
 
-**Risk 1 — Questions CHECK constraint breaks existing rows**
-The three-way CHECK is additive. All existing rows satisfy it. Before running Migration 044: `SELECT COUNT(*) FROM questions WHERE league_id IS NULL AND arena_session_id IS NULL` — must return 0. Only then proceed.
-
-**Risk 2 — `correct_answer DROP NOT NULL` breaks existing callers**
-Before running Migration 044: grep all files for `correct_answer`. Audit each callsite. The resolver never reads `correct_answer` for resolution logic. League and arena feeds never show BR questions. If any callsite is ambiguous, add explicit `WHERE br_session_id IS NULL` filter before proceeding.
-
-**Risk 3 — Regular hourly resolver double-processes BR rounds**
-The hourly resolver will also process BR questions and call `advance_br_session_round()`. The idempotency guard (`last_processed_seq >= p_question_seq` → immediate return) makes the double-call a no-op. No data integrity risk.
-
-**Risk 4 — BR pool generation pass interferes with existing generation**
-The BR pool pass runs after all existing passes and writes exclusively to `br_match_pool_questions`. It does not write to `questions`, does not modify `generation_runs` or `generation_run_leagues`. Complete isolation.
-
-**Risk 5 — `BR_MATCH_LIVE` validator addition affects existing questions**
-`validTypes` gains one entry. No existing entry is modified. All existing `CORE_MATCH_LIVE` and `CORE_MATCH_PREMATCH` questions validate identically. The `BR_MATCH_LIVE` path is only reachable from the BR pool generation pass.
-
-**Risk 6 — PATH C RLS creates unintended `player_answers` permissions**
-PATH C applies only when `br_session_id IS NOT NULL`. It cannot overlap with PATH A (league) or PATH B (arena). After Migration 045: attempt an insert as an eliminated player — must be rejected at the DB level before deploying any application code.
-
-**Risk 7 — Stuck session watchdog terminates healthy sessions**
-Corrected condition requires `last_processed_seq < current_question_seq` AND `resolves_after < now() - 10 minutes`. A session in normal inter-round wait satisfies neither. A session within 10 minutes of resolver lag satisfies only the second. Only sessions stalled 10+ minutes past resolution are terminated.
-
-**Risk 8 — Migration 044 table-lock duration**
-Create the `br_session_id` index `CONCURRENTLY` before adding the FK constraint. Run during off-peak hours. At current data volumes on the free tier, each ALTER operation completes in under 5 seconds. Monitor the Supabase dashboard for lock wait times.
+| Migration | Description |
+|---|---|
+| 040 | `br_match_pools` table (dormant in v2) |
+| 041 | `br_match_pool_questions` table (dormant in v2) |
+| 042 | `br_sessions` table — base schema |
+| 043 | `br_session_players` + late-join trigger |
+| 044 | `questions` alterations: `correct_answer` nullable, `br_session_id` FK |
+| 045 | `player_answers` RLS PATH C for BR |
+| 046 | `users.br_rating`, `br_games_played`, `br_rating_updated_at`; snapshot columns on `br_session_players` |
+| 047 | BR RPCs v1 (superseded by 072) |
+| 048 | 1-minute BR cron (`br-resolve-every-minute`) |
+| 069 | `half_scope` → `segment_scope`; `pool_id` nullable; `rating_mode` added; `full_match` dropped from CHECK |
+| 070 | Pool tables: `half_scope` → `segment_scope` (schema consistency) |
+| 071 | `br_session_players`: `hp_at_elimination`, `eliminated_at_seq`, `avg_response_ms`, `correct_answer_count` |
+| 072 | RPCs v2: pool-free `instantiate_br_session`, segment-aware `advance_br_session_round`, updated `finalize_br_session` |
+| 073 | `update_br_ratings` v2: pairwise ELO, K=40/30/20, clamp ±18, floor 800, rated gate, min-player gate |
+| 074 | Dropped stale `instantiate_br_session(uuid, bigint, integer)` v1 overload |
+| 075 | `join_br_session(UUID)` + `leave_br_session(UUID)` SECURITY DEFINER RPCs — replace client-side inserts blocked by RLS |
 
 ---
 
-## Phase 2 — Client gameplay page (future)
+## Join / Leave RPCs (migration 075)
 
-To be planned after Phase 1 is verified end-to-end.
+Client calls `sb.rpc('join_br_session', { p_session_id })` — never inserts into `br_session_players` directly.
 
-Scope will include:
-- `br-session.html` — full gameplay page, Realtime subscriptions for `br_sessions`, `br_session_players`, `questions`, `player_answers`
-- HP bar display, elimination animations, streak indicator, comeback indicator
-- Question feed restricted to `current_question_seq`
-- `multiplayer.html` routing: lobby full → `createArenaSession()` already handles 1v1/2v2; BR will need a parallel `createBrSession()` call
+| RPC | Behaviour |
+|---|---|
+| `join_br_session(UUID)` | Checks `status = 'waiting'`, inserts caller into `br_session_players` (`ON CONFLICT DO NOTHING`). Returns `{ok, reason?}`. |
+| `leave_br_session(UUID)` | Deletes caller's row. No-op if not present. Called on `pagehide` via `fetch keepalive`. |
 
----
-
-## Phase 3 — BR ratings and leaderboard (future)
-
-To be planned after Phase 2 is verified.
-
-Scope will include:
-- `update_br_ratings(p_session_id)` SECURITY DEFINER RPC — placement-weighted ELO
-- `br_ratings_before/after/delta` snapshot columns on `br_session_players`
-- BR leaderboard tab in `leaderboard.html`
-- BR tier display on `profile.html` and `dashboard.html`
-- `br-leaderboard.html` history tab update to show server-authoritative results
+Both are SECURITY DEFINER — bypasses the RLS WITH CHECK that blocked direct client inserts.
 
 ---
 
-## Key constants (Phase 1 defaults)
+## Lobby Size Enforcement (Production TODO — Phase 4)
+
+Client-side constants only (`BR_MIN_PLAYERS=4`, `BR_MAX_PLAYERS=12`). Server-side enforcement deferred:
+
+- `instantiate_br_session` should reject when player count < min
+- `join_br_session` should gate on max players (currently no cap check)
+- `update_br_ratings` min-player check (already enforced at ≥4) is the safety net for now
+
+---
+
+## Key Constants
 
 | Constant | Value | Location |
 |---|---|---|
-| `MIN_SESSION_QUESTIONS` | 2 | `instantiate_br_session()` |
-| `MIN_ANSWER_WINDOW_SECONDS` | 60 | `instantiate_br_session()` |
-| `POOL_EXPIRY_MINUTES_AFTER_KICKOFF` | 130 | `br_match_pools.expires_at` |
-| Standard wrong damage | −15 | `br_match_pool_questions.br_wrong_damage` default |
-| Standard correct reward | 0 | `br_match_pool_questions.br_correct_reward` default |
+| Standard wrong damage | −15 | `advance_br_session_round` `V1_WRONG_DAMAGE` |
+| Standard correct reward | 0 | `br_correct_reward` column default |
 | HP start | 100 | `br_session_players.hp` default |
-| HP cap | 150 | `advance_br_session_round()` clamp |
-| Streak 2-correct bonus | +5 HP | `advance_br_session_round()` |
-| Streak 3+ bonus | +10 HP | `advance_br_session_round()` |
-| Stuck session grace | 10 minutes | Stuck session watchdog |
-| Classic BR questions | 4 | Session configuration |
-| Ranked BR questions | 5 | Session configuration |
-| BR rating floor | 500 | `users.br_rating` DEFAULT |
-| BR ELO clamp | ±18 | `update_br_ratings()` — Phase 3 |
-| BR K-factor (<10 games) | 32 | `update_br_ratings()` — Phase 3 |
-| BR K-factor (10–29 games) | 24 | `update_br_ratings()` — Phase 3 |
-| BR K-factor (≥30 games) | 20 | `update_br_ratings()` — Phase 3 |
+| HP cap | 150 | `advance_br_session_round` clamp |
+| Streak 2-correct bonus | +5 HP | `advance_br_session_round` |
+| Streak 3+ bonus | +10 HP | `advance_br_session_round` |
+| BR rating floor | 800 | `update_br_ratings` `RATING_FLOOR` |
+| ELO clamp | ±18 | `update_br_ratings` `DELTA_CLAMP_MAX` |
+| K-factor (<10 games) | 40 | `update_br_ratings` |
+| K-factor (<30 games) | 30 | `update_br_ratings` |
+| K-factor (≥30 games) | 20 | `update_br_ratings` |
+| Min players for ELO | 4 | `update_br_ratings` `MIN_PLAYERS_RANKED` |
+| H1 late-minute cutoff | 43 | `generate-questions` BR pass |
+| H2 late-minute cutoff | 87 | `generate-questions` BR pass |
+| H1 clutch threshold | 35' | `generate-questions` BR pass |
+| H2 clutch threshold | 80' | `generate-questions` BR pass |
