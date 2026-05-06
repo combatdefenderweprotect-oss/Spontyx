@@ -913,6 +913,8 @@
     .arena-mode-btn.active { border-color: rgba(168,225,12,0.45); background: rgba(168,225,12,0.07); color: var(--lime); }
     .mode-btn-sub { font-size: 0.65rem; font-weight: 500; color: rgba(255,255,255,0.25); }
     .arena-mode-btn.active .mode-btn-sub { color: rgba(168,225,12,0.6); }
+    .mode-btn-desc { font-size: 0.6rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.18); margin-top: 1px; }
+    .arena-mode-btn.active .mode-btn-desc { color: rgba(168,225,12,0.45); }
 
     /* ── Phase availability badges on match cards ─────────────────────────── */
     .phase-avail-badge {
@@ -1064,7 +1066,7 @@
           <!-- LEFT: match list -->
           <div class="mp-split-left">
             <div class="match-list-header">
-              <span class="match-list-header-label">Upcoming Matches</span>
+              <span class="match-list-header-label">Available Matches</span>
               <span class="match-list-count" id="match-count-label"></span>
             </div>
             <div id="match-list">
@@ -1224,55 +1226,127 @@
   }
 
   // ── MATCH LOADING ──────────────────────────────────────────────────────────
+  // Shows only: live matches (1H/2H from live_match_stats) + matches kicking off
+  // within the next 60 minutes. Hides FT/AET/PEN and everything else.
   async function loadMatches() {
     var list = document.getElementById('match-list');
     list.innerHTML = '<div class="match-list-loading">Loading matches…</div>';
 
-    var nowMinus3h  = new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString();
-    var twoDaysOut  = new Date(Date.now() + 2 * 86400 * 1000).toISOString();
+    // 1. Live matches — authoritative source
+    var { data: liveRows } = await window.sb
+      .from('live_match_stats')
+      .select('fixture_id, status, minute, home_team_name, away_team_name, kickoff_at')
+      .in('status', ['1H', '2H']);
 
-    var { data: fixtures, error } = await window.sb
+    // 2. Matches starting within next 60 minutes
+    var nowIso  = new Date().toISOString();
+    var plus60m = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    var { data: upcomingRows } = await window.sb
       .from('api_football_fixtures')
       .select('fixture_id, home_team_name, away_team_name, kickoff_at, status_short, league_id')
-      .gte('kickoff_at', nowMinus3h)
-      .lte('kickoff_at', twoDaysOut)
-      .order('kickoff_at', { ascending: true })
-      .limit(100);
+      .gte('kickoff_at', nowIso)
+      .lte('kickoff_at', plus60m)
+      .order('kickoff_at', { ascending: true });
 
-    if (error || !fixtures || !fixtures.length) {
-      list.innerHTML = '<div class="match-list-empty">' +
-        (error ? 'Could not load fixtures.' : 'No upcoming fixtures found.') + '</div>';
-      return;
+    // 3. Fetch league_id for live fixtures (not stored in live_match_stats)
+    var liveIds = (liveRows || []).map(function(r) { return r.fixture_id; });
+    var liveApiMap = {};
+    if (liveIds.length) {
+      var { data: liveApiRows } = await window.sb
+        .from('api_football_fixtures')
+        .select('fixture_id, league_id')
+        .in('fixture_id', liveIds);
+      (liveApiRows || []).forEach(function(r) { liveApiMap[r.fixture_id] = r; });
     }
 
-    var leagueIds = [...new Set(fixtures.map(function(f) { return f.league_id; }).filter(Boolean))];
-    var compById  = {};
-    if (leagueIds.length) {
+    // Populate liveStatsMap
+    liveStatsMap = {};
+    (liveRows || []).forEach(function(r) { liveStatsMap[String(r.fixture_id)] = r; });
+
+    // 4. Collect league_ids for competition lookup
+    var leagueIdSet = {};
+    (liveRows || []).forEach(function(r) {
+      var a = liveApiMap[r.fixture_id];
+      if (a && a.league_id) leagueIdSet[a.league_id] = true;
+    });
+    (upcomingRows || []).forEach(function(f) {
+      if (f.league_id) leagueIdSet[f.league_id] = true;
+    });
+    var allLeagueIds = Object.keys(leagueIdSet).map(Number).filter(Boolean);
+
+    var compById = {};
+    if (allLeagueIds.length) {
       var { data: comps } = await window.sb
         .from('sports_competitions')
         .select('api_league_id, name, sport')
-        .in('api_league_id', leagueIds);
-      if (comps) comps.forEach(function(c) {
+        .in('api_league_id', allLeagueIds);
+      (comps || []).forEach(function(c) {
         compById[c.api_league_id] = { name: c.name, sport: c.sport || 'football' };
       });
     }
 
-    allMatches = fixtures.map(function(f) {
-      var comp = compById[f.league_id] || { name: 'Football', sport: 'football' };
-      return {
-        matchId:    String(f.fixture_id),
-        home:       f.home_team_name || 'Home',
-        away:       f.away_team_name || 'Away',
-        kickoff:    f.kickoff_at ? new Date(f.kickoff_at) : null,
-        statusShort: f.status_short || 'NS',
-        compId:     f.league_id,
-        compName:   comp.name,
-        sport:      comp.sport,
+    // 5. Build match objects, deduplicated by fixture_id
+    var matchMap = {};
+
+    (liveRows || []).forEach(function(r) {
+      var api  = liveApiMap[r.fixture_id] || {};
+      var comp = compById[api.league_id]  || { name: 'Football', sport: 'football' };
+      matchMap[String(r.fixture_id)] = {
+        matchId:     String(r.fixture_id),
+        home:        r.home_team_name || 'Home',
+        away:        r.away_team_name || 'Away',
+        kickoff:     r.kickoff_at ? new Date(r.kickoff_at) : null,
+        statusShort: r.status,
+        compId:      api.league_id || null,
+        compName:    comp.name,
+        sport:       comp.sport,
       };
     });
 
-    // Build sport filter
-    var sports = [...new Set(allMatches.map(function(m) { return m.sport; }).filter(Boolean))].sort();
+    (upcomingRows || []).forEach(function(f) {
+      var key = String(f.fixture_id);
+      if (matchMap[key]) return; // already present as live
+      var comp = compById[f.league_id] || { name: 'Football', sport: 'football' };
+      matchMap[key] = {
+        matchId:     key,
+        home:        f.home_team_name || 'Home',
+        away:        f.away_team_name || 'Away',
+        kickoff:     f.kickoff_at ? new Date(f.kickoff_at) : null,
+        statusShort: f.status_short || 'NS',
+        compId:      f.league_id    || null,
+        compName:    comp.name,
+        sport:       comp.sport,
+      };
+    });
+
+    allMatches = Object.values(matchMap);
+
+    console.log('Arena fixtures:', allMatches);
+    console.log('Live stats:', liveStatsMap);
+
+    if (!allMatches.length) {
+      list.innerHTML =
+        '<div class="match-list-empty">' +
+        '<strong style="color:rgba(255,255,255,0.55)">No matches available right now.</strong><br><br>' +
+        'Arena requires:<br>' +
+        '• Live matches (1H / 2H)<br>' +
+        '• Or matches starting soon<br><br>' +
+        'Come back when matches are live.' +
+        '</div>';
+      return;
+    }
+
+    buildFilters();
+    sortAndRender();
+  }
+
+  function buildFilters() {
+    var sports = [];
+    var seenSports = {};
+    allMatches.forEach(function(m) {
+      if (m.sport && !seenSports[m.sport]) { seenSports[m.sport] = true; sports.push(m.sport); }
+    });
+    sports.sort();
     var sportSel = document.getElementById('sport-filter');
     sportSel.innerHTML = '<option value="all">All Sports</option>';
     sports.forEach(function(s) {
@@ -1281,7 +1355,7 @@
       sportSel.appendChild(opt);
     });
 
-    // Build competition filter
+    compMap = {};
     allMatches.forEach(function(m) {
       if (m.compId && !compMap[String(m.compId)]) compMap[String(m.compId)] = m.compName;
     });
@@ -1294,25 +1368,6 @@
       opt.value = cid; opt.textContent = compMap[cid];
       compSel.appendChild(opt);
     });
-
-    await loadLiveStats();
-    sortAndRender();
-  }
-
-  async function loadLiveStats() {
-    var liveIds = allMatches
-      .filter(function(m) { return isLiveStatus(m.statusShort); })
-      .map(function(m) { return parseInt(m.matchId, 10); })
-      .filter(Boolean);
-    if (!liveIds.length) { liveStatsMap = {}; return; }
-
-    var { data: rows } = await window.sb
-      .from('live_match_stats')
-      .select('fixture_id, status, minute')
-      .in('fixture_id', liveIds);
-
-    liveStatsMap = {};
-    (rows || []).forEach(function(r) { liveStatsMap[String(r.fixture_id)] = r; });
   }
 
   function isLiveStatus(s) {
@@ -1378,21 +1433,24 @@
 
   function sortAndRender() {
     allMatches.sort(function(a, b) {
-      if (sortMode === 'active') {
-        // "Most Active" = matches with an open phase window first
-        var aElig  = getPhaseEligibility(a.matchId);
-        var bElig  = getPhaseEligibility(b.matchId);
-        var aOpen  = (aElig.h1.ok || aElig.h2.ok) ? 1 : 0;
-        var bOpen  = (bElig.h1.ok || bElig.h2.ok) ? 1 : 0;
-        if (aOpen !== bOpen) return bOpen - aOpen;
-      }
       var aLive = isLiveStatus(a.statusShort);
       var bLive = isLiveStatus(b.statusShort);
+      if (sortMode === 'active') {
+        // Live first, then higher match minute first
+        if (aLive && !bLive) return -1;
+        if (!aLive && bLive) return 1;
+        if (aLive && bLive) {
+          var aMin = (liveStatsMap[a.matchId] || {}).minute || 0;
+          var bMin = (liveStatsMap[b.matchId] || {}).minute || 0;
+          return bMin - aMin;
+        }
+      }
+      // By time: live first, then kickoff ASC
       if (aLive && !bLive) return -1;
       if (!aLive && bLive) return 1;
-      var aDiff = a.kickoff ? Math.abs(a.kickoff.getTime() - Date.now()) : Infinity;
-      var bDiff = b.kickoff ? Math.abs(b.kickoff.getTime() - Date.now()) : Infinity;
-      return aDiff - bDiff;
+      var aKick = a.kickoff ? a.kickoff.getTime() : Infinity;
+      var bKick = b.kickoff ? b.kickoff.getTime() : Infinity;
+      return aKick - bKick;
     });
     applyFilters();
   }
@@ -1428,6 +1486,7 @@
       return true;
     });
 
+    console.log('Filtered matches:', visible);
     renderMatchList(visible);
     document.getElementById('match-count-label').textContent =
       visible.length + ' match' + (visible.length !== 1 ? 'es' : '');
@@ -1479,14 +1538,22 @@
         timeColHtml = '<div class="time-val">—</div>';
       }
 
-      // Phase availability badges (only shown when live)
+      // Phase status per half — shown for live matches
       var phaseBadgesHtml = '';
       if (isLive) {
-        var badges = [];
-        if (elig.h1.ok) badges.push('<span class="phase-avail-badge h1">H1 Open</span>');
-        if (elig.h2.ok) badges.push('<span class="phase-avail-badge h2">H2 Open</span>');
-        if (!elig.h1.ok && !elig.h2.ok) badges.push('<span class="phase-avail-badge closed">No window</span>');
-        phaseBadgesHtml = '<div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;">' + badges.join('') + '</div>';
+        var h1Label = elig.h1.ok ? 'Available'
+          : (elig.h1.reason && elig.h1.reason.indexOf('ended') !== -1 ? 'Closed' : 'Locked');
+        var h2Label = elig.h2.ok ? 'Available'
+          : (elig.h2.reason && (elig.h2.reason.indexOf('ended') !== -1 || elig.h2.reason.indexOf('Window closed') !== -1)) ? 'Closed'
+          : elig.h2.reason === 'Second half just started' ? "Locked · starts at 45'"
+          : 'Locked';
+        var h1Cls = elig.h1.ok ? 'phase-avail-badge h1' : 'phase-avail-badge closed';
+        var h2Cls = elig.h2.ok ? 'phase-avail-badge h2' : 'phase-avail-badge closed';
+        phaseBadgesHtml =
+          '<div style="margin-top:5px;display:flex;gap:4px;flex-wrap:wrap;">' +
+          '<span class="' + h1Cls + '">H1: ' + h1Label + '</span>' +
+          '<span class="' + h2Cls + '">H2: ' + h2Label + '</span>' +
+          '</div>';
       }
 
       html += '<div class="match-row' + (isSelected ? ' selected' : '') + (isLive ? ' live-row' : '') +
@@ -1577,17 +1644,21 @@
     var modeToggleHtml =
       '<div class="arena-mode-toggle">' +
         '<button class="arena-mode-btn' + (selectedArenaMode === 'ranked' ? ' active' : '') + '" onclick="selectArenaMode(\'ranked\')">' +
-          '<span>Ranked</span><span class="mode-btn-sub">Affects ELO</span>' +
+          '<span>Ranked</span>' +
+          '<span class="mode-btn-sub">Affects your Arena rating</span>' +
+          '<span class="mode-btn-desc">Competitive</span>' +
         '</button>' +
         '<button class="arena-mode-btn' + (selectedArenaMode === 'casual' ? ' active' : '') + '" onclick="selectArenaMode(\'casual\')">' +
-          '<span>Casual</span><span class="mode-btn-sub">No ELO</span>' +
+          '<span>Casual</span>' +
+          '<span class="mode-btn-sub">No rating impact</span>' +
+          '<span class="mode-btn-desc">Practice mode</span>' +
         '</button>' +
       '</div>';
 
     // Join button
     var canJoin   = selectedPhase !== null;
     var joinLabel = canJoin
-      ? 'Join ' + (selectedArenaMode === 'ranked' ? 'Ranked' : 'Casual') + ' · ' + selectedPhase
+      ? 'Join ' + selectedPhase + ' (' + (selectedArenaMode === 'ranked' ? 'Ranked' : 'Casual') + ')'
       : 'Select a phase above';
     var joinBtn =
       '<button class="enter-arena-btn" onclick="handleJoin()"' + (canJoin ? '' : ' disabled') + '>' +
