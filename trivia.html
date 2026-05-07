@@ -2305,21 +2305,6 @@ function showXPToast(prefix, xp) {
   setTimeout(() => toast.classList.remove('show'), 1200);
 }
 
-/* ═══ DUEL SIMULATION ═══ */
-let duelOppScore = 0;
-function simulateDuelOpponent(youGotWrong) {
-  // opponent gets it right ~60% of time
-  const oppCorrect = youGotWrong ? Math.random() > 0.3 : Math.random() > 0.5;
-  if (oppCorrect) duelOppScore++;
-  document.getElementById('duel-your-score').textContent = 'Score: ' + correctCount;
-  document.getElementById('duel-opp-score').textContent = 'Score: ' + duelOppScore;
-  document.getElementById('duel-opp-correct').textContent = duelOppScore;
-
-  const yours = document.getElementById('duel-your-score');
-  const theirs = document.getElementById('duel-opp-score');
-  yours.className = 'duel-player-score' + (correctCount >= duelOppScore ? ' leading' : '');
-  theirs.className = 'duel-player-score' + (duelOppScore > correctCount ? ' leading' : '');
-}
 
 /* ═══ PARTY SIMULATION ═══ */
 let partyScores = { mark: 0, sarah: 0, dave: 0 };
