@@ -597,9 +597,7 @@
           <button class="view-tab disabled" type="button" title="Coming soon" aria-disabled="true">
             Combined <span class="lb-soon">Soon</span>
           </button>
-          <button class="view-tab disabled trivia-tint" type="button" title="Coming soon" aria-disabled="true">
-            Trivia <span class="lb-soon">Soon</span>
-          </button>
+          <button class="view-tab trivia-tint" onclick="switchView('trivia')">Trivia</button>
         </div>
       </div>
 
@@ -943,6 +941,35 @@
       <div id="br-table-section"></div>
     </div>
 
+    <!-- ═══ TRIVIA VIEW ═══ -->
+    <div class="view-panel" id="view-trivia">
+      <div class="ar-hero" style="--hero-accent:var(--teal);">
+        <div class="ar-hero-icon" style="background:rgba(78,205,196,0.15);color:var(--teal);">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </div>
+        <div class="ar-hero-info">
+          <div class="ar-hero-title">Trivia Rankings</div>
+          <div class="ar-hero-sub">Ranked Duel skill leaderboard · Compete in 1v1 trivia duels to earn rating</div>
+        </div>
+        <div class="ar-hero-badge" style="background:rgba(78,205,196,0.15);color:var(--teal);border-color:rgba(78,205,196,0.3);">1v1 Duels</div>
+      </div>
+
+      <div class="lb-filter-line" id="trivia-sport-filter-row" style="margin-bottom:16px;">
+        <span class="lb-filter-label">Sport</span>
+        <div id="trivia-sport-chips" style="display:flex;flex-wrap:wrap;gap:6px;">
+          <button class="lb-scope-chip active" data-sport="" onclick="selectTriviaSport(this,'')">All</button>
+          <button class="lb-scope-chip" data-sport="soccer" onclick="selectTriviaSport(this,'soccer')">Soccer</button>
+          <button class="lb-scope-chip" data-sport="nfl" onclick="selectTriviaSport(this,'nfl')">NFL</button>
+          <button class="lb-scope-chip" data-sport="nba" onclick="selectTriviaSport(this,'nba')">NBA</button>
+          <button class="lb-scope-chip" data-sport="mlb" onclick="selectTriviaSport(this,'mlb')">MLB</button>
+          <button class="lb-scope-chip" data-sport="f1" onclick="selectTriviaSport(this,'f1')">F1</button>
+        </div>
+      </div>
+
+      <div id="trv-podium-section"></div>
+      <div id="trv-table-section"></div>
+    </div>
+
       </div><!-- /.lb-main-col -->
 
       <!-- ═══ RIGHT CONTEXT PANEL ═══ -->
@@ -962,6 +989,10 @@
             <div class="lb-ctx-rank-cell">
               <span class="lb-ctx-rank-label">BR</span>
               <span class="lb-ctx-rank-val" id="ctx-rank-br">—</span>
+            </div>
+            <div class="lb-ctx-rank-cell">
+              <span class="lb-ctx-rank-label">Trivia</span>
+              <span class="lb-ctx-rank-val" id="ctx-rank-trivia">—</span>
             </div>
           </div>
         </div>
@@ -999,12 +1030,14 @@
               </div>
             </div>
           </div>
-          <div class="lb-ctx-rating soon">
+          <div class="lb-ctx-rating" style="border-color:rgba(78,205,196,0.25);">
             <span class="lb-ctx-rating-icon">🧠</span>
             <div class="lb-ctx-rating-info">
               <div class="lb-ctx-rating-label">Trivia</div>
               <div class="lb-ctx-rating-line">
-                <span class="lb-ctx-rating-soon">Coming soon</span>
+                <span class="lb-ctx-rating-num" id="ctx-trivia-num">—</span>
+                <span class="lb-ctx-rating-suffix" id="ctx-trivia-suffix" style="display:none;">TR</span>
+                <span class="lb-ctx-rating-tier" id="ctx-trivia-tier"></span>
               </div>
             </div>
           </div>
@@ -1395,6 +1428,183 @@ function hideBrStickyCard() {
   if (card) card.classList.remove('visible');
 }
 
+// ── Trivia leaderboard ────────────────────────────────────────────────
+let triviaLbLoaded     = false;
+let triviaLbData       = [];      // global: trivia_player_ratings rows joined with users
+let triviaLbSport      = '';      // '' = all sports (global rating)
+let triviaLbSportData  = {};      // cache: sport → rows
+
+function getTriviaRatingTier(rating) {
+  if (rating >= 1700) return { label: 'Elite',    cls: 'ar-tier-legend'   };
+  if (rating >= 1500) return { label: 'Diamond',  cls: 'ar-tier-diamond'  };
+  if (rating >= 1300) return { label: 'Platinum', cls: 'ar-tier-platinum' };
+  if (rating >= 1100) return { label: 'Gold',     cls: 'ar-tier-gold'     };
+  if (rating >=  900) return { label: 'Silver',   cls: 'ar-tier-silver'   };
+  return                     { label: 'Bronze',   cls: 'ar-tier-bronze'   };
+}
+
+async function loadTriviaLeaderboard() {
+  triviaLbLoaded = true;
+  const podiumEl = document.getElementById('trv-podium-section');
+  const tableEl  = document.getElementById('trv-table-section');
+  if (podiumEl) podiumEl.innerHTML = '<div class="ar-loading" style="color:var(--teal);">Loading trivia rankings…</div>';
+  if (tableEl)  tableEl.innerHTML  = '';
+
+  try {
+    const { data, error } = await window.sb
+      .from('trivia_player_ratings')
+      .select('user_id, rating, peak_rating, ranked_duels, wins, losses, draws, users(id, handle, name)')
+      .gt('ranked_duels', 0)
+      .order('rating', { ascending: false })
+      .limit(100);
+    if (error) throw error;
+    triviaLbData = (data || []).map(r => ({ ...r, ...(r.users || {}) }));
+  } catch (e) {
+    console.warn('[leaderboard] trivia load error', e);
+    triviaLbData = [];
+  }
+
+  if (currentView === 'trivia') renderTriviaLeaderboard(triviaLbData);
+  else hydrateRightPanel();
+}
+
+async function fetchTriviaLbSport(sport) {
+  if (triviaLbSportData[sport]) return triviaLbSportData[sport];
+  try {
+    const { data, error } = await window.sb
+      .from('trivia_sport_ratings')
+      .select('user_id, sport, rating, ranked_duels, wins, losses, users(id, handle, name)')
+      .eq('sport', sport)
+      .gt('ranked_duels', 0)
+      .order('rating', { ascending: false })
+      .limit(100);
+    if (error) throw error;
+    const rows = (data || []).map(r => ({ ...r, ...(r.users || {}) }));
+    triviaLbSportData[sport] = rows;
+    return rows;
+  } catch (e) {
+    console.warn('[leaderboard] trivia sport load error', e);
+    return [];
+  }
+}
+
+async function selectTriviaSport(chip, sport) {
+  document.querySelectorAll('#trivia-sport-chips .lb-scope-chip').forEach(c => c.classList.remove('active'));
+  chip.classList.add('active');
+  triviaLbSport = sport;
+  const podiumEl = document.getElementById('trv-podium-section');
+  const tableEl  = document.getElementById('trv-table-section');
+  if (podiumEl) podiumEl.innerHTML = '<div class="ar-loading" style="color:var(--teal);">Loading…</div>';
+  if (tableEl)  tableEl.innerHTML  = '';
+  if (!sport) {
+    renderTriviaLeaderboard(triviaLbData);
+  } else {
+    const rows = await fetchTriviaLbSport(sport);
+    renderTriviaLeaderboard(rows);
+  }
+}
+
+function renderTriviaLeaderboard(data) {
+  const uid      = SpontixStore.Session.getCurrentUserId();
+  const podiumEl = document.getElementById('trv-podium-section');
+  const tableEl  = document.getElementById('trv-table-section');
+  if (!podiumEl || !tableEl) return;
+
+  const ratingKey = triviaLbSport ? 'rating' : 'rating';
+
+  function getInitials(p) {
+    const n = p.name || p.handle || '?';
+    const parts = n.trim().split(/\s+/);
+    if (parts.length >= 2) return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+    return n.slice(0, 2).toUpperCase();
+  }
+
+  const avColors = [
+    'background:linear-gradient(135deg,var(--teal),var(--lime));color:var(--navy);',
+    'background:var(--purple);color:#fff;',
+    'background:var(--coral);color:#fff;',
+    'background:rgba(78,205,196,0.15);color:var(--teal);',
+    'background:rgba(168,225,12,0.15);color:var(--lime);',
+    'background:rgba(124,92,252,0.2);color:var(--purple);',
+    'background:rgba(255,107,107,0.15);color:var(--coral);',
+  ];
+
+  function avStyle(p, i) {
+    return p.user_id === uid ? 'background:var(--teal);color:var(--navy);' : avColors[i % avColors.length];
+  }
+
+  if (!data || data.length === 0) {
+    podiumEl.innerHTML = '';
+    tableEl.innerHTML = `<div class="ar-empty">
+      <div class="ar-empty-icon" style="color:var(--teal);">🧠</div>
+      <div class="ar-empty-title">No trivia rankings yet</div>
+      <div class="ar-empty-sub">Play Ranked Duels in Trivia to earn your rating.</div>
+      <a href="trivia.html" class="ar-empty-btn" style="background:var(--teal);color:var(--navy);">Play Trivia</a>
+    </div>`;
+    hydrateRightPanel();
+    return;
+  }
+
+  // Podium top-3 (order: 2nd, 1st, 3rd)
+  const slots = [
+    { p: data[1], cls: 'second', rank: 2 },
+    { p: data[0], cls: 'first',  rank: 1 },
+    { p: data[2], cls: 'third',  rank: 3 },
+  ];
+  podiumEl.innerHTML = `<div class="ar-podium">${slots.map(({ p, cls, rank }) => {
+    if (!p) return '';
+    const isYou  = p.user_id === uid;
+    const initials = getInitials(p);
+    const tier   = getTriviaRatingTier(p.rating);
+    const avIdx  = data.indexOf(p);
+    const avCls  = isYou ? 'ar-podium-avatar av-self' : 'ar-podium-avatar av-user';
+    const avAttr = isYou ? '' : ` data-name="${initials}"`;
+    const crown  = cls === 'first' ? '<span class="podium-crown"><svg viewBox="0 0 24 24"><path d="M2 20h20L18 8l-4 5-2-9-2 9-4-5z"/></svg></span>' : '';
+    const youTag = isYou ? ' <span style="font-size:0.6rem;color:var(--teal);font-weight:700;">(You)</span>' : '';
+    return `<div class="ar-podium-card ${cls}">
+      <div class="${avCls}"${avAttr} style="${avStyle(p, avIdx)}">${crown}${initials}</div>
+      <div class="ar-podium-name">${p.name || p.handle || '—'}${youTag}</div>
+      <div class="ar-podium-rating">${p.rating.toLocaleString()} Trivia Rating</div>
+      <div class="ar-podium-tier"><span class="ar-tier-badge ${tier.cls}">${tier.label}</span></div>
+      <div class="ar-podium-bar"></div>
+      <div class="ar-podium-rank">${rank}</div>
+    </div>`;
+  }).join('')}</div>`;
+
+  // Table
+  let myRank = -1;
+  const rows = data.map((p, i) => {
+    const isYou  = p.user_id === uid;
+    if (isYou) myRank = i + 1;
+    const initials = getInitials(p);
+    const tier   = getTriviaRatingTier(p.rating);
+    const rankCls = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : 'normal';
+    const youTag = isYou ? ' <span style="font-size:0.65rem;color:var(--teal);font-weight:700;">(You)</span>' : '';
+    const wld = `${p.wins || 0}W / ${p.losses || 0}L${p.draws ? ' / ' + p.draws + 'D' : ''}`;
+    return `<tr${isYou ? ' class="you-row"' : ''}>
+      <td><div class="lb-rank ${rankCls}">${i + 1}</div></td>
+      <td><div class="lb-player">
+        <div class="${isYou ? 'lb-avatar av-self' : 'lb-avatar av-user'}" ${isYou ? '' : `data-name="${initials}"`} style="${avStyle(p, i)}">${initials}</div>
+        <div class="lb-player-info">
+          <div class="lb-player-name">${p.name || p.handle || '—'}${youTag}</div>
+          <div class="lb-player-handle">${p.handle ? '@' + p.handle : '—'}</div>
+        </div>
+      </div></td>
+      <td><span class="ar-tier-badge ${tier.cls}">${tier.label}</span></td>
+      <td class="lb-stat" style="color:var(--teal);">${p.rating.toLocaleString()}</td>
+      <td style="color:var(--grey);font-size:0.8rem;">${wld}</td>
+    </tr>`;
+  }).join('');
+
+  tableEl.innerHTML = `<table class="ar-table">
+    <thead><tr><th>#</th><th>Player</th><th>Tier</th><th>Trivia Rating</th><th>Record</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+
+  SpontixStore.applyAvatarsToPage();
+  hydrateRightPanel();
+}
+
 // ── View / chip handlers ───────────────────────────────────────────────
 function switchView(view) {
   document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'));
@@ -1419,11 +1629,16 @@ function switchView(view) {
   if (view === 'arena') {
     hideBrStickyCard();
     if (!arenaLoaded) loadArenaLeaderboard();
-    else renderArenaLeaderboard(arenaData);   // pre-loaded cache → render now
+    else renderArenaLeaderboard(arenaData);
   } else if (view === 'br') {
     hideArenaStickyCard();
     if (!brLoaded) loadBrLeaderboard();
-    else renderBrLeaderboard(brData, SpontixStore.Session.getCurrentUserId()); // pre-loaded cache
+    else renderBrLeaderboard(brData, SpontixStore.Session.getCurrentUserId());
+  } else if (view === 'trivia') {
+    hideArenaStickyCard();
+    hideBrStickyCard();
+    if (!triviaLbLoaded) loadTriviaLeaderboard();
+    else renderTriviaLeaderboard(triviaLbSport ? (triviaLbSportData[triviaLbSport] || []) : triviaLbData);
   } else {
     hideArenaStickyCard();
     hideBrStickyCard();
@@ -1498,6 +1713,24 @@ function hydrateRightPanel() {
       }
     } else if ($rBr) {
       $rBr.textContent = '—';
+    }
+
+    // Trivia rank + rating (uses triviaLbData)
+    const $rTrivia  = document.getElementById('ctx-rank-trivia');
+    const $tNum     = document.getElementById('ctx-trivia-num');
+    const $tTier    = document.getElementById('ctx-trivia-tier');
+    const $tSuffix  = document.getElementById('ctx-trivia-suffix');
+    if (triviaLbData && triviaLbData.length) {
+      const i = triviaLbData.findIndex(p => p.user_id === uid);
+      if ($rTrivia) $rTrivia.textContent = i >= 0 ? '#' + (i + 1) : '—';
+      if (i >= 0) {
+        const t = getTriviaRatingTier(triviaLbData[i].rating);
+        if ($tNum)    { $tNum.textContent = triviaLbData[i].rating; }
+        if ($tSuffix) { $tSuffix.style.display = ''; }
+        if ($tTier)   { $tTier.textContent = t.label; $tTier.className = 'lb-ctx-rating-tier ' + t.cls; }
+      }
+    } else if ($rTrivia) {
+      $rTrivia.textContent = '—';
     }
 
     // Next target — use whichever rating panel has data; prefer Arena

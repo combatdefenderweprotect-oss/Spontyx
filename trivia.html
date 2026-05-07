@@ -541,6 +541,12 @@
     .lobby-start-btn.duel { background: linear-gradient(135deg, var(--coral), #E84545); color: #fff; }
     .lobby-start-btn.party { background: linear-gradient(135deg, var(--purple), #5B3FD4); color: #fff; }
     .lobby-start-btn:hover { transform: translateY(-2px); }
+    .lobby-cancel-btn {
+      padding: 10px 32px; border: 1px solid rgba(255,255,255,0.12); border-radius: var(--radius-lg);
+      background: transparent; color: var(--grey); font-family: inherit; font-size: 0.82rem;
+      font-weight: 700; cursor: pointer; transition: all 0.2s;
+    }
+    .lobby-cancel-btn:hover { border-color: rgba(255,107,107,0.4); color: var(--coral); }
 
     /* ═══════════════════════════════
        PARTY PLAY EXTRAS
@@ -632,6 +638,31 @@
     .results-levelup { display: none; }
     .results-levelup.show { display: block; }
 
+    .results-duel {
+      width: 100%; max-width: 480px;
+      background: var(--navy-card); border: 1px solid rgba(255,255,255,0.08);
+      border-radius: var(--radius-xl); padding: 20px 24px;
+      text-align: center; margin-bottom: 16px;
+    }
+    .results-duel-outcome {
+      font-size: 1.6rem; font-weight: 900; letter-spacing: 2px;
+      text-transform: uppercase; margin-bottom: 8px;
+    }
+    .results-duel-score {
+      font-size: 1.1rem; font-weight: 800; color: var(--off-white);
+      margin-bottom: 10px; letter-spacing: 1px;
+    }
+    .results-duel-rating {
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      font-size: 0.85rem; font-weight: 700;
+    }
+    .results-duel-delta { font-size: 1rem; font-weight: 900; }
+    .results-duel-new-rating { color: var(--grey); }
+    .results-duel-waiting {
+      font-size: 0.78rem; color: var(--grey); font-weight: 600;
+      text-align: center; margin-bottom: 12px;
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
     .results-actions { display: flex; gap: 12px; width: 100%; max-width: 480px; }
     .results-btn {
       flex: 1; padding: 14px; border: none; border-radius: var(--radius-lg);
@@ -704,36 +735,36 @@
       <div class="hub-profile">
         <div class="hub-profile-row">
           <div class="hub-avatar">
-            BW
-            <div class="hub-level-badge">12</div>
+            <span id="hub-avatar-initials">?</span>
+            <div class="hub-level-badge" id="hub-level-badge">1</div>
           </div>
           <div class="hub-profile-info">
-            <div class="hub-profile-name">BranWilson</div>
-            <div class="hub-profile-title">Sports Scholar — Lvl 12</div>
+            <div class="hub-profile-name" id="hub-profile-name">—</div>
+            <div class="hub-profile-title" id="hub-profile-title">Rookie — Lvl 1</div>
           </div>
         </div>
         <div class="hub-xp-bar-wrap">
-          <div class="hub-xp-bar"><div class="hub-xp-fill" style="width:62%"></div></div>
-          <div class="hub-xp-text"><span>3,100 / 5,000 XP</span><span>Lvl 13</span></div>
+          <div class="hub-xp-bar"><div class="hub-xp-fill" id="hub-xp-fill" style="width:0%"></div></div>
+          <div class="hub-xp-text"><span id="hub-xp-text-current">0 / 100 XP</span><span id="hub-xp-text-next">Lvl 2</span></div>
         </div>
       </div>
 
       <div class="hub-stats">
         <div class="hub-stat">
-          <div class="hub-stat-val teal">143</div>
+          <div class="hub-stat-val teal" id="hub-stat-games">—</div>
           <div class="hub-stat-label">Games Played</div>
         </div>
         <div class="hub-stat">
-          <div class="hub-stat-val lime">72%</div>
+          <div class="hub-stat-val lime" id="hub-stat-accuracy">—</div>
           <div class="hub-stat-label">Accuracy</div>
         </div>
         <div class="hub-stat">
-          <div class="hub-stat-val gold">18</div>
-          <div class="hub-stat-label">Win Streak</div>
+          <div class="hub-stat-val gold" id="hub-stat-streak">—</div>
+          <div class="hub-stat-label">Best Streak</div>
         </div>
         <div class="hub-stat">
-          <div class="hub-stat-val coral">9</div>
-          <div class="hub-stat-label">1v1 Wins</div>
+          <div class="hub-stat-val coral" id="hub-stat-wins">—</div>
+          <div class="hub-stat-label">Duels Played</div>
         </div>
       </div>
 
@@ -967,17 +998,17 @@
   <div class="setup-card">
     <h3><span class="step-num">3</span> Number of Rounds</h3>
     <div class="round-picker">
-      <div class="round-chip selected" onclick="selectRounds(this, 10)">
+      <div class="round-chip" onclick="selectRounds(this, 10)">
         <div class="round-chip-num">10</div>
         <div class="round-chip-label">Quick</div>
       </div>
-      <div class="round-chip" onclick="selectRounds(this, 15)">
+      <div class="round-chip selected" onclick="selectRounds(this, 15)">
         <div class="round-chip-num">15</div>
         <div class="round-chip-label">Standard</div>
       </div>
-      <div class="round-chip" onclick="selectRounds(this, 20)">
-        <div class="round-chip-num">20</div>
-        <div class="round-chip-label">Marathon</div>
+      <div class="round-chip" onclick="selectRounds(this, 25)">
+        <div class="round-chip-num">25</div>
+        <div class="round-chip-label">Long Game</div>
       </div>
     </div>
   </div>
@@ -1034,28 +1065,29 @@
     <div class="lobby-icon duel">
       <svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     </div>
-    <div class="lobby-title">1v1 Duel</div>
-    <div class="lobby-subtitle">Football — Medium — 10 Rounds</div>
-    <div class="lobby-searching">
+    <div class="lobby-title">1v1 Ranked Duel</div>
+    <div class="lobby-subtitle" id="duel-lobby-subtitle">Searching…</div>
+    <div class="lobby-searching" id="duel-searching">
       <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
       <div class="lobby-searching-text">Finding opponent...</div>
     </div>
     <div class="lobby-players">
       <div class="lobby-player">
-        <div class="lobby-player-avatar" style="background:var(--teal);color:#fff;">BW</div>
-        <div class="lobby-player-name">You</div>
+        <div class="lobby-player-avatar" id="duel-my-avatar" style="background:var(--teal);color:#fff;">??</div>
+        <div class="lobby-player-name" id="duel-my-name">You</div>
       </div>
       <div class="lobby-player">
         <div class="lobby-player-avatar" style="background:var(--navy-light);color:var(--grey);font-size:1rem;">⚡</div>
         <div class="lobby-player-name">VS</div>
       </div>
-      <div class="lobby-player" id="duel-opponent">
-        <div class="lobby-player-avatar empty"></div>
-        <div class="lobby-player-name">Waiting...</div>
+      <div class="lobby-player">
+        <div class="lobby-player-avatar empty" id="duel-opp-avatar"></div>
+        <div class="lobby-player-name" id="duel-opp-name">Waiting...</div>
       </div>
     </div>
-    <div style="margin-top:24px;">
-      <button class="lobby-start-btn duel" onclick="startDuel()">Opponent Found — Start!</button>
+    <div style="margin-top:24px; display:flex; flex-direction:column; align-items:center; gap:10px;">
+      <button class="lobby-start-btn duel" id="duel-start-btn" style="display:none;" onclick="startDuel()">Opponent Found — Start!</button>
+      <button class="lobby-cancel-btn" id="duel-cancel-btn" onclick="cancelDuelQueue()">Cancel</button>
     </div>
   </div>
 </div>
@@ -1068,19 +1100,19 @@
   <!-- VS Strip -->
   <div class="duel-vs-strip">
     <div class="duel-player">
-      <div class="duel-player-avatar" style="background:var(--teal);color:#fff;">BW</div>
+      <div class="duel-player-avatar" id="duel-my-avatar-vs" style="background:var(--teal);color:#fff;">??</div>
       <div>
-        <div class="duel-player-name">You</div>
+        <div class="duel-player-name" id="duel-my-name-vs">You</div>
         <div class="duel-player-score leading" id="duel-your-score">Score: 0</div>
       </div>
     </div>
     <div class="duel-vs">VS</div>
     <div class="duel-player">
       <div>
-        <div class="duel-player-name" style="text-align:right">AlexR</div>
+        <div class="duel-player-name" id="duel-opp-name-vs" style="text-align:right">Opponent</div>
         <div class="duel-player-score" id="duel-opp-score" style="text-align:right">Score: 0</div>
       </div>
-      <div class="duel-player-avatar" style="background:var(--coral);color:#fff;">AR</div>
+      <div class="duel-player-avatar" id="duel-opp-avatar-vs" style="background:var(--coral);color:#fff;">??</div>
     </div>
   </div>
 
@@ -1286,6 +1318,13 @@
     <div class="results-levelup-title">New Title: Trivia Veteran</div>
   </div>
 
+  <!-- Duel result (shown for ranked_duel only) -->
+  <div id="results-duel" class="results-duel" style="display:none;"></div>
+  <div id="results-duel-waiting" class="results-duel-waiting" style="display:none;">
+    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    Waiting for opponent to finish…
+  </div>
+
   <!-- Actions -->
   <div class="results-actions">
     <button class="results-btn primary" onclick="goScreen('screen-setup')">Play Again</button>
@@ -1308,7 +1347,7 @@ function goBackOrFallback(fallback) {
 let currentMode = 'solo';
 let selectedTopic = 'Football';
 let selectedDiff = 'medium';
-let selectedRounds = 10;
+let selectedRounds = 15;
 let currentRound = 1;
 let correctCount = 0;
 let wrongCount = 0;
@@ -1316,6 +1355,28 @@ let totalXP = 0;
 let timerInterval = null;
 let timerSeconds = 20;
 const CIRC = 226.2;
+
+/* ═══ STATE — DB session ═══ */
+let currentSessionId    = null;
+let currentUserId       = null;
+let currentStreak       = 0;
+let bestStreakInSession  = 0;
+let questionStartTime   = null;
+let gameStartTime       = null;
+let totalResponseMs     = 0;
+let answeredCount       = 0;
+
+/* ═══ STATE — Ranked Duel ═══ */
+let currentRoomId          = null;
+let duelPollingInterval    = null;
+let duelRealtimeChannel    = null;
+let duelCountdownTimer     = null;
+let duelOpponentId         = null;
+let duelOpponentName       = null;
+let duelOpponentSessionId  = null;
+let duelOppScore           = 0;
+let duelOppAnswerChannel   = null;
+let duelFinalizeInterval   = null;
 
 /* ═══ QUESTIONS BANK ═══ */
 const questions = {
@@ -1343,6 +1404,473 @@ const questions = {
   ]
 };
 
+/* ═══ TOPIC → SPORT ═══ */
+const TOPIC_TO_SPORT = {
+  'Football':    'soccer',
+  'Basketball':  'nba',
+  'MMA / UFC':   'mma',
+  'Tennis':      'tennis',
+  'Cricket':     null,
+  'Mixed / All': null,
+};
+function topicToSport(topic) { return TOPIC_TO_SPORT[topic] || null; }
+
+/* ═══ DB HELPERS ═══ */
+
+function normalizeDbQuestion(row) {
+  return {
+    id:      row.id,
+    q:       row.question,
+    opts:    row.options,
+    correct: row.correct_index,
+    cat:     row.category || row.sport,
+    diff:    row.difficulty,
+  };
+}
+
+async function loadQuestionsFromDB(sport, difficulty, count) {
+  let query = window.sb.from('trivia_questions')
+    .select('id, question, options, correct_index, category, difficulty, sport')
+    .eq('approval_state', 'approved_public')
+    .limit(count * 4);
+
+  if (sport) query = query.eq('sport', sport);
+  if (['easy', 'medium', 'hard'].includes(difficulty)) query = query.eq('difficulty', difficulty);
+
+  const { data, error } = await query;
+
+  console.log('[trivia] loadQuestionsFromDB', {
+    sport:      sport || '(any)',
+    difficulty: difficulty,
+    requested:  count,
+    returned:   data?.length ?? 0,
+    error:      error?.message ?? null,
+  });
+
+  if (error) return null;
+  if (!data || data.length < count) return null;
+
+  return shuffleArray([...data]).slice(0, count);
+}
+
+/* ── Sport label helper ───────────────────────────────────────────── */
+const SPORT_LABELS = {
+  soccer:'Football', nfl:'NFL', nba:'NBA', mlb:'MLB',
+  college_football:'College FB', f1:'F1', tennis:'Tennis', mma:'MMA'
+};
+function sportToLabel(sport) { return SPORT_LABELS[sport] || sport; }
+
+/* ── Load questions by exact IDs (room's ordered question set) ────── */
+async function loadQuestionsFromRoomIds(questionIds) {
+  if (!questionIds || !questionIds.length) return [];
+  const { data, error } = await window.sb.from('trivia_questions')
+    .select('id, question, options, correct_index, category, difficulty, sport')
+    .in('id', questionIds);
+  if (error || !data) return [];
+  return questionIds.map(id => {
+    const row = data.find(r => r.id === id);
+    return row ? normalizeDbQuestion(row) : null;
+  }).filter(Boolean);
+}
+
+/* ── Short display name for opponent (UUID suffix fallback) ───────── */
+function oppShortName(userId) {
+  return 'Player #' + (userId || '').slice(-6).toUpperCase();
+}
+
+/* ── Duel lobby UI update ─────────────────────────────────────────── */
+function updateDuelLobbyUI({ state, sport, opponentName }) {
+  const subtitle  = document.getElementById('duel-lobby-subtitle');
+  const searching = document.getElementById('duel-searching');
+  const startBtn  = document.getElementById('duel-start-btn');
+  const oppAvatar = document.getElementById('duel-opp-avatar');
+  const oppName   = document.getElementById('duel-opp-name');
+
+  // Populate "You" slot with real initials
+  const myInitialsEl = document.getElementById('duel-my-avatar');
+  const hubInitials  = document.getElementById('hub-avatar-initials');
+  if (myInitialsEl && hubInitials && hubInitials.textContent.trim())
+    myInitialsEl.textContent = hubInitials.textContent.trim();
+
+  if (state === 'searching') {
+    if (subtitle) subtitle.textContent = sportToLabel(sport) + ' — 10 Rounds — 15s';
+    if (searching) searching.style.display = '';
+    if (startBtn)  startBtn.style.display  = 'none';
+    if (oppAvatar) { oppAvatar.className = 'lobby-player-avatar empty'; oppAvatar.textContent = ''; }
+    if (oppName)   oppName.textContent = 'Waiting...';
+
+  } else if (state === 'matched') {
+    if (searching) searching.style.display = 'none';
+    if (startBtn)  startBtn.style.display  = '';
+    const initials = (opponentName || '??').slice(0, 2).toUpperCase();
+    if (oppAvatar) {
+      oppAvatar.className = 'lobby-player-avatar';
+      oppAvatar.style.background = 'var(--coral)';
+      oppAvatar.style.color = '#fff';
+      oppAvatar.textContent = initials;
+    }
+    if (oppName) oppName.textContent = opponentName || 'Opponent';
+  }
+}
+
+/* ── Queue polling ────────────────────────────────────────────────── */
+function stopQueuePolling() {
+  if (duelPollingInterval)  { clearInterval(duelPollingInterval);  duelPollingInterval  = null; }
+  if (duelCountdownTimer)   { clearInterval(duelCountdownTimer);   duelCountdownTimer   = null; }
+  if (duelRealtimeChannel)  { window.sb?.removeChannel(duelRealtimeChannel); duelRealtimeChannel = null; }
+}
+
+/* ── Shared match handler — called by both the active pairer and the
+   passive matchee (via Realtime or poll fallback). Idempotent. ───── */
+async function handleRoomMatch(roomId) {
+  if (currentRoomId === roomId) return; // already handled
+  stopQueuePolling();
+
+  const { data: room, error: roomErr } = await window.sb
+    .from('trivia_rooms')
+    .select('id, sport, question_ids, player1_id, player2_id, player1_session_id, player2_session_id')
+    .eq('id', roomId)
+    .single();
+
+  if (roomErr || !room) {
+    showToast('Could not load match. Please try again.');
+    goScreen('screen-setup');
+    return;
+  }
+
+  currentRoomId         = room.id;
+  const isP1            = currentUserId === room.player1_id;
+  currentSessionId      = isP1 ? room.player1_session_id : room.player2_session_id;
+  duelOpponentSessionId = isP1 ? room.player2_session_id : room.player1_session_id;
+  duelOpponentId        = isP1 ? room.player2_id : room.player1_id;
+  duelOpponentName      = oppShortName(duelOpponentId);
+  selectedRounds        = room.question_ids?.length || 10;
+
+  playQuestions = await loadQuestionsFromRoomIds(room.question_ids);
+  if (!playQuestions.length) {
+    showToast('Could not load questions for this duel. Please try again.');
+    goScreen('screen-setup');
+    return;
+  }
+
+  updateDuelLobbyUI({ state: 'matched', opponentName: duelOpponentName });
+
+  // Populate VS strip
+  const myInit = (document.getElementById('hub-avatar-initials') || {}).textContent?.trim() || '??';
+  const el_ma = document.getElementById('duel-my-avatar-vs');
+  const el_mn = document.getElementById('duel-my-name-vs');
+  const el_oa = document.getElementById('duel-opp-avatar-vs');
+  const el_on = document.getElementById('duel-opp-name-vs');
+  if (el_ma) el_ma.textContent = myInit;
+  if (el_mn) el_mn.textContent = 'You';
+  if (el_oa) el_oa.textContent = duelOpponentName.slice(0, 2).toUpperCase();
+  if (el_on) el_on.textContent = duelOpponentName;
+
+  // 3-second auto-start countdown
+  let count = 3;
+  const btn = document.getElementById('duel-start-btn');
+  if (btn) btn.textContent = 'Starting in ' + count + '…';
+  duelCountdownTimer = setInterval(() => {
+    count--;
+    if (count > 0) {
+      if (btn) btn.textContent = 'Starting in ' + count + '…';
+    } else {
+      clearInterval(duelCountdownTimer);
+      duelCountdownTimer = null;
+      startDuel();
+    }
+  }, 1000);
+}
+
+async function pollQueue() {
+  if (!window.sb || !currentUserId) return;
+  const { data, error } = await window.sb.rpc('pair_trivia_queue');
+  if (error || !data) return;
+
+  if (data.status === 'matched') {
+    await handleRoomMatch(data.room_id);
+
+  } else if (data.ok === false) {
+    if (data.reason === 'not_in_queue') {
+      // Passive player: matched by opponent before our next poll
+      const { data: entry } = await window.sb
+        .from('trivia_duel_queue')
+        .select('status, matched_room_id')
+        .eq('user_id', currentUserId)
+        .order('joined_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (entry?.status === 'matched' && entry?.matched_room_id) {
+        await handleRoomMatch(entry.matched_room_id);
+      }
+    } else {
+      stopQueuePolling();
+      const reason = data.reason;
+      showToast(reason === 'insufficient_questions'
+        ? 'Not enough questions for this sport yet — try another.'
+        : reason === 'queue_expired'
+        ? 'Queue timed out. Please try again.'
+        : 'Matchmaking error. Please try again.');
+      goScreen('screen-setup');
+    }
+  }
+}
+
+function startQueuePolling(sport) {
+  stopQueuePolling();
+  updateDuelLobbyUI({ state: 'searching', sport });
+
+  // Realtime: instant notification when our queue row is matched by opponent
+  if (window.sb && currentUserId) {
+    duelRealtimeChannel = window.sb
+      .channel('duel-queue-' + currentUserId)
+      .on('postgres_changes', {
+        event:  'UPDATE',
+        schema: 'public',
+        table:  'trivia_duel_queue',
+        filter: 'user_id=eq.' + currentUserId,
+      }, (payload) => {
+        if (payload.new?.status === 'matched' && payload.new?.matched_room_id) {
+          handleRoomMatch(payload.new.matched_room_id);
+        }
+      })
+      .subscribe();
+  }
+
+  pollQueue();
+  duelPollingInterval = setInterval(pollQueue, 2500);
+}
+
+async function cancelDuelQueue(navigate = true) {
+  stopQueuePolling();
+  if (window.sb) await window.sb.rpc('cancel_trivia_queue');
+  currentRoomId = null; currentSessionId = null;
+  playQuestions = [];
+  if (navigate) goScreen('screen-setup');
+}
+
+/* ── Live opponent score tracking ─────────────────────────────────── */
+function stopDuelAnswerWatch() {
+  if (duelFinalizeInterval)  { clearInterval(duelFinalizeInterval); duelFinalizeInterval = null; }
+  if (duelOppAnswerChannel)  { window.sb?.removeChannel(duelOppAnswerChannel); duelOppAnswerChannel = null; }
+}
+
+function startDuelAnswerWatch(oppSessionId) {
+  stopDuelAnswerWatch();
+  if (!window.sb || !oppSessionId) return;
+  duelOppAnswerChannel = window.sb
+    .channel('duel-opp-answers-' + oppSessionId)
+    .on('postgres_changes', {
+      event:  'INSERT',
+      schema: 'public',
+      table:  'trivia_session_answers',
+      filter: 'session_id=eq.' + oppSessionId,
+    }, (payload) => {
+      if (payload.new?.is_correct === true) {
+        duelOppScore++;
+        updateDuelScoreDisplay();
+      }
+    })
+    .subscribe();
+}
+
+function updateDuelScoreDisplay() {
+  const yourScore  = document.getElementById('duel-your-score');
+  const theirScore = document.getElementById('duel-opp-score');
+  const oppCount   = document.getElementById('duel-opp-correct');
+  if (yourScore)  yourScore.textContent  = 'Score: ' + correctCount;
+  if (theirScore) theirScore.textContent = 'Score: ' + duelOppScore;
+  if (oppCount)   oppCount.textContent   = duelOppScore;
+  if (yourScore)  yourScore.className    = 'duel-player-score' + (correctCount >= duelOppScore ? ' leading' : '');
+  if (theirScore) theirScore.className   = 'duel-player-score' + (duelOppScore > correctCount ? ' leading' : '');
+}
+
+/* ── Duel result application ──────────────────────────────────────── */
+function applyDuelResult(data) {
+  const isP1     = currentUserId && data.result_p1 && data.result_p2;
+  const myResult = data['result_' + (currentUserId ? (
+    // Determine p1/p2 by comparing winner
+    data.result_p1 === data.result_p2
+      ? 'p1' // draw — doesn't matter
+      : (currentRoomId ? 'p1' : 'p1') // fallback
+  ) : 'p1')];
+
+  // Simpler: if winner_id matches me → win, else if draw → draw, else loss
+  let outcome, outcomeColor;
+  if (data.is_draw) {
+    outcome = 'DRAW'; outcomeColor = 'var(--grey)';
+  } else if (data.winner_id === currentUserId) {
+    outcome = 'VICTORY'; outcomeColor = 'var(--teal)';
+  } else {
+    outcome = 'DEFEAT'; outcomeColor = 'var(--coral)';
+  }
+
+  // My delta: check which player I am by matching winner
+  const myDelta = data.is_draw
+    ? data.delta_p1  // both same in draw
+    : (data.winner_id === currentUserId ? Math.abs(data.delta_p1 || data.delta_p2) : -Math.abs(data.delta_p1 || data.delta_p2));
+  const myNewRating = data.is_draw
+    ? (data.new_rating_p1 || data.new_rating_p2)
+    : (data.winner_id === currentUserId ? Math.max(data.new_rating_p1, data.new_rating_p2) : Math.min(data.new_rating_p1, data.new_rating_p2));
+
+  const duelEl = document.getElementById('results-duel');
+  if (!duelEl) return;
+  duelEl.style.display = '';
+  duelEl.innerHTML =
+    '<div class="results-duel-outcome" style="color:' + outcomeColor + '">' + outcome + '</div>' +
+    '<div class="results-duel-score">' + correctCount + ' — ' + duelOppScore + '</div>' +
+    '<div class="results-duel-rating">' +
+      '<span class="results-duel-delta" style="color:' + (myDelta >= 0 ? 'var(--teal)' : 'var(--coral)') + '">' +
+        (myDelta >= 0 ? '+' : '') + myDelta + ' Elo' +
+      '</span>' +
+      '<span class="results-duel-new-rating">→ ' + myNewRating + '</span>' +
+    '</div>';
+
+  // Update title
+  const titleEl = document.getElementById('results-title');
+  if (titleEl) titleEl.textContent = outcome === 'VICTORY' ? 'You Won!' : outcome === 'DRAW' ? 'It\'s a Draw!' : 'Tough Game';
+}
+
+async function waitForDuelFinalize() {
+  if (!currentRoomId || !window.sb) return;
+  duelFinalizeInterval = setInterval(async () => {
+    const { data } = await window.sb.rpc('finalize_duel', { p_room_id: currentRoomId });
+    if (!data || !data.ok) return;
+    if (data.status !== 'waiting_for_opponent') {
+      clearInterval(duelFinalizeInterval);
+      duelFinalizeInterval = null;
+      stopDuelAnswerWatch();
+      applyDuelResult(data);
+      // Hide waiting note
+      const w = document.getElementById('results-duel-waiting');
+      if (w) w.style.display = 'none';
+    }
+  }, 3000);
+}
+
+async function createTriviaSession(sport) {
+  if (!currentUserId || !window.sb) return null;
+  const modeDb = currentMode === 'duel' ? 'ranked_duel' : currentMode;
+  const { data, error } = await window.sb.from('trivia_sessions').insert({
+    user_id:       currentUserId,
+    mode:          modeDb,
+    sport:         sport || 'soccer',
+    difficulty:    selectedDiff,
+    total_rounds:  selectedRounds,
+    timer_seconds: TriviaConfig.getDefaultTimerSeconds(modeDb),
+    is_ranked:     currentMode === 'duel',
+    result_status: 'abandoned',
+    completed:     false,
+  }).select('id').single();
+  if (error) { console.warn('[trivia] session create failed:', error.message); return null; }
+  return data?.id || null;
+}
+
+function insertSessionAnswer(sessionId, questionId, qIndex, chosenIndex, isCorrect, responseMs, baseXp, speedMult, strkMult, finalXp) {
+  if (!sessionId || !questionId) return;
+  window.sb.from('trivia_session_answers').insert({
+    session_id:        sessionId,
+    question_id:       questionId,
+    question_index:    qIndex,
+    chosen_index:      chosenIndex,
+    is_correct:        isCorrect,
+    response_time_ms:  responseMs,
+    base_xp:           baseXp,
+    speed_multiplier:  speedMult,
+    streak_multiplier: strkMult,
+    source_multiplier: 1.0,
+    final_xp_awarded:  finalXp,
+  }).then(({ error }) => {
+    if (error) console.warn('[trivia] answer insert failed:', error.message);
+  });
+}
+
+async function finalizeSession(finalXP) {
+  if (!currentSessionId || !currentUserId) return null;
+  const pct        = selectedRounds > 0 ? correctCount / selectedRounds : 0;
+  const accuracy   = Math.min(pct, 1);
+  const isPerfect  = wrongCount === 0 && correctCount > 0;
+  const modeDb     = currentMode === 'duel' ? 'ranked_duel' : currentMode;
+  const durSec     = gameStartTime ? Math.round((Date.now() - gameStartTime) / 1000) : null;
+  const avgRespMs  = answeredCount > 0 ? Math.round(totalResponseMs / answeredCount) : null;
+
+  const { data, error } = await window.sb.rpc('complete_trivia_session', {
+    p_session_id:       currentSessionId,
+    p_correct_count:    correctCount,
+    p_wrong_count:      wrongCount,
+    p_total_xp_earned:  finalXP,
+    p_accuracy:         accuracy,
+    p_stars:            pct >= 0.9 ? 3 : pct >= 0.6 ? 2 : pct >= 0.3 ? 1 : 0,
+    p_avg_response_ms:  avgRespMs,
+    p_duration_seconds: durSec,
+    p_xp_breakdown:     {
+      raw_sum:       totalXP,
+      mode_mult:     TriviaConfig.getXpMultiplier(currentMode),
+      perfect_bonus: isPerfect ? TriviaConfig.XP_PERFECT_GAME_BONUS : 1.0,
+      final:         finalXP,
+    },
+    p_best_streak:      bestStreakInSession,
+    p_perfect_game:     isPerfect,
+    p_mode:             modeDb,
+  });
+  if (error) { console.warn('[trivia] finalizeSession failed:', error.message); return null; }
+  return data;
+}
+
+/* ═══ LEVEL COMPUTE ═══ */
+function computeLevel(xpTotal) {
+  let cur = levels[0];
+  for (const l of levels) { if (xpTotal >= l.xp) cur = l; else break; }
+  return cur;
+}
+
+/* ═══ HUB STATS (populated from DB on load) ═══ */
+async function loadHubStats() {
+  if (!currentUserId || !window.sb) return;
+
+  const [{ data: statsRow }, { data: { user } }] = await Promise.all([
+    window.sb.from('trivia_player_stats').select('*').eq('user_id', currentUserId).maybeSingle(),
+    window.sb.auth.getUser(),
+  ]);
+
+  const name     = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Player';
+  const initials = name.slice(0, 2).toUpperCase();
+
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('hub-avatar-initials', initials);
+  set('hub-profile-name', name);
+
+  if (!statsRow) {
+    set('hub-level-badge', 1);
+    set('hub-profile-title', 'Rookie — Lvl 1');
+    set('hub-xp-text-current', '0 / 100 XP');
+    set('hub-stat-games', 0);
+    set('hub-stat-accuracy', '0%');
+    set('hub-stat-streak', 0);
+    set('hub-stat-wins', 0);
+    return;
+  }
+
+  const lvl  = computeLevel(statsRow.xp_total);
+  const next = levels[Math.min(lvl.lvl, levels.length - 1)];
+  const range = next.xp - lvl.xp;
+  const prog  = range > 0 ? Math.min((statsRow.xp_total - lvl.xp) / range, 1) : 1;
+
+  set('hub-level-badge',    lvl.lvl);
+  set('hub-profile-title',  lvl.title + ' — Lvl ' + lvl.lvl);
+  set('hub-xp-text-next',   'Lvl ' + (lvl.lvl + 1));
+  set('hub-xp-text-current', statsRow.xp_total.toLocaleString() + ' / ' + next.xp.toLocaleString() + ' XP');
+
+  const fillEl = document.getElementById('hub-xp-fill');
+  if (fillEl) fillEl.style.width = (prog * 100).toFixed(1) + '%';
+
+  const tot = statsRow.correct_total + statsRow.wrong_total;
+  set('hub-stat-games',    statsRow.games_played);
+  set('hub-stat-accuracy', tot > 0 ? Math.round(statsRow.correct_total / tot * 100) + '%' : '0%');
+  set('hub-stat-streak',   statsRow.best_in_session_streak);
+  set('hub-stat-wins',     statsRow.games_duel);
+}
+
 /* ═══ LEVEL SYSTEM ═══ */
 const levels = [
   { lvl: 1, title: "Rookie", xp: 0 },
@@ -1364,6 +1892,10 @@ const levels = [
 
 /* ═══ SCREEN NAV ═══ */
 function goScreen(id) {
+  // If leaving duel lobby before a match starts, clean up queue (no re-navigate)
+  if (duelPollingInterval && id !== 'screen-duel-lobby' && id !== 'screen-duel-play') {
+    cancelDuelQueue(false);
+  }
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   if (id === 'screen-solo') initPlay('solo');
@@ -1455,7 +1987,7 @@ function selectRounds(el, n) {
   el.classList.add('selected');
   selectedRounds = n;
 }
-function startGame() {
+async function startGame() {
   // Tier gate: 3-way logic matching BR architecture
   if (typeof SpontixStore !== 'undefined') {
     const player = SpontixStore.getPlayer();
@@ -1513,11 +2045,59 @@ function startGame() {
     }
   }
 
-  if (currentMode === 'solo') goScreen('screen-solo');
-  else if (currentMode === 'duel') goScreen('screen-duel-lobby');
-  else goScreen('screen-party-lobby');
+  // Reset session state for new game
+  currentSessionId   = null;
+  currentStreak      = 0;
+  bestStreakInSession = 0;
+  totalResponseMs    = 0;
+  answeredCount      = 0;
+  playQuestions      = [];
+
+  if (currentMode === 'solo') {
+    const sport = topicToSport(selectedTopic);
+    showToast('Loading questions…');
+    const dbRows = await loadQuestionsFromDB(sport, selectedDiff, selectedRounds);
+    if (!dbRows || !dbRows.length) {
+      showToast('No questions available for this topic yet. Try another category or difficulty.');
+      return;
+    }
+    playQuestions    = dbRows.map(normalizeDbQuestion);
+    currentSessionId = await createTriviaSession(sport);
+    goScreen('screen-solo');
+    return;
+  }
+
+  if (currentMode === 'duel') {
+    const sport = topicToSport(selectedTopic);
+    if (!sport) {
+      showToast('Please select a specific sport for Ranked Duel — Mixed is not supported.');
+      return;
+    }
+    let ratingSnapshot = 800;
+    if (currentUserId) {
+      const { data: rr } = await window.sb.from('trivia_player_ratings')
+        .select('rating').eq('user_id', currentUserId).maybeSingle();
+      if (rr) ratingSnapshot = rr.rating;
+    }
+    const { error: qErr } = await window.sb.from('trivia_duel_queue')
+      .insert({ user_id: currentUserId, sport, rating_snapshot: ratingSnapshot });
+    if (qErr) {
+      showToast(qErr.code === '23505'
+        ? 'Already in queue — cancel your active search first.'
+        : 'Could not join queue. Please try again.');
+      return;
+    }
+    goScreen('screen-duel-lobby');
+    startQueuePolling(sport);
+    return;
+  }
+
+  goScreen('screen-party-lobby');
 }
-function startDuel() { goScreen('screen-duel-play'); }
+function startDuel() {
+  // selectedRounds already set to 10 by pollQueue on match
+  goScreen('screen-duel-play');
+}
 function startParty() { goScreen('screen-party-play'); }
 
 /* ═══ PLAY ENGINE ═══ */
@@ -1525,18 +2105,32 @@ let playQuestions = [];
 let playPrefix = '';
 
 function initPlay(mode) {
-  playPrefix = mode;
-  currentRound = 1;
-  correctCount = 0;
-  wrongCount = 0;
-  totalXP = 0;
+  playPrefix         = mode;
+  currentRound       = 1;
+  correctCount       = 0;
+  wrongCount         = 0;
+  totalXP            = 0;
+  currentStreak      = 0;
+  bestStreakInSession = 0;
+  questionStartTime  = null;
+  gameStartTime      = Date.now();
   clearInterval(timerInterval);
 
-  // build question set
-  const pool = questions['Football'] || questions['Football'];
-  playQuestions = shuffleArray([...pool]).slice(0, selectedRounds);
+  // party simulation only: duel questions come from matchmaking (loadQuestionsFromRoomIds)
+  if (!playQuestions.length && mode === 'party') {
+    playQuestions = shuffleArray([...questions['Football']]).slice(0, selectedRounds);
+  }
 
-  // render pips
+  if (mode === 'duel') {
+    duelOppScore = 0;
+    updateDuelScoreDisplay();
+    startDuelAnswerWatch(duelOpponentSessionId);
+  }
+
+  // Update round total display (e.g. "Round 1 / 15")
+  const totalEl = document.getElementById(mode + '-round-total');
+  if (totalEl) totalEl.textContent = selectedRounds;
+
   renderPips(playPrefix);
   updateScoreDisplay(playPrefix);
   loadQuestion(playPrefix);
@@ -1570,9 +2164,10 @@ function loadQuestion(prefix) {
 
   if (catEl) catEl.textContent = q.cat;
   if (diffEl) {
-    const d = getDiffLabel();
-    diffEl.textContent = d.label;
-    diffEl.className = 'play-q-difficulty ' + d.cls;
+    const diff = q.diff || selectedDiff;
+    const cls  = ['easy','medium','hard'].includes(diff) ? diff : 'medium';
+    diffEl.textContent = cls.charAt(0).toUpperCase() + cls.slice(1);
+    diffEl.className   = 'play-q-difficulty ' + cls;
   }
   if (textEl) textEl.textContent = q.q;
 
@@ -1586,12 +2181,14 @@ function loadQuestion(prefix) {
   `).join('');
 
   // start timer
-  const timeLimit = prefix === 'duel' ? 15 : 20;
-  timerSeconds = timeLimit;
-  const ring = document.getElementById(prefix + '-ring');
+  const modeKey   = prefix === 'duel' ? 'ranked_duel' : prefix === 'party' ? 'party' : 'solo';
+  const timeLimit = TriviaConfig.getDefaultTimerSeconds(modeKey);
+  timerSeconds    = timeLimit;
+  questionStartTime = Date.now();
+  const ring      = document.getElementById(prefix + '-ring');
   const timerText = document.getElementById(prefix + '-timer-text');
   ring.style.strokeDashoffset = '0';
-  ring.className = 'ring-fg';
+  ring.className  = 'ring-fg';
   timerText.textContent = timeLimit;
 
   timerInterval = setInterval(() => {
@@ -1600,8 +2197,8 @@ function loadQuestion(prefix) {
     const offset = ((timeLimit - timerSeconds) / timeLimit) * CIRC;
     ring.style.strokeDashoffset = offset;
 
-    if (timerSeconds <= 5) ring.className = 'ring-fg critical';
-    else if (timerSeconds <= 8) ring.className = 'ring-fg warning';
+    if (timerSeconds <= TriviaConfig.TIMER_CRITICAL_AT) ring.className = 'ring-fg critical';
+    else if (timerSeconds <= TriviaConfig.TIMER_WARNING_AT) ring.className = 'ring-fg warning';
 
     if (timerSeconds <= 0) {
       clearInterval(timerInterval);
@@ -1612,6 +2209,10 @@ function loadQuestion(prefix) {
 
 function answerQuestion(prefix, chosen, correctIdx) {
   clearInterval(timerInterval);
+
+  const responseMs = questionStartTime ? Date.now() - questionStartTime : null;
+  const q          = playQuestions[currentRound - 1];
+
   const opts = document.querySelectorAll('#' + prefix + '-options .play-option');
   opts.forEach((o, i) => {
     o.classList.add('disabled');
@@ -1619,30 +2220,48 @@ function answerQuestion(prefix, chosen, correctIdx) {
     if (i === chosen && chosen !== correctIdx) o.classList.add('wrong');
   });
 
-  const pips = document.querySelectorAll('#' + prefix + '-pips .play-pip');
+  const pips      = document.querySelectorAll('#' + prefix + '-pips .play-pip');
   const isCorrect = chosen === correctIdx;
 
   if (isCorrect) {
     correctCount++;
-    const xp = getXPForDiff();
-    totalXP += xp;
-    pips[currentRound - 1].className = 'play-pip correct';
-    showXPToast(prefix, xp);
+    currentStreak++;
+    bestStreakInSession = Math.max(bestStreakInSession, currentStreak);
 
-    // simulate opponent in duel/party
-    if (prefix === 'duel') simulateDuelOpponent(false);
+    if (responseMs !== null) { totalResponseMs += responseMs; answeredCount++; }
+
+    const baseXp    = TriviaConfig.XP_BASE[q.diff] || TriviaConfig.XP_BASE.medium;
+    const speedMult = TriviaConfig.getSpeedMultiplier(responseMs ? responseMs / 1000 : 999);
+    const strkMult  = TriviaConfig.getStreakMultiplier(currentStreak);
+    const finalXp   = Math.floor(baseXp * speedMult * strkMult);
+    totalXP += finalXp;
+
+    if (currentSessionId && q.id) {
+      insertSessionAnswer(currentSessionId, q.id, currentRound - 1, chosen, true, responseMs, baseXp, speedMult, strkMult, finalXp);
+    }
+
+    pips[currentRound - 1].className = 'play-pip correct';
+    showXPToast(prefix, finalXp);
+    if (prefix === 'duel') updateDuelScoreDisplay();
     if (prefix === 'party') simulatePartyScores(true);
   } else {
     wrongCount++;
-    pips[currentRound - 1].className = 'play-pip wrong';
+    currentStreak = 0;
 
-    if (prefix === 'duel') simulateDuelOpponent(true);
+    if (currentSessionId && q && q.id) {
+      insertSessionAnswer(currentSessionId, q.id, currentRound - 1,
+        chosen === -1 ? null : chosen,
+        chosen === -1 ? null : false,
+        responseMs, 0, 1.0, 1.0, 0);
+    }
+
+    pips[currentRound - 1].className = 'play-pip wrong';
+    if (prefix === 'duel') updateDuelScoreDisplay();
     if (prefix === 'party') simulatePartyScores(false);
   }
 
   updateScoreDisplay(prefix);
 
-  // next question after delay
   setTimeout(() => {
     currentRound++;
     if (currentRound <= selectedRounds) {
@@ -1716,16 +2335,23 @@ function simulatePartyScores(youCorrect) {
 }
 
 /* ═══ RESULTS ═══ */
-function showResults() {
+async function showResults() {
   clearInterval(timerInterval);
 
-  document.getElementById('res-correct').textContent = correctCount;
-  document.getElementById('res-wrong').textContent = wrongCount;
-  document.getElementById('res-avg-time').textContent = (Math.random() * 4 + 3).toFixed(1) + 's';
-  document.getElementById('res-xp-earned').textContent = '+' + totalXP + ' XP';
+  // Apply mode multiplier + perfect game bonus to raw per-question XP sum
+  const isPerfect  = wrongCount === 0 && correctCount > 0;
+  const modeXpMult = TriviaConfig.getXpMultiplier(currentMode === 'duel' ? 'ranked_duel' : currentMode);
+  const perfMult   = isPerfect ? TriviaConfig.XP_PERFECT_GAME_BONUS : 1.0;
+  const finalXP    = Math.floor(totalXP * modeXpMult * perfMult);
 
-  // star rating
-  const pct = correctCount / selectedRounds;
+  document.getElementById('res-correct').textContent   = correctCount;
+  document.getElementById('res-wrong').textContent     = wrongCount;
+  document.getElementById('res-avg-time').textContent  = answeredCount > 0
+    ? (totalResponseMs / answeredCount / 1000).toFixed(1) + 's' : '—';
+  document.getElementById('res-xp-earned').textContent = '+' + finalXP + ' XP';
+
+  // Star rating
+  const pct   = selectedRounds > 0 ? correctCount / selectedRounds : 0;
   const stars = pct >= 0.9 ? 3 : pct >= 0.6 ? 2 : pct >= 0.3 ? 1 : 0;
   const starsEl = document.getElementById('results-stars');
   starsEl.innerHTML = '';
@@ -1733,35 +2359,73 @@ function showResults() {
     starsEl.innerHTML += `<div class="results-star ${i < stars ? 'filled' : 'empty'}"><svg viewBox="0 0 24 24" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg></div>`;
   }
 
-  // title
   const titles = ['Keep Practicing!', 'Not Bad!', 'Great Performance!', 'Outstanding!'];
-  document.getElementById('results-title').textContent = titles[stars];
+  document.getElementById('results-title').textContent    = titles[stars];
   document.getElementById('results-subtitle').textContent = `You answered ${correctCount} out of ${selectedRounds} correctly`;
 
-  // XP bar animation
-  const baseXP = 3100;
-  const newXP = baseXP + totalXP;
-  const xpPct = Math.min((newXP % 5000) / 5000 * 100, 100);
-  setTimeout(() => {
-    document.getElementById('res-xp-fill').style.width = xpPct + '%';
-  }, 300);
-  document.getElementById('res-xp-current').textContent = newXP.toLocaleString() + ' / 5,000 XP';
+  // XP bar — show placeholder while DB call runs
+  document.getElementById('res-xp-fill').style.width   = '0%';
+  document.getElementById('res-xp-current').textContent = 'Saving…';
 
-  // confetti for 3 stars
   if (stars === 3) spawnConfetti();
 
-  // Award trophies based on mode and performance
   if (typeof SpontixStore !== 'undefined') {
     if (currentMode === 'duel') {
-      // In duel mode, player won if they got more correct
       SpontixStore.awardTrophy('trivia_1v1_champion', { mode: 'duel', event: 'Trivia 1v1 Victory' });
     } else if (currentMode === 'party') {
       SpontixStore.awardTrophy('trivia_party_winner', { mode: 'party', event: 'Trivia Party Victory' });
     }
-    // Perfect score trophy
-    if (wrongCount === 0 && correctCount > 0) {
+    if (isPerfect) {
       SpontixStore.awardTrophy('trivia_perfect', { mode: currentMode, event: 'Perfect Trivia Score' });
     }
+  }
+
+  // Hide duel result section until finalize_duel resolves
+  const duelEl = document.getElementById('results-duel');
+  if (duelEl) duelEl.style.display = 'none';
+  const waitEl = document.getElementById('results-duel-waiting');
+  if (waitEl) waitEl.style.display = 'none';
+
+  // Save to DB and update XP bar with real cumulative totals
+  if (currentSessionId && currentUserId) {
+    const result = await finalizeSession(finalXP);
+    const statsData = result?.stats || result;
+    if (statsData?.xp_total != null) {
+      const xpTotal = statsData.xp_total;
+      const lvl     = computeLevel(xpTotal);
+      const next    = levels[Math.min(lvl.lvl, levels.length - 1)];
+      const range   = next.xp - lvl.xp;
+      const prog    = range > 0 ? Math.min((xpTotal - lvl.xp) / range, 1) : 1;
+
+      setTimeout(() => {
+        document.getElementById('res-xp-fill').style.width = (prog * 100).toFixed(1) + '%';
+      }, 300);
+      document.getElementById('res-xp-current').textContent =
+        xpTotal.toLocaleString() + ' / ' + next.xp.toLocaleString() + ' XP';
+
+      const lvlEl = document.querySelector('.results-xp-text span:last-child');
+      if (lvlEl) lvlEl.textContent = 'Level ' + lvl.lvl;
+    } else {
+      document.getElementById('res-xp-current').textContent = '+' + finalXP + ' XP earned';
+    }
+
+    // Ranked duel: attempt finalization; poll if opponent not done yet
+    if (currentMode === 'duel' && currentRoomId) {
+      stopDuelAnswerWatch();
+      const { data: fd } = await window.sb.rpc('finalize_duel', { p_room_id: currentRoomId });
+      if (fd?.ok && fd.status !== 'waiting_for_opponent') {
+        applyDuelResult(fd);
+      } else {
+        if (waitEl) waitEl.style.display = '';
+        waitForDuelFinalize();
+      }
+    }
+  } else {
+    // Not signed in or no session — show local estimate
+    const lvl  = computeLevel(0);
+    const next = levels[1];
+    setTimeout(() => { document.getElementById('res-xp-fill').style.width = '10%'; }, 300);
+    document.getElementById('res-xp-current').textContent = '+' + finalXP + ' XP earned';
   }
 }
 
@@ -1800,19 +2464,6 @@ function showToast(msg) {
   setTimeout(() => t.classList.remove('show'), 2500);
 }
 
-/* ═══ INIT ═══ */
-// Simulate duel opponent found after 2s
-setTimeout(() => {
-  const opp = document.getElementById('duel-opponent');
-  if (opp) {
-    opp.querySelector('.lobby-player-avatar').classList.remove('empty');
-    opp.querySelector('.lobby-player-avatar').style.background = 'var(--coral)';
-    opp.querySelector('.lobby-player-avatar').style.color = '#fff';
-    opp.querySelector('.lobby-player-avatar').textContent = 'AR';
-    opp.querySelector('.lobby-player-name').textContent = 'AlexR';
-  }
-}, 2000);
-
 /* ═══ TIER GATING VISUAL INDICATORS ═══ */
 document.addEventListener('DOMContentLoaded', function() {
   if (typeof SpontixStore === 'undefined') return;
@@ -1844,8 +2495,17 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="supabase-client.js"></script>
 <script src="spontix-store.js"></script>
 <script src="sidebar.js"></script>
+<script src="trivia-config.js"></script>
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
+  document.addEventListener('DOMContentLoaded', async function() {
+    // Auth guard
+    if (typeof window.sb !== 'undefined') {
+      const { data: { session } } = await window.sb.auth.getSession();
+      if (!session) { window.location.href = 'login.html'; return; }
+      currentUserId = session.user.id;
+      loadHubStats().catch(e => console.warn('[trivia] loadHubStats:', e));
+    }
+
     try { SpontixSidebar.init({ type: 'player', active: 'trivia.html' }); }
     catch (e) { console.warn('Sidebar init failed:', e); }
   });
