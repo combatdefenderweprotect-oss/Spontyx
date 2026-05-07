@@ -17,7 +17,7 @@ The old labels — singleplayer / multiplayer / party — are **not** top-level 
 | **Leagues** | Prediction competitions, short or long | ✅ Fully live | ⚠️ Correct but missing hub |
 | **Arena** | Real-time competitive duels | ✅ Fully live | ⚠️ Exists but hidden and incomplete |
 | **Battle Royale** | Survival elimination with live questions | ✅ Fully live | ⚠️ Wired, untested with real questions |
-| **Trivia** | Knowledge quiz system | ❌ Not built | ❌ Simulation only |
+| **Trivia** | Knowledge quiz system | ✅ Solo + Ranked Duel live | ✅ Fully wired (solo + ranked duel) |
 
 ---
 
@@ -345,32 +345,25 @@ You want to test what you actually know about the sport — not what will happen
 - **Not match-bound** — no API-Sports integration needed for question resolution
 - **Speed-scored** — faster correct answers score higher than slower correct answers
 
-### Current state — what exists
+### Current state — what exists (2026-05-07)
 
-**Backend:** Nothing. No `trivia_sessions` table, no `trivia_questions` table, no server-authoritative state, no matchmaking, no real opponent system.
+**Backend:** ✅ Fully built. Migrations 076–084 applied. 11 DB tables, 5 SECURITY DEFINER RPCs, Elo rating system, XP stats, Realtime publication.
 
 **Frontend (`trivia.html`):**
-- Solo / 1v1 Duel / Party mode selector
-- Timer, scoring display, streak tracking
-- Tier gating (Starter daily cap, Pro monthly cap, Elite fair-use cooldown)
-- Static hardcoded question bank (JS array inside the page)
-- `simulateDuelOpponent()` — opponent uses `Math.random()`
-- `simulatePartyScores()` — other players' scores use `Math.random()`
+- Hub screen with live stats (XP, level, recent games, performance spark, suggested next game)
+- Solo mode: sport filter (6 chips), difficulty (easy/medium/hard), round count selector, fully wired to `trivia_questions` DB and `complete_trivia_session()` RPC
+- Ranked Duel: matchmaking via `pair_trivia_queue()` polling, real-time opponent score via Supabase Realtime, `finalize_duel()` applies Elo
+- Leaderboard tab in `leaderboard.html` — global and per-sport ratings from `trivia_player_ratings` / `trivia_sport_ratings`
+- Party mode disabled (coming soon) — UI placeholder preserved
 
-The current page is a UI demo. Nothing is connected to a real backend. No game results are saved. No leaderboard exists. No real opponent is ever matched.
+> Canonical architecture reference: [`docs/TRIVIA_SYSTEM.md`](TRIVIA_SYSTEM.md)
 
-### Target state — what Trivia should look like
+### Not yet implemented
 
-Trivia requires a full backend build before it can be a real pillar:
-- `trivia_sessions` table — one row per game
-- `trivia_questions` table — curated question bank, not hardcoded JS
-- Server-authoritative scoring — not client-calculated
-- Real matchmaking for 1v1 Duel mode
-- Game history saved to DB
-- Leaderboard tab for Trivia
-- XP awarded on completion
-
-**This is a separate sprint.** No Trivia backend work should begin until the other three pillars are fully surfaced in the frontend.
+- Party mode (multiplayer lobby, host-controlled)
+- Friend Duel (private room, no rating)
+- Event mode (host-managed event rooms)
+- AI question generation (credit system DB is built in migration 081, generator not wired)
 
 ---
 

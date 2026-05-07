@@ -13,7 +13,7 @@ Full implementation status across all 4 gameplay pillars. This document is the s
 | **Leagues** | Predict outcomes, accumulate points | Highest cumulative score | Yes (PREMATCH + LIVE + REAL_WORLD) | Cumulative leaderboard |
 | **Arena** | Predict in real-time, short session | Higher session score (1v1 / 2v2) | Yes (CORE_MATCH_LIVE) | ELO (9 tiers) |
 | **Battle Royale** | Answer or lose HP, last survivor wins | Outlast all opponents | Yes (BR_MATCH_LIVE — sequential) | BR Rating (separate from Arena ELO) |
-| **Trivia** | Answer knowledge questions | Correct answers / speed | No (independent of match data) | TBD |
+| **Trivia** | Answer knowledge questions | Correct answers / speed | No (independent of match data) | Elo (6 tiers, 800 start) |
 
 ---
 
@@ -203,40 +203,44 @@ HP-based survival game. Players start with 100 HP. Each round, one question is a
 ## Pillar 4 — Trivia
 
 ### What it is
-Knowledge-based question sessions, independent of live match data. Players answer general sports knowledge questions (or themed trivia). No prediction mechanic, no resolver, no sports API dependency. Questions have a known correct answer at generation time. Sessions are real-time (all players answer simultaneously within a time window per question).
+Knowledge-based question sessions, independent of live match data. Players answer multiple-choice sports knowledge questions. No prediction mechanic, no resolver, no sports API dependency. Answers are evaluated immediately on submission.
+
+> **Canonical spec:** [`docs/TRIVIA_SYSTEM.md`](TRIVIA_SYSTEM.md) — full DB schema, RPCs, XP formula, Elo system, UI screens, migration map.
 
 ### Backend status
 
-| Component | Status | Notes |
+| Component | Status | Location |
 |---|---|---|
-| `trivia_sessions` table | ❌ Not built | needs design |
-| `trivia_questions` table | ❌ Not built | different schema from `questions` — no prediction predicate |
-| `trivia_answers` table | ❌ Not built | answer at submission, not at resolution |
-| Trivia session lifecycle RPCs | ❌ Not built | |
-| Rating / scoring system | ❌ Not designed | ELO? separate leaderboard? XP only? |
-| Question generation pipeline | ❌ Not built | completely separate from prediction pipeline |
-| Resolver | ❌ Not applicable | answers are correct/incorrect at submit time |
+| `trivia_questions` table | ✅ Live | migration 076 |
+| `trivia_question_sets` table | ✅ Live | migration 076 |
+| `trivia_sessions` table | ✅ Live | migration 077 |
+| `trivia_session_answers` table | ✅ Live | migration 077 |
+| `trivia_player_stats` table | ✅ Live | migration 077 |
+| `upsert_trivia_player_stats_after_session()` RPC | ✅ Live | migration 077 |
+| `complete_trivia_session()` RPC | ✅ Live | migration 077a, updated 079 |
+| `trivia_player_ratings` / `trivia_sport_ratings` / `trivia_event_ratings` | ✅ Live | migration 078 |
+| `get_trivia_rating_tier()` helper | ✅ Live | migration 078 |
+| `trivia_rooms` + `trivia_duel_queue` tables | ✅ Live | migration 079 |
+| `finalize_duel()` RPC + Elo | ✅ Live | migration 079 |
+| `trivia_events` + `trivia_event_participants` tables | ✅ Live | migration 080 (event mode not yet UI-wired) |
+| AI credit wallet / transaction / generation log tables | ✅ Live | migration 081 (generator not wired) |
+| `trivia_daily_challenges` + `trivia_daily_completions` | ✅ Live | migration 082 |
+| pg_cron: expire queue + reset weekly XP | ✅ Live | migration 082 |
+| `pair_trivia_queue()` + `cancel_trivia_queue()` RPCs | ✅ Live | migration 083 |
+| Realtime publication + duel room RLS policy | ✅ Live | migration 084 |
 
 ### Frontend status
 
 | Page / Feature | Status |
 |---|---|
-| `trivia.html` — Solo/1v1/Party selector (client simulation) | ✅ Exists (no backend) |
-| Server-authoritative trivia session | ❌ Not built |
-
-### What needs to be decided before building
-1. **Question source** — AI-generated from sports knowledge? Curated static bank? Both?
-2. **Session type** — Real-time (all answer simultaneously) or async (individual pace)?
-3. **Rating system** — Separate ELO? Shared XP only? Unranked?
-4. **Question schema** — Static correct answer stored at creation. No predicate. No resolver.
-5. **Match dependency** — Themed trivia tied to an upcoming match? Or fully standalone?
-
-### Infrastructure notes
-- Cannot share the `questions` table without adding a 4th discriminator column and weakening the `questions_session_exclusivity` CHECK constraint
-- Cannot use the existing resolver — trivia answers are evaluated at submission, not after a sports API call
-- The timing model (`visible_from` / `answer_closes_at` / `resolves_after`) does not apply — replace with per-round timers managed by the session
-- XP (`award_xp()` RPC) can be reused for trivia rewards
-- Tier gating infrastructure can be reused (already has trivia daily/monthly counters in `TIER_LIMITS`)
+| `trivia.html` — Hub with live stats | ✅ Live |
+| Solo mode — sport filter, difficulty, round count, wired to DB | ✅ Live |
+| Ranked Duel — `pair_trivia_queue()` matchmaking, Realtime opponent score | ✅ Live |
+| `leaderboard.html` — Trivia tab (global + per-sport ratings) | ✅ Live |
+| Party mode | ❌ Not built (coming soon placeholder) |
+| Friend Duel | ❌ Not built |
+| Event mode | ❌ Not built |
+| AI question generation UI | ❌ Not built (credits DB ready) |
 
 ---
 
@@ -269,17 +273,17 @@ Club leaderboard MUST count only games played inside the club. Solo / public / e
 
 | System | Leagues | Arena | BR | Trivia |
 |---|---|---|---|---|
-| `questions` table | ✅ | ✅ | ✅ | ❌ (needs own) |
-| `player_answers` table | ✅ | ✅ | ✅ | ❌ (needs own) |
-| Resolver (`resolve-questions`) | ✅ | ✅ | ✅ | ❌ (not needed) |
-| `generate-questions` Edge Function | ✅ | ✅ | ❌ (not yet) | ❌ (not yet, different pipeline) |
+| `questions` table | ✅ | ✅ | ✅ | ❌ (own `trivia_questions` table) |
+| `player_answers` table | ✅ | ✅ | ✅ | ❌ (own `trivia_session_answers` table) |
+| Resolver (`resolve-questions`) | ✅ | ✅ | ✅ | ❌ (not needed — evaluated at submit) |
+| `generate-questions` Edge Function | ✅ | ✅ | ❌ (not yet) | ❌ (separate AI pipeline, DB built not wired) |
 | `live-stats-poller` | ✅ | ✅ | ✅ | ❌ |
-| `award_xp()` RPC | — | ✅ | ❌ (not yet wired) | ❌ (not yet) |
-| ELO rating | — | ✅ Arena ELO | ❌ BR ELO (columns exist, write not built) | ❌ TBD |
-| Realtime subscriptions | ✅ | ✅ | ✅ | ❌ (not yet) |
+| `award_xp()` RPC | — | ✅ | ❌ (not yet wired) | ❌ (own XP via `complete_trivia_session`) |
+| ELO rating | — | ✅ Arena ELO | ❌ BR ELO (columns exist, write not built) | ✅ Trivia Elo (6 tiers, global+sport+event) |
+| Realtime subscriptions | ✅ | ✅ | ✅ | ✅ (duel queue + session answers) |
 | Tier gating (`TIER_LIMITS`) | ✅ | ✅ | ✅ (daily counter) | ✅ (daily/monthly counter) |
 | Push notifications | ❌ | ✅ | ❌ | ❌ |
-| XP bar + level display | ✅ | ✅ | ❌ | ❌ |
+| XP bar + level display | ✅ | ✅ | ❌ | ✅ (hub + results screen) |
 
 ---
 
@@ -295,11 +299,6 @@ Club leaderboard MUST count only games played inside the club. Solo / public / e
 - BR leaderboard (`leaderboard.html` new tab using `users.br_rating`)
 - BR profile stats
 
-### Phase: design-first (needs decisions before touching code)
-- Trivia session schema (DB design, question format, scoring model)
-- Trivia question generation approach
-- Trivia rating system
-
 ### Phase: post-launch / polish
 - League session pacing for Type 1 (question chaining, match summary card)
 - Spectatable session browser (discovery of live spectatable arena sessions)
@@ -314,4 +313,4 @@ Club leaderboard MUST count only games played inside the club. Solo / public / e
 | **Leagues** | ✅ Complete | ✅ Complete | Cumulative leaderboard | ✅ Yes |
 | **Arena** | ✅ Complete | ✅ Complete | ✅ ELO live | ✅ Yes |
 | **Battle Royale** | ✅ Phase 1 complete | ❌ Old simulation only | ❌ Columns exist, writes not built | ❌ No (backend not connected) |
-| **Trivia** | ❌ Not started | ⚠️ Simulation only | ❌ Not designed | ❌ No |
+| **Trivia** | ✅ Complete (solo + ranked duel) | ✅ Fully wired | ✅ Elo live (6 tiers) | ✅ Yes (solo + ranked duel) |

@@ -12,6 +12,38 @@ For canonical specs, see the domain docs in this folder. This file is history on
 
 ## Recent updates (top-of-CLAUDE.md history)
 
+### 2026-05-07 — Trivia system fully wired: UI rebuild, leaderboard tab, docs
+
+**`trivia.html` — full UI rebuild (no placeholders):**
+
+- **Hub screen:** Live stats powered by `trivia_player_stats` (XP, level, games, accuracy). Recent games widget (`loadHubStats()`) queries last 7 completed sessions and renders mode icon, sport, score/result. Performance panel shows latest result, best streak, accuracy over last 7 sessions, and spark bars. Suggested next difficulty derived from average accuracy (≥80% → Hard, ≥50% → Medium, else Easy).
+- **Sport selector:** Six chips with `data-sport` attributes map directly to DB keys (`soccer`, `nfl`, `nba`, `mma`, `tennis`, `f1`). `selectedTopic` stores the raw DB key — no translation layer. `selectedTopicLabel` stores display label separately.
+- **Difficulty selector:** `easy` / `medium` / `hard` only. `adaptive` and `escalating` options removed — these difficulty values do not exist in the DB schema.
+- **Party mode disabled:** Hub card click → toast ("coming soon"). `selectMode('party')` → early return. Party lobby screen shows coming-soon placeholder. No simulation code runs.
+- **`duelOppScore` SyntaxError fixed:** Removed dead `simulateDuelOpponent` block (lines 2308–2322) that re-declared `let duelOppScore` already declared at line 1377. SyntaxError was preventing the entire script block from parsing, which blocked `SpontixSidebar.init` and caused the sidebar to disappear.
+- **`startGame()` simplified:** `currentMode === 'duel'` maps directly to `'ranked_duel'` DB value at session insert time. No topic-to-sport translation needed — `selectedTopic` is already the DB sport key.
+- **`getDiffLabel()` cleaned:** Removed `adaptive` and `escalating` cases.
+
+**`leaderboard.html` — Trivia leaderboard tab (Step 7):**
+
+- Activated the previously-disabled "Trivia Soon" button as a live tab (`switchView('trivia')`).
+- Tab panel: hero section, sport filter chips (all + 8 sports), podium top-3, full ranked table with tier badges (Bronze/Silver/Gold/Platinum/Diamond/Elite) and W/L/D record.
+- Data sources: `trivia_player_ratings` (global tab, joined with `users` for handle/name), `trivia_sport_ratings` (per-sport, cached in `triviaLbSportData`).
+- Right panel "Your Rankings" row: hydrates `ctx-rank-trivia`, `ctx-trivia-num`, `ctx-trivia-suffix`, `ctx-trivia-tier` from caller's `trivia_player_ratings` row.
+
+**Migrations 083–084 applied:**
+
+- **083** — `pair_trivia_queue()` SECURITY DEFINER RPC: atomic matchmaker using `FOR UPDATE SKIP LOCKED`; creates `trivia_rooms` + 2 `trivia_sessions`; marks queue entries `matched`; returns `{ room_id, session_id, opponent_id, question_ids }`. `cancel_trivia_queue()`: idempotent cancellation.
+- **084** — Adds `trivia_duel_queue` + `trivia_session_answers` to `supabase_realtime` publication. Adds `tsa_select_duel_room_participant` RLS policy: lets both players in a ranked_duel room read each other's answers (required for live opponent score Realtime subscription).
+
+**Docs created/updated:**
+- Created [`docs/TRIVIA_SYSTEM.md`](TRIVIA_SYSTEM.md) — full trivia architecture doc (13 sections: DB schema, modes, RPCs, XP formula, Elo system, level table, Realtime channels, UI screens, migration map).
+- Updated `CLAUDE.md` docs map + domain routing to include Trivia.
+- Updated `docs/GAMEPLAY_ARCHITECTURE.md` Pillar 4 status: `❌ Not built` → `✅ Solo + Ranked Duel live`.
+- Updated `docs/GAME_ARCHITECTURE_MAP.md` Pillar 4 backend/frontend tables and cross-pillar infrastructure table.
+
+---
+
 ### 2026-05-06 — BR lobby: esports card redesign + join/leave SECURITY DEFINER RPCs (migration 075)
 
 **Migration 075** (`backend/migrations/075_join_br_session_rpc.sql`):

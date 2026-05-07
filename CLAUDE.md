@@ -27,6 +27,7 @@ Authoritative specs live in `docs/`. This file holds only the high-level identit
 | [docs/LEAGUE_COMPLETION_EVALUATOR_TODO.md](docs/LEAGUE_COMPLETION_EVALUATOR_TODO.md) | Season-Long completion evaluator backlog |
 | [docs/ARENA_SESSION_SYSTEM.md](docs/ARENA_SESSION_SYSTEM.md) | Arena session lifecycle, RPCs, completion, XP, ELO, spectator |
 | [docs/BR_SESSION_SYSTEM.md](docs/BR_SESSION_SYSTEM.md) | Battle Royale server-authoritative session system |
+| [docs/TRIVIA_SYSTEM.md](docs/TRIVIA_SYSTEM.md) | Trivia pillar: DB schema, modes, RPCs, XP scoring, Elo rating, UI screens (migrations 076–084) |
 | [docs/GAMEPLAY_ARCHITECTURE.md](docs/GAMEPLAY_ARCHITECTURE.md) | Cross-cutting gameplay architecture (4 pillars, scoring, multipliers) |
 | [docs/GAME_ARCHITECTURE_MAP.md](docs/GAME_ARCHITECTURE_MAP.md) | Visual map: pages, tables, RPCs per game mode |
 | [docs/LEADERBOARD_ARCHITECTURE.md](docs/LEADERBOARD_ARCHITECTURE.md) | Leaderboard Phase 1 audit + filter system |
@@ -48,6 +49,7 @@ Claude must NOT load the entire documentation by default. Read `CLAUDE.md` for n
    - **Leagues / scoring** → [docs/LEAGUE_SCORING_V2.md](docs/LEAGUE_SCORING_V2.md), [docs/LEAGUE_CREATION_FLOW.md](docs/LEAGUE_CREATION_FLOW.md)
    - **Arena** → [docs/ARENA_SESSION_SYSTEM.md](docs/ARENA_SESSION_SYSTEM.md)
    - **Battle Royale** → [docs/BR_SESSION_SYSTEM.md](docs/BR_SESSION_SYSTEM.md)
+   - **Trivia** → [docs/TRIVIA_SYSTEM.md](docs/TRIVIA_SYSTEM.md)
    - **Question system / lanes** → [docs/QUESTION_SYSTEM.md](docs/QUESTION_SYSTEM.md)
    - **Live questions** → [docs/LIVE_QUESTION_SYSTEM.md](docs/LIVE_QUESTION_SYSTEM.md)
    - **Real World questions** → [docs/REAL_WORLD_QUESTION_SYSTEM.md](docs/REAL_WORLD_QUESTION_SYSTEM.md)
