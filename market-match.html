@@ -1,0 +1,724 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="view-transition" content="same-origin" />
+  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx Market — Match</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    :root {
+      --navy:#1A1A2E; --navy-light:#22223A; --navy-card:#2A2A44; --navy-hover:#32325A;
+      --lime:#A8E10C; --lime-dim:rgba(168,225,12,0.12); --coral:#FF6B6B;
+      --teal:#4ECDC4; --purple:#7C5CFC; --orange:#FF9F43; --gold:#FFD700;
+      --off-white:#E8E8F0; --grey:#9898B0; --grey-dark:#5A5A78;
+      --market-gold:#F5A623; --market-red:#FF5252; --market-green:#4CAF50;
+      --rw-bg:rgba(245,166,35,0.08); --rw-border:rgba(245,166,35,0.3);
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Inter',sans-serif;background:var(--navy);color:var(--off-white);min-height:100vh;}
+
+    /* ── MATCH HEADER ── */
+    .match-header {
+      background: linear-gradient(180deg, #1E1E38 0%, var(--navy) 100%);
+      border-bottom: 1px solid var(--navy-light);
+      padding: 20px 32px 18px;
+    }
+    .mh-top { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+    .back-btn {
+      display:flex; align-items:center; gap:6px; color:var(--grey); font-size:13px;
+      font-weight:600; text-decoration:none; cursor:pointer;
+      background:none; border:none; transition:color 0.15s;
+    }
+    .back-btn:hover { color:var(--lime); }
+    .mh-league { font-size:12px; color:var(--grey); margin-left:auto; }
+    .mh-teams { display:flex; align-items:center; justify-content:center; gap:16px; }
+    .mh-team { text-align:center; flex:1; max-width:220px; }
+    .mh-team .team-badge { font-size:36px; margin-bottom:8px; }
+    .mh-team .team-name { font-size:18px; font-weight:800; }
+    .mh-center { text-align:center; padding:0 16px; }
+    .mh-center .vs { font-size:12px; color:var(--grey); font-weight:700; letter-spacing:1px; }
+    .mh-center .kickoff-time { font-size:22px; font-weight:900; margin:4px 0; }
+    .mh-center .market-countdown {
+      font-size:12px; font-weight:700; padding:4px 10px; border-radius:100px;
+      background:var(--lime-dim); color:var(--lime); display:inline-block;
+    }
+    .mh-center .market-countdown.closed { background:rgba(255,82,82,0.1); color:var(--coral); }
+    .mh-wallet-strip { display:flex; align-items:center; justify-content:center; gap:16px; margin-top:14px; }
+    .mhw-item { text-align:center; }
+    .mhw-item .mhw-label { font-size:11px; color:var(--grey); text-transform:uppercase; letter-spacing:0.5px; }
+    .mhw-item .mhw-value { font-size:16px; font-weight:800; color:var(--lime); margin-top:2px; }
+    .mhw-item .mhw-value.reserved { color:var(--orange); }
+
+    /* ── CONTENT ── */
+    .match-content { padding: 24px 32px 80px; max-width: 900px; margin: 0 auto; }
+
+    /* ── CATEGORY SECTION ── */
+    .category-section { margin-bottom: 32px; }
+    .cat-header {
+      display:flex; align-items:center; gap:10px; margin-bottom:14px;
+      padding-bottom:10px; border-bottom:1px solid var(--navy-light);
+    }
+    .cat-icon { font-size:18px; }
+    .cat-title { font-size:15px; font-weight:800; }
+    .cat-subtitle { font-size:12px; color:var(--grey); margin-left:auto; }
+    .cat-badge {
+      font-size:10px; font-weight:700; padding:2px 7px; border-radius:100px;
+      background:var(--rw-bg); color:var(--market-gold); border:1px solid var(--rw-border);
+    }
+
+    /* ── QUESTION CARD ── */
+    .question-card {
+      background:var(--navy-card); border-radius:14px; border:1px solid var(--grey-dark);
+      overflow:hidden; margin-bottom:12px; transition:border-color 0.15s;
+    }
+    .question-card.predicted { border-color: var(--teal); }
+    .question-card.won       { border-color: var(--market-green); }
+    .question-card.lost      { border-color: var(--coral); }
+
+    /* Real World Edge special styling */
+    .question-card.rw {
+      background: var(--rw-bg); border-color: var(--rw-border);
+    }
+    .qc-rw-banner {
+      padding:8px 16px; background: rgba(245,166,35,0.1); border-bottom:1px solid var(--rw-border);
+      display:flex; align-items:flex-start; gap:8px;
+    }
+    .qc-rw-context { font-size:12px; color:var(--market-gold); line-height:1.5; flex:1; }
+    .qc-rw-conf {
+      font-size:10px; font-weight:700; padding:2px 7px; border-radius:100px;
+      flex-shrink:0; margin-top:1px;
+    }
+    .qc-rw-conf.high   { background:rgba(76,175,80,0.2);   color:var(--market-green); border:1px solid rgba(76,175,80,0.3); }
+    .qc-rw-conf.medium { background:rgba(245,166,35,0.2);  color:var(--market-gold);  border:1px solid rgba(245,166,35,0.3); }
+    .qc-rw-conf.low    { background:rgba(255,82,82,0.15);  color:var(--coral);        border:1px solid rgba(255,82,82,0.3); }
+
+    .qc-body { padding:16px; }
+    .qc-question { font-size:15px; font-weight:700; margin-bottom:14px; line-height:1.4; }
+    .qc-meta { display:flex; gap:10px; margin-bottom:14px; flex-wrap:wrap; }
+    .qc-tag {
+      font-size:10px; font-weight:700; padding:2px 8px; border-radius:100px;
+      background:var(--navy-light); color:var(--grey); text-transform:uppercase;
+    }
+    .qc-tag.hard   { color:var(--coral); border:1px solid rgba(255,82,82,0.3); }
+    .qc-tag.medium { color:var(--orange); border:1px solid rgba(255,159,67,0.3); }
+    .qc-tag.easy   { color:var(--market-green); border:1px solid rgba(76,175,80,0.3); }
+    .qc-tag.xp     { color:var(--lime); border:1px solid rgba(168,225,12,0.3); background:var(--lime-dim); }
+    .qc-tag.deadline { color:var(--grey); }
+
+    /* Answer options */
+    .qc-options { display:flex; flex-direction:column; gap:8px; }
+    .answer-btn {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:12px 16px; border-radius:10px; border:1px solid var(--grey-dark);
+      background:var(--navy-light); cursor:pointer; font-size:14px; font-weight:600;
+      color:var(--off-white); transition:all 0.15s; width:100%;
+    }
+    .answer-btn:hover:not(:disabled) { border-color:var(--lime); background:var(--lime-dim); }
+    .answer-btn.selected { border-color:var(--lime); background:var(--lime-dim); color:var(--lime); }
+    .answer-btn.correct  { border-color:var(--market-green); background:rgba(76,175,80,0.12); color:var(--market-green); }
+    .answer-btn.wrong    { border-color:var(--coral); background:rgba(255,82,82,0.08); color:var(--coral); }
+    .answer-btn:disabled { opacity:0.6; cursor:default; }
+    .answer-check { font-size:14px; }
+
+    /* Placed prediction banner */
+    .prediction-banner {
+      margin-top:12px; padding:10px 14px; border-radius:10px;
+      background:rgba(78,205,196,0.08); border:1px solid rgba(78,205,196,0.25);
+      display:flex; align-items:center; gap:10px; font-size:13px;
+    }
+    .prediction-banner .pb-answer { font-weight:700; color:var(--teal); }
+    .prediction-banner .pb-stake  { color:var(--grey); font-size:12px; }
+    .prediction-banner .pb-outcome { margin-left:auto; font-weight:800; }
+    .prediction-banner.won  { background:rgba(76,175,80,0.08);  border-color:rgba(76,175,80,0.3); }
+    .prediction-banner.lost { background:rgba(255,82,82,0.08);  border-color:rgba(255,82,82,0.3); }
+
+    /* ── PREDICTION MODAL ── */
+    .modal-overlay {
+      position:fixed; inset:0; background:rgba(0,0,0,0.65); z-index:1000;
+      display:none; align-items:flex-end; justify-content:center;
+    }
+    .modal-overlay.open { display:flex; }
+    .prediction-modal {
+      background:var(--navy-card); border-radius:20px 20px 0 0;
+      width:100%; max-width:560px; padding:24px;
+      animation:slideUp 0.25s ease-out;
+    }
+    @keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+    .pm-title { font-size:17px; font-weight:800; margin-bottom:6px; }
+    .pm-question { font-size:14px; color:var(--grey); margin-bottom:18px; line-height:1.4; }
+    .pm-selected {
+      padding:10px 14px; background:var(--navy-light); border-radius:10px;
+      font-size:14px; font-weight:700; color:var(--lime); margin-bottom:18px;
+      border:1px solid var(--lime);
+    }
+
+    /* Stake selector */
+    .pm-section-label { font-size:12px; font-weight:700; color:var(--grey); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:10px; }
+    .stake-grid { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:18px; }
+    .stake-btn {
+      padding:10px 18px; border-radius:10px; border:1px solid var(--grey-dark);
+      background:var(--navy-light); color:var(--off-white); font-size:14px; font-weight:700;
+      cursor:pointer; transition:all 0.15s;
+    }
+    .stake-btn:hover { border-color:var(--lime); }
+    .stake-btn.active { border-color:var(--lime); background:var(--lime-dim); color:var(--lime); }
+    .stake-custom {
+      padding:10px 14px; border-radius:10px; border:1px solid var(--grey-dark);
+      background:var(--navy-light); color:var(--off-white); font-size:14px; font-weight:700;
+      width:110px; outline:none; transition:border-color 0.15s;
+    }
+    .stake-custom:focus { border-color:var(--lime); }
+
+    /* Confidence selector */
+    .confidence-grid { display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; margin-bottom:20px; }
+    .conf-btn {
+      padding:12px 8px; border-radius:12px; border:1px solid var(--grey-dark);
+      background:var(--navy-light); cursor:pointer; text-align:center; transition:all 0.15s;
+    }
+    .conf-btn:hover { border-color:var(--off-white); }
+    .conf-btn.active.safe       { border-color:var(--market-green); background:rgba(76,175,80,0.1); }
+    .conf-btn.active.confident  { border-color:var(--market-gold);  background:rgba(245,166,35,0.1); }
+    .conf-btn.active.bold       { border-color:var(--coral);         background:rgba(255,82,82,0.08); }
+    .conf-btn .cb-name { font-size:13px; font-weight:800; }
+    .conf-btn .cb-loss { font-size:11px; color:var(--coral); margin-top:4px; }
+    .conf-btn .cb-win  { font-size:11px; color:var(--market-green); margin-top:2px; }
+
+    /* Confirmation strip */
+    .pm-confirm-strip {
+      background:var(--navy-light); border-radius:12px; padding:14px;
+      display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;
+    }
+    .pm-confirm-item { text-align:center; }
+    .pm-confirm-item .pci-label { font-size:11px; color:var(--grey); text-transform:uppercase; }
+    .pm-confirm-item .pci-val { font-size:17px; font-weight:800; margin-top:3px; }
+    .pm-confirm-item .pci-val.loss   { color:var(--coral); }
+    .pm-confirm-item .pci-val.reward { color:var(--market-green); }
+    .pm-confirm-item .pci-val.avail  { color:var(--lime); }
+    .pm-warn { font-size:12px; color:var(--coral); text-align:center; margin-bottom:14px; }
+
+    .pm-actions { display:flex; gap:10px; }
+    .pm-cancel {
+      flex:1; padding:14px; border-radius:12px; border:1px solid var(--grey-dark);
+      background:transparent; color:var(--grey); font-size:14px; font-weight:700; cursor:pointer;
+    }
+    .pm-submit {
+      flex:2; padding:14px; border-radius:12px; border:none;
+      background:var(--lime); color:var(--navy); font-size:15px; font-weight:900;
+      cursor:pointer; transition:opacity 0.15s;
+    }
+    .pm-submit:disabled { opacity:0.4; cursor:default; }
+    .pm-submit:not(:disabled):hover { opacity:0.85; }
+
+    /* ── TOAST ── */
+    .toast {
+      position:fixed; bottom:28px; left:50%; transform:translateX(-50%);
+      background:#2E2E50; color:var(--off-white); padding:12px 20px; border-radius:10px;
+      font-size:14px; font-weight:600; box-shadow:0 8px 32px rgba(0,0,0,0.4);
+      z-index:9999; pointer-events:none; opacity:0; transition:opacity 0.2s; white-space:nowrap;
+    }
+    .toast.show { opacity:1; }
+    .toast.success { border-left:3px solid var(--market-green); }
+    .toast.error   { border-left:3px solid var(--coral); }
+  </style>
+</head>
+<body>
+<div id="sidebar-placeholder"></div>
+
+<div class="main-content">
+  <!-- Match Header -->
+  <div class="match-header">
+    <div class="mh-top">
+      <button class="back-btn" onclick="history.back()">← Back</button>
+      <div class="mh-league" id="mh-league">—</div>
+    </div>
+    <div class="mh-teams">
+      <div class="mh-team">
+        <div class="team-badge" id="home-badge">⚽</div>
+        <div class="team-name" id="home-name">Home</div>
+      </div>
+      <div class="mh-center">
+        <div class="vs">KICKOFF</div>
+        <div class="kickoff-time" id="kickoff-time">—</div>
+        <div class="market-countdown" id="market-countdown">Loading…</div>
+      </div>
+      <div class="mh-team">
+        <div class="team-badge" id="away-badge">⚽</div>
+        <div class="team-name" id="away-name">Away</div>
+      </div>
+    </div>
+    <div class="mh-wallet-strip">
+      <div class="mhw-item">
+        <div class="mhw-label">Available</div>
+        <div class="mhw-value" id="mh-available">—</div>
+      </div>
+      <div class="mhw-item">
+        <div class="mhw-label">My Exposure</div>
+        <div class="mhw-value reserved" id="mh-exposure">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Questions -->
+  <div class="match-content" id="match-content">
+    <div style="color:var(--grey);text-align:center;padding:48px;">Loading prediction markets…</div>
+  </div>
+</div>
+
+<!-- Prediction Modal -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOnOverlay(event)">
+  <div class="prediction-modal">
+    <div class="pm-title">Place Prediction</div>
+    <div class="pm-question" id="pm-question">—</div>
+    <div class="pm-selected" id="pm-selected">—</div>
+
+    <!-- Step 2: Stake -->
+    <div class="pm-section-label">Choose Stake</div>
+    <div class="stake-grid">
+      <button class="stake-btn" onclick="setStake(10, this)">10</button>
+      <button class="stake-btn" onclick="setStake(25, this)">25</button>
+      <button class="stake-btn" onclick="setStake(50, this)">50</button>
+      <button class="stake-btn" onclick="setStake(100, this)">100</button>
+      <input class="stake-custom" type="number" min="1" max="9999" placeholder="Custom"
+             oninput="setStakeCustom(this.value)" />
+    </div>
+
+    <!-- Step 3: Confidence -->
+    <div class="pm-section-label">Choose Confidence</div>
+    <div class="confidence-grid">
+      <div class="conf-btn safe" onclick="setConfidence('safe',this)">
+        <div class="cb-name">🛡 Safe</div>
+        <div class="cb-loss" id="cb-loss-safe">Max loss: —</div>
+        <div class="cb-win"  id="cb-win-safe">Win: —</div>
+      </div>
+      <div class="conf-btn confident" onclick="setConfidence('confident',this)">
+        <div class="cb-name">⚡ Confident</div>
+        <div class="cb-loss" id="cb-loss-confident">Max loss: —</div>
+        <div class="cb-win"  id="cb-win-confident">Win: —</div>
+      </div>
+      <div class="conf-btn bold" onclick="setConfidence('bold',this)">
+        <div class="cb-name">💥 Bold</div>
+        <div class="cb-loss" id="cb-loss-bold">Max loss: —</div>
+        <div class="cb-win"  id="cb-win-bold">Win: —</div>
+      </div>
+    </div>
+
+    <!-- Confirmation strip -->
+    <div class="pm-confirm-strip">
+      <div class="pm-confirm-item">
+        <div class="pci-label">Max Loss</div>
+        <div class="pci-val loss" id="pci-loss">—</div>
+      </div>
+      <div class="pm-confirm-item">
+        <div class="pci-label">Win Reward</div>
+        <div class="pci-val reward" id="pci-reward">—</div>
+      </div>
+      <div class="pm-confirm-item">
+        <div class="pci-label">After Placement</div>
+        <div class="pci-val avail" id="pci-after">—</div>
+      </div>
+    </div>
+    <div class="pm-warn" id="pm-warn" style="display:none"></div>
+
+    <div class="pm-actions">
+      <button class="pm-cancel" onclick="closeModal()">Cancel</button>
+      <button class="pm-submit" id="pm-submit" onclick="submitPrediction()" disabled>
+        Confirm Prediction
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="sidebar.js"></script>
+<script src="spontix-store.js"></script>
+<script>
+const LEAGUE_NAMES = { 39: 'Premier League 🏴󠁧󠁢󠁥󠁮󠁧󠁿', 140: 'LaLiga 🇪🇸' };
+const TEAM_EMOJIS  = { 40:'🔴',42:'🔴',50:'🔵',49:'🔵',33:'🔴',541:'👑',529:'🔵' };
+const CATEGORY_META = {
+  real_world_edge:  { icon:'🌍', label:'Real World Edge',     sub:'AI-powered context questions', badge:'FEATURED' },
+  featured:         { icon:'⭐', label:'Featured Picks',       sub:'Top picks for this match' },
+  match_result:     { icon:'🏆', label:'Match Result',         sub:'Predict the full-time outcome' },
+  goals:            { icon:'⚽', label:'Goals Market',          sub:'Over/under and goalscoring' },
+  team_stats:       { icon:'📊', label:'Team Statistics',      sub:'Corners, possession & more' },
+  player_prediction:{ icon:'👕', label:'Player Predictions',   sub:'Individual player markets' },
+};
+const CATEGORY_ORDER = ['real_world_edge','featured','match_result','goals','team_stats','player_prediction'];
+const CONF_MULTIPLIERS = { safe:{loss:0.5,win:0.5}, confident:{loss:1.0,win:1.0}, bold:{loss:1.5,win:2.0} };
+
+let fixtureId   = null;
+let fixture     = null;
+let questions   = [];
+let myPredictions = {};
+let walletAvailable = 0;
+
+// Modal state
+let modalQuestionId   = null;
+let modalAnswer       = null;
+let modalAnswerLabel  = '';
+let modalStake        = 50;
+let modalConfidence   = 'confident';
+
+// ── Init ──────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  try { SpontixSidebar.init({ type:'player', active:'market.html' }); } catch(e) {}
+  const params = new URLSearchParams(window.location.search);
+  fixtureId = parseInt(params.get('fixture_id'));
+  if (!fixtureId) { document.getElementById('match-content').innerHTML = '<div style="color:var(--coral);padding:40px;">No fixture specified.</div>'; return; }
+  await Promise.all([loadFixture(), loadWallet()]);
+  await loadQuestions();
+});
+
+// ── Fixture ───────────────────────────────────────────────────────────
+async function loadFixture() {
+  const { data: f } = await sb.from('api_football_fixtures')
+    .select('*').eq('fixture_id', fixtureId).single();
+  if (!f) return;
+  fixture = f;
+
+  document.title = `${f.home_team_name} vs ${f.away_team_name} — Spontyx Market`;
+  document.getElementById('mh-league').textContent = LEAGUE_NAMES[f.league_id] ?? '';
+  document.getElementById('home-name').textContent = f.home_team_name;
+  document.getElementById('away-name').textContent = f.away_team_name;
+  document.getElementById('home-badge').textContent = TEAM_EMOJIS[f.home_team_id] ?? '⚽';
+  document.getElementById('away-badge').textContent = TEAM_EMOJIS[f.away_team_id] ?? '⚽';
+
+  const kickoff = new Date(f.kickoff_at);
+  document.getElementById('kickoff-time').textContent =
+    kickoff.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+
+  updateCountdown(kickoff);
+  setInterval(() => updateCountdown(kickoff), 15_000);
+}
+
+function updateCountdown(kickoff) {
+  const deadline = new Date(kickoff.getTime() - 30 * 60_000);
+  const ms = deadline - new Date();
+  const el = document.getElementById('market-countdown');
+  if (ms <= 0) {
+    el.textContent = '🔒 Market Closed';
+    el.classList.add('closed');
+  } else if (ms < 3600_000) {
+    el.textContent = `⏰ Closes in ${Math.ceil(ms/60_000)}m`;
+    el.classList.add('closed');
+  } else {
+    const h = Math.floor(ms/3600_000);
+    const m = Math.floor((ms%3600_000)/60_000);
+    el.textContent = `🟢 Market open · ${h}h ${m}m`;
+  }
+}
+
+// ── Wallet ────────────────────────────────────────────────────────────
+async function loadWallet() {
+  const { data } = await sb.rpc('get_market_wallet');
+  if (!data?.ok) return;
+  walletAvailable = data.balance_available;
+  document.getElementById('mh-available').textContent = formatCoins(walletAvailable);
+}
+
+// ── Questions ─────────────────────────────────────────────────────────
+async function loadQuestions() {
+  const { data: qs } = await sb.from('market_questions')
+    .select('*')
+    .eq('fixture_id', fixtureId)
+    .in('status', ['active','locked','resolved','void'])
+    .order('is_featured', { ascending: false });
+
+  questions = qs ?? [];
+
+  // Load my predictions
+  const qIds = questions.map(q => q.id);
+  if (qIds.length > 0) {
+    const { data: preds } = await sb.from('market_predictions')
+      .select('*').in('question_id', qIds);
+    for (const p of preds ?? []) myPredictions[p.question_id] = p;
+  }
+
+  // Refresh exposure
+  const exp = Object.values(myPredictions).filter(p => ['placed','locked'].includes(p.status));
+  const totalExp = exp.reduce((s, p) => s + parseFloat(p.max_loss), 0);
+  document.getElementById('mh-exposure').textContent = formatCoins(totalExp);
+
+  renderQuestions();
+}
+
+function renderQuestions() {
+  const content = document.getElementById('match-content');
+
+  if (!questions.length) {
+    content.innerHTML = `<div style="text-align:center;padding:60px;color:var(--grey);">
+      <div style="font-size:40px;margin-bottom:12px;">📭</div>
+      <div style="font-size:16px;font-weight:700;color:var(--off-white);">No markets yet</div>
+      <div style="font-size:14px;margin-top:8px;">Prediction questions for this match haven't been generated yet. Check back closer to kickoff.</div>
+    </div>`;
+    return;
+  }
+
+  // Featured Picks = questions with is_featured=true, shown first as their own section
+  const featuredQs = questions.filter(q => q.is_featured);
+
+  // Group remaining by category (exclude 'featured' which is a UI-only concept)
+  const groups = {};
+  for (const q of questions) {
+    if (!groups[q.category]) groups[q.category] = [];
+    groups[q.category].push(q);
+  }
+
+  let html = '';
+
+  // ── Featured Picks section ───────────────────────────────────────
+  if (featuredQs.length) {
+    const meta = CATEGORY_META['featured'];
+    html += `<div class="category-section">
+      <div class="cat-header">
+        <span class="cat-icon">${meta.icon}</span>
+        <span class="cat-title">${meta.label}</span>
+        <span class="cat-subtitle">${meta.sub}</span>
+      </div>`;
+    for (const q of featuredQs) {
+      html += renderQuestionCard(q);
+    }
+    html += `</div>`;
+  }
+
+  // ── Category sections (skip 'featured' — it's handled above) ────
+  for (const cat of CATEGORY_ORDER) {
+    if (cat === 'featured') continue;
+    if (!groups[cat]?.length) continue;
+    const meta = CATEGORY_META[cat];
+    html += `<div class="category-section">
+      <div class="cat-header">
+        <span class="cat-icon">${meta.icon}</span>
+        <span class="cat-title">${meta.label}</span>
+        ${meta.badge ? `<span class="cat-badge">${meta.badge}</span>` : ''}
+        <span class="cat-subtitle">${meta.sub}</span>
+      </div>`;
+    for (const q of groups[cat]) {
+      html += renderQuestionCard(q);
+    }
+    html += `</div>`;
+  }
+  content.innerHTML = html;
+}
+
+function renderQuestionCard(q) {
+  const pred     = myPredictions[q.id];
+  const isRW     = q.category === 'real_world_edge';
+  const deadline = new Date(q.deadline_at);
+  const isOpen   = q.status === 'active' && deadline > new Date() && !pred;
+  const options  = Array.isArray(q.answer_options) ? q.answer_options : JSON.parse(q.answer_options || '[]');
+
+  let cardClass = 'question-card';
+  if (isRW) cardClass += ' rw';
+  if (pred?.status === 'won')  cardClass += ' won';
+  if (pred?.status === 'lost') cardClass += ' lost';
+  if (pred && !['won','lost'].includes(pred.status)) cardClass += ' predicted';
+
+  let rwBanner = '';
+  if (isRW && q.real_world_context) {
+    const confClass = q.real_world_confidence ?? 'medium';
+    rwBanner = `<div class="qc-rw-banner">
+      <div class="qc-rw-context">💡 ${q.real_world_context}</div>
+      <div class="qc-rw-conf ${confClass}">${confClass.toUpperCase()} CONFIDENCE</div>
+    </div>`;
+  }
+
+  const diffClass = q.difficulty;
+  const deadlineStr = deadline.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+
+  let optionsHtml = '';
+  for (const opt of options) {
+    let btnClass = 'answer-btn';
+    let checkIcon = '';
+    if (q.correct_answer && q.status === 'resolved') {
+      if (opt.id === q.correct_answer) { btnClass += ' correct'; checkIcon = '✓'; }
+      else if (pred?.selected_answer === opt.id && opt.id !== q.correct_answer) { btnClass += ' wrong'; checkIcon = '✗'; }
+    } else if (pred?.selected_answer === opt.id) {
+      btnClass += ' selected';
+    }
+
+    const disabled = !isOpen ? 'disabled' : '';
+    const clickHandler = isOpen ? `onclick="openModal('${q.id}','${opt.id}',\`${opt.label.replace(/`/g, "'")}\`)"` : '';
+    optionsHtml += `<button class="${btnClass}" ${disabled} ${clickHandler}>
+      <span>${opt.label}</span>
+      <span class="answer-check">${checkIcon}</span>
+    </button>`;
+  }
+
+  let predBanner = '';
+  if (pred) {
+    const optLabel = options.find(o => o.id === pred.selected_answer)?.label ?? pred.selected_answer;
+    const outcomeHtml = pred.status === 'won'
+      ? `<span class="pb-outcome" style="color:var(--market-green)">+${formatCoins(pred.reward_on_win)} ✓</span>`
+      : pred.status === 'lost'
+      ? `<span class="pb-outcome" style="color:var(--coral)">-${formatCoins(pred.max_loss)} ✗</span>`
+      : `<span class="pb-outcome" style="color:var(--teal)">Pending</span>`;
+    predBanner = `<div class="prediction-banner ${pred.status}">
+      <span>🎯 <span class="pb-answer">${optLabel}</span></span>
+      <span class="pb-stake">${pred.confidence.toUpperCase()} · ${formatCoins(pred.stake)} staked</span>
+      ${outcomeHtml}
+    </div>`;
+  }
+
+  return `<div class="${cardClass}" id="qcard-${q.id}">
+    ${rwBanner}
+    <div class="qc-body">
+      <div class="qc-meta">
+        <span class="qc-tag ${diffClass}">${diffClass}</span>
+        <span class="qc-tag xp">+${q.xp_reward} XP</span>
+        <span class="qc-tag deadline">Closes ${deadlineStr}</span>
+        ${q.status !== 'active' ? `<span class="qc-tag" style="color:var(--orange)">${q.status.toUpperCase()}</span>` : ''}
+      </div>
+      <div class="qc-question">${q.question_text}</div>
+      <div class="qc-options">${optionsHtml}</div>
+      ${predBanner}
+    </div>
+  </div>`;
+}
+
+// ── Prediction Modal ──────────────────────────────────────────────────
+function openModal(questionId, answerId, answerLabel) {
+  modalQuestionId  = questionId;
+  modalAnswer      = answerId;
+  modalAnswerLabel = answerLabel;
+  modalStake       = 50;
+  modalConfidence  = 'confident';
+
+  document.getElementById('pm-question').textContent =
+    questions.find(q => q.id === questionId)?.question_text ?? '';
+  document.getElementById('pm-selected').textContent = '▶ ' + answerLabel;
+  document.getElementById('pm-warn').style.display = 'none';
+
+  // Reset UI
+  document.querySelectorAll('.stake-btn').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.stake-btn')[1]?.classList.add('active'); // 25 default
+  document.querySelectorAll('.conf-btn').forEach(b => b.classList.remove('active'));
+
+  updateModalCalcs();
+  document.getElementById('modal-overlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('open');
+}
+
+function closeModalOnOverlay(e) {
+  if (e.target === document.getElementById('modal-overlay')) closeModal();
+}
+
+function setStake(val, el) {
+  modalStake = val;
+  document.querySelectorAll('.stake-btn').forEach(b => b.classList.remove('active'));
+  el?.classList.add('active');
+  document.querySelector('.stake-custom').value = '';
+  updateModalCalcs();
+}
+
+function setStakeCustom(val) {
+  modalStake = parseFloat(val) || 0;
+  document.querySelectorAll('.stake-btn').forEach(b => b.classList.remove('active'));
+  updateModalCalcs();
+}
+
+function setConfidence(conf, el) {
+  modalConfidence = conf;
+  document.querySelectorAll('.conf-btn').forEach(b => b.classList.remove('active'));
+  el?.classList.add('active');
+  updateModalCalcs();
+}
+
+function updateModalCalcs() {
+  const s = modalStake;
+
+  // Update each confidence button's preview
+  for (const [conf, mult] of Object.entries(CONF_MULTIPLIERS)) {
+    const maxL = (s * mult.loss).toFixed(0);
+    const winR = (s * mult.win).toFixed(0);
+    document.getElementById(`cb-loss-${conf}`).textContent = `Max loss: ${maxL}`;
+    document.getElementById(`cb-win-${conf}`).textContent  = `Win: +${winR}`;
+  }
+
+  if (!modalConfidence || !s) {
+    document.getElementById('pci-loss').textContent   = '—';
+    document.getElementById('pci-reward').textContent = '—';
+    document.getElementById('pci-after').textContent  = '—';
+    document.getElementById('pm-submit').disabled = true;
+    return;
+  }
+
+  const mult   = CONF_MULTIPLIERS[modalConfidence];
+  const maxL   = parseFloat((s * mult.loss).toFixed(2));
+  const winR   = parseFloat((s * mult.win).toFixed(2));
+  const after  = walletAvailable - maxL;
+
+  document.getElementById('pci-loss').textContent   = formatCoins(maxL);
+  document.getElementById('pci-reward').textContent = '+' + formatCoins(winR);
+  document.getElementById('pci-after').textContent  = formatCoins(after);
+
+  const warn = document.getElementById('pm-warn');
+  if (after < 0) {
+    warn.textContent = `Insufficient balance. You need ${formatCoins(maxL)} available, have ${formatCoins(walletAvailable)}.`;
+    warn.style.display = 'block';
+    document.getElementById('pm-submit').disabled = true;
+  } else {
+    warn.style.display = 'none';
+    document.getElementById('pm-submit').disabled = (s <= 0 || !modalConfidence);
+  }
+}
+
+async function submitPrediction() {
+  const btn = document.getElementById('pm-submit');
+  btn.disabled = true;
+  btn.textContent = 'Placing…';
+
+  const { data, error } = await sb.rpc('place_market_prediction', {
+    p_question_id: modalQuestionId,
+    p_answer:      modalAnswer,
+    p_stake:       modalStake,
+    p_confidence:  modalConfidence,
+  });
+
+  if (error || !data?.ok) {
+    const reason = data?.reason ?? 'unknown_error';
+    const msgs = {
+      insufficient_balance: `Not enough coins. Need ${formatCoins(data?.required)}, have ${formatCoins(data?.available)}.`,
+      already_predicted:    'You already have a prediction on this question.',
+      deadline_passed:      'The market for this question has closed.',
+      question_not_active:  'This question is no longer active.',
+    };
+    showToast(msgs[reason] ?? 'Error placing prediction.', 'error');
+    btn.disabled = false;
+    btn.textContent = 'Confirm Prediction';
+    return;
+  }
+
+  walletAvailable = data.new_available;
+  document.getElementById('mh-available').textContent = formatCoins(walletAvailable);
+  closeModal();
+  showToast('✅ Prediction placed!', 'success');
+
+  // Reload to show placed state
+  await loadQuestions();
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────
+function formatCoins(n) {
+  const v = parseFloat(n) || 0;
+  return v >= 1000 ? (v/1000).toFixed(1)+'k' : v.toFixed(0);
+}
+
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>
