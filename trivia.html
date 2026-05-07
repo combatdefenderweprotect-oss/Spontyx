@@ -810,16 +810,16 @@
         <div class="hub-mode-lg-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
       </div>
 
-      <div class="hub-mode-lg party" onclick="selectMode('party')">
+      <div class="hub-mode-lg party" style="opacity:0.55;cursor:not-allowed;" onclick="showToast('Party Room is coming soon — stay tuned!')">
         <div class="hub-mode-lg-icon">
           <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
         <div class="hub-mode-lg-info">
           <div class="hub-mode-lg-name">Party Room</div>
           <div class="hub-mode-lg-desc">Invite 2–8 friends to compete. Same questions, live standings. Top score wins.</div>
-          <div class="hub-mode-lg-cta">Open a room →</div>
+          <div class="hub-mode-lg-cta" style="color:var(--grey)">Coming soon</div>
         </div>
-        <div class="hub-mode-lg-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
+        <span style="position:absolute;top:10px;right:12px;background:var(--navy-hover);color:var(--grey);font-size:0.6rem;font-weight:800;padding:2px 8px;border-radius:6px;text-transform:uppercase;">Soon</span>
       </div>
     </div>
 
@@ -827,65 +827,34 @@
     <div class="hub-col-right">
 
       <div class="hub-section-title">Recent Games</div>
-      <div class="hub-recent">
-        <div class="hub-recent-item">
-          <div class="hub-recent-icon" style="background:rgba(78,205,196,0.12);color:var(--teal);">S</div>
-          <div class="hub-recent-info">
-            <div class="hub-recent-topic">Premier League History</div>
-            <div class="hub-recent-meta">Solo · Hard · 2h ago</div>
-          </div>
-          <div class="hub-recent-score" style="color:var(--teal)">8/10</div>
-        </div>
-        <div class="hub-recent-item">
-          <div class="hub-recent-icon" style="background:rgba(255,107,107,0.12);color:var(--coral);">D</div>
-          <div class="hub-recent-info">
-            <div class="hub-recent-topic">NBA All-Time Records</div>
-            <div class="hub-recent-meta">1v1 · vs MarkH · Yesterday</div>
-          </div>
-          <div class="hub-recent-score" style="color:var(--lime)">W</div>
-        </div>
-        <div class="hub-recent-item">
-          <div class="hub-recent-icon" style="background:rgba(124,92,252,0.12);color:var(--purple);">P</div>
-          <div class="hub-recent-info">
-            <div class="hub-recent-topic">World Cup Legends</div>
-            <div class="hub-recent-meta">Party · 5 players · 3d ago</div>
-          </div>
-          <div class="hub-recent-score" style="color:var(--gold)">2nd</div>
-        </div>
+      <div class="hub-recent" id="hub-recent-list">
+        <div style="color:var(--grey);font-size:0.82rem;padding:8px 0;">Loading…</div>
       </div>
 
       <div class="hub-section-title">Performance</div>
-      <div class="hub-perf">
+      <div class="hub-perf" id="hub-perf-section">
         <div class="hub-perf-row">
           <span class="hub-perf-label">Latest result</span>
-          <span class="hub-perf-val teal">8/10 · Solo</span>
+          <span class="hub-perf-val teal" id="hub-perf-latest">—</span>
         </div>
         <div class="hub-perf-row">
-          <span class="hub-perf-label">Best run</span>
-          <span class="hub-perf-val gold">22-streak</span>
+          <span class="hub-perf-label">Best streak</span>
+          <span class="hub-perf-val gold" id="hub-perf-streak">—</span>
         </div>
         <div class="hub-perf-row">
           <span class="hub-perf-label">Accuracy (last 7)</span>
-          <span class="hub-perf-val lime">76%</span>
+          <span class="hub-perf-val lime" id="hub-perf-acc">—</span>
         </div>
-        <div class="hub-perf-spark" aria-hidden="true">
-          <span style="height:35%"></span>
-          <span style="height:55%"></span>
-          <span style="height:42%"></span>
-          <span style="height:80%"></span>
-          <span style="height:60%" class="peak"></span>
-          <span style="height:72%"></span>
-          <span style="height:88%" class="peak"></span>
-        </div>
+        <div class="hub-perf-spark" aria-hidden="true" id="hub-perf-spark"></div>
       </div>
 
       <div class="hub-section-title">Suggested Next</div>
-      <div class="hub-suggest" onclick="selectMode('solo')">
+      <div class="hub-suggest" id="hub-suggest-card" onclick="selectMode('solo')">
         <div class="hub-suggest-icon">⚡</div>
         <div class="hub-suggest-info">
           <div class="hub-suggest-eyebrow">Try this</div>
-          <div class="hub-suggest-text">Football · Hard · Solo</div>
-          <div class="hub-suggest-meta">Push your accuracy past 80%</div>
+          <div class="hub-suggest-text" id="hub-suggest-text">Football · Medium · Solo</div>
+          <div class="hub-suggest-meta" id="hub-suggest-meta">Get your first score on the board</div>
         </div>
         <div class="hub-suggest-arrow"><svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg></div>
       </div>
@@ -904,31 +873,32 @@
   <div class="setup-card">
     <h3><span class="step-num">1</span> Choose Topic</h3>
     <div class="topic-grid">
-      <div class="topic-chip selected" onclick="selectTopic(this)">
+      <div class="topic-chip selected" onclick="selectTopic(this)" data-sport="soccer">
         <div class="topic-chip-icon"><svg viewBox="0 0 24 24" stroke="var(--teal)" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M12 2 C12 2 7 8 7 12 7 16 12 22 12 22 12 22 17 16 17 12 17 8 12 2 12 2z"/><line x1="2" y1="12" x2="22" y2="12"/></svg></div>
         <div class="topic-chip-label">Football</div>
       </div>
-      <div class="topic-chip" onclick="selectTopic(this)">
-        <div class="topic-chip-icon"><svg viewBox="0 0 24 24" stroke="var(--coral)" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93 19.07 19.07"/><path d="M19.07 4.93 4.93 19.07"/></svg></div>
-        <div class="topic-chip-label">Basketball</div>
+      <div class="topic-chip" onclick="selectTopic(this)" data-sport="nfl">
+        <div class="topic-chip-icon"><svg viewBox="0 0 24 24" stroke="var(--coral)" fill="none" stroke-width="1.8"><ellipse cx="12" cy="12" rx="10" ry="6" transform="rotate(-30 12 12)"/><line x1="7" y1="12" x2="17" y2="12"/><line x1="9" y1="9" x2="9" y2="15"/><line x1="15" y1="9" x2="15" y2="15"/></svg></div>
+        <div class="topic-chip-label">NFL</div>
       </div>
-      <div class="topic-chip" onclick="selectTopic(this)">
-        <div class="topic-chip-icon"><svg viewBox="0 0 24 24" stroke="var(--orange)" fill="none" stroke-width="1.8"><ellipse cx="12" cy="12" rx="10" ry="5"/><path d="M12 7v10"/><path d="M7 12h10"/></svg></div>
-        <div class="topic-chip-label">MMA / UFC</div>
+      <div class="topic-chip" onclick="selectTopic(this)" data-sport="nba">
+        <div class="topic-chip-icon"><svg viewBox="0 0 24 24" stroke="var(--orange)" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M4.93 4.93 19.07 19.07"/><path d="M19.07 4.93 4.93 19.07"/></svg></div>
+        <div class="topic-chip-label">NBA</div>
       </div>
-      <div class="topic-chip" onclick="selectTopic(this)">
-        <div class="topic-chip-icon"><svg viewBox="0 0 24 24" stroke="var(--lime)" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg></div>
+      <div class="topic-chip" onclick="selectTopic(this)" data-sport="mma">
+        <div class="topic-chip-icon"><svg viewBox="0 0 24 24" stroke="var(--lime)" fill="none" stroke-width="1.8"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg></div>
+        <div class="topic-chip-label">MMA</div>
+      </div>
+      <div class="topic-chip" onclick="selectTopic(this)" data-sport="tennis">
+        <div class="topic-chip-icon"><svg viewBox="0 0 24 24" stroke="var(--purple)" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg></div>
         <div class="topic-chip-label">Tennis</div>
       </div>
-      <div class="topic-chip" onclick="selectTopic(this)">
-        <div class="topic-chip-icon"><svg viewBox="0 0 24 24" stroke="var(--gold)" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><line x1="12" y1="2" x2="12" y2="22"/><path d="M5 6h14"/><path d="M5 18h14"/></svg></div>
-        <div class="topic-chip-label">Cricket</div>
-      </div>
-      <div class="topic-chip" onclick="selectTopic(this)">
-        <div class="topic-chip-icon"><svg viewBox="0 0 24 24" stroke="var(--purple)" fill="none" stroke-width="1.8"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26"/></svg></div>
-        <div class="topic-chip-label">Mixed / All</div>
+      <div class="topic-chip" onclick="selectTopic(this)" data-sport="f1">
+        <div class="topic-chip-icon"><svg viewBox="0 0 24 24" stroke="var(--gold)" fill="none" stroke-width="1.8"><path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v5"/><circle cx="18" cy="18" r="3"/><circle cx="7" cy="18" r="3"/></svg></div>
+        <div class="topic-chip-label">F1</div>
       </div>
     </div>
+    <div id="duel-sport-note" style="display:none;margin-top:8px;font-size:0.78rem;color:var(--grey);padding:0 4px;">Select a specific sport for Ranked Duel — All Sports is solo only.</div>
 
     <div class="topic-custom" id="topicCustom">
       <div class="topic-custom-icon">
@@ -973,22 +943,6 @@
           <div class="diff-name">Hard</div>
           <div class="diff-desc">Deep cuts, obscure stats, expert-level challenges</div>
           <div class="diff-xp">+20 XP per correct</div>
-        </div>
-      </div>
-      <div class="diff-option" onclick="selectDiff(this, 'adaptive')">
-        <div class="diff-dot adaptive"></div>
-        <div class="diff-info">
-          <div class="diff-name">Adaptive AI</div>
-          <div class="diff-desc">AI adjusts difficulty in real-time based on your performance</div>
-          <div class="diff-xp">+8–25 XP per correct (scales)</div>
-        </div>
-      </div>
-      <div class="diff-option" onclick="selectDiff(this, 'escalating')">
-        <div class="diff-dot escalating"></div>
-        <div class="diff-info">
-          <div class="diff-name">Escalating</div>
-          <div class="diff-desc">Starts easy, gets progressively harder each round — quiz show style</div>
-          <div class="diff-xp">+5–30 XP per correct (increases)</div>
         </div>
       </div>
     </div>
@@ -1147,50 +1101,16 @@
 </div>
 
 <!-- ═══════════════════════════════
-     SCREEN 6 — PARTY LOBBY
+     SCREEN 6 — PARTY LOBBY (coming soon)
 ═══════════════════════════════ -->
 <div id="screen-party-lobby" class="screen lobby">
-  <div class="lobby-card">
+  <div class="lobby-card" style="text-align:center;gap:20px;">
     <div class="lobby-icon party">
       <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     </div>
     <div class="lobby-title">Party Room</div>
-    <div class="lobby-subtitle">Football — Medium — 10 Rounds</div>
-
-    <div class="lobby-room-code">
-      <div class="lobby-room-code-label">Room Code</div>
-      <div class="lobby-room-code-val">SPNTX-742</div>
-    </div>
-
-    <div class="lobby-players">
-      <div class="lobby-player">
-        <div class="lobby-player-avatar" style="background:var(--teal);color:#fff;">BW</div>
-        <div class="lobby-player-name">You</div>
-      </div>
-      <div class="lobby-player">
-        <div class="lobby-player-avatar" style="background:var(--coral);color:#fff;">MH</div>
-        <div class="lobby-player-name">MarkH</div>
-      </div>
-      <div class="lobby-player">
-        <div class="lobby-player-avatar" style="background:var(--purple);color:#fff;">SJ</div>
-        <div class="lobby-player-name">SarahJ</div>
-      </div>
-      <div class="lobby-player">
-        <div class="lobby-player-avatar" style="background:var(--orange);color:#fff;">DK</div>
-        <div class="lobby-player-name">DaveK</div>
-      </div>
-      <div class="lobby-player">
-        <div class="lobby-player-avatar empty"></div>
-        <div class="lobby-player-name">Empty</div>
-      </div>
-      <div class="lobby-player">
-        <div class="lobby-player-avatar empty"></div>
-        <div class="lobby-player-name">Empty</div>
-      </div>
-    </div>
-    <div style="margin-top:24px;display:flex;gap:10px;justify-content:center;">
-      <button class="lobby-start-btn party" onclick="startParty()" style="flex:1;max-width:200px;">Start Game</button>
-    </div>
+    <div class="lobby-subtitle" style="max-width:320px;">Multiplayer party trivia is coming soon. Compete against friends with live standings.</div>
+    <button class="lobby-cancel-btn" onclick="goScreen('screen-hub')" style="margin-top:8px;">Back to Hub</button>
   </div>
 </div>
 
@@ -1345,7 +1265,8 @@ function goBackOrFallback(fallback) {
 }
 /* ═══ STATE ═══ */
 let currentMode = 'solo';
-let selectedTopic = 'Football';
+let selectedTopic      = 'soccer';   // data-sport value (DB key) or null for all
+let selectedTopicLabel = 'Football'; // display label
 let selectedDiff = 'medium';
 let selectedRounds = 15;
 let currentRound = 1;
@@ -1405,15 +1326,12 @@ const questions = {
 };
 
 /* ═══ TOPIC → SPORT ═══ */
-const TOPIC_TO_SPORT = {
-  'Football':    'soccer',
-  'Basketball':  'nba',
-  'MMA / UFC':   'mma',
-  'Tennis':      'tennis',
-  'Cricket':     null,
-  'Mixed / All': null,
-};
-function topicToSport(topic) { return TOPIC_TO_SPORT[topic] || null; }
+// Keys match topic-chip data-sport attributes; null = all sports (solo only)
+function topicToSport(chipOrLabel) {
+  // Accept either a data-sport value directly or the legacy label string
+  const map = { Football:'soccer', NFL:'nfl', NBA:'nba', MMA:'mma', Tennis:'tennis', F1:'f1' };
+  return map[chipOrLabel] || null;
+}
 
 /* ═══ DB HELPERS ═══ */
 
@@ -1828,9 +1746,15 @@ function computeLevel(xpTotal) {
 async function loadHubStats() {
   if (!currentUserId || !window.sb) return;
 
-  const [{ data: statsRow }, { data: { user } }] = await Promise.all([
+  const [{ data: statsRow }, { data: { user } }, { data: recentSessions }] = await Promise.all([
     window.sb.from('trivia_player_stats').select('*').eq('user_id', currentUserId).maybeSingle(),
     window.sb.auth.getUser(),
+    window.sb.from('trivia_sessions')
+      .select('id,mode,sport,correct_count,total_rounds,result_status,accuracy,created_at')
+      .eq('user_id', currentUserId)
+      .eq('completed', true)
+      .order('created_at', { ascending: false })
+      .limit(7),
   ]);
 
   const name     = user?.user_metadata?.display_name || user?.email?.split('@')[0] || 'Player';
@@ -1848,27 +1772,126 @@ async function loadHubStats() {
     set('hub-stat-accuracy', '0%');
     set('hub-stat-streak', 0);
     set('hub-stat-wins', 0);
+  } else {
+    const lvl  = computeLevel(statsRow.xp_total);
+    const next = levels[Math.min(lvl.lvl, levels.length - 1)];
+    const range = next.xp - lvl.xp;
+    const prog  = range > 0 ? Math.min((statsRow.xp_total - lvl.xp) / range, 1) : 1;
+
+    set('hub-level-badge',    lvl.lvl);
+    set('hub-profile-title',  lvl.title + ' — Lvl ' + lvl.lvl);
+    set('hub-xp-text-next',   'Lvl ' + (lvl.lvl + 1));
+    set('hub-xp-text-current', statsRow.xp_total.toLocaleString() + ' / ' + next.xp.toLocaleString() + ' XP');
+
+    const fillEl = document.getElementById('hub-xp-fill');
+    if (fillEl) fillEl.style.width = (prog * 100).toFixed(1) + '%';
+
+    const tot = statsRow.correct_total + statsRow.wrong_total;
+    set('hub-stat-games',    statsRow.games_played);
+    set('hub-stat-accuracy', tot > 0 ? Math.round(statsRow.correct_total / tot * 100) + '%' : '0%');
+    set('hub-stat-streak',   statsRow.best_in_session_streak);
+    set('hub-stat-wins',     statsRow.games_duel);
+  }
+
+  renderHubRecent(recentSessions || []);
+  renderHubPerformance(recentSessions || [], statsRow);
+}
+
+function relativeTime(isoStr) {
+  const diff = Date.now() - new Date(isoStr).getTime();
+  const m = Math.floor(diff / 60000);
+  if (m < 60)   return m <= 1 ? 'just now' : m + 'm ago';
+  const h = Math.floor(m / 60);
+  if (h < 24)   return h + 'h ago';
+  const d = Math.floor(h / 24);
+  return d === 1 ? 'Yesterday' : d + 'd ago';
+}
+
+function renderHubRecent(sessions) {
+  const el = document.getElementById('hub-recent-list');
+  if (!el) return;
+  if (!sessions.length) {
+    el.innerHTML = '<div style="color:var(--grey);font-size:0.82rem;padding:4px 0;">No games yet — play your first trivia challenge!</div>';
+    return;
+  }
+  const modeIcon = { solo: { letter:'S', bg:'rgba(78,205,196,0.12)', color:'var(--teal)' }, ranked_duel: { letter:'D', bg:'rgba(255,107,107,0.12)', color:'var(--coral)' }, party: { letter:'P', bg:'rgba(124,92,252,0.12)', color:'var(--purple)' } };
+  const modeLabel = { solo:'Solo', ranked_duel:'1v1 Duel', party:'Party' };
+  el.innerHTML = sessions.slice(0, 3).map(s => {
+    const ic = modeIcon[s.mode] || modeIcon.solo;
+    const sport = SPORT_LABELS[s.sport] || s.sport || 'Mixed';
+    const when  = relativeTime(s.created_at);
+    let score, scoreColor;
+    if (s.mode === 'ranked_duel') {
+      if (s.result_status === 'win')  { score = 'W'; scoreColor = 'var(--lime)'; }
+      else if (s.result_status === 'loss') { score = 'L'; scoreColor = 'var(--coral)'; }
+      else { score = 'D'; scoreColor = 'var(--grey)'; }
+    } else {
+      score = (s.correct_count || 0) + '/' + (s.total_rounds || 10);
+      scoreColor = 'var(--teal)';
+    }
+    return `<div class="hub-recent-item">
+      <div class="hub-recent-icon" style="background:${ic.bg};color:${ic.color};">${ic.letter}</div>
+      <div class="hub-recent-info">
+        <div class="hub-recent-topic">${sport}</div>
+        <div class="hub-recent-meta">${modeLabel[s.mode] || s.mode} · ${when}</div>
+      </div>
+      <div class="hub-recent-score" style="color:${scoreColor}">${score}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderHubPerformance(sessions, statsRow) {
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+
+  if (!sessions.length) {
+    set('hub-perf-latest',  '—');
+    set('hub-perf-streak',  '—');
+    set('hub-perf-acc',     '—');
     return;
   }
 
-  const lvl  = computeLevel(statsRow.xp_total);
-  const next = levels[Math.min(lvl.lvl, levels.length - 1)];
-  const range = next.xp - lvl.xp;
-  const prog  = range > 0 ? Math.min((statsRow.xp_total - lvl.xp) / range, 1) : 1;
+  // Latest result
+  const last = sessions[0];
+  const lastLabel = last.mode === 'ranked_duel'
+    ? (last.result_status === 'win' ? 'Win' : last.result_status === 'loss' ? 'Loss' : 'Draw') + ' · 1v1'
+    : (last.correct_count || 0) + '/' + (last.total_rounds || 10) + ' · ' + (SPORT_LABELS[last.sport] || 'Mixed');
+  set('hub-perf-latest', lastLabel);
 
-  set('hub-level-badge',    lvl.lvl);
-  set('hub-profile-title',  lvl.title + ' — Lvl ' + lvl.lvl);
-  set('hub-xp-text-next',   'Lvl ' + (lvl.lvl + 1));
-  set('hub-xp-text-current', statsRow.xp_total.toLocaleString() + ' / ' + next.xp.toLocaleString() + ' XP');
+  // Best streak from stats
+  set('hub-perf-streak', statsRow ? (statsRow.best_in_session_streak || 0) + '-streak' : '—');
 
-  const fillEl = document.getElementById('hub-xp-fill');
-  if (fillEl) fillEl.style.width = (prog * 100).toFixed(1) + '%';
+  // Accuracy over last 7
+  const accs = sessions.map(s => s.accuracy || (s.total_rounds > 0 ? (s.correct_count / s.total_rounds) : 0));
+  const avgAcc = accs.length ? Math.round(accs.reduce((a,b) => a + b, 0) / accs.length * 100) : 0;
+  set('hub-perf-acc', avgAcc + '%');
 
-  const tot = statsRow.correct_total + statsRow.wrong_total;
-  set('hub-stat-games',    statsRow.games_played);
-  set('hub-stat-accuracy', tot > 0 ? Math.round(statsRow.correct_total / tot * 100) + '%' : '0%');
-  set('hub-stat-streak',   statsRow.best_in_session_streak);
-  set('hub-stat-wins',     statsRow.games_duel);
+  // Spark bars
+  const sparkEl = document.getElementById('hub-perf-spark');
+  if (sparkEl) {
+    const bars = [...accs].reverse(); // oldest first
+    const peak = Math.max(...bars, 0.01);
+    sparkEl.innerHTML = bars.map((a, i) => {
+      const h = Math.round((a / peak) * 100);
+      const isPeak = a === peak;
+      return `<span style="height:${h}%"${isPeak ? ' class="peak"' : ''}></span>`;
+    }).join('');
+  }
+
+  // Suggested next
+  const sugText = document.getElementById('hub-suggest-text');
+  const sugMeta = document.getElementById('hub-suggest-meta');
+  if (sugText && sugMeta) {
+    if (avgAcc >= 80) {
+      sugText.textContent = (SPORT_LABELS[last.sport] || 'Football') + ' · Hard · Solo';
+      sugMeta.textContent = 'You\'re hot — push to expert level';
+    } else if (avgAcc >= 50) {
+      sugText.textContent = (SPORT_LABELS[last.sport] || 'Football') + ' · Medium · Solo';
+      sugMeta.textContent = 'Keep building your streak';
+    } else {
+      sugText.textContent = 'Football · Easy · Solo';
+      sugMeta.textContent = 'Build your confidence with easier questions';
+    }
+  }
 }
 
 /* ═══ LEVEL SYSTEM ═══ */
@@ -1944,7 +1967,14 @@ function selectMode(mode) {
     }
   }
 
+  if (mode === 'party') {
+    showToast('Party Room is coming soon — stay tuned!');
+    return;
+  }
   currentMode = mode;
+  // Show/hide duel sport note on setup screen
+  const note = document.getElementById('duel-sport-note');
+  if (note) note.style.display = mode === 'duel' && !selectedTopic ? '' : 'none';
   goScreen('screen-setup');
 }
 
@@ -1952,23 +1982,29 @@ function selectMode(mode) {
 function selectTopic(el) {
   document.querySelectorAll('.topic-chip').forEach(c => c.classList.remove('selected'));
   el.classList.add('selected');
-  selectedTopic = el.querySelector('.topic-chip-label').textContent;
-  // Clear custom input when a preset is picked
+  selectedTopic    = el.dataset.sport || null;
+  selectedTopicLabel = el.querySelector('.topic-chip-label').textContent;
   const customInput = document.getElementById('topicCustomInput');
-  if (customInput) { customInput.value = ''; }
+  if (customInput) customInput.value = '';
   document.getElementById('topicCustom').style.borderColor = 'rgba(255,255,255,0.08)';
   document.getElementById('topicCustom').style.background = 'var(--navy-light)';
+  // Show note if duel mode and no specific sport selected
+  const note = document.getElementById('duel-sport-note');
+  if (note) note.style.display = (currentMode === 'duel' && !selectedTopic) ? '' : 'none';
 }
 function onCustomTopic(input) {
   const val = input.value.trim();
   if (val.length > 0) {
-    // Deselect preset chips
     document.querySelectorAll('.topic-chip').forEach(c => c.classList.remove('selected'));
-    selectedTopic = val;
+    selectedTopic      = null;   // custom text → no fixed sport filter
+    selectedTopicLabel = val;
   } else {
-    // If cleared, re-select Football as default
     const firstChip = document.querySelector('.topic-chip');
-    if (firstChip) { firstChip.classList.add('selected'); selectedTopic = 'Football'; }
+    if (firstChip) {
+      firstChip.classList.add('selected');
+      selectedTopic      = firstChip.dataset.sport || 'soccer';
+      selectedTopicLabel = firstChip.querySelector('.topic-chip-label').textContent;
+    }
   }
 }
 function setCustomTopic(topic) {
@@ -2054,7 +2090,7 @@ async function startGame() {
   playQuestions      = [];
 
   if (currentMode === 'solo') {
-    const sport = topicToSport(selectedTopic);
+    const sport = selectedTopic;   // already the DB sport key (or null = all sports)
     showToast('Loading questions…');
     const dbRows = await loadQuestionsFromDB(sport, selectedDiff, selectedRounds);
     if (!dbRows || !dbRows.length) {
@@ -2068,9 +2104,10 @@ async function startGame() {
   }
 
   if (currentMode === 'duel') {
-    const sport = topicToSport(selectedTopic);
+    const sport = selectedTopic;   // already the DB sport key
     if (!sport) {
-      showToast('Please select a specific sport for Ranked Duel — Mixed is not supported.');
+      showToast('Please select a specific sport for Ranked Duel.');
+      document.getElementById('duel-sport-note').style.display = '';
       return;
     }
     let ratingSnapshot = 800;
@@ -2243,7 +2280,6 @@ function answerQuestion(prefix, chosen, correctIdx) {
     pips[currentRound - 1].className = 'play-pip correct';
     showXPToast(prefix, finalXp);
     if (prefix === 'duel') updateDuelScoreDisplay();
-    if (prefix === 'party') simulatePartyScores(true);
   } else {
     wrongCount++;
     currentStreak = 0;
@@ -2257,7 +2293,6 @@ function answerQuestion(prefix, chosen, correctIdx) {
 
     pips[currentRound - 1].className = 'play-pip wrong';
     if (prefix === 'duel') updateDuelScoreDisplay();
-    if (prefix === 'party') simulatePartyScores(false);
   }
 
   updateScoreDisplay(prefix);
@@ -2283,18 +2318,11 @@ function updateScoreDisplay(prefix) {
 
 function getDiffLabel() {
   const map = {
-    easy: { label: 'Easy', cls: 'easy' },
+    easy:   { label: 'Easy',   cls: 'easy'   },
     medium: { label: 'Medium', cls: 'medium' },
-    hard: { label: 'Hard', cls: 'hard' },
-    adaptive: { label: 'Adaptive', cls: 'medium' },
-    escalating: { label: 'Round ' + currentRound, cls: currentRound <= 4 ? 'easy' : currentRound <= 7 ? 'medium' : 'hard' }
+    hard:   { label: 'Hard',   cls: 'hard'   },
   };
   return map[selectedDiff] || map.medium;
-}
-
-function getXPForDiff() {
-  const map = { easy: 5, medium: 10, hard: 20, adaptive: 12, escalating: 5 + currentRound * 2 };
-  return map[selectedDiff] || 10;
 }
 
 function showXPToast(prefix, xp) {
@@ -2306,18 +2334,6 @@ function showXPToast(prefix, xp) {
 }
 
 
-/* ═══ PARTY SIMULATION ═══ */
-let partyScores = { mark: 0, sarah: 0, dave: 0 };
-function simulatePartyScores(youCorrect) {
-  if (Math.random() > 0.4) partyScores.mark += Math.floor(Math.random() * 15) + 5;
-  if (Math.random() > 0.5) partyScores.sarah += Math.floor(Math.random() * 15) + 5;
-  if (Math.random() > 0.6) partyScores.dave += Math.floor(Math.random() * 15) + 5;
-
-  document.getElementById('party-your-score').textContent = totalXP;
-  document.getElementById('party-mark-score').textContent = partyScores.mark;
-  document.getElementById('party-sarah-score').textContent = partyScores.sarah;
-  document.getElementById('party-dave-score').textContent = partyScores.dave;
-}
 
 /* ═══ RESULTS ═══ */
 async function showResults() {
