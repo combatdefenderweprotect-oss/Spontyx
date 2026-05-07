@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="view-transition" content="same-origin" />
+  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx — Market</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    :root {
+      --navy: #1A1A2E; --navy-light: #22223A; --navy-card: #2A2A44;
+      --navy-hover: #32325A; --lime: #A8E10C; --lime-dim: rgba(168,225,12,0.12);
+      --coral: #FF6B6B; --teal: #4ECDC4; --purple: #7C5CFC;
+      --orange: #FF9F43; --gold: #FFD700; --off-white: #E8E8F0;
+      --grey: #9898B0; --grey-dark: #5A5A78;
+      --market-gold: #F5A623; --market-red: #FF5252; --market-green: #4CAF50;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Inter',sans-serif; background:var(--navy); color:var(--off-white); min-height:100vh; }
+
+    /* ── PAGE LAYOUT ── */
+    .market-page { padding: 28px 32px 60px; max-width: 1280px; margin: 0 auto; }
+
+    /* ── HERO HEADER ── */
+    .market-hero {
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 28px; gap: 20px; flex-wrap: wrap;
+    }
+    .market-hero-left h1 {
+      font-size: 28px; font-weight: 900; letter-spacing: -0.5px;
+      background: linear-gradient(135deg, #A8E10C, #4ECDC4);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .market-hero-left p { color: var(--grey); font-size: 14px; margin-top: 4px; }
+
+    /* ── WALLET STRIP ── */
+    .wallet-strip {
+      display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    }
+    .wallet-card {
+      background: var(--navy-card); border-radius: 12px;
+      padding: 12px 18px; min-width: 140px;
+    }
+    .wallet-card .wc-label { font-size: 11px; color: var(--grey); text-transform: uppercase; letter-spacing: 0.6px; }
+    .wallet-card .wc-value { font-size: 20px; font-weight: 800; color: var(--lime); margin-top: 2px; }
+    .wallet-card .wc-value.reserved { color: var(--orange); }
+    .wallet-card .wc-value.total    { color: var(--off-white); }
+    .wallet-btn {
+      background: var(--lime-dim); color: var(--lime); border: 1px solid var(--lime);
+      border-radius: 10px; padding: 10px 16px; font-size: 13px; font-weight: 700;
+      cursor: pointer; text-decoration: none; display: flex; align-items: center; gap: 6px;
+      transition: background 0.15s;
+    }
+    .wallet-btn:hover { background: rgba(168,225,12,0.2); }
+    .bonus-btn {
+      background: linear-gradient(135deg, var(--market-gold), #E8920A);
+      color: #1A1A2E; border: none; border-radius: 10px; padding: 10px 16px;
+      font-size: 13px; font-weight: 800; cursor: pointer; display: flex;
+      align-items: center; gap: 6px; transition: opacity 0.15s;
+    }
+    .bonus-btn:disabled { opacity: 0.4; cursor: default; }
+    .bonus-btn:not(:disabled):hover { opacity: 0.85; }
+
+    /* ── FILTERS ── */
+    .market-filters {
+      display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; align-items: center;
+    }
+    .filter-chip {
+      padding: 7px 14px; border-radius: 100px; font-size: 13px; font-weight: 600;
+      border: 1px solid var(--grey-dark); color: var(--grey); background: transparent;
+      cursor: pointer; transition: all 0.15s;
+    }
+    .filter-chip:hover { border-color: var(--lime); color: var(--lime); }
+    .filter-chip.active { background: var(--lime); color: var(--navy); border-color: var(--lime); }
+    .filter-sep { width: 1px; height: 24px; background: var(--grey-dark); margin: 0 4px; }
+
+    /* ── DAILY CHALLENGES ── */
+    .challenges-section { margin-bottom: 28px; }
+    .section-title {
+      font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
+      color: var(--grey); margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+    }
+    .section-title span { color: var(--off-white); }
+    .challenges-strip { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 4px; }
+    .challenge-chip {
+      background: var(--navy-card); border-radius: 10px; padding: 10px 14px;
+      min-width: 180px; flex-shrink: 0; border: 1px solid var(--grey-dark);
+      transition: border-color 0.15s;
+    }
+    .challenge-chip.done { border-color: var(--market-green); }
+    .challenge-chip .ch-name { font-size: 12px; font-weight: 700; color: var(--off-white); display: flex; align-items: center; gap: 6px; }
+    .challenge-chip .ch-goal { font-size: 11px; color: var(--grey); margin-top: 2px; }
+    .challenge-chip .ch-bar { height: 3px; background: var(--navy-light); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+    .challenge-chip .ch-fill { height: 100%; background: var(--lime); border-radius: 2px; transition: width 0.4s; }
+    .challenge-chip.done .ch-fill { background: var(--market-green); }
+    .challenge-chip .ch-reward { font-size: 10px; color: var(--market-gold); margin-top: 5px; font-weight: 600; }
+
+    /* ── MATCH LIST ── */
+    .matches-section { }
+    .match-date-group { margin-bottom: 32px; }
+    .match-date-header {
+      font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px;
+      color: var(--grey); margin-bottom: 12px; padding-bottom: 8px;
+      border-bottom: 1px solid var(--navy-light);
+    }
+    .match-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 14px; }
+
+    /* ── MATCH CARD ── */
+    .match-card {
+      background: var(--navy-card); border-radius: 14px;
+      border: 1px solid var(--grey-dark); overflow: hidden;
+      cursor: pointer; transition: border-color 0.15s, transform 0.1s;
+      text-decoration: none; color: inherit; display: block;
+    }
+    .match-card:hover { border-color: var(--lime); transform: translateY(-2px); }
+    .match-card-league {
+      padding: 8px 16px; background: rgba(168,225,12,0.06);
+      border-bottom: 1px solid var(--navy-light);
+      font-size: 11px; color: var(--grey); font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .match-card-teams {
+      padding: 16px; display: flex; align-items: center; gap: 0;
+    }
+    .mc-team { flex: 1; text-align: center; }
+    .mc-team .team-name { font-size: 14px; font-weight: 700; }
+    .mc-team .team-badge {
+      width: 44px; height: 44px; border-radius: 50%;
+      background: var(--navy-light); display: flex; align-items: center; justify-content: center;
+      font-size: 20px; margin: 0 auto 6px;
+    }
+    .mc-vs {
+      padding: 0 12px; text-align: center; flex-shrink: 0;
+    }
+    .mc-vs .vs-text { font-size: 11px; color: var(--grey); font-weight: 700; text-transform: uppercase; }
+    .mc-vs .vs-time { font-size: 16px; font-weight: 800; color: var(--off-white); margin-top: 4px; }
+    .mc-vs .vs-countdown {
+      font-size: 11px; color: var(--lime); font-weight: 600; margin-top: 3px;
+    }
+    .mc-vs .vs-countdown.closing-soon { color: var(--coral); animation: pulse-red 1.5s infinite; }
+    @keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:0.5} }
+
+    .match-card-footer {
+      padding: 10px 16px; border-top: 1px solid var(--navy-light);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .mc-stats { display: flex; gap: 12px; }
+    .mc-stat { display: flex; align-items: center; gap: 5px; font-size: 12px; color: var(--grey); }
+    .mc-stat .mc-stat-n { font-weight: 700; color: var(--off-white); }
+    .mc-stat .rw-badge {
+      background: rgba(245,166,35,0.15); color: var(--market-gold);
+      border-radius: 4px; padding: 1px 5px; font-size: 10px; font-weight: 700;
+    }
+    .mc-exposure {
+      font-size: 12px; color: var(--orange); font-weight: 700;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .mc-exposure.zero { color: var(--grey); font-weight: 400; }
+    .mc-cta {
+      background: var(--lime); color: var(--navy); border: none; border-radius: 8px;
+      padding: 6px 14px; font-size: 12px; font-weight: 800; cursor: pointer;
+    }
+
+    /* ── EMPTY STATE ── */
+    .empty-state {
+      text-align: center; padding: 60px 20px; color: var(--grey);
+    }
+    .empty-state .es-icon { font-size: 48px; margin-bottom: 12px; }
+    .empty-state h3 { font-size: 18px; font-weight: 700; color: var(--off-white); margin-bottom: 8px; }
+    .empty-state p { font-size: 14px; }
+
+    /* ── TOAST ── */
+    .toast {
+      position: fixed; bottom: 28px; left: 50%; transform: translateX(-50%);
+      background: #2E2E50; color: var(--off-white); padding: 12px 20px;
+      border-radius: 10px; font-size: 14px; font-weight: 600;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4); z-index: 9999;
+      pointer-events: none; opacity: 0; transition: opacity 0.2s;
+      white-space: nowrap;
+    }
+    .toast.show { opacity: 1; }
+    .toast.success { border-left: 3px solid var(--market-green); }
+    .toast.error   { border-left: 3px solid var(--coral); }
+  </style>
+</head>
+<body>
+<div id="sidebar-placeholder"></div>
+
+<div class="main-content">
+  <div class="market-page">
+
+    <!-- Hero Header -->
+    <div class="market-hero">
+      <div class="market-hero-left">
+        <h1>⚡ Spontyx Market</h1>
+        <p>Predict. Stake. Win. Premier League &amp; LaLiga.</p>
+      </div>
+      <div class="wallet-strip">
+        <div class="wallet-card">
+          <div class="wc-label">Available</div>
+          <div class="wc-value" id="wallet-available">—</div>
+        </div>
+        <div class="wallet-card">
+          <div class="wc-label">Reserved</div>
+          <div class="wc-value reserved" id="wallet-reserved">—</div>
+        </div>
+        <button class="bonus-btn" id="bonus-btn" onclick="claimBonus()" disabled>
+          🎁 Daily Bonus
+        </button>
+        <a href="market-wallet.html" class="wallet-btn">
+          💳 Wallet
+        </a>
+      </div>
+    </div>
+
+    <!-- Daily Challenges -->
+    <div class="challenges-section">
+      <div class="section-title">Daily Challenges <span id="challenges-done-count"></span></div>
+      <div class="challenges-strip" id="challenges-strip">
+        <div style="color:var(--grey);font-size:13px;padding:10px;">Loading challenges…</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="market-filters">
+      <button class="filter-chip active" onclick="setFilter('all',this)">All Matches</button>
+      <button class="filter-chip" onclick="setFilter('pl',this)">🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier League</button>
+      <button class="filter-chip" onclick="setFilter('ll',this)">🇪🇸 LaLiga</button>
+      <div class="filter-sep"></div>
+      <button class="filter-chip" onclick="setFilter('target',this)">🌟 Featured Teams</button>
+      <button class="filter-chip" onclick="setFilter('open',this)">🟢 Market Open</button>
+    </div>
+
+    <!-- Match List -->
+    <div class="matches-section" id="matches-section">
+      <div class="empty-state">
+        <div class="es-icon">⚽</div>
+        <h3>Loading fixtures…</h3>
+        <p>Fetching upcoming matches with prediction markets.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="sidebar.js"></script>
+<script src="spontix-store.js"></script>
+<script>
+// ── Config ────────────────────────────────────────────────────────────
+const TARGET_LEAGUE_IDS = [39, 140];
+const TARGET_TEAM_IDS   = new Set([40, 42, 50, 49, 33, 541, 529]);
+const LEAGUE_NAMES      = { 39: 'Premier League 🏴󠁧󠁢󠁥󠁮󠁧󠁿', 140: 'LaLiga 🇪🇸' };
+const TEAM_EMOJIS       = { 40:'🔴',42:'🔴',50:'🔵',49:'🔵',33:'🔴',541:'👑',529:'🔵' };
+
+let allFixtures   = [];
+let matchSummaries = {};
+let activeFilter  = 'all';
+
+// ── Init ──────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', async () => {
+  try { SpontixSidebar.init({ type: 'player', active: 'market.html' }); } catch(e) {}
+  await Promise.all([loadWallet(), loadFixtures(), loadChallenges()]);
+});
+
+// ── Wallet ────────────────────────────────────────────────────────────
+async function loadWallet() {
+  const { data, error } = await sb.rpc('get_market_wallet');
+  if (error || !data?.ok) return;
+  document.getElementById('wallet-available').textContent = formatCoins(data.balance_available);
+  document.getElementById('wallet-reserved').textContent  = formatCoins(data.balance_reserved);
+  const btn = document.getElementById('bonus-btn');
+  if (data.can_claim_bonus) {
+    btn.disabled = false;
+    btn.textContent = '🎁 Daily Bonus +100';
+  } else {
+    btn.disabled = true;
+    btn.textContent = '🎁 Claimed Today';
+  }
+}
+
+async function claimBonus() {
+  const btn = document.getElementById('bonus-btn');
+  btn.disabled = true;
+  btn.textContent = '…';
+  const { data } = await sb.rpc('claim_daily_market_bonus');
+  if (data?.ok) {
+    showToast('🎁 +100 coins claimed!', 'success');
+    await loadWallet();
+  } else {
+    showToast(data?.reason === 'already_claimed_today' ? 'Already claimed today!' : 'Error claiming bonus', 'error');
+    btn.disabled = false;
+    btn.textContent = '🎁 Daily Bonus';
+  }
+}
+
+// ── Fixtures ──────────────────────────────────────────────────────────
+async function loadFixtures() {
+  const horizon = new Date(Date.now() + 72 * 3600_000).toISOString();
+  const { data: fixtures, error } = await sb
+    .from('api_football_fixtures')
+    .select('fixture_id, league_id, kickoff_at, home_team_id, home_team_name, away_team_id, away_team_name, status_short')
+    .in('league_id', TARGET_LEAGUE_IDS)
+    .in('status_short', ['NS', 'TBD'])
+    .gt('kickoff_at', new Date().toISOString())
+    .lte('kickoff_at', horizon)
+    .order('kickoff_at');
+
+  if (error) { showError('Failed to load fixtures.'); return; }
+
+  allFixtures = (fixtures ?? []).filter(f =>
+    TARGET_TEAM_IDS.has(f.home_team_id) || TARGET_TEAM_IDS.has(f.away_team_id)
+  );
+
+  // Load question counts and user exposures in parallel
+  await Promise.all(allFixtures.map(async (f) => {
+    const { data } = await sb.rpc('get_fixture_market_summary', { p_fixture_id: f.fixture_id });
+    if (data) matchSummaries[f.fixture_id] = data;
+  }));
+
+  renderFixtures();
+}
+
+function renderFixtures() {
+  const section = document.getElementById('matches-section');
+  const filtered = filterFixtures(allFixtures, activeFilter);
+
+  if (!filtered.length) {
+    section.innerHTML = `
+      <div class="empty-state">
+        <div class="es-icon">📭</div>
+        <h3>No matches found</h3>
+        <p>No upcoming fixtures match this filter. Check back soon.</p>
+      </div>`;
+    return;
+  }
+
+  // Group by date
+  const groups = {};
+  for (const f of filtered) {
+    const date = new Date(f.kickoff_at).toLocaleDateString('en-GB', { weekday:'long', day:'numeric', month:'long' });
+    if (!groups[date]) groups[date] = [];
+    groups[date].push(f);
+  }
+
+  let html = '';
+  for (const [date, fixtures] of Object.entries(groups)) {
+    html += `<div class="match-date-group">
+      <div class="match-date-header">${date}</div>
+      <div class="match-cards">`;
+    for (const f of fixtures) {
+      html += renderMatchCard(f);
+    }
+    html += `</div></div>`;
+  }
+  section.innerHTML = html;
+
+  // Start countdown timers
+  startCountdowns();
+}
+
+function renderMatchCard(f) {
+  const summary = matchSummaries[f.fixture_id] ?? { question_count: 0, rw_count: 0, user_exposure: 0 };
+  const kickoff = new Date(f.kickoff_at);
+  const timeStr = kickoff.toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
+  const hEmoji  = TEAM_EMOJIS[f.home_team_id] ?? '⚽';
+  const aEmoji  = TEAM_EMOJIS[f.away_team_id] ?? '⚽';
+  const lName   = LEAGUE_NAMES[f.league_id] ?? 'Football';
+  const deadline = new Date(kickoff.getTime() - 30 * 60_000);
+  const isOpen   = deadline > new Date();
+
+  const exposureHtml = summary.user_exposure > 0
+    ? `<div class="mc-exposure">⚡ ${formatCoins(summary.user_exposure)} staked</div>`
+    : `<div class="mc-exposure zero">No predictions yet</div>`;
+
+  const questionsHtml = summary.question_count > 0
+    ? `<div class="mc-stat"><span class="mc-stat-n">${summary.question_count}</span> questions</div>
+       ${summary.rw_count > 0 ? `<div class="mc-stat"><span class="rw-badge">RW ${summary.rw_count}</span></div>` : ''}`
+    : `<div class="mc-stat" style="color:var(--grey-dark)">No markets yet</div>`;
+
+  return `
+  <a href="market-match.html?fixture_id=${f.fixture_id}" class="match-card">
+    <div class="match-card-league">${lName}</div>
+    <div class="match-card-teams">
+      <div class="mc-team">
+        <div class="team-badge">${hEmoji}</div>
+        <div class="team-name">${f.home_team_name}</div>
+      </div>
+      <div class="mc-vs">
+        <div class="vs-text">Kickoff</div>
+        <div class="vs-time">${timeStr}</div>
+        <div class="vs-countdown ${!isOpen ? 'closing-soon' : ''}"
+             data-deadline="${deadline.toISOString()}"
+             data-kickoff="${f.kickoff_at}">
+          ${isOpen ? formatCountdown(deadline - new Date()) : 'Market Closed'}
+        </div>
+      </div>
+      <div class="mc-team">
+        <div class="team-badge">${aEmoji}</div>
+        <div class="team-name">${f.away_team_name}</div>
+      </div>
+    </div>
+    <div class="match-card-footer">
+      <div class="mc-stats">${questionsHtml}</div>
+      ${exposureHtml}
+    </div>
+  </a>`;
+}
+
+// ── Filters ───────────────────────────────────────────────────────────
+function filterFixtures(fixtures, filter) {
+  switch (filter) {
+    case 'pl':     return fixtures.filter(f => f.league_id === 39);
+    case 'll':     return fixtures.filter(f => f.league_id === 140);
+    case 'target': return fixtures.filter(f => TARGET_TEAM_IDS.has(f.home_team_id) || TARGET_TEAM_IDS.has(f.away_team_id));
+    case 'open':
+      return fixtures.filter(f => {
+        const deadline = new Date(f.kickoff_at).getTime() - 30 * 60_000;
+        return deadline > Date.now();
+      });
+    default: return fixtures;
+  }
+}
+
+function setFilter(filter, el) {
+  activeFilter = filter;
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderFixtures();
+}
+
+// ── Challenges ────────────────────────────────────────────────────────
+async function loadChallenges() {
+  const { data: challenges, error } = await sb.rpc('get_market_challenges_today');
+  if (error || !challenges) return;
+
+  const defs = await sb.from('market_daily_challenges').select('*').order('sort_order');
+  const defMap = {};
+  (defs.data ?? []).forEach(d => defMap[d.slug] = d);
+
+  let doneCount = 0;
+  let html = '';
+  for (const p of challenges) {
+    const def = defMap[p.challenge_slug];
+    if (!def) continue;
+    const pct = Math.min(100, Math.round((p.progress / def.goal_count) * 100));
+    if (p.completed) doneCount++;
+    html += `
+    <div class="challenge-chip ${p.completed ? 'done' : ''}">
+      <div class="ch-name">
+        ${def.icon} ${def.name}
+        ${p.completed ? '<span style="color:var(--market-green)">✓</span>' : ''}
+      </div>
+      <div class="ch-goal">${p.progress}/${def.goal_count} ${def.description}</div>
+      <div class="ch-bar"><div class="ch-fill" style="width:${pct}%"></div></div>
+      <div class="ch-reward">+${formatCoins(def.reward_coins)} · +${def.reward_xp} XP</div>
+    </div>`;
+  }
+
+  document.getElementById('challenges-strip').innerHTML = html || '<div style="color:var(--grey);font-size:13px;padding:10px;">No challenges found</div>';
+  document.getElementById('challenges-done-count').textContent = doneCount > 0 ? `${doneCount}/${challenges.length} done` : '';
+}
+
+// ── Countdowns ────────────────────────────────────────────────────────
+function startCountdowns() {
+  setInterval(() => {
+    document.querySelectorAll('.vs-countdown[data-deadline]').forEach(el => {
+      const ms = new Date(el.dataset.deadline) - new Date();
+      if (ms <= 0) { el.textContent = 'Market Closed'; el.classList.add('closing-soon'); return; }
+      el.textContent = formatCountdown(ms);
+      if (ms < 30 * 60_000) el.classList.add('closing-soon');
+    });
+  }, 10_000);
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────
+function formatCoins(n) {
+  const v = parseFloat(n) || 0;
+  return v >= 1000 ? (v / 1000).toFixed(1) + 'k' : v.toFixed(0);
+}
+
+function formatCountdown(ms) {
+  if (ms <= 0) return 'Closed';
+  const h = Math.floor(ms / 3600_000);
+  const m = Math.floor((ms % 3600_000) / 60_000);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+function showError(msg) {
+  document.getElementById('matches-section').innerHTML = `
+    <div class="empty-state">
+      <div class="es-icon">⚠️</div>
+      <h3>Error</h3><p>${msg}</p>
+    </div>`;
+}
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>

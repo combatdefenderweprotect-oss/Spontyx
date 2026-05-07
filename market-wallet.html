@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta name="view-transition" content="same-origin" />
+  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Spontyx Market — Wallet</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+  <style>
+    :root {
+      --navy:#1A1A2E; --navy-light:#22223A; --navy-card:#2A2A44; --navy-hover:#32325A;
+      --lime:#A8E10C; --lime-dim:rgba(168,225,12,0.12); --coral:#FF6B6B;
+      --teal:#4ECDC4; --orange:#FF9F43; --gold:#FFD700; --off-white:#E8E8F0;
+      --grey:#9898B0; --grey-dark:#5A5A78;
+      --market-gold:#F5A623; --market-red:#FF5252; --market-green:#4CAF50;
+    }
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:'Inter',sans-serif;background:var(--navy);color:var(--off-white);min-height:100vh;}
+
+    .wallet-page { padding:28px 32px 60px; max-width:900px; margin:0 auto; }
+
+    /* ── PAGE HEADER ── */
+    .wpage-header { display:flex; align-items:center; gap:14px; margin-bottom:28px; }
+    .back-btn {
+      display:flex; align-items:center; gap:6px; color:var(--grey); font-size:13px;
+      font-weight:600; text-decoration:none; cursor:pointer; background:none; border:none;
+      transition:color 0.15s;
+    }
+    .back-btn:hover { color:var(--lime); }
+    .wpage-header h1 { font-size:24px; font-weight:900; }
+
+    /* ── BALANCE CARDS ── */
+    .balance-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:28px; }
+    .balance-card { background:var(--navy-card); border-radius:16px; padding:20px; }
+    .bc-label { font-size:12px; color:var(--grey); text-transform:uppercase; letter-spacing:0.6px; margin-bottom:8px; }
+    .bc-value { font-size:28px; font-weight:900; }
+    .bc-value.available { color:var(--lime); }
+    .bc-value.reserved  { color:var(--orange); }
+    .bc-value.total     { color:var(--off-white); }
+    .bc-sub { font-size:12px; color:var(--grey); margin-top:6px; }
+
+    /* ── XP / STREAK ── */
+    .xp-strip { display:flex; gap:14px; margin-bottom:28px; }
+    .xp-card { flex:1; background:var(--navy-card); border-radius:14px; padding:16px; }
+    .xp-card .xp-icon { font-size:24px; margin-bottom:8px; }
+    .xp-card .xp-label { font-size:11px; color:var(--grey); text-transform:uppercase; letter-spacing:0.6px; }
+    .xp-card .xp-value { font-size:22px; font-weight:800; color:var(--purple); margin-top:4px; }
+    .xp-card .streak-value { color:var(--market-gold); }
+
+    /* ── BONUS ── */
+    .bonus-section { margin-bottom:28px; }
+    .bonus-card {
+      background: linear-gradient(135deg, rgba(245,166,35,0.12), rgba(232,146,10,0.06));
+      border:1px solid rgba(245,166,35,0.3); border-radius:16px; padding:20px;
+      display:flex; align-items:center; gap:18px;
+    }
+    .bonus-icon { font-size:36px; }
+    .bonus-info { flex:1; }
+    .bonus-info h3 { font-size:16px; font-weight:800; margin-bottom:4px; }
+    .bonus-info p  { font-size:13px; color:var(--grey); }
+    .bonus-btn {
+      background:linear-gradient(135deg,var(--market-gold),#E8920A);
+      color:#1A1A2E; border:none; border-radius:12px; padding:12px 20px;
+      font-size:14px; font-weight:900; cursor:pointer; transition:opacity 0.15s;
+      flex-shrink:0;
+    }
+    .bonus-btn:disabled { opacity:0.4; cursor:default; }
+    .bonus-btn:not(:disabled):hover { opacity:0.85; }
+
+    /* ── TROPHIES ── */
+    .trophies-section { margin-bottom:28px; }
+    .section-title { font-size:13px; font-weight:700; text-transform:uppercase; letter-spacing:0.8px; color:var(--grey); margin-bottom:14px; }
+    .trophies-grid { display:flex; gap:10px; flex-wrap:wrap; }
+    .trophy-chip {
+      background:var(--navy-card); border-radius:10px; padding:10px 14px;
+      display:flex; align-items:center; gap:8px; border:1px solid var(--grey-dark);
+    }
+    .trophy-chip .t-icon { font-size:20px; }
+    .trophy-chip .t-info {}
+    .trophy-chip .t-name { font-size:12px; font-weight:700; }
+    .trophy-chip .t-date { font-size:10px; color:var(--grey); }
+    .trophy-chip.legendary { border-color: var(--market-gold); }
+    .trophy-chip.epic      { border-color: var(--purple); }
+    .trophy-chip.rare      { border-color: var(--teal); }
+
+    /* ── STATS ── */
+    .stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:28px; }
+    .stat-card { background:var(--navy-card); border-radius:12px; padding:14px; text-align:center; }
+    .stat-card .st-val { font-size:20px; font-weight:800; margin-bottom:4px; }
+    .stat-card .st-label { font-size:11px; color:var(--grey); }
+
+    /* ── LEADERBOARD TABS ── */
+    .lb-tabs { display:flex; gap:4px; margin-bottom:18px; background:var(--navy-card); border-radius:10px; padding:4px; }
+    .lb-tab {
+      flex:1; padding:8px; border-radius:8px; border:none; background:transparent;
+      color:var(--grey); font-size:12px; font-weight:600; cursor:pointer; transition:all 0.15s;
+    }
+    .lb-tab.active { background:var(--navy-hover); color:var(--off-white); }
+
+    /* ── TRANSACTIONS ── */
+    .tx-section { margin-bottom:28px; }
+    .tx-list { display:flex; flex-direction:column; gap:6px; }
+    .tx-item {
+      background:var(--navy-card); border-radius:10px; padding:12px 16px;
+      display:flex; align-items:center; gap:12px;
+    }
+    .tx-icon { font-size:18px; width:28px; text-align:center; flex-shrink:0; }
+    .tx-info { flex:1; }
+    .tx-info .tx-note { font-size:13px; font-weight:600; }
+    .tx-info .tx-time { font-size:11px; color:var(--grey); margin-top:2px; }
+    .tx-amount { font-size:14px; font-weight:800; }
+    .tx-amount.pos { color:var(--market-green); }
+    .tx-amount.neg { color:var(--coral); }
+    .tx-amount.neu { color:var(--grey); }
+
+    .empty-tx { text-align:center; padding:40px; color:var(--grey); font-size:14px; }
+
+    /* ── LEADERBOARD TABLE ── */
+    .lb-section { margin-bottom:28px; }
+    .lb-table { width:100%; border-collapse:collapse; }
+    .lb-table th { font-size:11px; color:var(--grey); text-transform:uppercase; letter-spacing:0.5px; padding:10px 12px; text-align:left; }
+    .lb-table td { padding:10px 12px; border-top:1px solid var(--navy-light); font-size:13px; }
+    .lb-table tr:hover td { background:var(--navy-hover); }
+    .lb-rank { font-weight:800; color:var(--grey-dark); width:36px; }
+    .lb-rank.gold   { color:var(--gold); }
+    .lb-rank.silver { color:#C0C0C0; }
+    .lb-rank.bronze { color:#CD7F32; }
+    .lb-avatar { width:28px; height:28px; border-radius:50%; background:var(--navy-light); display:inline-flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; margin-right:8px; }
+    .lb-me td { background:var(--lime-dim); }
+
+    /* ── TOAST ── */
+    .toast { position:fixed; bottom:28px; left:50%; transform:translateX(-50%); background:#2E2E50; color:var(--off-white); padding:12px 20px; border-radius:10px; font-size:14px; font-weight:600; box-shadow:0 8px 32px rgba(0,0,0,0.4); z-index:9999; pointer-events:none; opacity:0; transition:opacity 0.2s; white-space:nowrap; }
+    .toast.show { opacity:1; }
+    .toast.success { border-left:3px solid var(--market-green); }
+    .toast.error   { border-left:3px solid var(--coral); }
+
+    @media(max-width:640px) {
+      .balance-grid { grid-template-columns:1fr; }
+      .stats-grid { grid-template-columns:repeat(2,1fr); }
+    }
+  </style>
+</head>
+<body>
+<div id="sidebar-placeholder"></div>
+
+<div class="main-content">
+  <div class="wallet-page">
+
+    <!-- Header -->
+    <div class="wpage-header">
+      <a href="market.html" class="back-btn">← Market</a>
+      <h1>💳 My Wallet</h1>
+    </div>
+
+    <!-- Balance Cards -->
+    <div class="balance-grid">
+      <div class="balance-card">
+        <div class="bc-label">Available</div>
+        <div class="bc-value available" id="bc-available">—</div>
+        <div class="bc-sub">Ready to stake</div>
+      </div>
+      <div class="balance-card">
+        <div class="bc-label">Reserved</div>
+        <div class="bc-value reserved" id="bc-reserved">—</div>
+        <div class="bc-sub">Locked in predictions</div>
+      </div>
+      <div class="balance-card">
+        <div class="bc-label">Total Balance</div>
+        <div class="bc-value total" id="bc-total">—</div>
+        <div class="bc-sub">Net coins owned</div>
+      </div>
+    </div>
+
+    <!-- XP / Streak -->
+    <div class="xp-strip">
+      <div class="xp-card">
+        <div class="xp-icon">⚡</div>
+        <div class="xp-label">Market XP</div>
+        <div class="xp-value" id="xp-total">—</div>
+      </div>
+      <div class="xp-card">
+        <div class="xp-icon">🔥</div>
+        <div class="xp-label">Correct Streak</div>
+        <div class="xp-value streak-value" id="streak-val">—</div>
+      </div>
+    </div>
+
+    <!-- Daily Bonus -->
+    <div class="bonus-section">
+      <div class="bonus-card">
+        <div class="bonus-icon">🎁</div>
+        <div class="bonus-info">
+          <h3>Daily Login Bonus</h3>
+          <p id="bonus-desc">Claim your +100 coins every day.</p>
+        </div>
+        <button class="bonus-btn" id="bonus-btn" onclick="claimBonus()">Claim +100</button>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="st-val" id="stat-total">—</div>
+        <div class="st-label">Total Predictions</div>
+      </div>
+      <div class="stat-card">
+        <div class="st-val" style="color:var(--market-green)" id="stat-wins">—</div>
+        <div class="st-label">Wins</div>
+      </div>
+      <div class="stat-card">
+        <div class="st-val" style="color:var(--orange)" id="stat-acc">—%</div>
+        <div class="st-label">Accuracy</div>
+      </div>
+      <div class="stat-card">
+        <div class="st-val" style="color:var(--coral)" id="stat-bold">—</div>
+        <div class="st-label">Bold Wins</div>
+      </div>
+    </div>
+
+    <!-- Trophies -->
+    <div class="trophies-section">
+      <div class="section-title">My Trophies</div>
+      <div class="trophies-grid" id="trophies-grid">
+        <div style="color:var(--grey);font-size:13px;">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Leaderboard -->
+    <div class="lb-section">
+      <div class="section-title">Leaderboards</div>
+      <div class="lb-tabs">
+        <button class="lb-tab active" onclick="switchLb('weekly',this)">📈 Weekly Profit</button>
+        <button class="lb-tab" onclick="switchLb('accuracy',this)">🎯 Accuracy</button>
+        <button class="lb-tab" onclick="switchLb('xp',this)">⚡ XP</button>
+        <button class="lb-tab" onclick="switchLb('bold',this)">💥 Bold</button>
+      </div>
+      <div id="lb-content">
+        <div style="color:var(--grey);text-align:center;padding:24px;font-size:13px;">Loading…</div>
+      </div>
+    </div>
+
+    <!-- Transactions -->
+    <div class="tx-section">
+      <div class="section-title">Transaction History</div>
+      <div class="tx-list" id="tx-list">
+        <div class="empty-tx">Loading transactions…</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="supabase-client.js"></script>
+<script src="sidebar.js"></script>
+<script src="spontix-store.js"></script>
+<script>
+const TX_ICONS = {
+  stake_reserved: '🔒', win_profit:'✅', loss_deduct:'❌', refund:'↩️',
+  daily_bonus:'🎁', entry_fee:'🏟', entry_refund:'↩️', admin_credit:'⬆️', admin_debit:'⬇️',
+};
+const TX_LABELS = {
+  stake_reserved:'Stake reserved', win_profit:'Prediction won', loss_deduct:'Prediction lost',
+  refund:'Refund', daily_bonus:'Daily bonus', entry_fee:'Match League entry',
+  entry_refund:'League entry refunded', admin_credit:'Credit', admin_debit:'Debit',
+};
+
+let myUserId = null;
+
+window.addEventListener('DOMContentLoaded', async () => {
+  try { SpontixSidebar.init({ type:'player', active:'market.html' }); } catch(e) {}
+  const { data:{ user } } = await sb.auth.getUser();
+  myUserId = user?.id;
+  await Promise.all([loadWallet(), loadStats(), loadTrophies(), loadTransactions()]);
+  await switchLb('weekly');
+});
+
+// ── Wallet ────────────────────────────────────────────────────────────
+async function loadWallet() {
+  const { data } = await sb.rpc('get_market_wallet');
+  if (!data?.ok) return;
+  document.getElementById('bc-available').textContent = formatCoins(data.balance_available);
+  document.getElementById('bc-reserved').textContent  = formatCoins(data.balance_reserved);
+  document.getElementById('bc-total').textContent     = formatCoins(data.balance_total);
+  document.getElementById('xp-total').textContent     = data.xp_total.toLocaleString();
+  document.getElementById('streak-val').textContent   = data.streak_correct + ' in a row';
+
+  const bonusBtn  = document.getElementById('bonus-btn');
+  const bonusDesc = document.getElementById('bonus-desc');
+  if (data.can_claim_bonus) {
+    bonusBtn.disabled = false;
+    bonusBtn.textContent = 'Claim +100';
+    bonusDesc.textContent = 'Your daily bonus is ready!';
+  } else {
+    bonusBtn.disabled = true;
+    bonusBtn.textContent = 'Claimed';
+    bonusDesc.textContent = 'Come back tomorrow for your next +100 coins.';
+  }
+}
+
+async function claimBonus() {
+  const btn = document.getElementById('bonus-btn');
+  btn.disabled = true; btn.textContent = '…';
+  const { data } = await sb.rpc('claim_daily_market_bonus');
+  if (data?.ok) {
+    showToast('🎁 +100 coins! Come back tomorrow.', 'success');
+    await loadWallet();
+    await loadTransactions();
+  } else {
+    showToast(data?.reason === 'already_claimed_today' ? 'Already claimed today!' : 'Error', 'error');
+    btn.disabled = false; btn.textContent = 'Claim +100';
+  }
+}
+
+// ── Stats ─────────────────────────────────────────────────────────────
+async function loadStats() {
+  const { data: preds } = await sb.from('market_predictions')
+    .select('status, confidence').neq('status', 'void').neq('status', 'placed');
+  if (!preds) return;
+  const total = preds.length;
+  const wins  = preds.filter(p => p.status === 'won').length;
+  const boldW = preds.filter(p => p.status === 'won' && p.confidence === 'bold').length;
+  const settled = preds.filter(p => ['won','lost'].includes(p.status)).length;
+  const acc = settled ? Math.round(wins / settled * 100) : 0;
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-wins').textContent  = wins;
+  document.getElementById('stat-acc').textContent   = acc + '%';
+  document.getElementById('stat-bold').textContent  = boldW;
+}
+
+// ── Trophies ──────────────────────────────────────────────────────────
+async function loadTrophies() {
+  const { data: ut } = await sb.from('market_user_trophies')
+    .select('trophy_slug, awarded_at').order('awarded_at', { ascending:false });
+  const { data: td } = await sb.from('market_trophies').select('*');
+
+  const grid = document.getElementById('trophies-grid');
+  if (!ut?.length) { grid.innerHTML = '<div style="color:var(--grey);font-size:13px;">No trophies yet. Win predictions to earn them!</div>'; return; }
+
+  const defMap = {};
+  (td ?? []).forEach(t => defMap[t.slug] = t);
+
+  grid.innerHTML = ut.map(ut => {
+    const def = defMap[ut.trophy_slug];
+    if (!def) return '';
+    const dateStr = new Date(ut.awarded_at).toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+    return `<div class="trophy-chip ${def.rarity}" title="${def.description}">
+      <span class="t-icon">${def.icon}</span>
+      <div class="t-info">
+        <div class="t-name">${def.name}</div>
+        <div class="t-date">${dateStr}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── Transactions ──────────────────────────────────────────────────────
+async function loadTransactions() {
+  const { data: txs } = await sb.from('market_transactions')
+    .select('*').order('created_at', { ascending:false }).limit(50);
+  const list = document.getElementById('tx-list');
+  if (!txs?.length) { list.innerHTML = '<div class="empty-tx">No transactions yet. Start predicting!</div>'; return; }
+
+  list.innerHTML = txs.map(tx => {
+    const icon  = TX_ICONS[tx.type] ?? '💱';
+    const label = TX_LABELS[tx.type] ?? tx.type;
+    const note  = tx.note ? `· ${tx.note}` : '';
+    const timeStr = new Date(tx.created_at).toLocaleString('en-GB', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+
+    let amtClass = 'neu';
+    let amtStr   = '—';
+    if (tx.type === 'win_profit') { amtClass = 'pos'; amtStr = `+${formatCoins(tx.amount)}`; }
+    else if (tx.type === 'loss_deduct' || tx.type === 'entry_fee') { amtClass = 'neg'; amtStr = formatCoins(tx.amount); }
+    else if (tx.type === 'daily_bonus' || tx.type === 'admin_credit') { amtClass = 'pos'; amtStr = `+${formatCoins(tx.amount)}`; }
+    else if (tx.type === 'stake_reserved') { amtClass = 'neu'; amtStr = `${formatCoins(tx.reserved_delta)} reserved`; }
+    else if (tx.type === 'refund' || tx.type === 'entry_refund') { amtClass = 'pos'; amtStr = `+${formatCoins(Math.abs(tx.reserved_delta))} freed`; }
+
+    return `<div class="tx-item">
+      <span class="tx-icon">${icon}</span>
+      <div class="tx-info">
+        <div class="tx-note">${label}</div>
+        <div class="tx-time">${timeStr}${note ? ' ' + note : ''}</div>
+      </div>
+      <span class="tx-amount ${amtClass}">${amtStr}</span>
+    </div>`;
+  }).join('');
+}
+
+// ── Leaderboard ───────────────────────────────────────────────────────
+let activeLb = 'weekly';
+
+async function switchLb(type, el) {
+  activeLb = type;
+  document.querySelectorAll('.lb-tab').forEach(b => b.classList.remove('active'));
+  el?.classList.add('active');
+  const content = document.getElementById('lb-content');
+  content.innerHTML = '<div style="color:var(--grey);text-align:center;padding:24px;font-size:13px;">Loading…</div>';
+
+  const viewMap = {
+    weekly:   'market_lb_weekly_profit',
+    accuracy: 'market_lb_accuracy',
+    xp:       'market_lb_xp',
+    bold:     'market_lb_bold',
+  };
+
+  const { data: rows } = await sb.from(viewMap[type]).select('*').limit(20);
+  if (!rows?.length) {
+    content.innerHTML = '<div style="color:var(--grey);text-align:center;padding:24px;font-size:13px;">No data yet — be the first!</div>';
+    return;
+  }
+
+  const colMap = {
+    weekly:   { metric:'net_coins',   label:'Net Coins',   fmt: v => (v > 0 ? '+' : '') + formatCoins(v) },
+    accuracy: { metric:'accuracy_pct', label:'Accuracy',   fmt: v => v + '%' },
+    xp:       { metric:'xp_total',    label:'XP',          fmt: v => v?.toLocaleString() },
+    bold:     { metric:'bold_pct',    label:'Bold Win %',  fmt: v => v + '%' },
+  };
+  const col = colMap[type];
+
+  let html = `<table class="lb-table">
+    <tr><th>#</th><th>Player</th><th>${col.label}</th></tr>`;
+
+  rows.forEach((r, i) => {
+    const rank = i + 1;
+    const rankClass = rank === 1 ? 'gold' : rank === 2 ? 'silver' : rank === 3 ? 'bronze' : '';
+    const isMe = r.user_id === myUserId;
+    const avatar = r.avatar ?? '?';
+    const color  = r.avatar_color ?? '#5A5A78';
+    const val = col.fmt(r[col.metric]);
+    html += `<tr class="${isMe ? 'lb-me' : ''}">
+      <td class="lb-rank ${rankClass}">${rank}</td>
+      <td>
+        <span class="lb-avatar" style="background:${color}">${avatar}</span>
+        ${r.handle ?? r.name ?? 'Unknown'}
+        ${isMe ? '<strong> (you)</strong>' : ''}
+      </td>
+      <td style="font-weight:700">${val}</td>
+    </tr>`;
+  });
+  html += '</table>';
+  content.innerHTML = html;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────
+function formatCoins(n) {
+  const v = parseFloat(n) || 0;
+  return v >= 1000 ? (v/1000).toFixed(1)+'k' : Math.abs(v).toFixed(0);
+}
+
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = `toast ${type} show`;
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>

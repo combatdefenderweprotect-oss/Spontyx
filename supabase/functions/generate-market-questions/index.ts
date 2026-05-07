@@ -1,9 +1,13 @@
 // ════════════════════════════════════════════════════════════════════════
 // Spontyx Market — generate-market-questions Edge Function
 // ════════════════════════════════════════════════════════════════════════
-// Generates pre-match prediction questions for upcoming PL and LaLiga
-// fixtures involving the 6 target teams. Triggered daily by pg_cron at
-// 08:00 UTC. Also callable on-demand via POST.
+// Pipeline:
+//   1. Fetch upcoming PL/LaLiga fixtures involving target teams
+//   2. For each fixture, query Google News RSS (3 queries: broad, signal, match-specific)
+//   3. Parse + deduplicate articles by Jaccard title similarity
+//   4. Pass top headlines to OpenAI → 2-3 grounded Real World Edge questions
+//   5. Generate template questions for match_result, goals, team_stats, player_prediction
+//   6. Insert all questions with status='active'
 //
 // Deploy:
 //   supabase functions deploy generate-market-questions --no-verify-jwt
@@ -11,28 +15,22 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-const SUPABASE_URL          = Deno.env.get('SUPABASE_URL')!;
-const SUPABASE_SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const OPENAI_API_KEY        = Deno.env.get('OPENAI_API_KEY')!;
+const SUPABASE_URL         = Deno.env.get('SUPABASE_URL')!;
+const SUPABASE_SERVICE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+const OPENAI_API_KEY       = Deno.env.get('OPENAI_API_KEY')!;
 
 // ── Target scope ──────────────────────────────────────────────────────
-const TARGET_LEAGUE_IDS = [39, 140];          // PL + LaLiga
-const TARGET_TEAM_IDS   = new Set([           // Must involve at least one
-  40,   // Liverpool
-  42,   // Arsenal
-  50,   // Man City
-  49,   // Chelsea
-  33,   // Man United
-  541,  // Real Madrid
-  529,  // Barcelona
-]);
+const TARGET_LEAGUE_IDS = [39, 140];
+const TARGET_TEAM_IDS   = new Set([40, 42, 50, 49, 33, 541, 529]);
 
-// ── Confidence XP map ─────────────────────────────────────────────────
-const XP_BY_DIFFICULTY: Record<string, number> = {
-  easy:   20,
-  medium: 30,
-  hard:   50,
-};
+// ── News fetch config ─────────────────────────────────────────────────
+const GOOGLE_NEWS_RSS_BASE = 'https://news.google.com/rss/search';
+const FETCH_TIMEOUT_MS     = 8_000;
+const MAX_AGE_DAYS         = 5;
+const DEDUP_THRESHOLD      = 0.45;
+const SIGNAL_TERMS =
+  'injury OR injured OR doubtful OR "ruled out" OR suspended OR suspension ' +
+  'OR lineup OR "starting XI" OR transfer OR fitness OR unavailable OR "will miss"';
 
 // ════════════════════════════════════════════════════════════════════════
 // Entry
@@ -49,9 +47,8 @@ Deno.serve(async (req: Request) => {
 
   try {
     // ── 1. Fetch upcoming fixtures ─────────────────────────────────────
-    const now      = new Date();
-    const horizonH = 72;
-    const horizon  = new Date(now.getTime() + horizonH * 3600_000).toISOString();
+    const now     = new Date();
+    const horizon = new Date(now.getTime() + 72 * 3600_000).toISOString();
 
     let fixtureQuery = sb
       .from('api_football_fixtures')
@@ -72,7 +69,6 @@ Deno.serve(async (req: Request) => {
     const { data: fixtures, error: fErr } = await fixtureQuery;
     if (fErr) throw fErr;
 
-    // ── 2. Filter for target teams ─────────────────────────────────────
     const relevant = (fixtures ?? []).filter((f: any) =>
       TARGET_TEAM_IDS.has(f.home_team_id) || TARGET_TEAM_IDS.has(f.away_team_id)
     );
@@ -82,7 +78,7 @@ Deno.serve(async (req: Request) => {
     let totalGenerated = 0;
 
     for (const fixture of relevant) {
-      // Skip if questions already exist for this fixture
+      // Skip if questions already exist
       const { count } = await sb
         .from('market_questions')
         .select('id', { count: 'exact', head: true })
@@ -90,7 +86,7 @@ Deno.serve(async (req: Request) => {
         .in('status', ['draft', 'active', 'locked']);
 
       if ((count ?? 0) > 0) {
-        console.log(`[generate-market-questions] skip fixture ${fixture.fixture_id} (has ${count} questions)`);
+        console.log(`[generate-market-questions] skip fixture ${fixture.fixture_id} (${count} questions exist)`);
         continue;
       }
 
@@ -99,8 +95,8 @@ Deno.serve(async (req: Request) => {
       const deadline60  = new Date(kickoff.getTime() - 60 * 60_000).toISOString();
       const resolveAfter = new Date(kickoff.getTime() + 100 * 60_000).toISOString();
 
-      const home = fixture.home_team_name;
-      const away = fixture.away_team_name;
+      const home = fixture.home_team_name as string;
+      const away = fixture.away_team_name as string;
 
       const questions: any[] = [];
 
@@ -110,9 +106,9 @@ Deno.serve(async (req: Request) => {
         category: 'match_result',
         question_text: `Who wins: ${home} vs ${away}?`,
         answer_options: [
-          { id: 'home', label: home + ' Win' },
+          { id: 'home', label: `${home} Win` },
           { id: 'draw', label: 'Draw' },
-          { id: 'away', label: away + ' Win' },
+          { id: 'away', label: `${away} Win` },
         ],
         difficulty: 'medium',
         xp_reward: 30,
@@ -128,9 +124,9 @@ Deno.serve(async (req: Request) => {
         category: 'match_result',
         question_text: `Who leads at half-time: ${home} vs ${away}?`,
         answer_options: [
-          { id: 'home', label: home + ' lead' },
+          { id: 'home', label: `${home} lead` },
           { id: 'draw', label: 'Level at HT' },
-          { id: 'away', label: away + ' lead' },
+          { id: 'away', label: `${away} lead` },
         ],
         difficulty: 'hard',
         xp_reward: 50,
@@ -147,7 +143,7 @@ Deno.serve(async (req: Request) => {
         category: 'goals',
         question_text: `Total goals in ${home} vs ${away}: Over or Under 2.5?`,
         answer_options: [
-          { id: 'over', label: 'Over 2.5 goals' },
+          { id: 'over',  label: 'Over 2.5 goals' },
           { id: 'under', label: 'Under 2.5 goals' },
         ],
         difficulty: 'easy',
@@ -238,8 +234,8 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      // ── Real World Edge (AI-generated) ─────────────────────────────
-      const rwQuestions = await generateRealWorldQuestions(home, away, fixture, OPENAI_API_KEY);
+      // ── Real World Edge — News-grounded questions ───────────────────
+      const rwQuestions = await generateRealWorldFromNews(home, away, fixture.fixture_id, OPENAI_API_KEY);
       for (const rwQ of rwQuestions) {
         questions.push({
           ...rwQ,
@@ -252,9 +248,7 @@ Deno.serve(async (req: Request) => {
         });
       }
 
-      // ── Mark featured (top 3 by xp_reward) ──────────────────────────
-      // Map original indices sorted by xp_reward descending, then store
-      // those original indices — NOT positions within the sorted array.
+      // ── Mark featured (top 3 by xp_reward — original indices) ───────
       const featuredIndices = new Set<number>(
         questions
           .map((q, i) => ({ xp: q.xp_reward, i }))
@@ -278,7 +272,7 @@ Deno.serve(async (req: Request) => {
         console.error(`[generate-market-questions] insert error fixture ${fixture.fixture_id}:`, insertErr);
       } else {
         totalGenerated += withFeatured.length;
-        console.log(`[generate-market-questions] fixture ${fixture.fixture_id}: ${withFeatured.length} questions`);
+        console.log(`[generate-market-questions] fixture ${fixture.fixture_id}: ${withFeatured.length} questions (${rwQuestions.length} RW)`);
       }
     }
 
@@ -296,41 +290,78 @@ Deno.serve(async (req: Request) => {
 });
 
 // ════════════════════════════════════════════════════════════════════════
-// OpenAI: generate Real World Edge questions
+// Real World Edge — news pipeline
 // ════════════════════════════════════════════════════════════════════════
 
-async function generateRealWorldQuestions(
-  home: string,
-  away: string,
-  fixture: any,
-  apiKey: string,
-): Promise<any[]> {
-  try {
-    const prompt = `You are a sports prediction analyst. Generate 2–3 pre-match prediction questions for the upcoming football match: ${home} vs ${away}.
+interface NewsArticle {
+  title:       string;
+  snippet:     string;
+  sourceName:  string;
+  url:         string;
+  publishedAt: string;
+}
 
-These are "Real World Edge" questions — they must be grounded in real-world context: injuries, squad form, tactical matchups, key player availability, or head-to-head patterns.
+async function generateRealWorldFromNews(
+  home:      string,
+  away:      string,
+  fixtureId: number,
+  apiKey:    string,
+): Promise<any[]> {
+  // ── Step 1: Fetch news articles about this match ──────────────────
+  const articles = await fetchMatchNews(home, away);
+  console.log(`[rw-news] fixture ${fixtureId}: ${articles.length} articles for ${home} vs ${away}`);
+
+  if (!articles.length) {
+    console.warn(`[rw-news] no articles found for ${home} vs ${away}, skipping RW questions`);
+    return [];
+  }
+
+  // ── Step 2: Format headlines as context for OpenAI ────────────────
+  const newsContext = articles.slice(0, 8).map((a, i) =>
+    `[${i + 1}] "${a.title}" — ${a.sourceName} (${formatAge(a.publishedAt)})\n    ${a.snippet}`
+  ).join('\n\n');
+
+  // ── Step 3: OpenAI generates grounded questions ───────────────────
+  const prompt = `You are a sports prediction analyst creating REAL WORLD EDGE questions for a prediction market.
+
+Match: ${home} vs ${away}
+
+Here are the latest real news articles about these teams:
+
+${newsContext}
+
+Your task:
+1. Read the news carefully
+2. Create exactly 2-3 prediction questions GROUNDED in this specific news
+3. Each question must be directly resolvable by watching the match or checking the final match stats
+4. Each question must reference the real-world context (injury, lineup, form, tactical situation)
 
 Rules:
-1. Each question must be binary or have 2–3 clear answer options
-2. Each must include a short "context" (1–2 sentences explaining WHY this question matters right now)
-3. Resolution must be objectively determinable from the final match stats/report
-4. Specify source_confidence: low | medium | high
+- Questions must be YES/NO or have 2 clear options
+- The correct answer must be determinable from the final match data alone
+- Include a "real_world_context" field explaining the news angle (1-2 sentences, cite source if possible)
+- Include "real_world_confidence": "high" (clear confirmed news) | "medium" (rumour/likely) | "low" (speculation)
+- Include "resolution_note" describing exactly how to verify the answer post-match
+- Do NOT ask about things unresolvable from match stats (e.g. "will player X train tomorrow?")
 
-Return a JSON array with this exact shape (no markdown, no commentary):
+Return ONLY a JSON array, no markdown:
 [
   {
     "question_text": "...",
-    "answer_options": [{"id": "a", "label": "..."}, {"id": "b", "label": "..."}],
-    "correct_answer": null,
+    "answer_options": [{"id": "yes", "label": "..."}, {"id": "no", "label": "..."}],
     "difficulty": "hard",
     "xp_reward": 50,
     "real_world_context": "...",
     "real_world_confidence": "medium",
-    "resolution_rule": {"type": "ai_resolved", "resolution_note": "Determined from post-match stats/report"},
+    "resolution_rule": {
+      "type": "ai_resolved",
+      "resolution_note": "Check if X happened in the final match stats/report"
+    },
     "is_featured": false
   }
 ]`;
 
+  try {
     const res = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -340,23 +371,162 @@ Return a JSON array with this exact shape (no markdown, no commentary):
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [{ role: 'user', content: prompt }],
-        temperature: 0.7,
-        max_tokens: 1200,
+        temperature: 0.5,
+        max_tokens: 1600,
       }),
     });
 
     if (!res.ok) {
-      console.warn('[generate-market-questions] OpenAI error:', res.status);
+      console.warn(`[rw-news] OpenAI error ${res.status}`);
       return [];
     }
 
-    const json  = await res.json();
-    const text  = json.choices?.[0]?.message?.content ?? '[]';
-    const parsed = JSON.parse(text);
+    const json   = await res.json();
+    const text   = json.choices?.[0]?.message?.content ?? '[]';
+    const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
     return Array.isArray(parsed) ? parsed : [];
 
   } catch (err: any) {
-    console.warn('[generate-market-questions] OpenAI call failed:', err.message);
+    console.warn('[rw-news] OpenAI call failed:', err.message);
     return [];
   }
+}
+
+// ════════════════════════════════════════════════════════════════════════
+// Google News RSS fetch + parse + deduplicate
+// ════════════════════════════════════════════════════════════════════════
+
+async function fetchMatchNews(home: string, away: string): Promise<NewsArticle[]> {
+  // Three targeted queries:
+  // 1. Broad — either team with news signal keywords
+  // 2. Match-specific — both teams together
+  // 3. Signal — injury/lineup/suspension focus
+  const queries = [
+    `("${home}" OR "${away}") AND (${SIGNAL_TERMS})`,
+    `"${home}" AND "${away}"`,
+    `"${home}" AND (${SIGNAL_TERMS})`,
+    `"${away}" AND (${SIGNAL_TERMS})`,
+  ];
+
+  const urls = queries.map(q =>
+    `${GOOGLE_NEWS_RSS_BASE}?q=${encodeURIComponent(q)}&hl=en-US&gl=US&ceid=US:en`
+  );
+
+  // Fetch all feeds concurrently
+  const allArticles = (await Promise.all(urls.map(fetchRssFeed))).flat();
+
+  // Filter by age
+  const cutoff = new Date(Date.now() - MAX_AGE_DAYS * 86_400_000);
+  const fresh  = allArticles.filter(a => new Date(a.publishedAt) >= cutoff);
+
+  // Deduplicate by title similarity
+  const deduped = deduplicateByJaccard(fresh);
+
+  // Sort: signal keywords first, then by freshness
+  return deduped.sort((a, b) => {
+    const aSignal = hasSignal(a.title + ' ' + a.snippet) ? 1 : 0;
+    const bSignal = hasSignal(b.title + ' ' + b.snippet) ? 1 : 0;
+    if (aSignal !== bSignal) return bSignal - aSignal;
+    return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime();
+  });
+}
+
+async function fetchRssFeed(url: string): Promise<NewsArticle[]> {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+    const res = await fetch(url, { signal: controller.signal });
+    clearTimeout(timer);
+    if (!res.ok) return [];
+    const xml = await res.text();
+    return parseRssXml(xml);
+  } catch {
+    return [];
+  }
+}
+
+function parseRssXml(xml: string): NewsArticle[] {
+  const articles: NewsArticle[] = [];
+  const itemRe = /<item>([\s\S]*?)<\/item>/g;
+  let m: RegExpExecArray | null;
+
+  while ((m = itemRe.exec(xml)) !== null) {
+    const block   = m[1];
+    const title   = stripCdata(extractTag(block, 'title'));
+    const link    = stripCdata(extractTag(block, 'link'));
+    const pubDate = extractTag(block, 'pubDate');
+    const desc    = stripCdata(extractTag(block, 'description'));
+    if (!title || !link) continue;
+
+    // "Headline - Source Name" format
+    let headline   = title;
+    let sourceName = stripCdata(extractSourceTag(block));
+    if (!sourceName) {
+      const dash = title.lastIndexOf(' - ');
+      if (dash > 10) {
+        headline   = title.slice(0, dash).trim();
+        sourceName = title.slice(dash + 3).trim();
+      }
+    }
+
+    articles.push({
+      title:       headline,
+      snippet:     desc.slice(0, 280),
+      sourceName:  sourceName || 'Unknown',
+      url:         link,
+      publishedAt: parseRssDate(pubDate),
+    });
+  }
+  return articles;
+}
+
+function deduplicateByJaccard(articles: NewsArticle[]): NewsArticle[] {
+  const seen: string[] = [];
+  const result: NewsArticle[] = [];
+  for (const a of articles) {
+    const norm = normalise(a.title);
+    const isDup = seen.some(s => jaccardSim(norm, s) >= DEDUP_THRESHOLD);
+    if (!isDup) { seen.push(norm); result.push(a); }
+  }
+  return result;
+}
+
+function jaccardSim(a: string, b: string): number {
+  const wA = new Set(a.split(' ').filter(w => w.length > 3));
+  const wB = new Set(b.split(' ').filter(w => w.length > 3));
+  if (!wA.size || !wB.size) return 0;
+  const inter = [...wA].filter(w => wB.has(w)).length;
+  return inter / new Set([...wA, ...wB]).size;
+}
+
+function hasSignal(text: string): boolean {
+  const t = text.toLowerCase();
+  return ['injur', 'lineup', 'doubt', 'ruled out', 'suspend', 'miss', 'unavail', 'fitness'].some(k => t.includes(k));
+}
+
+// ── XML helpers ───────────────────────────────────────────────────────
+function extractTag(xml: string, tag: string): string {
+  const re = new RegExp(`<${tag}[^>]*>([\\s\\S]*?)<\\/${tag}>`, 'i');
+  return (re.exec(xml)?.[1] ?? '').trim();
+}
+
+function extractSourceTag(block: string): string {
+  return (/<source[^>]*>([^<]+)<\/source>/i.exec(block)?.[1] ?? '').trim();
+}
+
+function stripCdata(s: string): string {
+  return s.replace(/<!\[CDATA\[/g, '').replace(/\]\]>/g, '').trim();
+}
+
+function parseRssDate(raw: string): string {
+  try { return new Date(raw).toISOString(); } catch { return new Date().toISOString(); }
+}
+
+function normalise(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function formatAge(iso: string): string {
+  const h = Math.round((Date.now() - new Date(iso).getTime()) / 3600_000);
+  return h < 24 ? `${h}h ago` : `${Math.floor(h / 24)}d ago`;
 }
