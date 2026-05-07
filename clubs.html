@@ -10,23 +10,25 @@
 <html lang="en">
 <head>
   <meta name="view-transition" content="same-origin" />
-  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <style>html{background:#111111;margin:0;padding:0}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spontyx — Clubs</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <style>
     :root {
-      --club-accent: #A8E10C;
-      --club-accent-soft: rgba(168,225,12,0.12);
+      --club-accent: #A8E65E;
+      --club-accent-soft: rgba(168,230,94,0.12);
     }
 
     .clubs-wrap { width: 100%; padding: 28px 36px 48px; }
 
     /* ── Header ── */
     .club-header {
-      background: linear-gradient(135deg, rgba(168,225,12,0.08), rgba(124,92,252,0.04));
+      background: linear-gradient(135deg, rgba(168,230,94,0.08), rgba(124,92,252,0.04));
       border: 1px solid rgba(255,255,255,0.06);
       border-radius: 16px;
       padding: 22px 26px;
@@ -90,8 +92,8 @@
       background: rgba(255,255,255,0.02);
       border: 1px solid rgba(255,255,255,0.04);
     }
-    .lb-row.podium { background: linear-gradient(90deg, rgba(168,225,12,0.06), transparent 65%); border-color: rgba(168,225,12,0.2); }
-    .lb-row.you    { border-color: var(--club-accent); background: rgba(168,225,12,0.08); }
+    .lb-row.podium { background: linear-gradient(90deg, rgba(168,230,94,0.06), transparent 65%); border-color: rgba(168,230,94,0.2); }
+    .lb-row.you    { border-color: var(--club-accent); background: rgba(168,230,94,0.08); }
     .lb-rank { font-size: 1.4rem; font-weight: 800; color: var(--grey-light); text-align: center; }
     .lb-row.podium .lb-rank { color: var(--club-accent); }
     .lb-rank .medal { font-size: 1.6rem; }
@@ -111,7 +113,7 @@
     .feed-row:hover { background: rgba(255,255,255,0.02); }
     .feed-avatar {
       width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
-      background: rgba(168,225,12,0.15); color: var(--club-accent);
+      background: rgba(168,230,94,0.15); color: var(--club-accent);
       display: flex; align-items: center; justify-content: center;
       font-weight: 700; font-size: 0.72rem;
     }
@@ -131,7 +133,7 @@
     .qa-btn:hover { transform: translateX(2px); }
     .qa-icon { width: 34px; height: 34px; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .qa-icon svg { width: 16px; height: 16px; fill: none; stroke-width: 2; }
-    .qa-icon.lime  { background: rgba(168,225,12,0.12); }  .qa-icon.lime svg  { stroke: var(--club-accent); }
+    .qa-icon.lime  { background: rgba(168,230,94,0.12); }  .qa-icon.lime svg  { stroke: var(--club-accent); }
     .qa-icon.coral { background: rgba(255,107,107,0.12); } .qa-icon.coral svg { stroke: var(--coral, #FF6B6B); }
     .qa-icon.teal  { background: rgba(78,205,196,0.12); }  .qa-icon.teal svg  { stroke: var(--teal, #4ECDC4); }
     .qa-icon.purple{ background: rgba(124,92,252,0.12); }  .qa-icon.purple svg{ stroke: var(--purple, #7C5CFC); }
@@ -147,7 +149,7 @@
     .mem-row:hover { background: rgba(255,255,255,0.02); }
     .mem-avatar {
       width: 32px; height: 32px; border-radius: 50%;
-      background: rgba(168,225,12,0.15); color: var(--club-accent);
+      background: rgba(168,230,94,0.15); color: var(--club-accent);
       display: flex; align-items: center; justify-content: center;
       font-weight: 700; font-size: 0.74rem;
     }

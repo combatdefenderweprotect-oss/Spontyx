@@ -4,12 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Stats Tab Preview</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #1A1A2E; color: #fff; font-family: 'Inter', sans-serif; padding: 24px; min-height: 100vh; }
-  h1 { color: #A8E10C; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 16px; opacity: .7; }
+  body { background: #111111; color: #fff; font-family: 'Satoshi', 'Inter', sans-serif; padding: 24px; min-height: 100vh; }
+  h1 { color: #A8E65E; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 16px; opacity: .7; }
 
   /* ── Stats tab CSS (copied from league.html) ── */
   .stats-score-card { background: #12122a; border: 1px solid #2a2a4a; border-radius: 14px; padding: 20px 24px; margin-bottom: 16px; text-align: center; }
@@ -29,20 +30,20 @@
   /* Events */
   .event-row { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #1e1e3a; font-size: 13px; }
   .event-row:last-child { border-bottom: none; }
-  .event-min { color: #A8E10C; font-weight: 700; font-size: 12px; min-width: 32px; }
+  .event-min { color: #A8E65E; font-weight: 700; font-size: 12px; min-width: 32px; }
   .event-icon { font-size: 16px; }
   .event-desc { flex: 1; color: #ccc; }
-  .event-team-home { color: #A8E10C; font-size: 11px; font-weight: 600; }
+  .event-team-home { color: #A8E65E; font-size: 11px; font-weight: 600; }
   .event-team-away { color: #FF6B6B; font-size: 11px; font-weight: 600; }
 
   /* Team stat bars */
   .stat-bar-row { margin-bottom: 14px; }
   .stat-bar-labels { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-size: 12px; }
-  .stat-bar-home-val { color: #A8E10C; font-weight: 700; }
+  .stat-bar-home-val { color: #A8E65E; font-weight: 700; }
   .stat-bar-away-val { color: #FF6B6B; font-weight: 700; }
   .stat-bar-name { color: #aaa; font-size: 11px; }
   .stat-bar-track { height: 6px; background: #1e1e3a; border-radius: 3px; display: flex; gap: 2px; }
-  .stat-bar-home { height: 6px; background: #A8E10C; border-radius: 3px; }
+  .stat-bar-home { height: 6px; background: #A8E65E; border-radius: 3px; }
   .stat-bar-away { height: 6px; background: #FF6B6B; border-radius: 3px; }
 
   /* SVG pitch */
@@ -54,7 +55,7 @@
   /* Player cards */
   .player-tab-bar { display: flex; gap: 8px; margin-bottom: 14px; }
   .player-tab-btn { padding: 6px 18px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid #2a2a4a; background: transparent; color: #aaa; cursor: pointer; transition: .15s; }
-  .player-tab-btn.active { background: #A8E10C; color: #000; border-color: #A8E10C; }
+  .player-tab-btn.active { background: #A8E65E; color: #000; border-color: #A8E65E; }
   .player-tab-btn.active.away { background: #FF6B6B; border-color: #FF6B6B; }
   .player-cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
   .player-card { background: #1a1a3a; border: 1px solid #2a2a4a; border-radius: 10px; padding: 12px; }
@@ -62,7 +63,7 @@
   .player-num { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #000; }
   .player-card-name { font-size: 12px; font-weight: 700; line-height: 1.3; }
   .player-card-pos { font-size: 10px; color: #888; }
-  .player-rating { font-size: 18px; font-weight: 900; color: #A8E10C; margin-bottom: 6px; }
+  .player-rating { font-size: 18px; font-weight: 900; color: #A8E65E; margin-bottom: 6px; }
   .player-rating.mid { color: #FF9F43; }
   .player-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
   .pstat { font-size: 10px; color: #888; }
@@ -71,12 +72,12 @@
   /* Predictions */
   .pred-teams-row { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 8px; }
   .pred-bar-wrap { display: flex; height: 28px; border-radius: 6px; overflow: hidden; margin-bottom: 4px; }
-  .pred-win-home { background: linear-gradient(90deg,#A8E10C,#7ab008); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #000; }
+  .pred-win-home { background: linear-gradient(90deg,#A8E65E,#7ab008); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #000; }
   .pred-win-draw { background: #2a2a4a; display: flex; align-items: center; justify-content: center; font-size: 11px; color: #aaa; }
   .pred-win-away { background: linear-gradient(90deg,#c04020,#FF6B6B); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 800; color: #fff; }
   .pred-form-row { display: flex; align-items: center; gap: 8px; margin-top: 12px; font-size: 12px; }
   .form-dot { width: 18px; height: 18px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: #000; }
-  .form-W { background: #A8E10C; }
+  .form-W { background: #A8E65E; }
   .form-D { background: #888; color: #fff; }
   .form-L { background: #FF6B6B; color: #fff; }
   .pred-advice { font-size: 12px; color: #aaa; font-style: italic; margin-top: 10px; padding: 10px; background: #1e1e3a; border-radius: 8px; }
@@ -87,10 +88,10 @@
   .h2h-date { color: #888; min-width: 60px; }
   .h2h-teams { flex: 1; }
   .h2h-score { font-weight: 700; font-size: 14px; min-width: 40px; text-align: center; }
-  .h2h-winner { color: #A8E10C; font-size: 10px; }
+  .h2h-winner { color: #A8E65E; font-size: 10px; }
 
   .stats-footer { text-align: center; font-size: 11px; color: #666; margin-top: 16px; }
-  .stats-footer a { color: #A8E10C; cursor: pointer; }
+  .stats-footer a { color: #A8E65E; cursor: pointer; }
 
   .page-wrap { max-width: 860px; margin: 0 auto; }
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
@@ -145,7 +146,7 @@
     <div class="stats-section">
       <h3>Team Stats</h3>
       <div style="display:flex;justify-content:space-between;font-size:11px;font-weight:700;margin-bottom:12px;">
-        <span style="color:#A8E10C">Real Madrid</span>
+        <span style="color:#A8E65E">Real Madrid</span>
         <span style="color:#FF6B6B">Barcelona</span>
       </div>
       <div class="stat-bar-row">
@@ -290,27 +291,27 @@
 
       <!-- HOME TEAM: Real Madrid (lime, bottom half) -->
       <!-- ATT row -->
-      <g filter="url(#drop)"><circle cx="80" cy="295" r="18" fill="#A8E10C"/><text x="80" y="299" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">11</text><text x="80" y="322" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Vinicius</text>
+      <g filter="url(#drop)"><circle cx="80" cy="295" r="18" fill="#A8E65E"/><text x="80" y="299" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">11</text><text x="80" y="322" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Vinicius</text>
         <text x="90" y="280" font-size="11">⚽</text>
       </g>
-      <g filter="url(#drop)"><circle cx="190" cy="295" r="18" fill="#A8E10C"/><text x="190" y="299" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">9</text><text x="190" y="322" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Mbappé</text>
+      <g filter="url(#drop)"><circle cx="190" cy="295" r="18" fill="#A8E65E"/><text x="190" y="299" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">9</text><text x="190" y="322" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Mbappé</text>
         <text x="200" y="280" font-size="11">⚽</text>
       </g>
-      <g filter="url(#drop)"><circle cx="300" cy="295" r="18" fill="#A8E10C"/><text x="300" y="299" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">5</text><text x="300" y="322" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Bellingham</text></g>
+      <g filter="url(#drop)"><circle cx="300" cy="295" r="18" fill="#A8E65E"/><text x="300" y="299" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">5</text><text x="300" y="322" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Bellingham</text></g>
       <!-- MID row -->
-      <g filter="url(#drop)"><circle cx="100" cy="370" r="18" fill="#A8E10C"/><text x="100" y="374" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">15</text><text x="100" y="397" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Valverde</text></g>
-      <g filter="url(#drop)"><circle cx="190" cy="370" r="18" fill="#A8E10C"/><text x="190" y="374" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">10</text><text x="190" y="397" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Modric</text></g>
-      <g filter="url(#drop)"><circle cx="280" cy="370" r="18" fill="#A8E10C"/><text x="280" y="374" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">6</text><text x="280" y="397" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Tchouaméni</text></g>
+      <g filter="url(#drop)"><circle cx="100" cy="370" r="18" fill="#A8E65E"/><text x="100" y="374" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">15</text><text x="100" y="397" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Valverde</text></g>
+      <g filter="url(#drop)"><circle cx="190" cy="370" r="18" fill="#A8E65E"/><text x="190" y="374" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">10</text><text x="190" y="397" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Modric</text></g>
+      <g filter="url(#drop)"><circle cx="280" cy="370" r="18" fill="#A8E65E"/><text x="280" y="374" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">6</text><text x="280" y="397" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Tchouaméni</text></g>
       <!-- DEF row -->
-      <g filter="url(#drop)"><circle cx="68" cy="445" r="18" fill="#A8E10C"/><text x="68" y="449" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">2</text><text x="68" y="472" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Carvajal</text></g>
-      <g filter="url(#drop)"><circle cx="143" cy="445" r="18" fill="#A8E10C"/><text x="143" y="449" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">22</text><text x="143" y="472" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Militão</text></g>
-      <g filter="url(#drop)"><circle cx="237" cy="445" r="18" fill="#A8E10C"/><text x="237" y="449" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">3</text><text x="237" y="472" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Alaba</text></g>
-      <g filter="url(#drop)"><circle cx="312" cy="445" r="18" fill="#A8E10C"/><text x="312" y="449" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">23</text><text x="312" y="472" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Ferland</text></g>
+      <g filter="url(#drop)"><circle cx="68" cy="445" r="18" fill="#A8E65E"/><text x="68" y="449" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">2</text><text x="68" y="472" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Carvajal</text></g>
+      <g filter="url(#drop)"><circle cx="143" cy="445" r="18" fill="#A8E65E"/><text x="143" y="449" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">22</text><text x="143" y="472" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Militão</text></g>
+      <g filter="url(#drop)"><circle cx="237" cy="445" r="18" fill="#A8E65E"/><text x="237" y="449" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">3</text><text x="237" y="472" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Alaba</text></g>
+      <g filter="url(#drop)"><circle cx="312" cy="445" r="18" fill="#A8E65E"/><text x="312" y="449" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">23</text><text x="312" y="472" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Ferland</text></g>
       <!-- GK -->
-      <g filter="url(#drop)"><circle cx="190" cy="495" r="18" fill="#A8E10C"/><text x="190" y="499" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">13</text><text x="190" y="522" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Lunin</text></g>
+      <g filter="url(#drop)"><circle cx="190" cy="495" r="18" fill="#A8E65E"/><text x="190" y="499" text-anchor="middle" font-family="Inter" font-size="10.5" font-weight="800" fill="#000">13</text><text x="190" y="522" text-anchor="middle" font-family="Inter" font-size="7.5" fill="rgba(255,255,255,.8)">Lunin</text></g>
     </svg>
     <div class="pitch-legend">
-      <span><span class="leg-dot" style="background:#A8E10C"></span>Real Madrid (home)</span>
+      <span><span class="leg-dot" style="background:#A8E65E"></span>Real Madrid (home)</span>
       <span><span class="leg-dot" style="background:#FF6B6B"></span>Barcelona (away)</span>
     </div>
   </div>
@@ -325,7 +326,7 @@
     <div id="home-players" class="player-cards-grid">
       <div class="player-card">
         <div class="player-card-top">
-          <div class="player-num" style="background:#A8E10C">9</div>
+          <div class="player-num" style="background:#A8E65E">9</div>
           <div><div class="player-card-name">Kylian Mbappé</div><div class="player-card-pos">FW · 67 min</div></div>
         </div>
         <div class="player-rating">8.4</div>
@@ -338,7 +339,7 @@
       </div>
       <div class="player-card">
         <div class="player-card-top">
-          <div class="player-num" style="background:#A8E10C">11</div>
+          <div class="player-num" style="background:#A8E65E">11</div>
           <div><div class="player-card-name">Vinicius Jr</div><div class="player-card-pos">FW · 67 min</div></div>
         </div>
         <div class="player-rating">8.1</div>
@@ -351,7 +352,7 @@
       </div>
       <div class="player-card">
         <div class="player-card-top">
-          <div class="player-num" style="background:#A8E10C">5</div>
+          <div class="player-num" style="background:#A8E65E">5</div>
           <div><div class="player-card-name">Jude Bellingham</div><div class="player-card-pos">MF · 67 min</div></div>
         </div>
         <div class="player-rating mid">7.6</div>
@@ -364,7 +365,7 @@
       </div>
       <div class="player-card">
         <div class="player-card-top">
-          <div class="player-num" style="background:#A8E10C">13</div>
+          <div class="player-num" style="background:#A8E65E">13</div>
           <div><div class="player-card-name">Andriy Lunin</div><div class="player-card-pos">GK · 67 min</div></div>
         </div>
         <div class="player-rating mid">7.2</div>

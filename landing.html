@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta name="view-transition" content="same-origin" />
-  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <style>html{background:#111111;margin:0;padding:0}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spontyx — Live Sports Prediction Leagues</title>
@@ -16,13 +16,13 @@
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
 
     :root {
-      --navy:        #1A1A2E;
-      --navy-light:  #22223A;
-      --navy-card:   #2A2A44;
-      --navy-hover:  #32325A;
-      --lime:        #A8E10C;
-      --lime-dim:    rgba(168,225,12,0.12);
-      --lime-glow:   rgba(168,225,12,0.25);
+      --navy: #111111;
+      --navy-light:  #1A0022;
+      --navy-card:   #33003A;
+      --navy-hover:  #3E0049;
+      --lime:        #A8E65E;
+      --lime-dim:    rgba(168,230,94,0.12);
+      --lime-glow:   rgba(168,230,94,0.25);
       --purple:      #7C5CFC;
       --purple-dim:  rgba(124,92,252,0.12);
       --purple-glow: rgba(124,92,252,0.25);
@@ -78,11 +78,11 @@
       text-align: center; padding: 120px 24px 80px;
       background:
         radial-gradient(ellipse 1200px 700px at 5% -5%, rgba(124,92,252,0.2), transparent 55%),
-        radial-gradient(ellipse 900px 600px at 100% 110%, rgba(168,225,12,0.13), transparent 55%);
+        radial-gradient(ellipse 900px 600px at 100% 110%, rgba(168,230,94,0.13), transparent 55%);
     }
     .hero-badge {
       display: inline-flex; align-items: center; gap: 7px;
-      background: var(--lime-dim); border: 1px solid rgba(168,225,12,0.25);
+      background: var(--lime-dim); border: 1px solid rgba(168,230,94,0.25);
       color: var(--lime); border-radius: var(--radius-pill);
       padding: 6px 16px; font-size: 0.72rem; font-weight: 700;
       letter-spacing: 0.8px; text-transform: uppercase; margin-bottom: 28px;
@@ -111,10 +111,10 @@
       font-family: inherit; font-size: 0.95rem; font-weight: 800;
       border: none; border-radius: var(--radius-pill);
       padding: 15px 32px; cursor: pointer; text-decoration: none;
-      box-shadow: 0 8px 28px rgba(168,225,12,0.35);
+      box-shadow: 0 8px 28px rgba(168,230,94,0.35);
       transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
     }
-    .btn-primary:hover { background: #BFEF3F; transform: translateY(-2px); box-shadow: 0 12px 36px rgba(168,225,12,0.45); }
+    .btn-primary:hover { background: #BFEF3F; transform: translateY(-2px); box-shadow: 0 12px 36px rgba(168,230,94,0.45); }
 
     .btn-secondary {
       background: transparent; color: var(--off-white);
@@ -185,13 +185,13 @@
     .p-min { font-size: 0.52rem; color: var(--grey); }
 
     .p-question {
-      background: rgba(168,225,12,0.08); border: 1px solid rgba(168,225,12,0.22);
+      background: rgba(168,230,94,0.08); border: 1px solid rgba(168,230,94,0.22);
       border-radius: 10px; padding: 9px 10px;
     }
     .p-badges { display: flex; gap: 4px; margin-bottom: 5px; }
     .p-badge { font-size: 0.48rem; font-weight: 800; padding: 2px 6px; border-radius: var(--radius-pill); letter-spacing: 0.3px; text-transform: uppercase; }
     .p-badge.live { background: rgba(255,107,107,0.2); color: var(--coral); }
-    .p-badge.hv   { background: rgba(168,225,12,0.15); color: var(--lime); }
+    .p-badge.hv   { background: rgba(168,230,94,0.15); color: var(--lime); }
     .p-badge.fast { background: rgba(124,92,252,0.15); color: var(--purple); }
     .p-q-text { font-size: 0.65rem; font-weight: 700; line-height: 1.3; margin-bottom: 7px; }
     .p-timer { font-size: 0.52rem; color: var(--grey); display: flex; justify-content: space-between; }
@@ -201,12 +201,12 @@
       background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08);
       border-radius: 7px; padding: 6px 9px; font-size: 0.6rem; font-weight: 600;
     }
-    .p-opt.sel { background: rgba(168,225,12,0.15); border-color: rgba(168,225,12,0.4); color: var(--lime); }
+    .p-opt.sel { background: rgba(168,230,94,0.15); border-color: rgba(168,230,94,0.4); color: var(--lime); }
 
     .p-lb { margin-top: 2px; }
     .p-lb-head { font-size: 0.55rem; font-weight: 700; color: var(--grey-dark); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 5px; }
     .p-lb-row { display: flex; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 0.58rem; }
-    .p-lb-row.me { background: rgba(168,225,12,0.06); border-radius: 5px; padding: 4px 5px; }
+    .p-lb-row.me { background: rgba(168,230,94,0.06); border-radius: 5px; padding: 4px 5px; }
     .p-lb-pos { width: 12px; color: var(--grey-dark); font-weight: 700; }
     .p-lb-name { flex: 1; font-weight: 600; }
     .p-lb-pts { font-weight: 800; color: var(--lime); }
@@ -248,7 +248,7 @@
       position: absolute; bottom: -60px; left: 50%; transform: translateX(-50%);
       width: 180px; height: 180px; border-radius: 50%; pointer-events: none;
     }
-    .phone-glow-lime   { background: radial-gradient(circle, rgba(168,225,12,0.2), transparent 70%); }
+    .phone-glow-lime   { background: radial-gradient(circle, rgba(168,230,94,0.2), transparent 70%); }
     .phone-glow-purple { background: radial-gradient(circle, rgba(124,92,252,0.2), transparent 70%); }
 
     .phones-text { display: flex; flex-direction: column; justify-content: center; }
@@ -297,7 +297,7 @@
       transition: transform 0.2s, border-color 0.2s;
     }
     .feat-card:hover { transform: translateY(-4px); }
-    .feat-card.pc:hover { border-color: rgba(168,225,12,0.25); }
+    .feat-card.pc:hover { border-color: rgba(168,230,94,0.25); }
     .feat-card.vc:hover { border-color: rgba(124,92,252,0.25); }
 
     .feat-card h3 { font-size: 0.95rem; font-weight: 800; letter-spacing: -0.3px; margin-bottom: 6px; }
@@ -307,7 +307,7 @@
       font-size: 0.62rem; font-weight: 700; padding: 3px 8px; border-radius: var(--radius-pill);
       border: 1px solid; letter-spacing: 0.2px;
     }
-    .feat-tag.lime   { color: var(--lime);   border-color: rgba(168,225,12,0.3);  background: var(--lime-dim); }
+    .feat-tag.lime   { color: var(--lime);   border-color: rgba(168,230,94,0.3);  background: var(--lime-dim); }
     .feat-tag.purple { color: var(--purple); border-color: rgba(124,92,252,0.3);  background: var(--purple-dim); }
     .feat-tag.grey   { color: var(--grey);   border-color: rgba(255,255,255,0.1); background: transparent; }
 
@@ -324,26 +324,26 @@
       font-size: 0.59rem;
       display: flex; flex-direction: column; gap: 5px;
     }
-    .feat-snap.sn-p { border-color: rgba(168,225,12,0.14); }
+    .feat-snap.sn-p { border-color: rgba(168,230,94,0.14); }
     .feat-snap.sn-v { border-color: rgba(124,92,252,0.14); }
 
     /* Snap: Live question */
     .sn-badges { display: flex; gap: 3px; }
     .sn-b { font-size: 0.5rem; font-weight: 800; padding: 1px 5px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.2px; }
     .sn-b.live { background: rgba(255,107,107,0.18); color: var(--coral); }
-    .sn-b.hv   { background: rgba(168,225,12,0.14); color: var(--lime); }
+    .sn-b.hv   { background: rgba(168,230,94,0.14); color: var(--lime); }
     .sn-b.fast { background: rgba(124,92,252,0.14); color: var(--purple); }
     .sn-q-text { font-size: 0.63rem; font-weight: 700; line-height: 1.25; color: var(--off-white); }
     .sn-opts { display: flex; gap: 4px; margin-top: 1px; }
     .sn-opt { flex: 1; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 5px; padding: 4px 6px; font-size: 0.56rem; font-weight: 600; color: var(--grey); }
-    .sn-opt.sel { background: rgba(168,225,12,0.14); border-color: rgba(168,225,12,0.35); color: var(--lime); }
+    .sn-opt.sel { background: rgba(168,230,94,0.14); border-color: rgba(168,230,94,0.35); color: var(--lime); }
     .sn-timer { font-size: 0.5rem; color: var(--grey-dark); display: flex; justify-content: space-between; margin-top: 1px; }
 
     /* Snap: Leaderboard */
     .sn-lb-title { font-size: 0.55rem; font-weight: 700; color: var(--grey-dark); text-transform: uppercase; letter-spacing: 0.4px; }
     .sn-lb-rows { display: flex; flex-direction: column; gap: 4px; margin-top: 2px; }
     .sn-lb-row { display: flex; align-items: center; gap: 5px; font-size: 0.6rem; }
-    .sn-lb-row.me { background: rgba(168,225,12,0.07); border-radius: 4px; padding: 2px 5px; }
+    .sn-lb-row.me { background: rgba(168,230,94,0.07); border-radius: 4px; padding: 2px 5px; }
     .sn-pos { width: 12px; color: var(--grey-dark); font-weight: 700; font-size: 0.55rem; }
     .sn-name { flex: 1; font-weight: 600; }
     .sn-pts { font-weight: 800; color: var(--lime); }
@@ -355,10 +355,10 @@
     .sn-mults { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; margin-top: 2px; }
     .sn-mult { font-size: 0.53rem; font-weight: 700; padding: 2px 6px; border-radius: 5px; }
     .sn-mult.base  { background: rgba(255,255,255,0.07); color: var(--grey); }
-    .sn-mult.time  { background: rgba(168,225,12,0.15); color: var(--lime); }
+    .sn-mult.time  { background: rgba(168,230,94,0.15); color: var(--lime); }
     .sn-mult.streak{ background: rgba(78,205,196,0.15); color: var(--teal); }
     .sn-mult.eq    { color: var(--grey-dark); font-size: 0.55rem; }
-    .sn-mult.total { background: var(--lime-dim); color: var(--lime); border: 1px solid rgba(168,225,12,0.25); }
+    .sn-mult.total { background: var(--lime-dim); color: var(--lime); border: 1px solid rgba(168,230,94,0.25); }
     .sn-streak-bar { margin-top: 5px; font-size: 0.52rem; color: var(--teal); font-weight: 700; }
 
     /* Snap: Battle Royale */
@@ -366,7 +366,7 @@
     .sn-br-rows { display: flex; flex-direction: column; gap: 3px; margin-top: 4px; }
     .sn-br-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.58rem; padding: 3px 6px; border-radius: 5px; }
     .sn-br-row.out  { background: rgba(255,255,255,0.03); color: var(--grey-dark); text-decoration: line-through; }
-    .sn-br-row.live { background: rgba(168,225,12,0.09); }
+    .sn-br-row.live { background: rgba(168,230,94,0.09); }
     .sn-elim  { font-size: 0.5rem; color: var(--coral); font-weight: 700; }
     .sn-still { font-size: 0.5rem; color: var(--lime);  font-weight: 700; }
     .sn-elo { margin-top: 4px; font-size: 0.52rem; color: var(--grey); }
@@ -401,7 +401,7 @@
     /* Snap: Event wizard */
     .sn-wiz-steps { display: flex; gap: 3px; margin-bottom: 6px; }
     .sn-wiz-step { flex: 1; text-align: center; padding: 4px 2px; border-radius: 5px; font-size: 0.5rem; font-weight: 700; border: 1px solid rgba(255,255,255,0.06); color: var(--grey-dark); background: rgba(255,255,255,0.03); }
-    .sn-wiz-step.done   { background: rgba(168,225,12,0.08); border-color: rgba(168,225,12,0.2); color: var(--lime); }
+    .sn-wiz-step.done   { background: rgba(168,230,94,0.08); border-color: rgba(168,230,94,0.2); color: var(--lime); }
     .sn-wiz-step.active { background: rgba(124,92,252,0.15); border-color: rgba(124,92,252,0.3); color: var(--off-white); }
     .sn-wiz-content { font-size: 0.6rem; font-weight: 700; color: var(--off-white); }
     .sn-wiz-sub  { font-size: 0.5rem; color: var(--grey); margin-top: 2px; }
@@ -423,8 +423,8 @@
     .sn-ai-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--lime); animation: pulse 1.8s infinite; }
     .sn-ai-log { display: flex; flex-direction: column; gap: 4px; }
     .sn-ai-row { font-size: 0.55rem; padding: 3px 6px; border-radius: 5px; }
-    .sn-ai-row.ok  { background: rgba(168,225,12,0.08); color: var(--lime); }
-    .sn-ai-row.ok2 { background: rgba(168,225,12,0.05); color: var(--grey); }
+    .sn-ai-row.ok  { background: rgba(168,230,94,0.08); color: var(--lime); }
+    .sn-ai-row.ok2 { background: rgba(168,230,94,0.05); color: var(--grey); }
     .sn-ai-row.pend{ background: rgba(255,255,255,0.04); color: var(--grey-dark); }
 
     /* Snap: Analytics */
@@ -460,7 +460,7 @@
       display: flex; flex-direction: column;
     }
     .tier-card:hover { transform: translateY(-4px); }
-    .tier-card.pop-p { border-color: rgba(168,225,12,0.35); box-shadow: 0 0 0 1px rgba(168,225,12,0.08), 0 20px 50px rgba(0,0,0,0.3); }
+    .tier-card.pop-p { border-color: rgba(168,230,94,0.35); box-shadow: 0 0 0 1px rgba(168,230,94,0.08), 0 20px 50px rgba(0,0,0,0.3); }
     .tier-card.pop-v { border-color: rgba(124,92,252,0.4);  box-shadow: 0 0 0 1px rgba(124,92,252,0.1),  0 20px 50px rgba(0,0,0,0.3); }
 
     .pop-label {
@@ -493,7 +493,7 @@
       font-family: inherit; font-size: 0.88rem; font-weight: 800;
       cursor: pointer; border: none; transition: all 0.2s; text-align: center; text-decoration: none; display: block;
     }
-    .tier-btn.p-out { background: transparent; color: var(--lime);   border: 1.5px solid rgba(168,225,12,0.35); }
+    .tier-btn.p-out { background: transparent; color: var(--lime);   border: 1.5px solid rgba(168,230,94,0.35); }
     .tier-btn.p-out:hover { background: var(--lime-dim); border-color: var(--lime); }
     .tier-btn.p-fill { background: var(--lime); color: var(--navy); }
     .tier-btn.p-fill:hover { background: #BFEF3F; }
@@ -512,7 +512,7 @@
     .cta-inner::before {
       content: ''; position: absolute; top: -100px; left: 50%; transform: translateX(-50%);
       width: 400px; height: 400px;
-      background: radial-gradient(circle, rgba(168,225,12,0.07), transparent 60%);
+      background: radial-gradient(circle, rgba(168,230,94,0.07), transparent 60%);
       pointer-events: none;
     }
     .cta-inner h2 {
@@ -561,7 +561,7 @@
     <a href="#" class="nav-logo">
       <!-- Wordmark: inline SVG from spontyx_primary_navy.svg, background rect stripped -->
       <svg class="nav-wordmark" viewBox="100 82 980 162" xmlns="http://www.w3.org/2000/svg">
-        <text x="110" y="235" font-family="Clash Display, Arial, sans-serif" font-size="150" font-weight="800" fill="#FFFFFF">Spontyx<tspan dx="-4" dy="-58" fill="#A8E10C">●</tspan></text>
+        <text x="110" y="235" font-family="Clash Display, Arial, sans-serif" font-size="150" font-weight="800" fill="#FFFFFF">Spontyx<tspan dx="-4" dy="-58" fill="#A8E65E">●</tspan></text>
       </svg>
     </a>
     <div class="nav-right">
@@ -1141,7 +1141,7 @@
     <a href="#" class="footer-logo">
       <img src="spontyx-icon.svg" alt="Spontyx" />
       <svg style="height:20px;" viewBox="100 82 980 162" xmlns="http://www.w3.org/2000/svg">
-        <text x="110" y="235" font-family="Clash Display, Arial, sans-serif" font-size="150" font-weight="800" fill="#FFFFFF">Spontyx<tspan dx="-4" dy="-58" fill="#A8E10C">●</tspan></text>
+        <text x="110" y="235" font-family="Clash Display, Arial, sans-serif" font-size="150" font-weight="800" fill="#FFFFFF">Spontyx<tspan dx="-4" dy="-58" fill="#A8E65E">●</tspan></text>
       </svg>
     </a>
     <span class="footer-copy">© 2026 Spontyx. All rights reserved.</span>

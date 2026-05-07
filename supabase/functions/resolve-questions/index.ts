@@ -32,6 +32,13 @@ Deno.serve(async (req: Request) => {
 
   const sb = createClient(SUPABASE_URL, SERVICE_ROLE_KEY);
 
+  // ── BR lifecycle: lobby lock + segment-end (br_only cron only) ───────
+  // Runs before question processing so newly locked sessions can start
+  // receiving questions in the same cron tick.
+  if (brOnly) {
+    await runBrLifecycle(sb);
+  }
+
   // ── Fetch pending questions past their resolves_after ────────────────
   // Include all scoring metadata needed by markCorrectAnswers()
   let questionsQuery = sb
@@ -969,5 +976,110 @@ async function maybeCompleteArenaSession(sb: any, sessionId: string): Promise<vo
     }
   } catch (err) {
     console.warn(`[arena-complete] exception for session ${sessionId}:`, String(err));
+  }
+}
+
+// ── BR lifecycle: lobby lock + segment-end detection ─────────────────
+//
+// Runs at the start of every br_only=1 cron tick (before question processing).
+//
+// Lock phase:  finds waiting BR sessions whose match segment has started
+//              (first_half → status '1H', second_half → status '2H') and
+//              calls instantiate_br_session() to transition them to 'active'.
+//
+// Segment-end: finds active BR sessions whose segment has ended and calls
+//              finalize_br_session(). finalize is idempotent — safe if a
+//              single-survivor win already triggered it this tick.
+//
+// Uses live_match_stats (written by live-stats-poller every minute) as the
+// authoritative source of match status. Never uses segment_ends_at (that is
+// informational only).
+
+const SEGMENT_END_STATUSES: Record<string, string[]> = {
+  first_half:  ['HT', '2H', 'FT', 'AET', 'PEN', 'FT_PEN', 'ABD'],
+  second_half: ['FT', 'AET', 'PEN', 'FT_PEN', 'ABD'],
+  // Future sports can add entries here
+};
+
+async function runBrLifecycle(sb: any): Promise<void> {
+  // ── 1. Fetch waiting + active sessions and their match statuses ───────
+  const [waitingResult, activeResult] = await Promise.all([
+    sb.from('br_sessions')
+      .select('id, match_id, segment_scope')
+      .eq('status', 'waiting'),
+    sb.from('br_sessions')
+      .select('id, match_id, segment_scope')
+      .eq('status', 'active'),
+  ]);
+
+  const allSessions = [
+    ...(waitingResult.data ?? []),
+    ...(activeResult.data  ?? []),
+  ];
+
+  if (allSessions.length === 0) return;
+
+  const allMatchIds = [...new Set(allSessions.map((s: any) => String(s.match_id)))];
+
+  const { data: liveStats, error: statsErr } = await sb
+    .from('live_match_stats')
+    .select('fixture_id, status')
+    .in('fixture_id', allMatchIds);
+
+  if (statsErr) {
+    console.warn('[br-lifecycle] live_match_stats fetch error:', statsErr.message);
+    return;
+  }
+
+  const matchStatusMap = new Map<string, string>();
+  for (const row of (liveStats ?? [])) {
+    matchStatusMap.set(String(row.fixture_id), row.status);
+  }
+
+  // ── 2. Lock waiting sessions whose segment has started ─────────────
+  for (const session of (waitingResult.data ?? [])) {
+    const matchStatus = matchStatusMap.get(String(session.match_id));
+    if (!matchStatus) continue;
+
+    const shouldLock =
+      (session.segment_scope === 'first_half'  && matchStatus === '1H') ||
+      (session.segment_scope === 'second_half' && matchStatus === '2H');
+
+    if (!shouldLock) continue;
+
+    const { error } = await sb.rpc('instantiate_br_session', {
+      p_session_id: session.id,
+    });
+
+    if (error) {
+      console.warn(`[br-lock] failed to lock session ${session.id}:`, error.message);
+    } else {
+      console.log(
+        `[br-lock] session ${session.id} locked — ` +
+        `segment=${session.segment_scope} match_status=${matchStatus}`,
+      );
+    }
+  }
+
+  // ── 3. Finalize active sessions whose segment has ended ─────────────
+  for (const session of (activeResult.data ?? [])) {
+    const matchStatus = matchStatusMap.get(String(session.match_id));
+    if (!matchStatus) continue;
+
+    const endStatuses = SEGMENT_END_STATUSES[session.segment_scope] ?? [];
+    if (!endStatuses.includes(matchStatus)) continue;
+
+    const { error } = await sb.rpc('finalize_br_session', {
+      p_session_id: session.id,
+    });
+
+    if (error) {
+      console.warn(`[br-segment-end] failed to finalize session ${session.id}:`, error.message);
+    } else {
+      console.log(
+        `[br-segment-end] session ${session.id} finalized — ` +
+        `segment=${session.segment_scope} match_status=${matchStatus}`,
+      );
+    }
   }
 }

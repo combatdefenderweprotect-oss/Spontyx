@@ -2,11 +2,13 @@
 <html lang="en">
 <head>
   <meta name="view-transition" content="same-origin" />
-  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <style>html{background:#111111;margin:0;padding:0}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spontyx — Browse Matches</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 <style>
@@ -20,8 +22,8 @@
 
     /* Custom mode-icon tint for the fixtures page */
     .mode-icon.icon-fixtures {
-      background: rgba(168,225,12,0.12);
-      border-color: rgba(168,225,12,0.28);
+      background: rgba(168,230,94,0.12);
+      border-color: rgba(168,230,94,0.28);
       color: var(--lime);
     }
 
@@ -46,11 +48,11 @@
       padding: 6px 12px; border-radius: 999px;
       border: 1px solid rgba(255,255,255,0.1);
       background: transparent; color: var(--grey);
-      font-family: 'Inter', sans-serif; font-size: 0.74rem; font-weight: 600;
+      font-family: 'Satoshi', 'Inter', sans-serif; font-size: 0.74rem; font-weight: 600;
       cursor: pointer; white-space: nowrap;
       transition: all 0.15s;
     }
-    .fx-chip:hover { color: var(--off-white); border-color: rgba(168,225,12,0.3); }
+    .fx-chip:hover { color: var(--off-white); border-color: rgba(168,230,94,0.3); }
     .fx-chip.active { background: var(--lime); color: var(--navy); border-color: var(--lime); }
 
     /* Three primary CTAs per match card */
@@ -59,7 +61,7 @@
       padding: 7px 12px; border-radius: 999px;
       border: 1px solid rgba(255,255,255,0.1);
       background: transparent; color: var(--grey);
-      font-family: 'Inter', sans-serif; font-size: 0.66rem; font-weight: 700;
+      font-family: 'Satoshi', 'Inter', sans-serif; font-size: 0.66rem; font-weight: 700;
       letter-spacing: 0.02em;
       cursor: pointer; white-space: nowrap; flex-shrink: 0;
       text-decoration: none;
@@ -68,8 +70,8 @@
     .match-cta-btn svg { width: 11px; height: 11px; stroke: currentColor; fill: none; stroke-width: 2; }
     .match-cta-btn.cta-league { color: #9b7cfc; border-color: rgba(124,92,252,0.35); }
     .match-cta-btn.cta-league:hover { background: rgba(124,92,252,0.12); border-color: #9b7cfc; }
-    .match-cta-btn.cta-arena  { color: var(--lime);  border-color: rgba(168,225,12,0.35); }
-    .match-cta-btn.cta-arena:hover  { background: rgba(168,225,12,0.12); border-color: var(--lime); }
+    .match-cta-btn.cta-arena  { color: var(--lime);  border-color: rgba(168,230,94,0.35); }
+    .match-cta-btn.cta-arena:hover  { background: rgba(168,230,94,0.12); border-color: var(--lime); }
     .match-cta-btn.cta-br     { color: var(--coral); border-color: rgba(255,107,107,0.35); }
     .match-cta-btn.cta-br:hover     { background: rgba(255,107,107,0.12); border-color: var(--coral); }
 
@@ -124,7 +126,7 @@
     .match-section-badge {
       font-size: 0.58rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;
       padding: 3px 10px; border-radius: var(--radius-pill);
-      background: rgba(168,225,12,0.1); color: var(--lime);
+      background: rgba(168,230,94,0.1); color: var(--lime);
     }
     .match-section-name { font-size: 0.82rem; font-weight: 700; }
     .match-section-count { font-size: 0.68rem; color: var(--grey); margin-left: auto; }
@@ -137,7 +139,7 @@
       padding: 16px 20px; background: var(--navy-card); border-radius: var(--radius-lg);
       border: 1px solid rgba(255,255,255,0.06); transition: all 0.2s; cursor: pointer;
     }
-    .match-card:hover { border-color: rgba(168,225,12,0.2); transform: translateY(-1px); }
+    .match-card:hover { border-color: rgba(168,230,94,0.2); transform: translateY(-1px); }
     .match-card.is-live { border-color: rgba(255,107,107,0.2); background: linear-gradient(135deg, var(--navy-card), rgba(255,107,107,0.03)); }
 
     .match-card-time { text-align: center; min-width: 58px; flex-shrink: 0; }
@@ -157,7 +159,7 @@
 
     .match-q-badge {
       padding: 4px 10px; border-radius: var(--radius-pill); font-size: 0.62rem; font-weight: 700;
-      background: rgba(168,225,12,0.08); color: var(--lime); flex-shrink: 0; white-space: nowrap;
+      background: rgba(168,230,94,0.08); color: var(--lime); flex-shrink: 0; white-space: nowrap;
     }
     .match-q-badge.no-q { background: rgba(255,255,255,0.04); color: var(--grey-dark); }
 
@@ -167,8 +169,8 @@
       font-family: inherit; font-size: 0.68rem; font-weight: 700; cursor: pointer;
       transition: all 0.15s; white-space: nowrap;
     }
-    .match-action.league { background: rgba(168,225,12,0.1); color: var(--lime); border: 1px solid rgba(168,225,12,0.2); }
-    .match-action.league:hover { background: rgba(168,225,12,0.2); }
+    .match-action.league { background: rgba(168,230,94,0.1); color: var(--lime); border: 1px solid rgba(168,230,94,0.2); }
+    .match-action.league:hover { background: rgba(168,230,94,0.2); }
 
     /* Match Live button */
     .btn-match-live {
@@ -191,15 +193,15 @@
     }
     .btn-save svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2.2; transition: all 0.18s; }
     .btn-save:hover { border-color: var(--lime); color: var(--lime); }
-    .btn-save.saved { border-color: var(--lime); color: var(--lime); background: rgba(168,225,12,0.08); }
+    .btn-save.saved { border-color: var(--lime); color: var(--lime); background: rgba(168,230,94,0.08); }
     .btn-save.saving { opacity: 0.5; pointer-events: none; }
 
     /* Inline invite CTA — shown after saving, inside the card */
     .save-cta {
       display: none; align-items: center; gap: 8px; flex-wrap: wrap;
       margin-top: 10px; padding: 10px 14px;
-      background: rgba(168,225,12,0.06); border-radius: var(--radius-sm);
-      border: 1px solid rgba(168,225,12,0.12);
+      background: rgba(168,230,94,0.06); border-radius: var(--radius-sm);
+      border: 1px solid rgba(168,230,94,0.12);
     }
     .save-cta.visible { display: flex; }
     .save-cta-msg { font-size: 0.72rem; color: var(--lime); font-weight: 600; flex: 1; min-width: 120px; }
@@ -260,7 +262,7 @@
       border-radius: var(--radius-sm); cursor: pointer; transition: background 0.15s;
     }
     .comp-row:hover { background: rgba(255,255,255,0.03); }
-    .comp-row.active { background: rgba(168,225,12,0.06); }
+    .comp-row.active { background: rgba(168,230,94,0.06); }
     .comp-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
     .comp-name { font-size: 0.78rem; font-weight: 600; flex: 1; }
     .comp-count { font-size: 0.62rem; color: var(--grey); font-weight: 600; }

@@ -2,11 +2,13 @@
 <html lang="en">
 <head>
   <meta name="view-transition" content="same-origin" />
-  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <style>html{background:#111111;margin:0;padding:0}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spontyx — Tonight's Events</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <style>
@@ -27,7 +29,7 @@
       transition: border-color 0.2s;
     }
     .topbar-search input::placeholder { color: var(--grey-dark); }
-    .topbar-search input:focus { border-color: rgba(168,225,12,0.3); }
+    .topbar-search input:focus { border-color: rgba(168,230,94,0.3); }
     .topbar-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--grey-dark); }
     .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
     .topbar-btn {
@@ -47,7 +49,7 @@
       padding: 6px 14px; border-radius: var(--radius-pill);
       font-size: 0.75rem; font-weight: 700;
     }
-    .venue-status.open { background: rgba(168,225,12,0.12); color: var(--lime); }
+    .venue-status.open { background: rgba(168,230,94,0.12); color: var(--lime); }
     .venue-status-dot {
       width: 8px; height: 8px; border-radius: 50%; background: var(--lime);
       animation: pulse-live 2s infinite;
@@ -135,7 +137,7 @@
     .event-status.live { background: rgba(255,107,107,0.15); color: var(--coral); }
     .event-status.live .status-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--coral); animation: pulse-live 2s infinite; }
     .event-status.scheduled { background: rgba(124,92,252,0.12); color: var(--purple); }
-    .event-status.registering { background: rgba(168,225,12,0.12); color: var(--lime); }
+    .event-status.registering { background: rgba(168,230,94,0.12); color: var(--lime); }
     .event-status.completed { background: rgba(152,152,176,0.12); color: var(--grey); }
 
     .event-title { font-size: 1.1rem; font-weight: 800; margin-bottom: 4px; letter-spacing: -0.3px; }

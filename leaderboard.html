@@ -2,11 +2,13 @@
 <html lang="en">
 <head>
   <meta name="view-transition" content="same-origin" />
-  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <style>html{background:#111111;margin:0;padding:0}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spontyx — Leaderboards</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 <style>/* ══ SIDEBAR ══ */
@@ -25,7 +27,7 @@
       transition: border-color 0.2s;
     }
     .topbar-search input::placeholder { color: var(--grey-dark); }
-    .topbar-search input:focus { border-color: rgba(168,225,12,0.3); }
+    .topbar-search input:focus { border-color: rgba(168,230,94,0.3); }
     .topbar-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--grey-dark); }
     .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
     .topbar-btn {
@@ -68,7 +70,7 @@
       background: none; color: var(--grey); font-size: 0.75rem; font-weight: 600;
       cursor: pointer; font-family: inherit; transition: all 0.15s;
     }
-    .time-chip:hover { border-color: rgba(168,225,12,0.2); color: var(--off-white); }
+    .time-chip:hover { border-color: rgba(168,230,94,0.2); color: var(--off-white); }
     .time-chip.active { background: var(--lime); color: var(--navy); border-color: var(--lime); }
 
     /* ══ CATEGORY SELECTOR ══ */
@@ -79,7 +81,7 @@
       cursor: pointer; font-family: inherit; transition: all 0.15s;
       display: flex; align-items: center; gap: 6px;
     }
-    .cat-chip:hover { border-color: rgba(168,225,12,0.2); }
+    .cat-chip:hover { border-color: rgba(168,230,94,0.2); }
     .cat-chip.active { border-color: var(--lime); color: var(--lime); background: var(--lime-dim); }
     .cat-chip svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; fill: none; }
 
@@ -107,7 +109,7 @@
     .podium-bar {
       width: 80px; border-radius: 8px 8px 0 0; margin-top: 8px;
     }
-    .podium-spot.first .podium-bar { height: 100px; background: linear-gradient(180deg, var(--lime), rgba(168,225,12,0.3)); }
+    .podium-spot.first .podium-bar { height: 100px; background: linear-gradient(180deg, var(--lime), rgba(168,230,94,0.3)); }
     .podium-spot.second .podium-bar { height: 72px; background: linear-gradient(180deg, var(--purple), rgba(124,92,252,0.25)); }
     .podium-spot.third .podium-bar { height: 52px; background: linear-gradient(180deg, var(--teal), rgba(78,205,196,0.25)); }
     .podium-rank {
@@ -169,7 +171,7 @@
       background: var(--navy-card); border-radius: var(--radius-lg); padding: 22px;
       border: 1px solid rgba(255,255,255,0.06); transition: border-color 0.15s;
     }
-    .league-lb-card:hover { border-color: rgba(168,225,12,0.12); }
+    .league-lb-card:hover { border-color: rgba(168,230,94,0.12); }
     .league-lb-header { display: flex; align-items: center; gap: 14px; margin-bottom: 16px; }
     .league-lb-icon {
       width: 44px; height: 44px; border-radius: var(--radius-md); display: flex;
@@ -225,13 +227,13 @@
 
     /* ══ ARENA LEADERBOARD ══ */
     .ar-hero {
-      background: linear-gradient(135deg, rgba(168,225,12,0.06) 0%, rgba(78,205,196,0.04) 100%);
-      border: 1px solid rgba(168,225,12,0.12); border-radius: var(--radius-lg);
+      background: linear-gradient(135deg, rgba(168,230,94,0.06) 0%, rgba(78,205,196,0.04) 100%);
+      border: 1px solid rgba(168,230,94,0.12); border-radius: var(--radius-lg);
       padding: 24px 28px; margin-bottom: 24px; display: flex; align-items: center; gap: 20px;
     }
     .ar-hero-icon {
       width: 52px; height: 52px; border-radius: var(--radius-md); flex-shrink: 0;
-      background: rgba(168,225,12,0.1); display: flex; align-items: center; justify-content: center;
+      background: rgba(168,230,94,0.1); display: flex; align-items: center; justify-content: center;
     }
     .ar-hero-icon svg { width: 26px; height: 26px; stroke: var(--lime); stroke-width: 2; fill: none; }
     .ar-hero-info { flex: 1; }
@@ -239,8 +241,8 @@
     .ar-hero-sub { font-size: 0.78rem; color: var(--grey); margin-top: 3px; }
     .ar-hero-badge {
       padding: 5px 14px; border-radius: var(--radius-pill);
-      background: rgba(168,225,12,0.1); color: var(--lime); font-size: 0.72rem; font-weight: 700;
-      border: 1px solid rgba(168,225,12,0.2); white-space: nowrap;
+      background: rgba(168,230,94,0.1); color: var(--lime); font-size: 0.72rem; font-weight: 700;
+      border: 1px solid rgba(168,230,94,0.2); white-space: nowrap;
     }
     .ar-tier-badge {
       display: inline-block; padding: 3px 10px; border-radius: var(--radius-pill);
@@ -254,7 +256,7 @@
     .ar-tier-diamond     { background: rgba(124,92,252,0.15);  color: var(--purple); }
     .ar-tier-master      { background: rgba(192,132,252,0.15); color: #C084FC; }
     .ar-tier-grandmaster { background: rgba(224,110,255,0.15); color: #E06EFF; }
-    .ar-tier-legend      { background: rgba(168,225,12,0.12);  color: var(--lime); }
+    .ar-tier-legend      { background: rgba(168,230,94,0.12);  color: var(--lime); }
     .ar-podium { display: flex; align-items: flex-end; justify-content: center; gap: 12px; margin-bottom: 28px; padding: 20px 0; }
     .ar-podium-card { display: flex; flex-direction: column; align-items: center; text-align: center; }
     .ar-podium-avatar {
@@ -264,13 +266,13 @@
     }
     .ar-podium-card.first .ar-podium-avatar {
       width: 68px; height: 68px; font-size: 1.1rem;
-      box-shadow: 0 0 24px rgba(168,225,12,0.3);
+      box-shadow: 0 0 24px rgba(168,230,94,0.3);
     }
     .ar-podium-name  { font-size: 0.82rem; font-weight: 700; margin-bottom: 2px; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ar-podium-rating { font-size: 0.7rem; font-weight: 700; color: var(--lime); margin-bottom: 4px; }
     .ar-podium-tier  { margin-bottom: 6px; }
     .ar-podium-bar   { width: 80px; border-radius: 8px 8px 0 0; margin-top: 8px; }
-    .ar-podium-card.first  .ar-podium-bar { height: 100px; background: linear-gradient(180deg, var(--lime), rgba(168,225,12,0.3)); }
+    .ar-podium-card.first  .ar-podium-bar { height: 100px; background: linear-gradient(180deg, var(--lime), rgba(168,230,94,0.3)); }
     .ar-podium-card.second .ar-podium-bar { height: 72px;  background: linear-gradient(180deg, var(--purple), rgba(124,92,252,0.25)); }
     .ar-podium-card.third  .ar-podium-bar { height: 52px;  background: linear-gradient(180deg, var(--teal), rgba(78,205,196,0.25)); }
     .ar-podium-rank {
@@ -295,7 +297,7 @@
     .ar-table tr.you-row td { font-weight: 700; }
     .ar-loading { padding: 60px 20px; text-align: center; color: var(--grey); font-size: 0.85rem; }
     .ar-empty { padding: 60px 20px; text-align: center; }
-    .ar-empty-icon { width: 64px; height: 64px; border-radius: 50%; background: rgba(168,225,12,0.08); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+    .ar-empty-icon { width: 64px; height: 64px; border-radius: 50%; background: rgba(168,230,94,0.08); display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
     .ar-empty-icon svg { width: 28px; height: 28px; stroke: var(--lime); stroke-width: 1.8; fill: none; }
     .ar-empty-title { font-size: 1rem; font-weight: 700; margin-bottom: 6px; }
     .ar-empty-sub   { font-size: 0.82rem; color: var(--grey); margin-bottom: 20px; }
@@ -337,7 +339,7 @@
     .br-tier-elite       { background: rgba(192,132,252,0.15); color: #C084FC; }
     .br-tier-master      { background: rgba(255,107,107,0.15); color: var(--coral); }
     .br-tier-champion    { background: rgba(255,165,0,0.15);   color: #FFA500; }
-    .br-tier-legend      { background: rgba(168,225,12,0.12);  color: var(--lime); }
+    .br-tier-legend      { background: rgba(168,230,94,0.12);  color: var(--lime); }
     /* BR uses the same .ar-podium + .ar-table structural classes with .br- colour overrides */
     .br-podium-card.first  .ar-podium-bar { background: linear-gradient(180deg, var(--coral), rgba(255,107,107,0.3)); }
     .br-podium-card.second .ar-podium-bar { background: linear-gradient(180deg, var(--orange,#FF9F43), rgba(255,159,67,0.25)); }
@@ -352,7 +354,7 @@
 
     .ar-sticky-you {
       position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%) translateY(120px);
-      background: var(--navy-card); border: 1px solid rgba(168,225,12,0.3);
+      background: var(--navy-card); border: 1px solid rgba(168,230,94,0.3);
       border-radius: var(--radius-lg); padding: 12px 20px;
       display: flex; align-items: center; gap: 14px;
       box-shadow: 0 8px 32px rgba(0,0,0,0.5); z-index: 100;
@@ -389,7 +391,7 @@
     .lb-live-pill .num { color: var(--off-white); font-weight: 800; }
     .lb-live-pill .lb-live-dot {
       width: 7px; height: 7px; border-radius: 50%;
-      background: var(--lime); box-shadow: 0 0 8px rgba(168,225,12,0.55);
+      background: var(--lime); box-shadow: 0 0 8px rgba(168,230,94,0.55);
       animation: lb-live-blink 1.6s ease-in-out infinite;
     }
     .lb-live-pill.coral  .lb-live-dot { background: var(--coral);  box-shadow: 0 0 8px rgba(255,107,107,0.6); }
@@ -420,10 +422,10 @@
       padding: 6px 14px; border-radius: var(--radius-pill);
       border: 1px solid rgba(255,255,255,0.1);
       background: transparent; color: var(--grey);
-      font-family: 'Inter', sans-serif; font-size: 0.74rem; font-weight: 600;
+      font-family: 'Satoshi', 'Inter', sans-serif; font-size: 0.74rem; font-weight: 600;
       cursor: pointer; transition: all 0.15s;
     }
-    .lb-scope-chip:hover { color: var(--off-white); border-color: rgba(168,225,12,0.3); }
+    .lb-scope-chip:hover { color: var(--off-white); border-color: rgba(168,230,94,0.3); }
     .lb-scope-chip.active { background: var(--lime); color: var(--navy); border-color: var(--lime); }
 
     /* Mode chip row reuses .view-tab — adjust to fit the new container */
@@ -451,7 +453,7 @@
       margin-left: 6px;
       font-size: 0.55rem; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
       padding: 1px 6px; border-radius: 10px;
-      background: rgba(168,225,12,0.12); color: var(--lime);
+      background: rgba(168,230,94,0.12); color: var(--lime);
     }
 
     /* Hide the legacy stand-alone view-tabs / time-filter blocks (they're now inside .lb-filters) */
@@ -506,7 +508,7 @@
       margin-bottom: 8px;
     }
     .lb-ctx-rating:last-child { margin-bottom: 0; }
-    .lb-ctx-rating.arena { border-color: rgba(168,225,12,0.18); background: rgba(168,225,12,0.04); }
+    .lb-ctx-rating.arena { border-color: rgba(168,230,94,0.18); background: rgba(168,230,94,0.04); }
     .lb-ctx-rating.br    { border-color: rgba(255,107,107,0.20); background: rgba(255,107,107,0.04); }
     .lb-ctx-rating.soon  { opacity: 0.55; }
     .lb-ctx-rating-icon { font-size: 1.05rem; flex-shrink: 0; }
@@ -525,7 +527,7 @@
       text-transform: uppercase; letter-spacing: 0.06em;
       background: rgba(255,255,255,0.06); color: var(--grey);
     }
-    .lb-ctx-rating.arena .lb-ctx-rating-tier { background: rgba(168,225,12,0.14); color: var(--lime); }
+    .lb-ctx-rating.arena .lb-ctx-rating-tier { background: rgba(168,230,94,0.14); color: var(--lime); }
     .lb-ctx-rating.br    .lb-ctx-rating-tier { background: rgba(255,107,107,0.14); color: var(--coral); }
     .lb-ctx-rating-soon {
       font-size: 0.7rem; font-style: italic; color: var(--grey-dark);
@@ -1197,7 +1199,7 @@ function renderArenaLeaderboard(data) {
     'background:rgba(124,92,252,0.2);color:var(--purple);',
     'background:rgba(78,205,196,0.15);color:var(--teal);',
     'background:rgba(255,107,107,0.15);color:var(--coral);',
-    'background:rgba(168,225,12,0.15);color:var(--lime);',
+    'background:rgba(168,230,94,0.15);color:var(--lime);',
   ];
 
   function getInitials(name) {
@@ -1524,7 +1526,7 @@ function renderTriviaLeaderboard(data) {
     'background:var(--purple);color:#fff;',
     'background:var(--coral);color:#fff;',
     'background:rgba(78,205,196,0.15);color:var(--teal);',
-    'background:rgba(168,225,12,0.15);color:var(--lime);',
+    'background:rgba(168,230,94,0.15);color:var(--lime);',
     'background:rgba(124,92,252,0.2);color:var(--purple);',
     'background:rgba(255,107,107,0.15);color:var(--coral);',
   ];
@@ -1854,7 +1856,7 @@ async function renderLeaguesLeaderboard() {
 
   // League colour palette (cycles through brand colours)
   const palette = [
-    { color: 'var(--lime)',   dim: 'rgba(168,225,12,0.12)'  },
+    { color: 'var(--lime)',   dim: 'rgba(168,230,94,0.12)'  },
     { color: 'var(--purple)', dim: 'rgba(124,92,252,0.12)'  },
     { color: 'var(--coral)',  dim: 'rgba(255,107,107,0.12)' },
     { color: 'var(--teal)',   dim: 'rgba(78,205,196,0.12)'  },

@@ -2,11 +2,13 @@
 <html lang="en">
 <head>
   <meta name="view-transition" content="same-origin" />
-  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <style>html{background:#111111;margin:0;padding:0}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spontyx — Notifications</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 <style>
@@ -30,7 +32,7 @@
       transition: border-color 0.15s;
     }
     .notif-search input::placeholder { color: var(--grey-dark); }
-    .notif-search input:focus { border-color: rgba(168,225,12,0.4); }
+    .notif-search input:focus { border-color: rgba(168,230,94,0.4); }
     .notif-search svg {
       position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
       width: 15px; height: 15px; stroke: var(--grey-dark); fill: none; stroke-width: 2;
@@ -78,7 +80,7 @@
       position: relative;
     }
     .notif-item:hover { background: rgba(255,255,255,0.03); }
-    .notif-item.unread { background: rgba(168,225,12,0.03); }
+    .notif-item.unread { background: rgba(168,230,94,0.03); }
     .notif-item.unread::before {
       content: ''; position: absolute; left: 4px; top: 50%; transform: translateY(-50%);
       width: 6px; height: 6px; border-radius: 50%; background: var(--lime);

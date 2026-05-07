@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta name="view-transition" content="same-origin" />
-  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <style>html{background:#111111;margin:0;padding:0}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spontyx — Join the Waitlist</title>
@@ -17,11 +17,11 @@
     /* ── Reset & tokens ── */
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
     :root {
-      --navy:        #1A1A2E;
-      --navy-light:  #22223A;
-      --navy-card:   #2A2A44;
-      --navy-hover:  #32325A;
-      --lime:        #A8E10C;
+      --navy: #111111;
+      --navy-light:  #1A0022;
+      --navy-card:   #33003A;
+      --navy-hover:  #3E0049;
+      --lime:        #A8E65E;
       --lime-hover:  #BFEF3F;
       --lime-glow:   rgba(168, 225, 12, 0.25);
       --purple:      #7C5CFC;
@@ -47,7 +47,7 @@
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       background:
         radial-gradient(ellipse 1200px 700px at 5% -5%,  rgba(124,92,252,0.22), transparent 55%),
-        radial-gradient(ellipse 900px  600px at 100% 110%, rgba(168,225,12,0.14), transparent 55%),
+        radial-gradient(ellipse 900px  600px at 100% 110%, rgba(168,230,94,0.14), transparent 55%),
         var(--navy);
       color: var(--off-white);
       overflow: hidden; /* body itself never scrolls — scroll-container handles it */
@@ -114,7 +114,7 @@
     .orb-1 {
       width: 500px; height: 500px;
       top: -180px; right: -120px;
-      background: radial-gradient(circle, rgba(168,225,12,0.07), transparent 70%);
+      background: radial-gradient(circle, rgba(168,230,94,0.07), transparent 70%);
       animation-duration: 14s;
     }
     .orb-2 {
@@ -137,7 +137,7 @@
 
     .badge {
       display: inline-flex; align-items: center; gap: 7px;
-      background: rgba(168,225,12,0.1); border: 1px solid rgba(168,225,12,0.25);
+      background: rgba(168,230,94,0.1); border: 1px solid rgba(168,230,94,0.25);
       color: var(--lime); border-radius: var(--radius-pill);
       padding: 6px 16px; font-size: 0.72rem; font-weight: 700;
       letter-spacing: 0.8px; text-transform: uppercase;
@@ -182,7 +182,7 @@
       border-radius: 20px;
       padding: 32px 28px 28px;
       box-shadow:
-        0 0 0 1px rgba(168,225,12,0.06),
+        0 0 0 1px rgba(168,230,94,0.06),
         0 24px 60px rgba(0,0,0,0.45);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
@@ -218,7 +218,7 @@
     }
     .input:focus {
       border-color: var(--lime);
-      box-shadow: 0 0 0 3px rgba(168,225,12,0.12);
+      box-shadow: 0 0 0 3px rgba(168,230,94,0.12);
     }
     .input::placeholder { color: var(--grey-dark); }
     .input.error {
@@ -233,13 +233,13 @@
       font-family: inherit; font-size: 1rem; font-weight: 800;
       cursor: pointer; letter-spacing: -0.2px;
       transition: transform 0.15s, opacity 0.15s, box-shadow 0.2s;
-      box-shadow: 0 6px 24px rgba(168,225,12,0.35);
+      box-shadow: 0 6px 24px rgba(168,230,94,0.35);
       margin-top: 4px;
       display: flex; align-items: center; justify-content: center; gap: 8px;
     }
     .btn:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 10px 30px rgba(168,225,12,0.45);
+      box-shadow: 0 10px 30px rgba(168,230,94,0.45);
     }
     .btn:active:not(:disabled) { transform: translateY(0); }
     .btn:disabled { opacity: 0.55; cursor: not-allowed; }
@@ -267,8 +267,8 @@
     }
     .alert.show { display: block; }
     .alert.ok {
-      background: rgba(168,225,12,0.08);
-      border: 1px solid rgba(168,225,12,0.28);
+      background: rgba(168,230,94,0.08);
+      border: 1px solid rgba(168,230,94,0.28);
       color: var(--lime);
     }
     .alert.err {
@@ -290,8 +290,8 @@
     .success-pane.show { display: block; }
     .success-icon {
       width: 56px; height: 56px;
-      background: rgba(168,225,12,0.1);
-      border: 1.5px solid rgba(168,225,12,0.3);
+      background: rgba(168,230,94,0.1);
+      border: 1.5px solid rgba(168,230,94,0.3);
       border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       margin: 0 auto 16px;

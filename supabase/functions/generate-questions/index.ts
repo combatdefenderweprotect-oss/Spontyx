@@ -1956,7 +1956,7 @@ Deno.serve(async (req: Request) => {
     {
       const { data: activeBrSessions } = await sb
         .from('br_sessions')
-        .select('id, match_id, api_league_id, started_at')
+        .select('id, match_id, api_league_id, started_at, segment_scope, kickoff_at')
         .eq('status', 'active');
 
       if (activeBrSessions && activeBrSessions.length > 0) {
@@ -1976,8 +1976,11 @@ Deno.serve(async (req: Request) => {
 
           // Skip if match isn't currently live in the poller cache
           if (!brFixture) continue;
-          if (brFixture.status === 'HT') {
-            console.log(`[br-gen] skipping session ${brSession.id}: halftime_pause`);
+          // Skip HT only for first_half sessions — second_half sessions
+          // should not be generating questions at HT anyway (status='2H' required).
+          // For first_half, HT means segment is over; finalize handles it.
+          if (brFixture.status === 'HT' && brSession.segment_scope === 'first_half') {
+            console.log(`[br-gen] skipping session ${brSession.id}: halftime_pause (first_half segment ended)`);
             continue;
           }
 
@@ -1994,8 +1997,12 @@ Deno.serve(async (req: Request) => {
             console.log(`[br-gen] skipping session ${brSession.id}: no_live_stats_available`);
             continue;
           }
-          if (brLiveCtx.matchMinute >= 89) {
-            console.log(`[br-gen] skipping session ${brSession.id}: match_minute_too_late (${brLiveCtx.matchMinute})`);
+          // Stop generating near the end of the active segment.
+          // first_half: stop at minute 43 (no time for a 30s answer window before HT).
+          // second_half: stop at minute 87 (standard late-match cutoff).
+          const brSegmentCutoff = brSession.segment_scope === 'first_half' ? 43 : 87;
+          if (brLiveCtx.matchMinute >= brSegmentCutoff) {
+            console.log(`[br-gen] skipping session ${brSession.id}: segment_minute_too_late (minute=${brLiveCtx.matchMinute}, cutoff=${brSegmentCutoff}, segment=${brSession.segment_scope})`);
             continue;
           }
           if (brLiveCtx.activeQuestionCount >= MAX_ACTIVE_LIVE_QUESTIONS) {
@@ -2096,7 +2103,7 @@ Deno.serve(async (req: Request) => {
             source:             'br_session' as const,
             brSessionId:        brSession.id,
             mode:               'battle_royale',
-            halfScope:          'full_match',
+            segmentScope:       brSession.segment_scope ?? 'first_half',
             playerCount:        brAliveCount ?? 2,
             competitive_format: true,
           };
@@ -2161,15 +2168,21 @@ Deno.serve(async (req: Request) => {
           brRaw.visible_from     = new Date(Date.now() + brVisibleDelayMs).toISOString();
           brRaw.opens_at         = brRaw.visible_from;
 
-          // BR sessions always span full_match — use standard clutch threshold (minute >= 80)
-          const isBrClutch      = brLiveCtx.matchMinute != null && brLiveCtx.matchMinute >= 80;
+          // Clutch threshold: first_half → minute >= 35, second_half → minute >= 80
+          const brClutchMin     = brSession.segment_scope === 'first_half' ? 35 : 80;
+          const isBrClutch      = brLiveCtx.matchMinute != null && brLiveCtx.matchMinute >= brClutchMin;
           const brAnswerWindowMs = isBrClutch
             ? (brIsEventDriven ? 90 : 60) * 1000
             : (brIsEventDriven ? 120 : 90) * 1000;
 
           brRaw.answer_closes_at = new Date(Date.now() + brVisibleDelayMs + brAnswerWindowMs).toISOString();
           brRaw.deadline         = brRaw.answer_closes_at;
-          brRaw.resolves_after   = computeResolvesAfter(brLiveCtx.kickoff, 'football');
+          // Default resolves_after: segment boundary + 90s settle time.
+          // first_half resolves at HT (kickoff+45min); second_half at FT (kickoff+90min).
+          // match_stat_window predicates override this below with their own window_end.
+          const brSegmentEndMin  = brSession.segment_scope === 'first_half' ? 45 : 90;
+          const brSegmentEndMs   = new Date(minuteToTimestamp(brLiveCtx.kickoff, brSegmentEndMin)).getTime();
+          brRaw.resolves_after   = new Date(brSegmentEndMs + 90_000).toISOString();
 
           let brPredicate;
           try {
@@ -2189,13 +2202,46 @@ Deno.serve(async (req: Request) => {
           }
 
           const brPredAny = brPredicate as any;
+
+          // ── BR v1 predicate allowlist ─────────────────────────────────────
+          // Only match_stat_window with field=goals or field=cards is permitted.
+          // All other predicates (player_stat, match_outcome, btts, etc.) are
+          // rejected before any DB write to keep BR questions fast to resolve.
+          const brAllowedField = ['goals', 'cards'];
           if (
-            brPredAny.resolution_type === 'match_stat_window' &&
-            brPredAny.window_start_minute != null &&
-            brPredAny.window_end_minute   != null
+            brPredAny.resolution_type !== 'match_stat_window' ||
+            !brAllowedField.includes(brPredAny.field)
           ) {
-            brRaw.answer_closes_at  = minuteToTimestamp(brLiveCtx.kickoff, brPredAny.window_start_minute);
-            brRaw.deadline          = brRaw.answer_closes_at;
+            console.log(
+              `[br-gen] question rejected for session ${brSession.id}: ` +
+              `predicate_not_allowed (type=${brPredAny.resolution_type}, field=${brPredAny.field})`,
+            );
+            continue;
+          }
+
+          // ── Segment window validation ─────────────────────────────────────
+          // The window must fall entirely within the active segment.
+          // first_half:  window_end_minute <= 45
+          // second_half: window_start_minute >= 46 AND window_end_minute <= 90
+          const brWinStart = brPredAny.window_start_minute ?? 0;
+          const brWinEnd   = brPredAny.window_end_minute   ?? 90;
+          const brSegIsFirst = brSession.segment_scope === 'first_half';
+          const brWindowValid = brSegIsFirst
+            ? brWinEnd <= 45
+            : (brWinStart >= 46 && brWinEnd <= 90);
+
+          if (!brWindowValid) {
+            console.log(
+              `[br-gen] question rejected for session ${brSession.id}: ` +
+              `window_outside_segment (window=${brWinStart}–${brWinEnd}, segment=${brSession.segment_scope})`,
+            );
+            continue;
+          }
+
+          // ── Timestamp computation from validated window ───────────────────
+          if (brPredAny.window_start_minute != null && brPredAny.window_end_minute != null) {
+            brRaw.answer_closes_at    = minuteToTimestamp(brLiveCtx.kickoff, brPredAny.window_start_minute);
+            brRaw.deadline            = brRaw.answer_closes_at;
             brRaw.window_start_minute = brPredAny.window_start_minute;
             brRaw.window_end_minute   = brPredAny.window_end_minute;
             const brSettleMs = (brIsEventDriven ? 120 : 90) * 1000;
@@ -2252,7 +2298,7 @@ Deno.serve(async (req: Request) => {
               match_minute_at_generation: brLiveCtx.matchMinute,
               home_goals_at_generation:   brLiveCtx.homeScore,
               away_goals_at_generation:   brLiveCtx.awayScore,
-              session_scope:              'full_match',
+              session_scope:              brSession.segment_scope ?? 'first_half',
             },
           } as any;
 

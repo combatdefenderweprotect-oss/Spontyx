@@ -2,20 +2,22 @@
 <html lang="en">
 <head>
   <meta name="view-transition" content="same-origin" />
-  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <style>html{background:#111111;margin:0;padding:0}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spontyx — LIVE: Barcelona vs Real Madrid</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --navy: #1A1A2E;
-      --navy-light: #22223A;
-      --navy-card: #2A2A44;
-      --navy-hover: #32325A;
-      --lime: #A8E10C;
-      --lime-dim: rgba(168,225,12,0.12);
+      --navy: #111111;
+      --navy-light: #1A0022;
+      --navy-card: #33003A;
+      --navy-hover: #3E0049;
+      --lime: #A8E65E;
+      --lime-dim: rgba(168,230,94,0.12);
       --coral: #FF6B6B;
       --teal: #4ECDC4;
       --purple: #7C5CFC;
@@ -128,8 +130,8 @@
       border: 1px solid rgba(255,255,255,0.08);
       box-shadow: 0 12px 48px rgba(0,0,0,0.4);
     }
-    .question-card.active-glow { border-color: rgba(168,225,12,0.25); box-shadow: 0 12px 48px rgba(0,0,0,0.4), 0 0 40px rgba(168,225,12,0.08); }
-    .question-card.result-correct { border-color: rgba(168,225,12,0.4); }
+    .question-card.active-glow { border-color: rgba(168,230,94,0.25); box-shadow: 0 12px 48px rgba(0,0,0,0.4), 0 0 40px rgba(168,230,94,0.08); }
+    .question-card.result-correct { border-color: rgba(168,230,94,0.4); }
     .question-card.result-wrong { border-color: rgba(255,107,107,0.4); }
 
     .q-type-badge {
@@ -170,9 +172,9 @@
       cursor: pointer; transition: all 0.2s; font-family: inherit; color: var(--off-white);
       text-align: left; position: relative; overflow: hidden;
     }
-    .q-option:hover:not(.locked) { border-color: rgba(168,225,12,0.3); background: var(--lime-dim); }
+    .q-option:hover:not(.locked) { border-color: rgba(168,230,94,0.3); background: var(--lime-dim); }
     .q-option.selected { border-color: var(--lime); background: var(--lime-dim); color: var(--lime); }
-    .q-option.correct { border-color: var(--lime); background: rgba(168,225,12,0.15); color: var(--lime); }
+    .q-option.correct { border-color: var(--lime); background: rgba(168,230,94,0.15); color: var(--lime); }
     .q-option.correct::after { content: '✓'; position: absolute; right: 16px; font-weight: 900; }
     .q-option.wrong { border-color: var(--coral); background: rgba(255,107,107,0.1); color: var(--coral); opacity: 0.7; }
     .q-option.wrong.selected { opacity: 1; }
@@ -202,7 +204,7 @@
       text-align: center; padding: 16px; border-radius: var(--radius-md); margin-top: 8px;
       font-weight: 700; font-size: 0.9rem; display: none;
     }
-    .q-result.correct { background: rgba(168,225,12,0.1); color: var(--lime); display: block; }
+    .q-result.correct { background: rgba(168,230,94,0.1); color: var(--lime); display: block; }
     .q-result.wrong { background: rgba(255,107,107,0.1); color: var(--coral); display: block; }
     .q-result .pts { font-size: 1.3rem; font-weight: 900; display: block; margin-bottom: 2px; }
 
@@ -237,7 +239,7 @@
     }
     .mini-lb h3 { font-size: 0.75rem; font-weight: 700; color: var(--grey-dark); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 14px; }
     .mini-lb-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: var(--radius-sm); transition: background 0.15s; }
-    .mini-lb-row.you { background: var(--lime-dim); border: 1px solid rgba(168,225,12,0.12); }
+    .mini-lb-row.you { background: var(--lime-dim); border: 1px solid rgba(168,230,94,0.12); }
     .mini-lb-rank { font-size: 0.75rem; font-weight: 800; color: var(--grey-dark); width: 20px; text-align: center; }
     .mini-lb-row.you .mini-lb-rank { color: var(--lime); }
     .mini-lb-avatar {
@@ -324,7 +326,7 @@
       opacity: 0; transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1); pointer-events: none;
     }
     .point-popup.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-    .point-popup.correct { color: var(--lime); text-shadow: 0 0 40px rgba(168,225,12,0.5); }
+    .point-popup.correct { color: var(--lime); text-shadow: 0 0 40px rgba(168,230,94,0.5); }
     .point-popup.wrong { color: var(--coral); text-shadow: 0 0 40px rgba(255,107,107,0.5); }
 
     /* ══ JOIN SCREEN ══ */

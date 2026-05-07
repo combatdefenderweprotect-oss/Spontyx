@@ -2,11 +2,13 @@
 <html lang="en">
 <head>
   <meta name="view-transition" content="same-origin" />
-  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <style>html{background:#111111;margin:0;padding:0}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spontyx — Table Map</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <style>    /* ── Custom Scrollbars ── */
@@ -213,7 +215,7 @@
     }
     .structure.bar-counter::before {
       content: ''; position: absolute; top: 0; left: 0; right: 0; height: 50%;
-      background: linear-gradient(180deg, rgba(168,225,12,0.15) 0%, transparent 100%);
+      background: linear-gradient(180deg, rgba(168,230,94,0.15) 0%, transparent 100%);
       border-radius: 8px 8px 0 0; pointer-events: none;
     }
     .structure.bar-counter::after {
@@ -227,7 +229,7 @@
     .structure.stage {
       background: linear-gradient(135deg, #8A6AC4 0%, #6A4AB4 50%, #5A3AA4 100%);
       border-radius: 100px 100px 10px 10px;
-      border: 2px solid rgba(168,225,12,0.4);
+      border: 2px solid rgba(168,230,94,0.4);
       box-shadow: 0 0 20px rgba(124,92,252,0.25);
       color: #fff; font-weight: 900; letter-spacing: 2px;
       text-shadow: 0 1px 4px rgba(0,0,0,0.3);
@@ -237,9 +239,9 @@
       font-size: 13px; filter: drop-shadow(0 1px 3px rgba(0,0,0,0.5));
     }
     .structure.entrance {
-      font-size: 18px; background: rgba(168,225,12,0.1);
-      border: 2px dashed rgba(168,225,12,0.4); border-radius: 6px;
-      box-shadow: 0 0 10px rgba(168,225,12,0.1);
+      font-size: 18px; background: rgba(168,230,94,0.1);
+      border: 2px dashed rgba(168,230,94,0.4); border-radius: 6px;
+      box-shadow: 0 0 10px rgba(168,230,94,0.1);
     }
     .floor-grid-inner.placing { cursor: crosshair; }
     .struct-resize-handle {
@@ -273,7 +275,7 @@
     .table-shape.square { width: 72px; height: 72px; border-radius: var(--radius-md); }
 
     /* Status colors */
-    .table-item.active .table-shape { border-color: var(--lime); background: rgba(168,225,12,0.06); }
+    .table-item.active .table-shape { border-color: var(--lime); background: rgba(168,230,94,0.06); }
     .table-item.idle .table-shape { border-color: rgba(255,255,255,0.08); }
     .table-item.reserved .table-shape { border-color: var(--purple); background: rgba(124,92,252,0.06); }
     .table-item.empty .table-shape { border-color: rgba(255,255,255,0.04); background: rgba(0,0,0,0.1); }
@@ -452,7 +454,7 @@
       font-family: inherit; white-space: nowrap;
     }
     .mode-action-btn svg { width: 13px; height: 13px; stroke: currentColor; stroke-width: 2; fill: none; }
-    .mode-action-btn.save-btn:hover { color: var(--lime); border-color: rgba(168,225,12,0.3); background: rgba(168,225,12,0.06); }
+    .mode-action-btn.save-btn:hover { color: var(--lime); border-color: rgba(168,230,94,0.3); background: rgba(168,230,94,0.06); }
     .mode-action-btn.reset-btn:hover { color: var(--coral); border-color: rgba(255,107,107,0.3); background: rgba(255,107,107,0.06); }
     .expand-btn { padding: 6px 14px; border-radius: var(--radius-sm);
       border: 1px solid rgba(124,92,252,0.3); background: rgba(124,92,252,0.08);
@@ -1005,12 +1007,12 @@
           <div class="modal-field">
             <label>Table Color (optional override)</label>
             <div class="td-color-row">
-              <div class="td-color-chip selected" data-color="auto" onclick="tdSelectColor(this,'auto')" style="background: linear-gradient(135deg,#4ECDC4,#7C5CFC,#A8E10C); position:relative;" title="Auto (zone color)">
+              <div class="td-color-chip selected" data-color="auto" onclick="tdSelectColor(this,'auto')" style="background: linear-gradient(135deg,#4ECDC4,#7C5CFC,#A8E65E); position:relative;" title="Auto (zone color)">
                 <span style="font-size:0.5rem;color:#fff;font-weight:800;">AUTO</span>
               </div>
               <div class="td-color-chip" data-color="teal" onclick="tdSelectColor(this,'teal')" style="background:#4ECDC4;" title="Teal"></div>
               <div class="td-color-chip" data-color="purple" onclick="tdSelectColor(this,'purple')" style="background:#7C5CFC;" title="Purple"></div>
-              <div class="td-color-chip" data-color="lime" onclick="tdSelectColor(this,'lime')" style="background:#A8E10C;" title="Lime"></div>
+              <div class="td-color-chip" data-color="lime" onclick="tdSelectColor(this,'lime')" style="background:#A8E65E;" title="Lime"></div>
               <div class="td-color-chip" data-color="gold" onclick="tdSelectColor(this,'gold')" style="background:#FFD700;" title="Gold"></div>
               <div class="td-color-chip" data-color="coral" onclick="tdSelectColor(this,'coral')" style="background:#FF6B6B;" title="Coral"></div>
               <div class="td-color-chip" data-color="grey" onclick="tdSelectColor(this,'grey')" style="background:#9ca3af;" title="Grey"></div>
@@ -1059,7 +1061,7 @@
     const zoneColors = {
       teal:   { rgb: 'rgba(78,205,196,0.06)',  border: 'rgba(78,205,196,0.3)',  solid: '#4ECDC4', tableBg: 'rgba(78,205,196,0.10)',  tableBorder: 'rgba(78,205,196,0.6)',  name: 'Teal' },
       purple: { rgb: 'rgba(124,92,252,0.06)',   border: 'rgba(124,92,252,0.3)',  solid: '#7C5CFC', tableBg: 'rgba(124,92,252,0.10)',  tableBorder: 'rgba(124,92,252,0.6)',  name: 'Purple' },
-      lime:   { rgb: 'rgba(168,225,12,0.06)',   border: 'rgba(168,225,12,0.3)',  solid: '#A8E10C', tableBg: 'rgba(168,225,12,0.10)',  tableBorder: 'rgba(168,225,12,0.6)',  name: 'Lime' },
+      lime:   { rgb: 'rgba(168,230,94,0.06)',   border: 'rgba(168,230,94,0.3)',  solid: '#A8E65E', tableBg: 'rgba(168,230,94,0.10)',  tableBorder: 'rgba(168,230,94,0.6)',  name: 'Lime' },
       gold:   { rgb: 'rgba(255,215,0,0.06)',    border: 'rgba(255,215,0,0.3)',   solid: '#FFD700', tableBg: 'rgba(255,215,0,0.10)',   tableBorder: 'rgba(255,215,0,0.6)',   name: 'Gold' },
       coral:  { rgb: 'rgba(255,107,107,0.06)',  border: 'rgba(255,107,107,0.3)', solid: '#FF6B6B', tableBg: 'rgba(255,107,107,0.10)', tableBorder: 'rgba(255,107,107,0.6)', name: 'Coral' },
       grey:   { rgb: 'rgba(152,152,176,0.06)',  border: 'rgba(152,152,176,0.3)', solid: '#9898B0', tableBg: 'rgba(152,152,176,0.10)', tableBorder: 'rgba(152,152,176,0.6)', name: 'Grey' }

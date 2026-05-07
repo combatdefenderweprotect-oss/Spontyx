@@ -2,11 +2,13 @@
 <html lang="en">
 <head>
   <meta name="view-transition" content="same-origin" />
-  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <style>html{background:#111111;margin:0;padding:0}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spontyx — Live &amp; Activity</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 <style>
@@ -24,7 +26,7 @@
       color: var(--off-white); font-size: 0.85rem; font-family: inherit; outline: none;
     }
     .topbar-search input::placeholder { color: var(--grey-dark); }
-    .topbar-search input:focus { border-color: rgba(168,225,12,0.3); }
+    .topbar-search input:focus { border-color: rgba(168,230,94,0.3); }
     .topbar-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--grey-dark); }
     .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
     .topbar-btn {
@@ -129,7 +131,7 @@
       padding: 10px 20px; background: var(--lime); color: var(--navy); border: none;
       border-radius: var(--radius-pill); font-size: 0.8rem; font-weight: 800;
       font-family: inherit; cursor: pointer; white-space: nowrap; transition: opacity 0.2s, transform 0.2s; flex-shrink: 0;
-      box-shadow: 0 4px 16px rgba(168,225,12,0.3);
+      box-shadow: 0 4px 16px rgba(168,230,94,0.3);
     }
     .live-match-cta:hover { opacity: 0.9; transform: translateY(-1px); }
 
@@ -174,7 +176,7 @@
     .unanswered-timer.ok svg { stroke: var(--teal); }
 
     .unanswered-answer-btn {
-      padding: 8px 18px; border-radius: var(--radius-sm); border: 1px solid rgba(168,225,12,0.2);
+      padding: 8px 18px; border-radius: var(--radius-sm); border: 1px solid rgba(168,230,94,0.2);
       background: transparent; color: var(--lime); font-size: 0.78rem; font-weight: 700;
       font-family: inherit; cursor: pointer; white-space: nowrap; transition: all 0.2s; flex-shrink: 0;
     }

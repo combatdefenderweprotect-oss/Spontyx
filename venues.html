@@ -2,11 +2,13 @@
 <html lang="en">
 <head>
   <meta name="view-transition" content="same-origin" />
-  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <style>html{background:#111111;margin:0;padding:0}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spontyx — Venues &amp; Bars</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 <style>/* ── Sidebar (shared) ── */
@@ -47,14 +49,14 @@
     .play-live-btn {
       display: inline-flex; align-items: center; gap: 10px;
       padding: 14px 22px; border-radius: 999px;
-      background: linear-gradient(135deg, #A8E10C, #7BC400);
+      background: linear-gradient(135deg, #A8E65E, #7BC400);
       color: var(--navy); font-family: inherit; font-size: 0.9rem; font-weight: 800;
       text-decoration: none; border: none; cursor: pointer;
-      box-shadow: 0 8px 24px rgba(168,225,12,0.35);
+      box-shadow: 0 8px 24px rgba(168,230,94,0.35);
       transition: transform 0.2s, box-shadow 0.2s;
       position: relative; overflow: hidden; white-space: nowrap;
     }
-    .play-live-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(168,225,12,0.5); }
+    .play-live-btn:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(168,230,94,0.5); }
     .play-live-btn svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2.2; }
     .play-live-btn .live-dot {
       width: 8px; height: 8px; border-radius: 50%; background: var(--navy);
@@ -81,7 +83,7 @@
       transition: border-color 0.2s;
     }
     .search-box input::placeholder { color: var(--grey-dark); }
-    .search-box input:focus { border-color: rgba(168,225,12,0.3); }
+    .search-box input:focus { border-color: rgba(168,230,94,0.3); }
     .search-box svg {
       position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
       width: 18px; height: 18px; stroke: var(--grey-dark); fill: none; stroke-width: 1.8;
@@ -94,7 +96,7 @@
       background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px;
       min-width: 140px;
     }
-    .filter-select:focus { border-color: rgba(168,225,12,0.3); }
+    .filter-select:focus { border-color: rgba(168,230,94,0.3); }
 
     /* ── Radius Slider ── */
     .radius-filter {
@@ -120,7 +122,7 @@
     /* ── Location Banner ── */
     .location-banner {
       display: flex; align-items: center; gap: 10px; padding: 12px 18px;
-      background: linear-gradient(90deg, rgba(124,92,252,0.08), rgba(168,225,12,0.05));
+      background: linear-gradient(90deg, rgba(124,92,252,0.08), rgba(168,230,94,0.05));
       border: 1px solid rgba(124,92,252,0.15); border-radius: var(--radius-md);
       margin-bottom: 24px; font-size: 0.82rem; color: var(--grey);
     }
@@ -228,7 +230,7 @@
       font-family: inherit; font-size: 0.75rem; font-weight: 700; cursor: pointer;
       transition: all 0.2s; text-align: center;
     }
-    .venue-btn.primary { background: var(--lime); color: var(--navy); font-weight: 800; box-shadow: 0 4px 14px rgba(168,225,12,0.25); }
+    .venue-btn.primary { background: var(--lime); color: var(--navy); font-weight: 800; box-shadow: 0 4px 14px rgba(168,230,94,0.25); }
     .venue-btn.primary:hover { opacity: 0.9; transform: translateY(-1px); }
     .venue-btn.secondary {
       background: transparent; color: var(--grey); border: 1px solid rgba(255,255,255,0.08);
@@ -675,7 +677,7 @@
       const reservationStatus = hasReservation ? '<div class="venue-card-live" style="background:rgba(78,205,196,0.9);"><span class="pulse" style="background:var(--navy);"></span> RESERVED</div>' : '';
 
       const liveHtml = v.hasLiveEvent ? '<div class="venue-card-live"><span class="pulse"></span> LIVE NOW</div>' : '';
-      const newBadge = v.isNew ? '<div class="venue-card-live" style="background:rgba(168,225,12,0.9);"><span class="pulse" style="background:var(--navy);"></span> NEW</div>' : '';
+      const newBadge = v.isNew ? '<div class="venue-card-live" style="background:rgba(168,230,94,0.9);"><span class="pulse" style="background:var(--navy);"></span> NEW</div>' : '';
 
       return '<div class="venue-card" onclick="showToast(\'Opening ' + v.name.replace(/'/g, "\\'") + '...\')"><div class="venue-card-header' + (headerHasPhoto ? ' has-photo' : '') + '" style="' + headerStyle + '">' +
         '<div class="venue-card-distance">' + distLabel + '</div>' +

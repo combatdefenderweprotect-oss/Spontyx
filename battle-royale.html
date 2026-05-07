@@ -2,12 +2,14 @@
 <html lang="en">
 <head>
   <meta name="view-transition" content="same-origin" />
-  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <style>html{background:#111111;margin:0;padding:0}</style>
   <script>window.location.replace('br-lobby.html');</script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spontyx — Battle Royale</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 <style>
@@ -241,7 +243,7 @@
     .lobby-match-banner::before {
       content: ''; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
       width: 500px; height: 500px; border-radius: 50%;
-      background: radial-gradient(circle, rgba(168,225,12,0.04) 0%, transparent 60%);
+      background: radial-gradient(circle, rgba(168,230,94,0.04) 0%, transparent 60%);
       pointer-events: none;
     }
     .lobby-match-league {
@@ -307,8 +309,8 @@
       transition: all 0.4s ease; position: relative;
     }
     .lobby-player-card.joined {
-      border-color: rgba(168,225,12,0.15);
-      background: linear-gradient(180deg, rgba(168,225,12,0.04) 0%, var(--navy-card) 100%);
+      border-color: rgba(168,230,94,0.15);
+      background: linear-gradient(180deg, rgba(168,230,94,0.04) 0%, var(--navy-card) 100%);
     }
     .lobby-player-card.you-card {
       border-color: rgba(255,159,67,0.3);
@@ -322,7 +324,7 @@
       width: 44px; height: 44px; border-radius: 50%;
       display: flex; align-items: center; justify-content: center;
       font-size: 0.72rem; font-weight: 800;
-      border: 2px solid rgba(168,225,12,0.3);
+      border: 2px solid rgba(168,230,94,0.3);
       transition: all 0.3s;
     }
     .lobby-player-card.you-card .lobby-card-avatar {
@@ -392,7 +394,7 @@
     .arena-ring-bg {
       position: absolute; inset: 0; border-radius: 50%;
       border: 2px solid rgba(255,255,255,0.06);
-      background: radial-gradient(circle, rgba(168,225,12,0.04) 0%, transparent 70%);
+      background: radial-gradient(circle, rgba(168,230,94,0.04) 0%, transparent 70%);
     }
     .arena-center {
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -412,7 +414,7 @@
       font-size: 0.7rem; font-weight: 800; border: 3px solid rgba(255,255,255,0.1);
       transition: all 0.5s ease; position: relative;
     }
-    .player-slot-avatar.alive { border-color: var(--lime); box-shadow: 0 0 12px rgba(168,225,12,0.2); }
+    .player-slot-avatar.alive { border-color: var(--lime); box-shadow: 0 0 12px rgba(168,230,94,0.2); }
     .player-slot-avatar.you { border-color: var(--orange); box-shadow: 0 0 16px rgba(255,159,67,0.3); }
     .player-slot-avatar.dead { border-color: var(--coral); opacity: 0.3; filter: grayscale(1); box-shadow: none; }
     .player-slot-avatar.empty { border: 2px dashed var(--grey-dark); background: none !important; }
@@ -454,7 +456,7 @@
     .arena::before {
       content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
       width: 800px; height: 600px; border-radius: 50%;
-      background: radial-gradient(ellipse, rgba(168,225,12,0.06) 0%, transparent 60%);
+      background: radial-gradient(ellipse, rgba(168,230,94,0.06) 0%, transparent 60%);
       pointer-events: none; z-index: 0;
     }
 
@@ -462,7 +464,7 @@
     .match-ticker {
       display: flex; align-items: center; justify-content: center; gap: 16px;
       padding: 12px 24px; position: relative; z-index: 1;
-      background: linear-gradient(180deg, rgba(168,225,12,0.06) 0%, transparent 100%);
+      background: linear-gradient(180deg, rgba(168,230,94,0.06) 0%, transparent 100%);
       border-bottom: 1px solid rgba(255,255,255,0.04);
     }
     .match-ticker-score {
@@ -488,12 +490,12 @@
       width: 32px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08);
       transition: all 0.4s; position: relative;
     }
-    .round-pip.done { background: var(--lime); box-shadow: 0 0 8px rgba(168,225,12,0.3); }
+    .round-pip.done { background: var(--lime); box-shadow: 0 0 8px rgba(168,230,94,0.3); }
     .round-pip.active {
       background: var(--lime); width: 52px;
       animation: pip-glow 2s infinite;
     }
-    @keyframes pip-glow { 0%,100%{box-shadow:0 0 6px rgba(168,225,12,0.3)} 50%{box-shadow:0 0 16px rgba(168,225,12,0.6)} }
+    @keyframes pip-glow { 0%,100%{box-shadow:0 0 6px rgba(168,230,94,0.3)} 50%{box-shadow:0 0 16px rgba(168,230,94,0.6)} }
     .round-pip.survived { background: var(--lime); opacity: 0.6; }
     .round-pip.failed { background: var(--coral); box-shadow: 0 0 8px rgba(255,107,107,0.3); }
     .round-label {
@@ -538,11 +540,11 @@
       width: 100%; max-width: 560px; position: relative;
       background: linear-gradient(180deg, var(--navy-card) 0%, rgba(26,26,46,0.8) 100%);
       border-radius: var(--radius-xl); padding: 32px 36px; margin-bottom: 24px;
-      border: 1px solid rgba(168,225,12,0.1); text-align: center;
+      border: 1px solid rgba(168,230,94,0.1); text-align: center;
     }
     .prediction-card::before {
       content: ''; position: absolute; inset: -1px; border-radius: var(--radius-xl);
-      background: linear-gradient(135deg, rgba(168,225,12,0.15), transparent 50%, rgba(78,205,196,0.1));
+      background: linear-gradient(135deg, rgba(168,230,94,0.15), transparent 50%, rgba(78,205,196,0.1));
       z-index: -1; opacity: 0.5;
     }
     .prediction-round {
@@ -574,18 +576,18 @@
     }
     .prediction-option::before {
       content: ''; position: absolute; inset: 0;
-      background: linear-gradient(180deg, rgba(168,225,12,0.05) 0%, transparent 100%);
+      background: linear-gradient(180deg, rgba(168,230,94,0.05) 0%, transparent 100%);
       opacity: 0; transition: opacity 0.25s;
     }
-    .prediction-option:hover { border-color: rgba(168,225,12,0.3); transform: translateY(-3px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
+    .prediction-option:hover { border-color: rgba(168,230,94,0.3); transform: translateY(-3px); box-shadow: 0 8px 32px rgba(0,0,0,0.3); }
     .prediction-option:hover::before { opacity: 1; }
     .prediction-option.selected {
-      border-color: var(--lime); background: rgba(168,225,12,0.08); color: var(--lime);
-      box-shadow: 0 0 24px rgba(168,225,12,0.15);
+      border-color: var(--lime); background: rgba(168,230,94,0.08); color: var(--lime);
+      box-shadow: 0 0 24px rgba(168,230,94,0.15);
     }
     .prediction-option.correct {
-      border-color: var(--lime); background: rgba(168,225,12,0.12); color: var(--lime);
-      box-shadow: 0 0 32px rgba(168,225,12,0.2);
+      border-color: var(--lime); background: rgba(168,230,94,0.12); color: var(--lime);
+      box-shadow: 0 0 32px rgba(168,230,94,0.2);
     }
     .prediction-option.wrong {
       border-color: var(--coral); background: rgba(255,107,107,0.12); color: var(--coral);
@@ -648,7 +650,7 @@
 
     .survive-overlay {
       display: none; position: fixed; inset: 0; z-index: 200;
-      background: rgba(168,225,12,0.1); align-items: center; justify-content: center;
+      background: rgba(168,230,94,0.1); align-items: center; justify-content: center;
       animation: flashIn 0.6s ease;
     }
     .survive-overlay.show { display: flex; }
@@ -698,7 +700,7 @@
       width: 32px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.08);
       transition: all 0.3s;
     }
-    .spec-pip.survived { background: var(--lime); box-shadow: 0 0 6px rgba(168,225,12,0.3); }
+    .spec-pip.survived { background: var(--lime); box-shadow: 0 0 6px rgba(168,230,94,0.3); }
     .spec-pip.you-died { background: var(--coral); box-shadow: 0 0 8px rgba(255,107,107,0.4); width: 40px; }
     .spec-pip.active { background: var(--lime); opacity: 0.5; width: 44px; animation: pip-glow 2s infinite; }
 
@@ -760,7 +762,7 @@
       border-color: rgba(255,107,107,0.15); background: rgba(255,107,107,0.04);
     }
     .spectator-feed-item.survive-event {
-      border-color: rgba(168,225,12,0.1);
+      border-color: rgba(168,230,94,0.1);
     }
     .feed-avatar {
       width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
@@ -820,7 +822,7 @@
     .sd-duelist-avatar {
       width: 72px; height: 72px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
       font-size: 1rem; font-weight: 900; border: 3px solid var(--lime);
-      box-shadow: 0 0 20px rgba(168,225,12,0.2); transition: all 0.3s;
+      box-shadow: 0 0 20px rgba(168,230,94,0.2); transition: all 0.3s;
     }
     .sd-duelist-avatar.you-avatar { border-color: var(--orange); box-shadow: 0 0 24px rgba(255,159,67,0.25); }
     .sd-duelist-name { font-size: 0.82rem; font-weight: 700; }
@@ -972,7 +974,7 @@
     .victory-elo-strip {
       display: flex; align-items: center; gap: 16px; margin-bottom: 24px;
       padding: 12px 24px; border-radius: var(--radius-lg);
-      background: rgba(168,225,12,0.04); border: 1px solid rgba(168,225,12,0.1);
+      background: rgba(168,230,94,0.04); border: 1px solid rgba(168,230,94,0.1);
     }
     .victory-elo-change { font-size: 1.8rem; font-weight: 900; color: var(--lime); }
     .victory-elo-detail { text-align: left; }
@@ -1211,11 +1213,11 @@
     .btn-how-to-play {
       display: inline-flex; align-items: center; gap: 8px;
       padding: 8px 18px; border-radius: var(--radius-pill);
-      background: var(--navy-card); border: 1px solid rgba(168,225,12,0.2);
+      background: var(--navy-card); border: 1px solid rgba(168,230,94,0.2);
       color: var(--lime); font-family: inherit; font-size: 0.78rem; font-weight: 700;
       cursor: pointer; transition: all 0.2s;
     }
-    .btn-how-to-play:hover { background: rgba(168,225,12,0.08); border-color: var(--lime); transform: translateY(-1px); }
+    .btn-how-to-play:hover { background: rgba(168,230,94,0.08); border-color: var(--lime); transform: translateY(-1px); }
     .btn-how-to-play svg { width: 16px; height: 16px; stroke: var(--lime); fill: none; stroke-width: 2; }
 
     /* ══ HOW-TO-PLAY MODAL ══ */
@@ -1257,7 +1259,7 @@
       transition: all 0.3s;
     }
     .htp-step-dot.active { background: var(--lime); width: 28px; border-radius: 4px; }
-    .htp-step-dot.done { background: rgba(168,225,12,0.4); }
+    .htp-step-dot.done { background: rgba(168,230,94,0.4); }
     .htp-step-label {
       margin-left: auto; font-size: 0.68rem; font-weight: 600; color: var(--grey-dark);
     }
@@ -1292,8 +1294,8 @@
     .htp-slide-desc .hl-purple { color: var(--purple); font-weight: 700; }
 
     .htp-tips {
-      margin-top: 16px; padding: 12px 16px; background: rgba(168,225,12,0.05);
-      border: 1px solid rgba(168,225,12,0.12); border-radius: var(--radius-md);
+      margin-top: 16px; padding: 12px 16px; background: rgba(168,230,94,0.05);
+      border: 1px solid rgba(168,230,94,0.12); border-radius: var(--radius-md);
     }
     .htp-tips-title { font-size: 0.7rem; font-weight: 800; color: var(--lime); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
     .htp-tips-text { font-size: 0.78rem; color: var(--grey); line-height: 1.5; }
@@ -1312,9 +1314,9 @@
     .htp-btn-back { background: var(--navy-card); color: var(--grey); }
     .htp-btn-back:hover { color: var(--off-white); background: var(--navy-hover); }
     .htp-btn-next { background: var(--lime); color: var(--navy); }
-    .htp-btn-next:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(168,225,12,0.25); }
+    .htp-btn-next:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(168,230,94,0.25); }
     .htp-btn-start { background: linear-gradient(135deg, var(--lime), var(--teal)); color: var(--navy); }
-    .htp-btn-start:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(168,225,12,0.35); }
+    .htp-btn-start:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(168,230,94,0.35); }
 
     /* ── Responsive ── */</style>
 </head>
@@ -1719,8 +1721,8 @@
           <div class="live-side-panel">
             <div class="live-side-title">Live Events</div>
             <div class="live-side-players" id="arena-events-feed">
-              <div class="live-side-player" style="border-color:rgba(168,225,12,0.15);">
-                <div class="live-side-avatar" style="background:rgba(168,225,12,0.12);color:var(--lime);">
+              <div class="live-side-player" style="border-color:rgba(168,230,94,0.15);">
+                <div class="live-side-avatar" style="background:rgba(168,230,94,0.12);color:var(--lime);">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>
                 </div>
                 <div class="live-side-name" style="font-size:0.7rem;">Round 2 — 6 correct</div>
@@ -1733,8 +1735,8 @@
                 <div class="live-side-name" style="font-size:0.7rem;">NikoFan eliminated R2</div>
                 <div class="live-side-status" style="background:rgba(255,107,107,0.12);color:var(--coral);">OUT</div>
               </div>
-              <div class="live-side-player" style="border-color:rgba(168,225,12,0.15);">
-                <div class="live-side-avatar" style="background:rgba(168,225,12,0.12);color:var(--lime);">
+              <div class="live-side-player" style="border-color:rgba(168,230,94,0.15);">
+                <div class="live-side-avatar" style="background:rgba(168,230,94,0.12);color:var(--lime);">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-5"/></svg>
                 </div>
                 <div class="live-side-name" style="font-size:0.7rem;">Round 1 — All survived</div>
@@ -2285,10 +2287,10 @@
         <div class="htp-slide active" id="htpSlide0">
           <div class="htp-slide-graphic">
             <svg viewBox="0 0 620 200" xmlns="http://www.w3.org/2000/svg">
-              <rect width="620" height="200" fill="#2A2A44"/>
+              <rect width="620" height="200" fill="#33003A"/>
               <!-- Game card mockup -->
-              <rect x="30" y="30" width="560" height="60" rx="12" fill="#1A1A2E" stroke="rgba(168,225,12,0.3)" stroke-width="1.5"/>
-              <circle cx="62" cy="60" r="6" fill="#A8E10C"/>
+              <rect x="30" y="30" width="560" height="60" rx="12" fill="#111111" stroke="rgba(168,230,94,0.3)" stroke-width="1.5"/>
+              <circle cx="62" cy="60" r="6" fill="#A8E65E"/>
               <text x="76" y="56" fill="#FF6B6B" font-family="Inter,sans-serif" font-size="11" font-weight="700">LIVE</text>
               <text x="76" y="70" fill="#9898B0" font-size="9">32'</text>
               <rect x="140" y="44" width="80" height="24" rx="12" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
@@ -2297,12 +2299,12 @@
               <rect x="252" y="44" width="85" height="24" rx="12" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
               <text x="262" y="60" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="10" font-weight="700">Real Madrid</text>
               <text x="370" y="60" fill="#5A5A78" font-family="Inter,sans-serif" font-size="9">La Liga</text>
-              <text x="450" y="56" fill="#A8E10C" font-family="Inter,sans-serif" font-size="12" font-weight="800">7/10</text>
+              <text x="450" y="56" fill="#A8E65E" font-family="Inter,sans-serif" font-size="12" font-weight="800">7/10</text>
               <text x="450" y="70" fill="#5A5A78" font-family="Inter,sans-serif" font-size="8">In Queue</text>
-              <rect x="510" y="44" width="58" height="28" rx="8" fill="#A8E10C"/>
-              <text x="525" y="63" fill="#1A1A2E" font-family="Inter,sans-serif" font-size="11" font-weight="800">Join</text>
+              <rect x="510" y="44" width="58" height="28" rx="8" fill="#A8E65E"/>
+              <text x="525" y="63" fill="#111111" font-family="Inter,sans-serif" font-size="11" font-weight="800">Join</text>
               <!-- Second card -->
-              <rect x="30" y="105" width="560" height="60" rx="12" fill="#1A1A2E" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
+              <rect x="30" y="105" width="560" height="60" rx="12" fill="#111111" stroke="rgba(255,255,255,0.04)" stroke-width="1"/>
               <text x="62" y="132" fill="#9898B0" font-family="Inter,sans-serif" font-size="11" font-weight="600">18:45</text>
               <text x="62" y="146" fill="#5A5A78" font-size="9">Today</text>
               <rect x="140" y="120" width="70" height="24" rx="12" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
@@ -2313,10 +2315,10 @@
               <text x="330" y="136" fill="#5A5A78" font-family="Inter,sans-serif" font-size="9">Serie A</text>
               <text x="450" y="132" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="12" font-weight="800">3/10</text>
               <text x="450" y="146" fill="#5A5A78" font-family="Inter,sans-serif" font-size="8">In Queue</text>
-              <rect x="510" y="120" width="58" height="28" rx="8" fill="#A8E10C"/>
-              <text x="525" y="139" fill="#1A1A2E" font-family="Inter,sans-serif" font-size="11" font-weight="800">Join</text>
+              <rect x="510" y="120" width="58" height="28" rx="8" fill="#A8E65E"/>
+              <text x="525" y="139" fill="#111111" font-family="Inter,sans-serif" font-size="11" font-weight="800">Join</text>
               <!-- Arrow pointer -->
-              <polygon points="525,98 535,105 515,105" fill="#A8E10C" opacity="0.7"/>
+              <polygon points="525,98 535,105 515,105" fill="#A8E65E" opacity="0.7"/>
             </svg>
           </div>
           <div class="htp-slide-number">1</div>
@@ -2334,72 +2336,72 @@
         <div class="htp-slide" id="htpSlide1">
           <div class="htp-slide-graphic">
             <svg viewBox="0 0 620 200" xmlns="http://www.w3.org/2000/svg">
-              <rect width="620" height="200" fill="#2A2A44"/>
+              <rect width="620" height="200" fill="#33003A"/>
               <!-- Lobby grid of players -->
               <text x="30" y="30" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="13" font-weight="800">Lobby · Waiting for players…</text>
               <text x="30" y="48" fill="#5A5A78" font-family="Inter,sans-serif" font-size="10">Barcelona vs Real Madrid · La Liga</text>
               <!-- Player slots row 1 -->
               <g transform="translate(40,70)">
-                <rect width="100" height="44" rx="10" fill="#1A1A2E" stroke="rgba(255,159,67,0.3)" stroke-width="1.5"/>
+                <rect width="100" height="44" rx="10" fill="#111111" stroke="rgba(255,159,67,0.3)" stroke-width="1.5"/>
                 <circle cx="22" cy="22" r="14" fill="rgba(255,159,67,0.12)"/>
                 <text x="22" y="26" fill="#FF9F43" font-family="Inter,sans-serif" font-size="8" font-weight="800" text-anchor="middle">BR</text>
                 <text x="46" y="20" fill="#FF9F43" font-family="Inter,sans-serif" font-size="9" font-weight="700">Bran</text>
                 <text x="46" y="32" fill="#5A5A78" font-size="7">Ready</text>
               </g>
               <g transform="translate(155,70)">
-                <rect width="100" height="44" rx="10" fill="#1A1A2E" stroke="rgba(168,225,12,0.15)" stroke-width="1"/>
-                <circle cx="22" cy="22" r="14" fill="rgba(168,225,12,0.12)"/>
-                <text x="22" y="26" fill="#A8E10C" font-family="Inter,sans-serif" font-size="8" font-weight="800" text-anchor="middle">MR</text>
+                <rect width="100" height="44" rx="10" fill="#111111" stroke="rgba(168,230,94,0.15)" stroke-width="1"/>
+                <circle cx="22" cy="22" r="14" fill="rgba(168,230,94,0.12)"/>
+                <text x="22" y="26" fill="#A8E65E" font-family="Inter,sans-serif" font-size="8" font-weight="800" text-anchor="middle">MR</text>
                 <text x="46" y="20" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="9" font-weight="700">Marco</text>
                 <text x="46" y="32" fill="#5A5A78" font-size="7">Ready</text>
               </g>
               <g transform="translate(270,70)">
-                <rect width="100" height="44" rx="10" fill="#1A1A2E" stroke="rgba(124,92,252,0.15)" stroke-width="1"/>
+                <rect width="100" height="44" rx="10" fill="#111111" stroke="rgba(124,92,252,0.15)" stroke-width="1"/>
                 <circle cx="22" cy="22" r="14" fill="rgba(124,92,252,0.12)"/>
                 <text x="22" y="26" fill="#7C5CFC" font-family="Inter,sans-serif" font-size="8" font-weight="800" text-anchor="middle">JL</text>
                 <text x="46" y="20" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="9" font-weight="700">Julia</text>
                 <text x="46" y="32" fill="#5A5A78" font-size="7">Ready</text>
               </g>
               <g transform="translate(385,70)">
-                <rect width="100" height="44" rx="10" fill="#1A1A2E" stroke="rgba(78,205,196,0.15)" stroke-width="1"/>
+                <rect width="100" height="44" rx="10" fill="#111111" stroke="rgba(78,205,196,0.15)" stroke-width="1"/>
                 <circle cx="22" cy="22" r="14" fill="rgba(78,205,196,0.12)"/>
                 <text x="22" y="26" fill="#4ECDC4" font-family="Inter,sans-serif" font-size="8" font-weight="800" text-anchor="middle">AL</text>
                 <text x="46" y="20" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="9" font-weight="700">Alex</text>
                 <text x="46" y="32" fill="#5A5A78" font-size="7">Ready</text>
               </g>
               <g transform="translate(500,70)">
-                <rect width="100" height="44" rx="10" fill="#1A1A2E" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="4 3"/>
+                <rect width="100" height="44" rx="10" fill="#111111" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="4 3"/>
                 <text x="50" y="26" fill="#5A5A78" font-family="Inter,sans-serif" font-size="10" text-anchor="middle">?</text>
               </g>
               <!-- Row 2 -->
               <g transform="translate(40,130)">
-                <rect width="100" height="44" rx="10" fill="#1A1A2E" stroke="rgba(255,107,107,0.15)" stroke-width="1"/>
+                <rect width="100" height="44" rx="10" fill="#111111" stroke="rgba(255,107,107,0.15)" stroke-width="1"/>
                 <circle cx="22" cy="22" r="14" fill="rgba(255,107,107,0.12)"/>
                 <text x="22" y="26" fill="#FF6B6B" font-family="Inter,sans-serif" font-size="8" font-weight="800" text-anchor="middle">SR</text>
                 <text x="46" y="20" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="9" font-weight="700">Sara</text>
                 <text x="46" y="32" fill="#5A5A78" font-size="7">Ready</text>
               </g>
               <g transform="translate(155,130)">
-                <rect width="100" height="44" rx="10" fill="#1A1A2E" stroke="rgba(255,159,67,0.15)" stroke-width="1"/>
+                <rect width="100" height="44" rx="10" fill="#111111" stroke="rgba(255,159,67,0.15)" stroke-width="1"/>
                 <circle cx="22" cy="22" r="14" fill="rgba(255,159,67,0.12)"/>
                 <text x="22" y="26" fill="#FF9F43" font-family="Inter,sans-serif" font-size="8" font-weight="800" text-anchor="middle">TK</text>
                 <text x="46" y="20" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="9" font-weight="700">TipKing</text>
                 <text x="46" y="32" fill="#5A5A78" font-size="7">Ready</text>
               </g>
               <g transform="translate(270,130)">
-                <rect width="100" height="44" rx="10" fill="#1A1A2E" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="4 3"/>
+                <rect width="100" height="44" rx="10" fill="#111111" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="4 3"/>
                 <text x="50" y="26" fill="#5A5A78" font-family="Inter,sans-serif" font-size="10" text-anchor="middle">?</text>
               </g>
               <g transform="translate(385,130)">
-                <rect width="100" height="44" rx="10" fill="#1A1A2E" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="4 3"/>
+                <rect width="100" height="44" rx="10" fill="#111111" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="4 3"/>
                 <text x="50" y="26" fill="#5A5A78" font-family="Inter,sans-serif" font-size="10" text-anchor="middle">?</text>
               </g>
               <g transform="translate(500,130)">
-                <rect width="100" height="44" rx="10" fill="#1A1A2E" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="4 3"/>
+                <rect width="100" height="44" rx="10" fill="#111111" stroke="rgba(255,255,255,0.06)" stroke-width="1" stroke-dasharray="4 3"/>
                 <text x="50" y="26" fill="#5A5A78" font-family="Inter,sans-serif" font-size="10" text-anchor="middle">?</text>
               </g>
               <!-- Player count -->
-              <text x="535" y="30" fill="#A8E10C" font-family="Inter,sans-serif" font-size="18" font-weight="900" text-anchor="middle">7/10</text>
+              <text x="535" y="30" fill="#A8E65E" font-family="Inter,sans-serif" font-size="18" font-weight="900" text-anchor="middle">7/10</text>
               <text x="535" y="46" fill="#5A5A78" font-family="Inter,sans-serif" font-size="9" text-anchor="middle">Players</text>
             </svg>
           </div>
@@ -2418,17 +2420,17 @@
         <div class="htp-slide" id="htpSlide2">
           <div class="htp-slide-graphic">
             <svg viewBox="0 0 620 240" xmlns="http://www.w3.org/2000/svg">
-              <rect width="620" height="240" fill="#2A2A44"/>
+              <rect width="620" height="240" fill="#33003A"/>
               <!-- Match context bar -->
-              <rect x="30" y="16" width="560" height="32" rx="8" fill="rgba(168,225,12,0.06)" stroke="rgba(168,225,12,0.15)" stroke-width="1"/>
+              <rect x="30" y="16" width="560" height="32" rx="8" fill="rgba(168,230,94,0.06)" stroke="rgba(168,230,94,0.15)" stroke-width="1"/>
               <text x="310" y="28" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="11" font-weight="700" text-anchor="middle">Barcelona 1 – 0 Real Madrid</text>
               <text x="540" y="28" fill="#FF6B6B" font-family="Inter,sans-serif" font-size="10" font-weight="700">23'</text>
-              <text x="80" y="37" fill="#A8E10C" font-family="Inter,sans-serif" font-size="8">Goal! Pedri 21'</text>
+              <text x="80" y="37" fill="#A8E65E" font-family="Inter,sans-serif" font-size="8">Goal! Pedri 21'</text>
               <!-- Round dots -->
               <g transform="translate(170,62)">
-                <circle cx="0" cy="0" r="8" fill="#A8E10C"/><text x="0" y="4" fill="#1A1A2E" font-size="8" font-weight="800" text-anchor="middle">1</text>
-                <circle cx="30" cy="0" r="8" fill="#A8E10C"/><text x="30" y="4" fill="#1A1A2E" font-size="8" font-weight="800" text-anchor="middle">2</text>
-                <circle cx="60" cy="0" r="8" fill="#A8E10C" stroke="#fff" stroke-width="2"/><text x="60" y="4" fill="#1A1A2E" font-size="8" font-weight="800" text-anchor="middle">3</text>
+                <circle cx="0" cy="0" r="8" fill="#A8E65E"/><text x="0" y="4" fill="#111111" font-size="8" font-weight="800" text-anchor="middle">1</text>
+                <circle cx="30" cy="0" r="8" fill="#A8E65E"/><text x="30" y="4" fill="#111111" font-size="8" font-weight="800" text-anchor="middle">2</text>
+                <circle cx="60" cy="0" r="8" fill="#A8E65E" stroke="#fff" stroke-width="2"/><text x="60" y="4" fill="#111111" font-size="8" font-weight="800" text-anchor="middle">3</text>
                 <circle cx="90" cy="0" r="8" fill="rgba(255,255,255,0.1)"/><text x="90" y="4" fill="#5A5A78" font-size="8" text-anchor="middle">4</text>
                 <circle cx="120" cy="0" r="8" fill="rgba(255,255,255,0.1)"/><text x="120" y="4" fill="#5A5A78" font-size="8" text-anchor="middle">5</text>
                 <circle cx="150" cy="0" r="8" fill="rgba(255,255,255,0.1)"/><text x="150" y="4" fill="#5A5A78" font-size="8" text-anchor="middle">6</text>
@@ -2439,17 +2441,17 @@
               </g>
               <!-- Timer ring -->
               <circle cx="100" cy="150" r="44" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="6"/>
-              <circle cx="100" cy="150" r="44" fill="none" stroke="#A8E10C" stroke-width="6" stroke-dasharray="276" stroke-dashoffset="69" stroke-linecap="round" transform="rotate(-90 100 150)"/>
+              <circle cx="100" cy="150" r="44" fill="none" stroke="#A8E65E" stroke-width="6" stroke-dasharray="276" stroke-dashoffset="69" stroke-linecap="round" transform="rotate(-90 100 150)"/>
               <text x="100" y="157" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="28" font-weight="900" text-anchor="middle">15</text>
               <text x="100" y="172" fill="#5A5A78" font-family="Inter,sans-serif" font-size="8" text-anchor="middle">seconds</text>
               <!-- Prediction card -->
-              <rect x="180" y="90" width="410" height="130" rx="14" fill="#1A1A2E" stroke="rgba(168,225,12,0.2)" stroke-width="1.5"/>
-              <text x="200" y="115" fill="#A8E10C" font-family="Inter,sans-serif" font-size="9" font-weight="700">ROUND 3 OF 10</text>
+              <rect x="180" y="90" width="410" height="130" rx="14" fill="#111111" stroke="rgba(168,230,94,0.2)" stroke-width="1.5"/>
+              <text x="200" y="115" fill="#A8E65E" font-family="Inter,sans-serif" font-size="9" font-weight="700">ROUND 3 OF 10</text>
               <text x="200" y="130" fill="#9898B0" font-family="Inter,sans-serif" font-size="9">Pedri just scored — 1-0 Barcelona (23')</text>
               <text x="200" y="150" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="13" font-weight="700">Will Real Madrid equalise before halftime?</text>
               <!-- Option buttons -->
-              <rect x="200" y="166" width="180" height="36" rx="10" fill="rgba(168,225,12,0.08)" stroke="rgba(168,225,12,0.25)" stroke-width="1"/>
-              <text x="290" y="189" fill="#A8E10C" font-family="Inter,sans-serif" font-size="11" font-weight="700" text-anchor="middle">Yes, they'll equalise</text>
+              <rect x="200" y="166" width="180" height="36" rx="10" fill="rgba(168,230,94,0.08)" stroke="rgba(168,230,94,0.25)" stroke-width="1"/>
+              <text x="290" y="189" fill="#A8E65E" font-family="Inter,sans-serif" font-size="11" font-weight="700" text-anchor="middle">Yes, they'll equalise</text>
               <rect x="392" y="166" width="180" height="36" rx="10" fill="rgba(255,255,255,0.04)" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
               <text x="482" y="189" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="11" font-weight="700" text-anchor="middle">No, Barcelona holds</text>
             </svg>
@@ -2469,7 +2471,7 @@
         <div class="htp-slide" id="htpSlide3">
           <div class="htp-slide-graphic">
             <svg viewBox="0 0 620 200" xmlns="http://www.w3.org/2000/svg">
-              <rect width="620" height="200" fill="#2A2A44"/>
+              <rect width="620" height="200" fill="#33003A"/>
               <!-- Sudden Death banner -->
               <rect x="140" y="12" width="340" height="36" rx="10" fill="rgba(255,107,107,0.1)" stroke="rgba(255,107,107,0.3)" stroke-width="1.5">
                 <animate attributeName="stroke-opacity" values="0.3;0.7;0.3" dur="2s" repeatCount="indefinite"/>
@@ -2481,8 +2483,8 @@
               <text x="210" y="116" fill="#FF9F43" font-family="Inter,sans-serif" font-size="16" font-weight="900" text-anchor="middle">BR</text>
               <text x="210" y="160" fill="#FF9F43" font-family="Inter,sans-serif" font-size="11" font-weight="700" text-anchor="middle">You (Bran)</text>
               <text x="310" y="118" fill="#5A5A78" font-family="Inter,sans-serif" font-size="22" font-weight="900" text-anchor="middle">VS</text>
-              <circle cx="410" cy="110" r="36" fill="rgba(168,225,12,0.12)" stroke="#A8E10C" stroke-width="3"/>
-              <text x="410" y="116" fill="#A8E10C" font-family="Inter,sans-serif" font-size="16" font-weight="900" text-anchor="middle">MR</text>
+              <circle cx="410" cy="110" r="36" fill="rgba(168,230,94,0.12)" stroke="#A8E65E" stroke-width="3"/>
+              <text x="410" y="116" fill="#A8E65E" font-family="Inter,sans-serif" font-size="16" font-weight="900" text-anchor="middle">MR</text>
               <text x="410" y="160" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="11" font-weight="700" text-anchor="middle">Marco</text>
               <!-- Lightning bolts -->
               <polygon points="290,85 295,100 285,100" fill="#FF6B6B" opacity="0.5"/>
@@ -2508,18 +2510,18 @@
         <div class="htp-slide" id="htpSlide4">
           <div class="htp-slide-graphic">
             <svg viewBox="0 0 620 200" xmlns="http://www.w3.org/2000/svg">
-              <rect width="620" height="200" fill="#2A2A44"/>
+              <rect width="620" height="200" fill="#33003A"/>
               <!-- Crown -->
               <path d="M275 48h70l8-32-18 16-17-24-17 24-18-16z" fill="none" stroke="#FFD700" stroke-width="2.5" stroke-linejoin="round"/>
               <rect x="275" y="48" width="70" height="6" rx="2" fill="none" stroke="#FFD700" stroke-width="2"/>
               <!-- Champion text -->
-              <text x="310" y="78" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="16" font-weight="900" text-anchor="middle"><tspan fill="#A8E10C">Battle Royale</tspan> Champion!</text>
+              <text x="310" y="78" fill="#E8E8F0" font-family="Inter,sans-serif" font-size="16" font-weight="900" text-anchor="middle"><tspan fill="#A8E65E">Battle Royale</tspan> Champion!</text>
               <!-- Avatar -->
               <circle cx="310" cy="112" r="22" fill="rgba(255,215,0,0.1)" stroke="#FFD700" stroke-width="3"/>
               <text x="310" y="118" fill="#FFD700" font-family="Inter,sans-serif" font-size="12" font-weight="900" text-anchor="middle">BR</text>
               <!-- Stats row -->
               <g transform="translate(115,148)">
-                <text x="0" y="14" fill="#A8E10C" font-family="Inter,sans-serif" font-size="18" font-weight="900" text-anchor="middle">10/10</text>
+                <text x="0" y="14" fill="#A8E65E" font-family="Inter,sans-serif" font-size="18" font-weight="900" text-anchor="middle">10/10</text>
                 <text x="0" y="28" fill="#5A5A78" font-family="Inter,sans-serif" font-size="7" font-weight="600" text-anchor="middle">ROUNDS</text>
               </g>
               <g transform="translate(235,148)">
@@ -2537,7 +2539,7 @@
               <!-- Badge -->
               <rect x="180" y="185" width="260" height="0" rx="12" fill="rgba(255,215,0,0.08)" stroke="rgba(255,215,0,0.2)" stroke-width="1"/>
               <!-- Confetti particles -->
-              <rect x="50" y="20" width="6" height="6" rx="1" fill="#A8E10C" opacity="0.7" transform="rotate(30 53 23)"/>
+              <rect x="50" y="20" width="6" height="6" rx="1" fill="#A8E65E" opacity="0.7" transform="rotate(30 53 23)"/>
               <rect x="550" y="30" width="6" height="6" rx="1" fill="#FF6B6B" opacity="0.6" transform="rotate(-20 553 33)"/>
               <rect x="80" y="90" width="5" height="5" rx="1" fill="#7C5CFC" opacity="0.5" transform="rotate(45 82 92)"/>
               <rect x="530" y="100" width="5" height="5" rx="1" fill="#FFD700" opacity="0.6" transform="rotate(15 532 102)"/>
@@ -3081,7 +3083,7 @@
       const container = document.getElementById('confetti');
       container.innerHTML = '';
       container.classList.add('show');
-      const colors = ['#A8E10C','#FF6B6B','#7C5CFC','#4ECDC4','#FF9F43','#FFD700'];
+      const colors = ['#A8E65E','#FF6B6B','#7C5CFC','#4ECDC4','#FF9F43','#FFD700'];
       for (let i = 0; i < 80; i++) {
         const piece = document.createElement('div');
         piece.className = 'confetti-piece';

@@ -2,11 +2,13 @@
 <html lang="en">
 <head>
   <meta name="view-transition" content="same-origin" />
-  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <style>html{background:#111111;margin:0;padding:0}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spontyx — Upcoming</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
 <style>
@@ -23,7 +25,7 @@
       color: var(--off-white); font-size: 0.85rem; font-family: inherit; outline: none;
     }
     .topbar-search input::placeholder { color: var(--grey-dark); }
-    .topbar-search input:focus { border-color: rgba(168,225,12,0.3); }
+    .topbar-search input:focus { border-color: rgba(168,230,94,0.3); }
     .topbar-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--grey-dark); }
     .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
     .topbar-btn {
@@ -53,7 +55,7 @@
       background: transparent; color: var(--grey); font-size: 0.8rem; font-weight: 600;
       font-family: inherit; cursor: pointer; transition: all 0.2s; white-space: nowrap;
     }
-    .filter-chip:hover { border-color: rgba(168,225,12,0.3); color: var(--off-white); }
+    .filter-chip:hover { border-color: rgba(168,230,94,0.3); color: var(--off-white); }
     .filter-chip.active { background: var(--lime); color: var(--navy); border-color: var(--lime); }
 
     /* ── Day Group ── */
@@ -80,15 +82,15 @@
       transition: border-color 0.2s, transform 0.15s; cursor: pointer;
       flex-wrap: wrap;
     }
-    .match-card:hover { border-color: rgba(168,225,12,0.15); transform: translateY(-1px); }
-    .match-card.tonight { border-color: rgba(168,225,12,0.2); background: linear-gradient(135deg, var(--navy-card), rgba(168,225,12,0.03)); }
+    .match-card:hover { border-color: rgba(168,230,94,0.15); transform: translateY(-1px); }
+    .match-card.tonight { border-color: rgba(168,230,94,0.2); background: linear-gradient(135deg, var(--navy-card), rgba(168,230,94,0.03)); }
 
     .match-time-box {
       display: flex; flex-direction: column; align-items: center; gap: 2px; flex-shrink: 0;
       min-width: 68px; padding: 10px 14px; border-radius: var(--radius-sm);
       background: rgba(255,255,255,0.04); text-align: center;
     }
-    .match-time-box.soon { background: rgba(168,225,12,0.08); }
+    .match-time-box.soon { background: rgba(168,230,94,0.08); }
     .match-time-day { font-size: 0.6rem; color: var(--grey); text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px; }
     .match-time-hour { font-size: 1.05rem; font-weight: 800; }
     .match-time-countdown { font-size: 0.6rem; font-weight: 600; }
@@ -108,7 +110,7 @@
     .match-pending svg { width: 13px; height: 13px; fill: none; stroke-width: 2; }
     .match-pending.has-pending { background: rgba(255,159,67,0.12); color: var(--orange); }
     .match-pending.has-pending svg { stroke: var(--orange); }
-    .match-pending.all-done { background: rgba(168,225,12,0.08); color: var(--lime); }
+    .match-pending.all-done { background: rgba(168,230,94,0.08); color: var(--lime); }
     .match-pending.all-done svg { stroke: var(--lime); }
 
     .match-notify-btn {
@@ -148,13 +150,13 @@
     /* ── Invite button ── */
     .invite-btn {
       padding: 8px 14px; border-radius: var(--radius-pill);
-      border: 1px solid rgba(168,225,12,0.3); background: rgba(168,225,12,0.06);
+      border: 1px solid rgba(168,230,94,0.3); background: rgba(168,230,94,0.06);
       color: var(--lime); font-size: 0.75rem; font-weight: 700;
       font-family: inherit; cursor: pointer; display: flex; align-items: center; gap: 5px;
       white-space: nowrap; transition: all 0.2s; flex-shrink: 0;
     }
     .invite-btn svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; }
-    .invite-btn:hover { background: rgba(168,225,12,0.14); border-color: var(--lime); }
+    .invite-btn:hover { background: rgba(168,230,94,0.14); border-color: var(--lime); }
 
     /* ── Match Live button ── */
     .match-live-btn {
@@ -227,10 +229,10 @@
     .match-saved-badge {
       display: flex; align-items: center; gap: 4px; padding: 5px 12px;
       border-radius: var(--radius-pill); font-size: 0.72rem; font-weight: 700; flex-shrink: 0;
-      background: rgba(168,225,12,0.08); color: var(--lime); border: 1px solid rgba(168,225,12,0.15);
+      background: rgba(168,230,94,0.08); color: var(--lime); border: 1px solid rgba(168,230,94,0.15);
     }
     .match-saved-badge svg { width: 11px; height: 11px; fill: var(--lime); stroke: none; }
-    .match-card.is-saved { border-color: rgba(168,225,12,0.15); }
+    .match-card.is-saved { border-color: rgba(168,230,94,0.15); }
 </style>
 </head>
 <body>

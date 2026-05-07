@@ -2,11 +2,13 @@
 <html lang="en">
 <head>
   <meta name="view-transition" content="same-origin" />
-  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <style>html{background:#111111;margin:0;padding:0}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spontyx — Venue Dashboard</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <style>
@@ -27,7 +29,7 @@
       transition: border-color 0.2s;
     }
     .topbar-search input::placeholder { color: var(--grey-dark); }
-    .topbar-search input:focus { border-color: rgba(168,225,12,0.3); }
+    .topbar-search input:focus { border-color: rgba(168,230,94,0.3); }
     .topbar-search svg { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; stroke: var(--grey-dark); }
     .topbar-right { display: flex; align-items: center; gap: 8px; margin-left: auto; }
     .topbar-btn {
@@ -47,7 +49,7 @@
       padding: 6px 14px; border-radius: var(--radius-pill);
       font-size: 0.75rem; font-weight: 700;
     }
-    .venue-status.open { background: rgba(168,225,12,0.12); color: var(--lime); }
+    .venue-status.open { background: rgba(168,230,94,0.12); color: var(--lime); }
     .venue-status.closed { background: rgba(255,107,107,0.12); color: var(--coral); }
     .venue-status-dot {
       width: 8px; height: 8px; border-radius: 50%;
@@ -171,7 +173,7 @@
     }
     .action-card.lime-accent .action-card-title { color: var(--navy); }
     .action-card.lime-accent .action-card-desc { color: rgba(26,26,46,0.65); }
-    .action-card.lime-accent:hover { background: #b8f01c; border-color: #b8f01c; }
+    .action-card.lime-accent:hover { background: var(--lime-hover); border-color: var(--lime-hover); }
 
     .action-card-icon {
       width: 40px; height: 40px; border-radius: var(--radius-sm);
@@ -222,8 +224,8 @@
     .nav-link-card.teal-link .nav-link-icon { background: rgba(78,205,196,0.12); }
     .nav-link-card.teal-link .nav-link-icon svg { stroke: var(--teal); }
 
-    .nav-link-card.lime-link { border-color: rgba(168,225,12,0.2); }
-    .nav-link-card.lime-link:hover { border-color: rgba(168,225,12,0.4); }
+    .nav-link-card.lime-link { border-color: rgba(168,230,94,0.2); }
+    .nav-link-card.lime-link:hover { border-color: rgba(168,230,94,0.4); }
     .nav-link-card.lime-link .nav-link-icon { background: var(--lime-dim); }
     .nav-link-card.lime-link .nav-link-icon svg { stroke: var(--lime); }
 

@@ -4,14 +4,16 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spontyx — Supabase Connection Test</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --navy: #1A1A2E;
-      --navy-light: #22223A;
-      --navy-card: #2A2A44;
-      --lime: #A8E10C;
+      --navy: #111111;
+      --navy-light: #1A0022;
+      --navy-card: #33003A;
+      --lime: #A8E65E;
       --coral: #FF6B6B;
       --teal: #4ECDC4;
       --off-white: #E8E8F0;
@@ -37,7 +39,7 @@
       padding: 6px 14px; border-radius: 999px; font-size: 0.78rem; font-weight: 700;
     }
     .status.loading { background: rgba(152,152,176,0.15); color: var(--grey); }
-    .status.ok      { background: rgba(168,225,12,0.15);  color: var(--lime); }
+    .status.ok      { background: rgba(168,230,94,0.15);  color: var(--lime); }
     .status.fail    { background: rgba(255,107,107,0.15); color: var(--coral); }
     .status .pulse { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
     .venue-list { display: grid; gap: 10px; margin-top: 14px; }
@@ -58,7 +60,7 @@
       background: var(--navy-light); padding: 2px 8px; border-radius: 6px;
       font-family: 'SF Mono', Consolas, monospace; font-size: 0.82rem; color: var(--lime);
     }
-    .next { margin-top: 28px; padding: 20px; background: rgba(168,225,12,0.06); border: 1px solid rgba(168,225,12,0.2); border-radius: 14px; }
+    .next { margin-top: 28px; padding: 20px; background: rgba(168,230,94,0.06); border: 1px solid rgba(168,230,94,0.2); border-radius: 14px; }
     .next h3 { color: var(--lime); margin-bottom: 10px; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 1px; font-weight: 800; }
     .next p { font-size: 0.88rem; line-height: 1.55; color: var(--off-white); }
   </style>

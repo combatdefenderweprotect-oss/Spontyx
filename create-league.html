@@ -9,20 +9,22 @@
 <html lang="en">
 <head>
   <meta name="view-transition" content="same-origin" />
-  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <style>html{background:#111111;margin:0;padding:0}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spontyx — Create a League</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --navy: #1A1A2E;
-      --navy-light: #22223A;
-      --navy-card: #2A2A44;
-      --navy-hover: #32325A;
-      --lime: #A8E10C;
-      --lime-dim: rgba(168,225,12,0.12);
+      --navy: #111111;
+      --navy-light: #1A0022;
+      --navy-card: #33003A;
+      --navy-hover: #3E0049;
+      --lime: #A8E65E;
+      --lime-dim: rgba(168,230,94,0.12);
       --coral: #FF6B6B;
       --teal: #4ECDC4;
       --purple: #7C5CFC;
@@ -93,7 +95,7 @@
       background: var(--navy-card); cursor: pointer; transition: all 0.2s;
       display: flex; align-items: center; gap: 16px;
     }
-    .type-card:hover { border-color: rgba(168,225,12,0.2); transform: translateY(-2px); }
+    .type-card:hover { border-color: rgba(168,230,94,0.2); transform: translateY(-2px); }
     .type-card.selected { border-color: var(--lime); background: var(--lime-dim); }
     .type-card-icon {
       width: 50px; height: 50px; border-radius: var(--radius-md); flex-shrink: 0;
@@ -168,13 +170,13 @@
 
     /* ══ AI CHATBOT ══ */
     .ai-chat {
-      background: var(--navy-card); border-radius: var(--radius-xl); border: 1px solid rgba(168,225,12,0.12);
+      background: var(--navy-card); border-radius: var(--radius-xl); border: 1px solid rgba(168,230,94,0.12);
       overflow: hidden;
     }
     .ai-chat-header {
       padding: 16px 20px; display: flex; align-items: center; gap: 10px;
       border-bottom: 1px solid rgba(255,255,255,0.06);
-      background: linear-gradient(135deg, rgba(168,225,12,0.06), rgba(124,92,252,0.04));
+      background: linear-gradient(135deg, rgba(168,230,94,0.06), rgba(124,92,252,0.04));
     }
     .ai-chat-avatar {
       width: 36px; height: 36px; border-radius: 50%;
@@ -211,7 +213,7 @@
 
     .ai-suggestions { display: flex; flex-wrap: wrap; gap: 6px; padding: 0 20px 8px; }
     .ai-suggest-btn {
-      padding: 7px 14px; border-radius: var(--radius-pill); border: 1px solid rgba(168,225,12,0.2);
+      padding: 7px 14px; border-radius: var(--radius-pill); border: 1px solid rgba(168,230,94,0.2);
       background: none; color: var(--lime); font-size: 0.72rem; font-weight: 600;
       cursor: pointer; font-family: inherit; transition: all 0.15s;
     }
@@ -227,7 +229,7 @@
       color: var(--off-white); font-size: 0.8rem; font-family: inherit; outline: none;
       transition: border-color 0.2s;
     }
-    .ai-chat-input:focus { border-color: rgba(168,225,12,0.3); }
+    .ai-chat-input:focus { border-color: rgba(168,230,94,0.3); }
     .ai-chat-input::placeholder { color: var(--grey-dark); }
     .ai-chat-send {
       width: 38px; height: 38px; border-radius: 50%;
@@ -239,7 +241,7 @@
 
     .ai-config-applied {
       margin-top: 16px; padding: 14px 18px; background: var(--lime-dim);
-      border: 1px solid rgba(168,225,12,0.2); border-radius: var(--radius-md);
+      border: 1px solid rgba(168,230,94,0.2); border-radius: var(--radius-md);
       display: none; animation: fadeIn 0.3s ease;
     }
     .ai-config-applied.show { display: block; }
@@ -282,7 +284,7 @@
       text-align: center; font-size: 0.8rem; font-weight: 600; font-family: inherit;
       color: var(--off-white); position: relative;
     }
-    .option-chip:hover { border-color: rgba(168,225,12,0.2); }
+    .option-chip:hover { border-color: rgba(168,230,94,0.2); }
     .option-chip.selected { border-color: var(--lime); background: var(--lime-dim); color: var(--lime); }
     .option-chip.locked {
       opacity: 0.5; cursor: not-allowed; position: relative;
@@ -346,7 +348,7 @@
       border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s; text-align: center;
     }
     .mode-card:hover { border-color: rgba(255,255,255,0.15); }
-    .mode-card.selected { border-color: var(--lime); background: rgba(168,225,12,0.04); }
+    .mode-card.selected { border-color: var(--lime); background: rgba(168,230,94,0.04); }
     .mode-card-icon { width: 40px; height: 40px; margin: 0 auto 10px; border-radius: var(--radius-sm); display: flex; align-items: center; justify-content: center; }
     .mode-card-icon svg { width: 22px; height: 22px; fill: none; stroke-width: 1.8; }
     .mode-card-name { font-size: 0.9rem; font-weight: 700; margin-bottom: 4px; }
@@ -365,14 +367,14 @@
       border-radius: var(--radius-md); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 12px;
     }
     .vis-card:hover { border-color: rgba(255,255,255,0.15); }
-    .vis-card.selected.public  { border-color: var(--lime);   background: rgba(168,225,12,0.05); }
+    .vis-card.selected.public  { border-color: var(--lime);   background: rgba(168,230,94,0.05); }
     .vis-card.selected.private { border-color: var(--coral);  background: rgba(255,107,107,0.05); }
     .vis-card-icon {
       width: 38px; height: 38px; border-radius: var(--radius-sm); flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
     }
     .vis-card-icon svg { width: 18px; height: 18px; fill: none; stroke-width: 2; }
-    .vis-card.public  .vis-card-icon { background: rgba(168,225,12,0.12); }
+    .vis-card.public  .vis-card-icon { background: rgba(168,230,94,0.12); }
     .vis-card.public  .vis-card-icon svg { stroke: var(--lime); }
     .vis-card.private .vis-card-icon { background: rgba(255,107,107,0.12); }
     .vis-card.private .vis-card-icon svg { stroke: var(--coral); }
@@ -389,7 +391,7 @@
     .invite-methods { display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
     .invite-code-display {
       text-align: center; padding: 24px; background: var(--navy-card);
-      border: 2px dashed rgba(168,225,12,0.3); border-radius: var(--radius-lg);
+      border: 2px dashed rgba(168,230,94,0.3); border-radius: var(--radius-lg);
     }
     .invite-code-label { font-size: 0.65rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
     .invite-code-value { font-size: 2rem; font-weight: 900; color: var(--lime); letter-spacing: 8px; margin-bottom: 12px; }
@@ -417,7 +419,7 @@
     .invite-contact-name { flex: 1; font-size: 0.8rem; font-weight: 600; }
     .invite-contact-sub { font-size: 0.65rem; color: var(--grey); }
     .invite-contact-btn {
-      padding: 5px 12px; border-radius: var(--radius-pill); border: 1px solid rgba(168,225,12,0.3);
+      padding: 5px 12px; border-radius: var(--radius-pill); border: 1px solid rgba(168,230,94,0.3);
       background: none; color: var(--lime); font-size: 0.7rem; font-weight: 700;
       cursor: pointer; font-family: inherit; transition: all 0.15s;
     }
@@ -457,13 +459,13 @@
       background: var(--lime); color: var(--navy); padding: 14px 28px; border-radius: var(--radius-pill);
       font-weight: 700; font-size: 0.85rem; z-index: 2000; opacity: 0;
       transition: transform 0.4s, opacity 0.4s; pointer-events: none;
-      box-shadow: 0 8px 32px rgba(168,225,12,0.3);
+      box-shadow: 0 8px 32px rgba(168,230,94,0.3);
     }
     .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
 
     /* ══ UPGRADE NUDGE ══ */
     .upgrade-nudge {
-      margin-top: 16px; padding: 14px 18px; background: linear-gradient(135deg, rgba(124,92,252,0.12), rgba(168,225,12,0.08));
+      margin-top: 16px; padding: 14px 18px; background: linear-gradient(135deg, rgba(124,92,252,0.12), rgba(168,230,94,0.08));
       border: 1px solid rgba(124,92,252,0.2); border-radius: var(--radius-md);
       display: flex; align-items: center; gap: 12px;
     }
@@ -535,7 +537,7 @@
       cursor: pointer; transition: all 0.15s; display: flex; align-items: flex-start; gap: 10px;
     }
     .scope-card:hover { border-color: rgba(255,255,255,0.18); }
-    .scope-card.selected { border-color: var(--lime); background: rgba(168,225,12,0.05); }
+    .scope-card.selected { border-color: var(--lime); background: rgba(168,230,94,0.05); }
     .scope-card-icon {
       width: 32px; height: 32px; border-radius: 8px; background: var(--lime-dim);
       display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px;
@@ -547,7 +549,7 @@
     /* ══ AI QUESTIONS SECTION ══ */
     .ai-questions-card {
       padding: 16px; border-radius: var(--radius-md);
-      border: 1px solid rgba(168,225,12,0.2); background: rgba(168,225,12,0.04);
+      border: 1px solid rgba(168,230,94,0.2); background: rgba(168,230,94,0.04);
       margin-top: 8px;
     }
     .ai-questions-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -565,7 +567,7 @@
     .ai-quota-grid { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
     .ai-quota-pill {
       padding: 4px 10px; border-radius: var(--radius-pill); font-size: 0.68rem; font-weight: 700;
-      background: rgba(168,225,12,0.12); color: var(--lime); border: 1px solid rgba(168,225,12,0.25);
+      background: rgba(168,230,94,0.12); color: var(--lime); border: 1px solid rgba(168,230,94,0.25);
     }
     .ai-questions-config { display: none; margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.06); }
     .ai-questions-config.visible { display: block; }
@@ -577,7 +579,7 @@
       background: var(--navy-card); cursor: pointer; transition: all 0.2s;
       display: flex; align-items: center; gap: 14px; position: relative;
     }
-    .qmode-card:hover { border-color: rgba(168,225,12,0.25); transform: translateY(-1px); }
+    .qmode-card:hover { border-color: rgba(168,230,94,0.25); transform: translateY(-1px); }
     .qmode-card.selected { border-color: var(--lime); background: var(--lime-dim); }
     .qmode-card.locked { opacity: 0.55; cursor: not-allowed; }
     .qmode-card.locked:hover { transform: none; border-color: rgba(255,255,255,0.08); }
@@ -623,8 +625,8 @@
       cursor: pointer;
       transition: border-color 0.15s, background 0.15s;
     }
-    .timing-card:hover { border-color: rgba(168,225,12,0.3); }
-    .timing-card.selected { border-color: var(--lime); background: rgba(168,225,12,0.07); }
+    .timing-card:hover { border-color: rgba(168,230,94,0.3); }
+    .timing-card.selected { border-color: var(--lime); background: rgba(168,230,94,0.07); }
     .timing-card.locked { opacity: 0.6; cursor: default; }
     .timing-card.locked:hover { border-color: rgba(255,255,255,0.12); }
     .timing-card-label {
@@ -642,8 +644,8 @@
       border-radius: 100px; border: 1.5px solid rgba(255,255,255,0.15);
       cursor: pointer; transition: all 0.15s; color: var(--grey);
     }
-    .timing-offset-pill:not(.locked):hover { border-color: rgba(168,225,12,0.3); color: var(--text); }
-    .timing-offset-pill.selected { border-color: var(--lime); color: var(--lime); background: rgba(168,225,12,0.08); }
+    .timing-offset-pill:not(.locked):hover { border-color: rgba(168,230,94,0.3); color: var(--text); }
+    .timing-offset-pill.selected { border-color: var(--lime); color: var(--lime); background: rgba(168,230,94,0.08); }
     .timing-offset-pill.locked {
       opacity: 0.45; cursor: default; border-style: dashed;
       position: relative;
@@ -898,7 +900,7 @@
           <label class="form-label">Pick your team</label>
           <input type="text" class="form-input" id="sl-team-search" placeholder="Search team (e.g. Barcelona, Liverpool)..." oninput="onSlTeamSearch()" autocomplete="off" />
           <div id="sl-team-results" style="margin-top:8px; max-height:220px; overflow-y:auto; border:1px solid rgba(255,255,255,0.06); border-radius:10px; display:none;"></div>
-          <div id="sl-team-selected" style="display:none; margin-top:10px; padding:10px 14px; background:rgba(168,225,12,0.08); border:1px solid rgba(168,225,12,0.3); border-radius:10px; display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <div id="sl-team-selected" style="display:none; margin-top:10px; padding:10px 14px; background:rgba(168,230,94,0.08); border:1px solid rgba(168,230,94,0.3); border-radius:10px; display:flex; align-items:center; justify-content:space-between; gap:12px;">
             <div><strong id="sl-team-selected-name"></strong> <span style="color:var(--grey-dark); font-size:0.8rem;" id="sl-team-selected-comp-count"></span></div>
             <button type="button" onclick="clearSlTeam()" style="background:none; border:1px solid rgba(255,255,255,0.15); color:var(--grey-light); padding:4px 10px; border-radius:6px; cursor:pointer; font-size:0.75rem;">Change</button>
           </div>
@@ -1210,8 +1212,8 @@
         <div class="toggle-label">Confidence Scoring</div>
         <div class="toggle-desc">Before each answer, players pick how sure they are. Sure picks win bigger — but wrong guesses cost points. Off → everyone scores the same: +10 for right, 0 for wrong.</div>
         <div style="margin-top:8px;display:flex;flex-wrap:wrap;gap:6px;">
-          <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;background:rgba(168,225,12,0.08);border:1px solid rgba(168,225,12,0.25);font-size:0.7rem;">
-            <strong style="color:#A8E10C;">Safe</strong>
+          <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;background:rgba(168,230,94,0.08);border:1px solid rgba(168,230,94,0.25);font-size:0.7rem;">
+            <strong style="color:#A8E65E;">Safe</strong>
             <span style="color:rgba(255,255,255,0.7);">+10 right · 0 wrong</span>
           </span>
           <span style="display:inline-flex;align-items:center;gap:6px;padding:4px 9px;border-radius:999px;background:rgba(255,159,67,0.08);border:1px solid rgba(255,159,67,0.25);font-size:0.7rem;">
@@ -1330,7 +1332,7 @@
             <div style="font-size:0.9rem;font-weight:700;display:flex;align-items:center;gap:8px;">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="var(--lime)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
               AI Real World Questions
-              <span style="font-size:0.6rem;background:rgba(168,225,12,0.15);color:var(--lime);padding:2px 8px;border-radius:100px;font-weight:800;">NEW</span>
+              <span style="font-size:0.6rem;background:rgba(168,230,94,0.15);color:var(--lime);padding:2px 8px;border-radius:100px;font-weight:800;">NEW</span>
             </div>
             <div class="form-hint" style="margin-top:4px;">AI generates questions based on real matches, injuries, and news. Goes live automatically.</div>
           </div>
@@ -2154,7 +2156,7 @@ async function onSlTeamSearch() {
     const _attrJson = (v) => JSON.stringify(v).replace(/"/g, '&quot;');
     resultsEl.innerHTML = uniq.slice(0, 20).map(t =>
       '<div class="sl-team-row" style="padding:10px 14px; cursor:pointer; border-bottom:1px solid rgba(255,255,255,0.04);" ' +
-      'onmouseover="this.style.background=\'rgba(168,225,12,0.08)\'" onmouseout="this.style.background=\'\'" ' +
+      'onmouseover="this.style.background=\'rgba(168,230,94,0.08)\'" onmouseout="this.style.background=\'\'" ' +
       'onclick="selectSlTeam(' + t.api_team_id + ', ' + _attrJson(t.name) + ', ' + _attrJson(t.sport) + ')">' +
       '<strong>' + escSlHtml(t.name) + '</strong></div>'
     ).join('');

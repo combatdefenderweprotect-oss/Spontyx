@@ -5,8 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="view-transition" content="same-origin">
   <title>Support — Spontyx</title>
-  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <style>html{background:#111111;margin:0;padding:0}</style>
+    <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <style>
@@ -55,7 +57,7 @@
     .sp-form textarea { min-height: 140px; resize: vertical; line-height: 1.5; }
     .sp-form select:focus,
     .sp-form input[type="text"]:focus,
-    .sp-form textarea:focus { border-color: rgba(168,225,12,0.4); }
+    .sp-form textarea:focus { border-color: rgba(168,230,94,0.4); }
 
     /* Two-column row (Topic / Priority) — collapses on narrow screens. */
     .sp-row-2col {
@@ -73,14 +75,14 @@
       cursor: pointer;
       transition: border-color 0.15s, background 0.15s;
     }
-    .sp-upload:hover { border-color: rgba(168,225,12,0.4); background: rgba(168,225,12,0.04); }
-    .sp-upload.has-file { border-color: rgba(168,225,12,0.45); background: rgba(168,225,12,0.06); border-style: solid; }
+    .sp-upload:hover { border-color: rgba(168,230,94,0.4); background: rgba(168,230,94,0.04); }
+    .sp-upload.has-file { border-color: rgba(168,230,94,0.45); background: rgba(168,230,94,0.06); border-style: solid; }
     .sp-upload input[type="file"] {
       position: absolute; inset: 0; opacity: 0; cursor: pointer;
     }
     .sp-upload-icon {
       width: 36px; height: 36px; border-radius: 8px; flex-shrink: 0;
-      background: rgba(168,225,12,0.10); color: var(--lime);
+      background: rgba(168,230,94,0.10); color: var(--lime);
       display: flex; align-items: center; justify-content: center;
     }
     .sp-upload-icon svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
@@ -108,9 +110,9 @@
       border-radius: 999px; padding: 11px 26px;
       font-family: inherit; font-size: 0.84rem; font-weight: 800; cursor: pointer;
       transition: background 0.15s, transform 0.12s, box-shadow 0.2s;
-      box-shadow: 0 4px 14px rgba(168,225,12,0.16);
+      box-shadow: 0 4px 14px rgba(168,230,94,0.16);
     }
-    .sp-send:hover { background: #b8f00f; transform: translateY(-1px); box-shadow: 0 6px 18px rgba(168,225,12,0.24); }
+    .sp-send:hover { background: var(--lime-hover); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(168,230,94,0.24); }
     .sp-form-hint {
       font-size: 0.7rem; color: var(--grey-dark);
     }

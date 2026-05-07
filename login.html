@@ -2,19 +2,21 @@
 <html lang="en">
 <head>
   <meta name="view-transition" content="same-origin" />
-  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <style>html{background:#111111;margin:0;padding:0}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spontyx — Sign in</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --navy: #1A1A2E;
-      --navy-light: #22223A;
-      --navy-card: #2A2A44;
-      --navy-hover: #32325A;
-      --lime: #A8E10C;
+      --navy: #111111;
+      --navy-light: #1A0022;
+      --navy-card: #33003A;
+      --navy-hover: #3E0049;
+      --lime: #A8E65E;
       --purple: #7C5CFC;
       --coral: #FF6B6B;
       --teal: #4ECDC4;
@@ -30,7 +32,7 @@
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       background:
         radial-gradient(1200px 800px at 10% -10%, rgba(124,92,252,0.18), transparent 60%),
-        radial-gradient(1000px 700px at 110% 110%, rgba(168,225,12,0.12), transparent 60%),
+        radial-gradient(1000px 700px at 110% 110%, rgba(168,230,94,0.12), transparent 60%),
         var(--navy);
       color: var(--off-white); min-height: 100vh;
       display: flex; align-items: center; justify-content: center; padding: 80px 24px 24px;
@@ -60,12 +62,12 @@
       border: 2px solid rgba(255,255,255,0.08); background: var(--navy-light);
       cursor: pointer; transition: all 0.2s; font-family: inherit; color: var(--off-white); text-align: center;
     }
-    .role-opt:hover { border-color: rgba(168,225,12,0.35); }
-    .role-opt.selected.player { border-color: var(--lime); background: rgba(168,225,12,0.08); }
+    .role-opt:hover { border-color: rgba(168,230,94,0.35); }
+    .role-opt.selected.player { border-color: var(--lime); background: rgba(168,230,94,0.08); }
     .role-opt.selected.venue  { border-color: var(--purple); background: rgba(124,92,252,0.08); }
     .role-opt-icon { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 6px; background: rgba(255,255,255,0.06); }
     .role-opt-icon svg { width: 16px; height: 16px; stroke-width: 2; fill: none; stroke: currentColor; }
-    .role-opt.selected.player .role-opt-icon { background: rgba(168,225,12,0.12); color: var(--lime); }
+    .role-opt.selected.player .role-opt-icon { background: rgba(168,230,94,0.12); color: var(--lime); }
     .role-opt.selected.venue  .role-opt-icon { background: rgba(124,92,252,0.15); color: var(--purple); }
     .role-opt-name { font-size: 0.85rem; font-weight: 700; }
     .role-opt-sub { font-size: 0.65rem; color: var(--grey); margin-top: 2px; }
@@ -87,7 +89,7 @@
       background: var(--lime); color: var(--navy); font-family: inherit;
       font-size: 0.95rem; font-weight: 800; cursor: pointer;
       transition: transform 0.15s, opacity 0.15s; margin-top: 8px;
-      box-shadow: 0 6px 20px rgba(168,225,12,0.3);
+      box-shadow: 0 6px 20px rgba(168,230,94,0.3);
     }
     .btn:hover:not(:disabled) { transform: translateY(-1px); }
     .btn:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -104,7 +106,7 @@
       padding: 12px 14px; border-radius: 10px; font-size: 0.85rem; margin-top: 14px; line-height: 1.5;
     }
     .alert.err { background: rgba(255,107,107,0.08); border: 1px solid rgba(255,107,107,0.25); color: var(--coral); }
-    .alert.ok  { background: rgba(168,225,12,0.08);  border: 1px solid rgba(168,225,12,0.25);  color: var(--lime); }
+    .alert.ok  { background: rgba(168,230,94,0.08);  border: 1px solid rgba(168,230,94,0.25);  color: var(--lime); }
     .alert.hidden { display: none; }
 
     .divider { display: flex; align-items: center; gap: 12px; margin: 18px 0; color: var(--grey-dark); font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; }

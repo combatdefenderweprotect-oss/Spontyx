@@ -2,11 +2,13 @@
 <html lang="en">
 <head>
   <meta name="view-transition" content="same-origin" />
-  <style>html{background:#1A1A2E;margin:0;padding:0}</style>
+  <style>html{background:#111111;margin:0;padding:0}</style>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Spontyx — Question Bank</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://api.fontshare.com">
+  <link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=satoshi@300,400,500,700,900&display=swap">
+<link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="styles.css" />
   <style>
@@ -186,14 +188,14 @@
     .type-badge.live     { background: rgba(255,107,107,0.15); color: var(--coral); }
     .type-badge.prediction { background: rgba(124,92,252,0.15); color: var(--purple); }
     .type-badge.trivia   { background: rgba(78,205,196,0.15); color: var(--teal); }
-    .type-badge.news     { background: rgba(168,225,12,0.12); color: var(--lime); }
+    .type-badge.news     { background: rgba(168,230,94,0.12); color: var(--lime); }
 
     /* Difficulty badges */
     .difficulty-badge {
       padding: 3px 9px; border-radius: var(--radius-sm);
       font-size: 0.65rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px;
     }
-    .difficulty-badge.easy   { background: rgba(168,225,12,0.1); color: var(--lime); }
+    .difficulty-badge.easy   { background: rgba(168,230,94,0.1); color: var(--lime); }
     .difficulty-badge.medium { background: rgba(255,200,60,0.12); color: #FFCA3C; }
     .difficulty-badge.hard   { background: rgba(255,107,107,0.12); color: var(--coral); }
 
@@ -207,11 +209,11 @@
       justify-content: space-between; gap: 8px; word-break: break-word;
     }
     .answer-pill.correct {
-      background: rgba(168,225,12,0.08); border-color: rgba(168,225,12,0.3); color: var(--lime);
+      background: rgba(168,230,94,0.08); border-color: rgba(168,230,94,0.3); color: var(--lime);
     }
     .answer-correct-tick {
       width: 16px; height: 16px; border-radius: 50%;
-      background: rgba(168,225,12,0.2); flex-shrink: 0;
+      background: rgba(168,230,94,0.2); flex-shrink: 0;
       display: flex; align-items: center; justify-content: center;
     }
     .answer-correct-tick svg { width: 9px; height: 9px; stroke: var(--lime); fill: none; stroke-width: 3; }
